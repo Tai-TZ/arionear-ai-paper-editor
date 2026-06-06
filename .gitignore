@@ -58,3 +58,5 @@ out/
 # AI logs — tracked structure, ignored content
 .ai-log/*.jsonl
 .ai-log/archive/
+.ai-log/.hook_state.json
+.ai-log/.hook_payload.json
