@@ -1,0 +1,332 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-ink: var(--ink);
+  --color-newsprint: var(--newsprint);
+  --color-editorial-red: var(--editorial-red);
+  --color-divider: var(--divider);
+  --font-serif-display: 'Playfair Display', 'Times New Roman', serif;
+  --font-serif-body: 'Lora', Georgia, serif;
+  --font-serif-prose: 'Source Serif 4', 'Lora', Georgia, serif;
+  --font-sans-ui: 'Inter', 'Helvetica Neue', sans-serif;
+  --font-mono-data: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ── Home / marketing: Arionear newsprint ── */
+:root {
+  --radius: 0px;
+  --ink: oklch(0.145 0 0);
+  --newsprint: oklch(0.973 0.005 90);
+  --editorial-red: oklch(0.52 0.22 27);
+  --divider: oklch(0.91 0.003 90);
+  --background: var(--newsprint);
+  --foreground: var(--ink);
+  --card: var(--newsprint);
+  --card-foreground: var(--ink);
+  --popover: var(--newsprint);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--newsprint);
+  --secondary: var(--divider);
+  --secondary-foreground: var(--ink);
+  --muted: var(--divider);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: var(--editorial-red);
+  --accent-foreground: var(--newsprint);
+  --destructive: var(--editorial-red);
+  --destructive-foreground: var(--newsprint);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--ink);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: var(--newsprint);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--newsprint);
+  --sidebar-accent: var(--divider);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--ink);
+  --sidebar-ring: var(--ink);
+}
+
+.dark {
+  /* single-mode */
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    border-radius: 0 !important;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-serif-body);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111111' fill-opacity='0.05' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif-display);
+  }
+}
+
+@layer utilities {
+  .font-serif-display { font-family: var(--font-serif-display); }
+  .font-body { font-family: var(--font-serif-body); }
+  .font-serif-prose { font-family: var(--font-serif-prose); }
+  .font-sans-ui { font-family: var(--font-sans-ui); }
+  .font-mono-data { font-family: var(--font-mono-data); }
+
+  .newsprint-texture { position: relative; }
+  .newsprint-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(0deg, transparent 98%, rgba(0,0,0,0.025) 100%),
+      linear-gradient(90deg, transparent 98%, rgba(0,0,0,0.025) 100%);
+    background-size: 3px 3px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .hard-shadow-hover {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .hard-shadow-hover:hover {
+    box-shadow: 6px 6px 0 0 var(--ink);
+    transform: translate(-3px, -3px);
+  }
+
+  .drop-cap::first-letter {
+    font-family: var(--font-serif-display);
+    font-weight: 900;
+    float: left;
+    font-size: 5.5rem;
+    line-height: 0.85;
+    padding: 0.35rem 0.6rem 0 0;
+  }
+}
+
+/* ── Editor workspace: insight-editor feel + Arionear accents ── */
+.editor-shell {
+  --radius: 0.375rem;
+  --ink: oklch(0.145 0 0);
+  --newsprint: oklch(0.978 0.006 90);
+  --editorial-red: oklch(0.52 0.22 27);
+  --background: oklch(0.978 0.006 90);
+  --foreground: oklch(0.24 0.03 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 255);
+  --primary: oklch(0.32 0.09 255);
+  --primary-foreground: oklch(0.985 0.003 240);
+  --secondary: oklch(0.955 0.012 90);
+  --secondary-foreground: oklch(0.32 0.09 255);
+  --muted: oklch(0.94 0.01 90);
+  --muted-foreground: oklch(0.5 0.03 255);
+  --accent: var(--editorial-red);
+  --accent-foreground: oklch(0.985 0.003 240);
+  --destructive: var(--editorial-red);
+  --destructive-foreground: oklch(0.985 0.003 240);
+  --border: oklch(0.88 0.012 90);
+  --input: oklch(0.88 0.012 90);
+  --ring: oklch(0.4 0.1 255);
+  --chart-1: oklch(0.32 0.09 255);
+  --chart-2: oklch(0.5 0.12 250);
+  --chart-3: oklch(0.65 0.08 245);
+  --chart-4: oklch(0.78 0.05 240);
+  --chart-5: oklch(0.45 0.15 260);
+  --sidebar: oklch(0.985 0.005 90);
+  --sidebar-foreground: oklch(0.24 0.03 255);
+  --sidebar-primary: oklch(0.32 0.09 255);
+  --sidebar-primary-foreground: oklch(0.985 0.003 240);
+  --sidebar-accent: oklch(0.94 0.02 90);
+  --sidebar-accent-foreground: oklch(0.28 0.08 255);
+  --sidebar-border: oklch(0.88 0.012 90);
+  --sidebar-ring: oklch(0.4 0.1 255);
+  --font-serif: var(--font-serif-prose);
+  --font-sans: var(--font-sans-ui);
+  --font-mono: var(--font-mono-data);
+  font-family: var(--font-sans-ui);
+  font-feature-settings: "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+}
+
+.editor-shell,
+.editor-shell * {
+  border-radius: revert;
+}
+
+.editor-shell .editor-masthead {
+  border-radius: 0 !important;
+}
+
+.editor-shell .font-serif { font-family: var(--font-serif-prose); }
+.editor-shell .font-mono { font-family: var(--font-mono-data); }
+
+.editor-shell .editor-prose {
+  font-family: var(--font-serif-prose);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--color-foreground);
+}
+.editor-shell .editor-prose h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
+}
+.editor-shell .editor-prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.editor-shell .editor-prose p { margin-bottom: 1rem; }
+.editor-shell .editor-prose .citation {
+  background-color: color-mix(in oklch, var(--editorial-red) 10%, transparent);
+  color: var(--editorial-red);
+  border-bottom: 1px dotted var(--editorial-red);
+  padding: 0 2px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: var(--font-mono-data);
+  font-size: 0.85em;
+}
+.editor-shell .editor-prose .citation:hover,
+.editor-shell .editor-prose .citation.is-active {
+  background-color: color-mix(in oklch, var(--editorial-red) 20%, transparent);
+}
+
+.editor-shell .pdf-highlight {
+  background-color: color-mix(in oklch, var(--editorial-red) 18%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--editorial-red) 30%, transparent);
+  border-radius: 2px;
+}
+
+/* LaTeX code editor */
+.editor-shell .latex-editor-shell {
+  background: linear-gradient(
+    165deg,
+    oklch(0.22 0.03 255) 0%,
+    oklch(0.18 0.025 260) 50%,
+    oklch(0.16 0.02 255) 100%
+  );
+  font-family: var(--font-mono-data);
+}
+
+.editor-shell .latex-gutter {
+  border-right: 1px solid oklch(1 0 0 / 6%);
+  background: oklch(0.14 0.02 255 / 40%);
+}
+
+.editor-shell .latex-line-num {
+  color: oklch(1 0 0 / 22%);
+  min-height: 1.65em;
+}
+
+.editor-shell .latex-input {
+  color: oklch(0.92 0.01 90);
+  caret-color: oklch(0.75 0.12 255);
+}
+
+.editor-shell .latex-input::selection {
+  background-color: color-mix(in oklch, var(--primary) 45%, transparent);
+}
+
+/* Thin soft scrollbars — editor workspace only */
+.editor-shell .soft-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.03 255 / 30%);
+  border-radius: 999px;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.05 255 / 45%);
+}
+
+.editor-shell .latex-input::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 12%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 22%);
+  background-clip: padding-box;
+}
