@@ -41,7 +41,7 @@ function Masthead() {
             <a href="#pricing" className="hover:text-[color:var(--editorial-red)]">Pricing</a>
           </nav>
           <Link
-            to="/editor"
+            to="/projects"
             className="inline-flex items-center gap-2 border border-foreground bg-foreground text-background px-4 py-2 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
           >
             Open Editor <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
@@ -101,7 +101,7 @@ function Hero() {
           </div>
           <div className="mt-10 flex flex-col sm:flex-row gap-3">
             <Link
-              to="/editor"
+              to="/projects"
               className="inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
             >
               <Upload className="h-4 w-4" strokeWidth={1.5} /> Upload a Manuscript
@@ -287,7 +287,7 @@ function Pricing() {
                 ))}
               </ul>
               <Link
-                to="/editor"
+                to="/projects"
                 className={`mt-8 inline-flex w-full items-center justify-center gap-2 border px-4 py-3 font-sans-ui uppercase text-xs tracking-widest transition-colors min-h-[44px] ${
                   t.featured
                     ? "border-background bg-background text-foreground hover:bg-transparent hover:text-background"
