@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Mail, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { AuthShell, Field } from "./login";
+import { AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -16,6 +16,15 @@ export const Route = createFileRoute("/forgot-password")({
 function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 600));
+    setLoading(false);
+    setSubmitted(true);
+  };
 
   return (
     <AuthShell
@@ -41,14 +50,8 @@ function ForgotPasswordPage() {
           </button>
         </div>
       ) : (
-        <form
-          className="space-y-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setSubmitted(true);
-          }}
-        >
-          <Field
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <AuthField
             id="email"
             label="Account email"
             icon={<Mail className="h-4 w-4" strokeWidth={1.5} />}
@@ -60,20 +63,20 @@ function ForgotPasswordPage() {
             placeholder="name@university.edu"
           />
 
-          <button
-            type="submit"
-            className="w-full inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-4 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[48px]"
-          >
+          <AuthSubmitButton loading={loading}>
             Send reset link <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
-          </button>
+          </AuthSubmitButton>
         </form>
       )}
 
       <div className="mt-8 flex items-center justify-between font-sans-ui uppercase text-[11px] tracking-widest">
-        <Link to="/login" className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]">
+        <Link
+          to="/signin"
+          className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+        >
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> Back to sign in
         </Link>
-        <Link to="/register" className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]">
+        <Link to="/signup" className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]">
           Create account
         </Link>
       </div>
