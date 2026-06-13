@@ -24,6 +24,7 @@ def route_by_task(state: AgentState) -> str:
         "citation": "citation",
         "structure": "structure",
         "logic": "structure",
+        "template": "chat",
         "chat": "chat",
     }
     return mapping.get(task, "chat")

@@ -64,7 +64,6 @@ import {
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { useLatexHistory } from "@/lib/use-latex-history";
-import { useLatexPdfPreview } from "@/lib/use-latex-pdf-preview";
 
 type EditorSearch = {
   projectId?: string;
@@ -259,6 +258,7 @@ function EditorPage() {
   const [savedLatex, setSavedLatex] = useState("");
   const isDirty = latex !== savedLatex;
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
+  const [isCompiling, setIsCompiling] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
@@ -270,7 +270,7 @@ function EditorPage() {
   const [selection, setSelection] = useState("");
   const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openai");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -525,6 +525,11 @@ function EditorPage() {
     ]);
   };
 
+  const handleCompile = () => {
+    setIsCompiling(true);
+    setTimeout(() => setIsCompiling(false), 1200);
+  };
+
   const chatProps = {
     messages,
     chatInput,
@@ -627,6 +632,8 @@ function EditorPage() {
               <PreviewPanel
                 latex={latex}
                 assets={assets}
+                isCompiling={isCompiling}
+                onCompile={handleCompile}
                 zoom={zoom}
                 onZoomChange={setZoom}
               />
@@ -661,6 +668,8 @@ function EditorPage() {
           <PreviewPanel
             latex={latex}
             assets={assets}
+            isCompiling={isCompiling}
+            onCompile={handleCompile}
             zoom={zoom}
             onZoomChange={setZoom}
             mobile
@@ -1628,27 +1637,22 @@ function PreviewDocument({
 function PreviewPanel({
   latex,
   assets,
+  isCompiling,
+  onCompile,
   zoom,
   onZoomChange,
   mobile = false,
 }: {
   latex: string;
   assets: ProjectAsset[];
+  isCompiling: boolean;
+  onCompile: () => void;
   zoom: number;
   onZoomChange: (z: number) => void;
   mobile?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
-  const [showLog, setShowLog] = useState(false);
-  const {
-    pdfUrl,
-    isCompiling,
-    isEngineReady,
-    compileError,
-    compileLog,
-    compile,
-  } = useLatexPdfPreview(latex, assets);
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -1668,7 +1672,6 @@ function PreviewPanel({
 
   const effectiveScale = zoom === 100 ? fitScale : zoom / 100;
   const displayZoom = Math.round(effectiveScale * 100);
-  const usePdf = Boolean(pdfUrl);
 
   return (
     <section
@@ -1679,38 +1682,25 @@ function PreviewPanel({
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 md:px-4 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <button
-            onClick={compile}
-            disabled={isCompiling || isEngineReady === false}
+            onClick={onCompile}
+            disabled={isCompiling}
             className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition disabled:opacity-60"
           >
             <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
-            {isCompiling ? "Compiling…" : "Recompile"}
+            {isCompiling ? "Compiling…" : "Compile"}
           </button>
-          {isEngineReady === false && (
-            <span className="font-mono text-[10px] text-amber-600">Engine not installed</span>
-          )}
-          {compileError && !isCompiling && (
-            <button
-              type="button"
-              onClick={() => setShowLog((v) => !v)}
-              className="font-mono text-[10px] text-destructive hover:underline"
-            >
-              Error — view log
-            </button>
-          )}
+          <span className="font-mono text-[10px] text-muted-foreground">01 of 01</span>
         </div>
         <div className="flex items-center gap-1">
-          {!usePdf && (
-            <select
-              value={zoom}
-              onChange={(e) => onZoomChange(Number(e.target.value))}
-              className="rounded-md bg-transparent px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary focus:outline-none"
-            >
-              <option value={75}>75%</option>
-              <option value={100}>Zoom to fit</option>
-              <option value={125}>125%</option>
-            </select>
-          )}
+          <select
+            value={zoom}
+            onChange={(e) => onZoomChange(Number(e.target.value))}
+            className="rounded-md bg-transparent px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary focus:outline-none"
+          >
+            <option value={75}>75%</option>
+            <option value={100}>Zoom to fit</option>
+            <option value={125}>125%</option>
+          </select>
           <IconBtn sm>
             <Download className="h-3.5 w-3.5" />
           </IconBtn>
@@ -1722,81 +1712,28 @@ function PreviewPanel({
         </div>
       </div>
 
-      {showLog && compileLog && (
-        <pre className="max-h-32 shrink-0 overflow-auto border-b border-border bg-muted/50 p-2 font-mono text-[10px] text-muted-foreground">
-          {compileLog.slice(-4000)}
-        </pre>
-      )}
-
       <div
         ref={viewportRef}
         className="preview-viewport soft-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-4 md:p-5 lg:p-7"
       >
-        {isEngineReady === false && (
-          <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p className="font-medium">LaTeX engine chưa được cài</p>
-            <p className="mt-1 text-xs opacity-80">
-              Chạy <code className="rounded bg-amber-100 px-1">npm run download:tex-assets</code> trong thư mục frontend để bật preview PDF giống Overleaf.
-            </p>
-          </div>
-        )}
-
-        {usePdf ? (
-          <div className="relative">
-            {isCompiling && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[1px]">
-                <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs shadow-sm">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
-                  Recompiling PDF…
-                </div>
-              </div>
-            )}
-            <div
-              className="preview-pdf-frame mx-auto overflow-hidden rounded-lg border border-border/40 bg-white shadow-[0_8px_32px_-12px_rgba(15,23,42,0.15)]"
-              style={{
-                width: zoom === 100 ? "100%" : `${zoom}%`,
-                maxWidth: "100%",
-                minHeight: "min(100%, 900px)",
-              }}
-            >
-              <iframe
-                src={pdfUrl ?? undefined}
-                title="PDF preview"
-                className="block h-[min(85vh,1100px)] w-full border-0"
-              />
-            </div>
-          </div>
-        ) : isCompiling || isEngineReady === null ? (
-          <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
-            <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-            <p>{isEngineReady === null ? "Checking LaTeX engine…" : "Compiling PDF (first run may take ~30s)…"}</p>
-          </div>
-        ) : (
-          <PreviewDocument latex={latex} assets={assets} scale={effectiveScale} />
-        )}
+        <PreviewDocument latex={latex} assets={assets} scale={effectiveScale} />
       </div>
 
       <div className="flex h-9 shrink-0 items-center justify-center gap-2 border-t border-border bg-card/80">
-        {!usePdf && (
-          <>
-            <IconBtn sm>
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </IconBtn>
-            <IconBtn sm>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </IconBtn>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <IconBtn sm onClick={() => onZoomChange(Math.max(50, zoom - 25))}>
-              <ZoomOut className="h-3.5 w-3.5" />
-            </IconBtn>
-            <span className="font-mono text-[10px] text-muted-foreground w-8 text-center">
-              {displayZoom}%
-            </span>
-            <IconBtn sm onClick={() => onZoomChange(Math.min(200, zoom + 25))}>
-              <ZoomIn className="h-3.5 w-3.5" />
-            </IconBtn>
-          </>
-        )}
+        <IconBtn sm>
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </IconBtn>
+        <IconBtn sm>
+          <ChevronRight className="h-3.5 w-3.5" />
+        </IconBtn>
+        <div className="mx-1 h-4 w-px bg-border" />
+        <IconBtn sm onClick={() => onZoomChange(Math.max(50, zoom - 25))}>
+          <ZoomOut className="h-3.5 w-3.5" />
+        </IconBtn>
+        <span className="font-mono text-[10px] text-muted-foreground w-8 text-center">{displayZoom}%</span>
+        <IconBtn sm onClick={() => onZoomChange(Math.min(200, zoom + 25))}>
+          <ZoomIn className="h-3.5 w-3.5" />
+        </IconBtn>
       </div>
     </section>
   );

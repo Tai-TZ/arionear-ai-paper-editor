@@ -20,36 +20,9 @@ from src.services.parser.latex import (
 from src.services.prompts import get_prompt
 from src.services.sessions import session_store
 
-STYLE_TASK_RE = re.compile(
-    r"(cải thiện|improve|style|grammar|văn phong|ngữ pháp|rewrite|chỉnh\s*sửa|polish|"
-    r"biên\s*tập|chuyên\s*nghiệp|professional|"
-    r"sửa\s*(file|bài|văn|bản|thảo|cho)|"
-    r"\bsửa\b)",
-    re.IGNORECASE,
-)
-FILE_EDIT_RE = re.compile(
-    r"(sửa\s*file|sửa\s*bài|sửa\s*văn|sửa\s*bản|sửa\s*thảo|toàn\s*bộ|cả\s*bài|"
-    r"main\.tex|whole\s*document|entire\s*(file|document|manuscript)|"
-    r"vào\s*(file|bài|latex|main\.tex))",
-    re.IGNORECASE,
-)
-EDIT_TASK_RE = re.compile(
-    r"(thêm|ghi|chèn|insert|add|write|put|điền|cập\s*nật|"
-    r"thay\s*(thế|đổi)|thay\s+.*\b(author|title|tên)\b|"
-    r"vào\s*(file|bài|latex|main\.tex)|"
-    r"in\s*(file|the\s*file|latex|main\.tex))",
-    re.IGNORECASE,
-)
-STRUCTURE_TASK_RE = re.compile(
-    r"(cấu trúc|structure|section|outline|bố cục|imrad)",
-    re.IGNORECASE,
-)
-CITATION_TASK_RE = re.compile(
-    r"(citation|trích dẫn|reference|bibliography|verify)",
-    re.IGNORECASE,
-)
-TEMPLATE_TASK_RE = re.compile(
-    r"(sườn|khung bài|khung\s|template|skeleton|bài mẫu|mẫu bài|soạn sườn|tạo sườn|làm sườn|framework|imrad template|outline bài)",
+# Kept for prepare_style_target fallback when router scope is missing
+_FILE_SCOPE_RE = re.compile(
+    r"(toàn\s*bộ|cả\s*bài|main\.tex|whole\s*document|entire\s*(file|document|manuscript))",
     re.IGNORECASE,
 )
 
@@ -67,9 +40,10 @@ def prepare_style_target(state: AgentState, query: str = "") -> dict:
     selection = (state.get("selection") or "").strip()
     latex = (state.get("latex") or "").strip()
     query = query or state.get("query", "")
-    use_full_document = bool(FILE_EDIT_RE.search(query)) or (not selection and bool(latex))
+    scope = state.get("apply_mode") or "document"
+    use_full_document = scope == "document" or _FILE_SCOPE_RE.search(query) or (not selection and bool(latex))
 
-    if selection and not FILE_EDIT_RE.search(query):
+    if selection and scope == "selection":
         return {
             **state,
             "original_text": selection,
@@ -98,22 +72,23 @@ def prepare_style_target(state: AgentState, query: str = "") -> dict:
 
 
 async def route_node(state: AgentState) -> dict:
+    from src.services.intent_router import classify_intent
+
     task = state.get("task", "chat")
     query = state.get("query", "")
 
-    if not task or task == "chat":
-        if TEMPLATE_TASK_RE.search(query):
-            task = "template"
-        elif EDIT_TASK_RE.search(query):
-            task = "edit"
-        elif STYLE_TASK_RE.search(query):
-            task = "style"
-        elif STRUCTURE_TASK_RE.search(query):
-            task = "structure"
-        elif CITATION_TASK_RE.search(query):
-            task = "citation"
+    if task and task != "chat":
+        return {"task": task}
 
-    return {"task": task}
+    intent = await classify_intent(
+        query,
+        has_latex=bool((state.get("latex") or "").strip()),
+        has_selection=bool((state.get("selection") or "").strip()),
+        explicit_task=task if task != "chat" else None,
+        provider=_provider(state),
+        model=_model(state),
+    )
+    return {"task": intent.action, "apply_mode": intent.scope}
 
 
 async def parse_node(state: AgentState) -> dict:
@@ -446,20 +421,10 @@ async def chat_node(state: AgentState) -> dict:
     )
     text = (response.content or "").strip()
 
-    result: dict = {
+    return {
         "response": text,
         "analysis": "Chat response generated.",
     }
-
-    if STYLE_TASK_RE.search(query) and selection:
-        style_result = await style_node({**state, "task": "style"})
-        result.update(style_result)
-        if style_result.get("suggestion"):
-            result["response"] = (
-                f"{text}\n\n---\nGợi ý chỉnh sửa:\n{style_result['suggestion']}"
-            )
-
-    return result
 
 
 async def respond_node(state: AgentState) -> dict:

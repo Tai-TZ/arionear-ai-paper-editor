@@ -29,4 +29,5 @@ class AgentState(TypedDict, total=False):
     analysis: str
     response: str
     error: str
+    apply_mode: str
     metadata: dict
