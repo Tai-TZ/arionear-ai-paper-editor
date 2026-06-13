@@ -8,7 +8,6 @@ import {
   ChevronRight,
   ZoomIn,
   ZoomOut,
-  Sparkles,
   ShieldCheck,
   ArrowLeft,
   Plus,
@@ -19,31 +18,24 @@ import {
   ChevronUp,
   MessageSquare,
   FolderOpen,
-  Send,
-  Paperclip,
-  Mic,
-  Minimize2,
   Settings,
   X,
   HelpCircle,
+  Undo2,
+  Redo2,
   Wrench,
 } from "lucide-react";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 import {
   addProjectAssets,
   getProject,
   isImageAssetFile,
   readFileAsDataUrl,
   resolveProjectAsset,
-  SAMPLE_LATEX,
   updateProject,
   type ProjectAsset,
 } from "@/lib/project-store";
 import {
+  formatSectionLabel,
   parseLatexPreview,
   renderPreviewParagraph,
 } from "@/lib/latex-preview";
@@ -56,8 +48,23 @@ import {
   type ProviderInfo,
 } from "@/lib/api/academic";
 import { citationErrorMessage } from "@/lib/api/api-errors";
+import {
+  arioAvatar,
+  ChatOverlay,
+  ChatMessages,
+  ChatInput,
+  type ChatMessage,
+} from "@/components/chat-overlay";
 import { SuggestionPanel } from "@/components/suggestion-panel";
 import { LatexDiffEditor } from "@/components/latex-diff-editor";
+import { LatexCodeEditor } from "@/components/latex-code-editor";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  EditorEntrySplash,
+} from "@/components/editor-entry-splash";
+import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
+import { useLatexHistory } from "@/lib/use-latex-history";
+import { useLatexPdfPreview } from "@/lib/use-latex-pdf-preview";
 
 type EditorSearch = {
   projectId?: string;
@@ -86,13 +93,6 @@ const today = new Date().toLocaleDateString("en-US", {
   day: "numeric",
 });
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-  activities?: string[];
-  reasoning?: string;
-  isStreaming?: boolean;
-};
 type MobileTab = "files" | "editor" | "preview";
 
 type PendingSuggestion = {
@@ -121,7 +121,6 @@ const PROJECT_FILES = [
 const OUTLINE_SECTIONS = ["Abstract", "Introduction", "Methods", "Results", "Conclusion"];
 
 const PREVIEW_PAGE_WIDTH = 480;
-const CHAT_DOCK_COLLAPSED_H = 40;
 
 type ToolsTab = "info" | "versions" | "citations";
 
@@ -244,39 +243,25 @@ function EditorPage() {
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [projectName] = useState(() => {
-    if (projectId) {
-      const project = getProject(projectId);
-      if (project) return project.name;
-    }
-    return "Untitled Project";
-  });
-  const [latex, setLatex] = useState(() => {
-    if (projectId) {
-      const project = getProject(projectId);
-      if (project) return project.latex;
-    }
-    return SAMPLE_LATEX;
-  });
-  const [savedLatex, setSavedLatex] = useState(() => {
-    if (projectId) {
-      const project = getProject(projectId);
-      if (project) return project.latex;
-    }
-    return SAMPLE_LATEX;
-  });
+  const [bootState, setBootState] = useState<"loading" | "ready">("loading");
+  const [splashPhase, setSplashPhase] = useState<"visible" | "exiting" | "hidden">("visible");
+  const [projectName, setProjectName] = useState("");
+  const {
+    latex,
+    setLatex,
+    resetHistory,
+    recordNow,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useLatexHistory("");
+  const [savedLatex, setSavedLatex] = useState("");
   const isDirty = latex !== savedLatex;
-  const [assets, setAssets] = useState<ProjectAsset[]>(() => {
-    if (projectId) {
-      const project = getProject(projectId);
-      if (project?.assets) return project.assets;
-    }
-    return [];
-  });
+  const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [chatInput, setChatInput] = useState("");
-  const [chatOpen, setChatOpen] = useState(true);
-  const [isCompiling, setIsCompiling] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
@@ -296,10 +281,30 @@ function EditorPage() {
       navigate({ to: "/projects", replace: true });
       return;
     }
-    if (!getProject(projectId)) {
+    const project = getProject(projectId);
+    if (!project) {
       navigate({ to: "/projects", replace: true });
+      return;
     }
-  }, [projectId, navigate]);
+    setProjectName(project.name);
+    resetHistory(project.latex);
+    setSavedLatex(project.latex);
+    setAssets(project.assets ?? []);
+    setBootState("ready");
+  }, [projectId, navigate, resetHistory]);
+
+  useEffect(() => {
+    if (bootState !== "ready") return;
+    const exitTimer = window.setTimeout(() => setSplashPhase("exiting"), 160);
+    const hideTimer = window.setTimeout(() => setSplashPhase("hidden"), 560);
+    return () => {
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [bootState]);
+
+  const showSplash = splashPhase !== "hidden";
+  const showEditor = bootState === "ready";
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
@@ -313,18 +318,29 @@ function EditorPage() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         handleSave();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleSave]);
+  }, [handleSave, undo, redo]);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (bootState !== "ready" || !projectId) return;
     syncSession(projectId, projectName, latex).catch(() => {});
-  }, [projectId, projectName, latex]);
+  }, [bootState, projectId, projectName, latex]);
 
-  useEffect(() => {
+  const loadProviders = useCallback(() => {
     fetchProviders()
       .then((data) => {
         setProviders(data.providers);
@@ -334,6 +350,10 @@ function EditorPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
   useEffect(() => {
     if (chatLoading) {
@@ -350,7 +370,7 @@ function EditorPage() {
 
     if (texFile) {
       const text = await texFile.text();
-      setLatex(text);
+      recordNow(text);
     }
 
     if (imageFiles.length && projectId) {
@@ -378,6 +398,7 @@ function EditorPage() {
   const handleSend = async () => {
     const text = chatInput.trim();
     if (!text || chatLoading || !projectId) return;
+    setChatOpen(true);
     chatAbortRef.current?.abort();
     const abort = new AbortController();
     chatAbortRef.current = abort;
@@ -480,13 +501,15 @@ function EditorPage() {
   const handleAcceptSuggestion = () => {
     if (!pendingSuggestion) return;
     const { originalText, suggestion, applyMode } = pendingSuggestion;
+    let next = latex;
     if (applyMode === "document") {
-      setLatex(suggestion);
+      next = suggestion;
     } else if (latex.includes(originalText)) {
-      setLatex(latex.replace(originalText, suggestion));
+      next = latex.replace(originalText, suggestion);
     } else {
-      setLatex(suggestion);
+      next = suggestion;
     }
+    recordNow(next);
     setPendingSuggestion(null);
     setMessages((prev) => [
       ...prev,
@@ -500,11 +523,6 @@ function EditorPage() {
       ...prev,
       { role: "assistant", content: "Đã từ chối gợi ý. Bản thảo gốc không thay đổi." },
     ]);
-  };
-
-  const handleCompile = () => {
-    setIsCompiling(true);
-    setTimeout(() => setIsCompiling(false), 1200);
   };
 
   const chatProps = {
@@ -524,6 +542,13 @@ function EditorPage() {
       if (info) setLlmModel(info.default_model);
     },
     onModelChange: setLlmModel,
+    onRefreshProviders: loadProviders,
+    onOpenChat: () => setChatOpen(true),
+    onCloseChat: () => setChatOpen(false),
+    onUndo: undo,
+    onRedo: redo,
+    canUndo,
+    canRedo,
     pendingSuggestion,
     onAcceptSuggestion: handleAcceptSuggestion,
     onRejectSuggestion: handleRejectSuggestion,
@@ -532,6 +557,18 @@ function EditorPage() {
 
   return (
     <div className="editor-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground">
+      {showSplash && (
+        <EditorEntrySplash
+          exiting={splashPhase === "exiting"}
+          label={bootState === "loading" ? "Loading project…" : "Opening editor…"}
+        />
+      )}
+      {showEditor && (
+        <div
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden${
+            showSplash ? " invisible" : ""
+          }`}
+        >
       <ArionearMasthead className="hidden md:flex" />
       <MobileHeader
         projectName={projectName}
@@ -567,22 +604,20 @@ function EditorPage() {
           onUploadAsset={() => assetInputRef.current?.click()}
           isDirty={isDirty}
         />
-        <ResizablePanelGroup orientation="horizontal" className="min-w-0 flex-1">
-          <ResizablePanel defaultSize={58} minSize={28} className="min-w-0">
+        <EditorDesktopPanels
+          center={
             <CenterPanel
               latex={latex}
               onLatexChange={setLatex}
               onSelectionChange={setSelection}
               chatOpen={chatOpen}
-              onToggleChat={() => setChatOpen((v) => !v)}
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
               {...chatProps}
             />
-          </ResizablePanel>
-          <ResizableHandle className="editor-resize-handle" />
-          <ResizablePanel defaultSize={42} minSize={22} className="min-w-0">
-            {toolsOpen ? (
+          }
+          right={
+            toolsOpen ? (
               <ToolsPanel
                 latex={latex}
                 projectId={projectId ?? ""}
@@ -592,14 +627,12 @@ function EditorPage() {
               <PreviewPanel
                 latex={latex}
                 assets={assets}
-                isCompiling={isCompiling}
-                onCompile={handleCompile}
                 zoom={zoom}
                 onZoomChange={setZoom}
               />
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            )
+          }
+        />
       </div>
 
       {/* Mobile layout */}
@@ -628,8 +661,6 @@ function EditorPage() {
           <PreviewPanel
             latex={latex}
             assets={assets}
-            isCompiling={isCompiling}
-            onCompile={handleCompile}
             zoom={zoom}
             onZoomChange={setZoom}
             mobile
@@ -643,6 +674,8 @@ function EditorPage() {
       )}
 
       <StatusBar lineCount={latex.split("\n").length} className="hidden md:flex" />
+        </div>
+      )}
     </div>
   );
 }
@@ -735,9 +768,9 @@ function MobileBottomBar({ onOpenChat, isDirty = false }: { onOpenChat: () => vo
         </button>
         <button
           onClick={onOpenChat}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90"
+          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
-          <Sparkles className="h-4 w-4" />
+          <img src={arioAvatar} alt="Chat with Ario" className="h-6 w-6 object-contain" />
         </button>
       </div>
     </div>
@@ -830,6 +863,8 @@ function MobileChatSheet({
   onChatInputChange,
   onSend,
   chatEndRef,
+  chatLoading,
+  liveActivity,
 }: {
   onClose: () => void;
   messages: ChatMessage[];
@@ -837,6 +872,8 @@ function MobileChatSheet({
   onChatInputChange: (v: string) => void;
   onSend: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
+  chatLoading?: boolean;
+  liveActivity?: string | null;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col md:hidden">
@@ -848,9 +885,7 @@ function MobileChatSheet({
       <div className="mobile-chat-sheet relative mt-auto flex max-h-[88dvh] min-h-[50dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border/50 bg-card shadow-[0_-8px_40px_-8px_rgba(15,23,42,0.2)]">
         <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
+            <img src={arioAvatar} alt="" className="h-8 w-8 rounded-lg object-contain" />
             <span className="text-sm font-medium">Ario</span>
           </div>
           <button
@@ -861,14 +896,20 @@ function MobileChatSheet({
           </button>
         </div>
 
-        <ChatMessages messages={messages} chatEndRef={chatEndRef} />
+        <ChatMessages
+          messages={messages}
+          chatEndRef={chatEndRef}
+          chatLoading={chatLoading}
+          liveActivity={liveActivity}
+        />
 
         <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
           <ChatInput
             chatInput={chatInput}
             onChatInputChange={onChatInputChange}
             onSend={onSend}
-            placeholder="Ask anything about your manuscript..."
+            loading={chatLoading}
+            placeholder="Ask anything"
           />
         </div>
       </div>
@@ -1036,148 +1077,13 @@ function LatexEditor({
     );
   }
 
-  const lines = latex.split("\n");
-  const gutterRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const syncGutterScroll = () => {
-    if (gutterRef.current && textareaRef.current) {
-      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
-    }
-  };
-
   return (
-    <div
-      className={`latex-editor-shell flex min-h-0 overflow-hidden ${
-        fullHeight ? "h-full rounded-none border-0 shadow-none" : "flex-1 rounded-xl border border-border/50 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)]"
-      }`}
-    >
-      <div
-        ref={gutterRef}
-        className="latex-gutter shrink-0 overflow-hidden select-none py-4 pr-2 pl-3 md:pr-3 md:pl-4 text-right font-mono text-[11px] leading-[1.65]"
-      >
-        {lines.map((_, i) => (
-          <div key={i} className="latex-line-num">
-            {i + 1}
-          </div>
-        ))}
-      </div>
-      <textarea
-        ref={textareaRef}
-        value={latex}
-        onChange={(e) => onLatexChange(e.target.value)}
-        onSelect={() => {
-          const el = textareaRef.current;
-          if (el && onSelectionChange) {
-            onSelectionChange(el.value.slice(el.selectionStart, el.selectionEnd));
-          }
-        }}
-        onScroll={syncGutterScroll}
-        spellCheck={false}
-        className="latex-input soft-scrollbar min-h-0 flex-1 resize-none overflow-y-auto overflow-x-auto bg-transparent py-4 pr-4 md:pr-5 font-mono text-[12px] md:text-[13px] leading-[1.65] outline-none"
-      />
-    </div>
-  );
-}
-
-function ChatMessages({
-  messages,
-  chatEndRef,
-}: {
-  messages: ChatMessage[];
-  chatEndRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  return (
-    <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-4">
-      {messages.map((m, i) => (
-        <div
-          key={i}
-          className={`chat-message-row flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}
-        >
-          <div
-            className={`chat-bubble max-w-[88%] text-[13px] leading-relaxed ${
-              m.role === "user" ? "chat-bubble-user" : "chat-bubble-assistant"
-            }`}
-          >
-            {m.role === "assistant" && (m.activities?.length ?? 0) > 0 && (
-              <ul className="chat-activity-feed mb-2 space-y-0.5 border-b border-border/30 pb-2">
-                {m.activities!.map((line, j) => (
-                  <li
-                    key={j}
-                    className={`font-mono text-[10px] leading-snug text-muted-foreground ${
-                      m.isStreaming && j === m.activities!.length - 1 ? "chat-activity-live" : ""
-                    }`}
-                  >
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {m.role === "assistant" && m.reasoning && (
-              <p className="chat-reasoning-block mb-2 text-[11px] italic leading-snug text-muted-foreground/90">
-                {m.reasoning}
-                {m.isStreaming && !m.content && (
-                  <span className="chat-stream-cursor" aria-hidden />
-                )}
-              </p>
-            )}
-            {m.content}
-            {m.role === "assistant" && m.isStreaming && m.content && (
-              <span className="chat-stream-cursor" aria-hidden />
-            )}
-          </div>
-        </div>
-      ))}
-      <div ref={chatEndRef} />
-    </div>
-  );
-}
-
-function ChatInput({
-  chatInput,
-  onChatInputChange,
-  onSend,
-  placeholder,
-  disabled,
-}: {
-  chatInput: string;
-  onChatInputChange: (v: string) => void;
-  onSend: () => void;
-  placeholder: string;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="chat-input-shell">
-      <textarea
-        value={chatInput}
-        onChange={(e) => onChatInputChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSend();
-          }
-        }}
-        placeholder={placeholder}
-        rows={1}
-        className="chat-input-field"
-      />
-      <div className="chat-input-actions">
-        <IconBtn sm>
-          <Paperclip className="h-3.5 w-3.5" />
-        </IconBtn>
-        <IconBtn sm>
-          <Mic className="h-3.5 w-3.5" />
-        </IconBtn>
-        <button
-          onClick={onSend}
-          disabled={!chatInput.trim() || disabled}
-          className="chat-send-btn"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
+    <LatexCodeEditor
+      latex={latex}
+      onLatexChange={onLatexChange}
+      onSelectionChange={onSelectionChange}
+      fullHeight={fullHeight}
+    />
   );
 }
 
@@ -1190,7 +1096,8 @@ function CenterPanel({
   onChatInputChange,
   onSend,
   chatOpen,
-  onToggleChat,
+  onCloseChat,
+  onOpenChat,
   toolsOpen,
   onToggleTools,
   chatEndRef,
@@ -1201,9 +1108,14 @@ function CenterPanel({
   llmModel,
   onProviderChange,
   onModelChange,
+  onRefreshProviders,
   pendingSuggestion,
   onAcceptSuggestion,
   onRejectSuggestion,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   isDirty = false,
 }: {
   latex: string;
@@ -1214,7 +1126,8 @@ function CenterPanel({
   onChatInputChange: (v: string) => void;
   onSend: () => void;
   chatOpen: boolean;
-  onToggleChat: () => void;
+  onCloseChat: () => void;
+  onOpenChat: () => void;
   toolsOpen: boolean;
   onToggleTools: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
@@ -1226,35 +1139,51 @@ function CenterPanel({
   llmModel?: string;
   onProviderChange?: (p: LLMProvider) => void;
   onModelChange?: (m: string) => void;
+  onRefreshProviders?: () => void;
   pendingSuggestion?: PendingSuggestion | null;
   onAcceptSuggestion?: () => void;
   onRejectSuggestion?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [expandedH, setExpandedH] = useState(320);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const update = () => {
-      setExpandedH(Math.min(380, Math.max(200, Math.round(el.clientHeight * 0.38))));
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const [chatOverlayH, setChatOverlayH] = useState(52);
 
   return (
-    <section
-      ref={sectionRef}
-      className="flex h-full min-h-0 flex-col overflow-hidden min-w-0 bg-secondary/20"
-    >
+    <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary shadow-sm">
-          <FileText className="h-3 w-3" />
-          <span>main.tex</span>
-          {isDirty && <span className="file-dirty-mark">*</span>}
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="editor-file-tab flex items-center gap-2 rounded-lg border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+            <Avatar className="h-4 w-4 rounded-md">
+              <AvatarImage src={arioAvatar} alt="" className="object-cover" />
+              <AvatarFallback className="rounded-md text-[9px]">A</AvatarFallback>
+            </Avatar>
+            <span>main.tex</span>
+            {isDirty && <span className="file-dirty-mark">*</span>}
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="editor-history-btn"
+              aria-label="Undo (Ctrl+Z)"
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="editor-history-btn"
+              aria-label="Redo (Ctrl+Shift+Z)"
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <button
           onClick={onToggleTools}
@@ -1269,114 +1198,60 @@ function CenterPanel({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col p-3">
-        <LatexEditor
-          latex={latex}
-          onLatexChange={onLatexChange}
-          onSelectionChange={onSelectionChange}
-          reviewDiff={
-            pendingSuggestion
-              ? {
-                  original: pendingSuggestion.originalText,
-                  suggested: pendingSuggestion.suggestion,
-                }
-              : null
-          }
-        />
-      </div>
-
-      {pendingSuggestion && onAcceptSuggestion && onRejectSuggestion && (
-        <SuggestionPanel
-          originalText={pendingSuggestion.originalText}
-          suggestion={pendingSuggestion.suggestion}
-          diff={pendingSuggestion.diff}
-          flags={pendingSuggestion.flags}
-          applyMode={pendingSuggestion.applyMode}
-          onAccept={onAcceptSuggestion}
-          onReject={onRejectSuggestion}
-        />
-      )}
-
-      <div
-        className="chat-dock mx-3 mb-3 shrink-0"
-        data-open={chatOpen}
-        style={{ height: chatOpen ? expandedH : CHAT_DOCK_COLLAPSED_H }}
-      >
-        <button
-          type="button"
-          onClick={onToggleChat}
-          className="chat-dock-trigger"
-          aria-hidden={chatOpen}
-          tabIndex={chatOpen ? -1 : 0}
-        >
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span>Chat with Ario</span>
-        </button>
-
-        <div
-          className="chat-dock-panel"
-          aria-hidden={!chatOpen}
-        >
-          <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/40 px-4">
-            <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <span className="shrink-0">Ario</span>
-              {liveActivity && (
-                <span className="truncate font-mono text-[10px] font-normal text-muted-foreground chat-activity-live">
-                  {liveActivity}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {providers && providers.length > 0 && onProviderChange && onModelChange && (
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <select
-                    value={llmProvider}
-                    onChange={(e) => onProviderChange(e.target.value as LLMProvider)}
-                    className="h-7 rounded-md border border-border bg-background px-2 text-[10px]"
-                  >
-                    {providers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={llmModel}
-                    onChange={(e) => onModelChange(e.target.value)}
-                    className="h-7 max-w-[140px] rounded-md border border-border bg-background px-2 text-[10px]"
-                  >
-                    {(providers.find((p) => p.id === llmProvider)?.models ?? []).map((m) => (
-                      <option key={m} value={m}>
-                        {m.split("/").pop()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <IconBtn sm>
-                <RefreshCw className="h-3 w-3" />
-              </IconBtn>
-              <IconBtn sm onClick={onToggleChat}>
-                <Minimize2 className="h-3 w-3" />
-              </IconBtn>
-            </div>
-          </div>
-          <div className="chat-dock-body flex min-h-0 flex-1 flex-col">
-            <ChatMessages messages={messages} chatEndRef={chatEndRef} />
-            <div className="shrink-0 border-t border-border/40 p-3">
-              <ChatInput
-                chatInput={chatInput}
-                onChatInputChange={onChatInputChange}
-                onSend={onSend}
-                disabled={chatLoading}
-                placeholder="Hỏi Ario — ví dụ: cải thiện phần Introduction..."
-              />
-            </div>
-          </div>
+      <div className="editor-workspace relative flex min-h-0 flex-1 flex-col overflow-hidden w-full">
+        <div className="flex min-h-0 flex-1 w-full min-w-0">
+          <LatexEditor
+            latex={latex}
+            onLatexChange={onLatexChange}
+            onSelectionChange={onSelectionChange}
+            fullHeight
+            reviewDiff={
+              pendingSuggestion
+                ? {
+                    original: pendingSuggestion.originalText,
+                    suggested: pendingSuggestion.suggestion,
+                  }
+                : null
+            }
+          />
         </div>
+
+        {pendingSuggestion && onAcceptSuggestion && onRejectSuggestion && (
+          <div
+            className="pointer-events-auto absolute inset-x-3 z-30"
+            style={{ bottom: `calc(${chatOverlayH}px + 1.25rem)` }}
+          >
+            <SuggestionPanel
+              originalText={pendingSuggestion.originalText}
+              suggestion={pendingSuggestion.suggestion}
+              diff={pendingSuggestion.diff}
+              flags={pendingSuggestion.flags}
+              applyMode={pendingSuggestion.applyMode}
+              onAccept={onAcceptSuggestion}
+              onReject={onRejectSuggestion}
+            />
+          </div>
+        )}
+
+        <ChatOverlay
+          open={chatOpen}
+          onClose={onCloseChat}
+          onOpen={onOpenChat}
+          messages={messages}
+          chatInput={chatInput}
+          onChatInputChange={onChatInputChange}
+          onSend={onSend}
+          chatEndRef={chatEndRef}
+          chatLoading={chatLoading}
+          liveActivity={liveActivity}
+          providers={providers}
+          llmProvider={llmProvider}
+          llmModel={llmModel}
+          onProviderChange={onProviderChange}
+          onModelChange={onModelChange}
+          onHeightChange={setChatOverlayH}
+          onRefreshProviders={onRefreshProviders}
+        />
       </div>
     </section>
   );
@@ -1637,6 +1512,8 @@ function PreviewDocument({
   const preview = useMemo(() => parseLatexPreview(latex), [latex]);
   const previewFontClass =
     preview.fontProfile === "times" ? "preview-font-times" : "preview-font-latin-modern";
+  const previewLayoutClass =
+    preview.layout === "ieee" ? "preview-layout-ieee" : "preview-layout-article";
 
   useEffect(() => {
     const el = pageRef.current;
@@ -1662,7 +1539,9 @@ function PreviewDocument({
           transformOrigin: "top left",
         }}
       >
-        <div className={`preview-page-content px-10 py-12 text-gray-900 ${previewFontClass}`}>
+        <div
+          className={`preview-page-content px-10 py-12 text-gray-900 ${previewFontClass} ${previewLayoutClass}`}
+        >
           {preview.blocks.length === 0 ? (
             <p className="text-center text-sm text-gray-500">
               Upload or write LaTeX to see a live preview.
@@ -1674,41 +1553,48 @@ function PreviewDocument({
                   return (
                     <h1
                       key={`${block.type}-${index}`}
-                      className="preview-title text-center mb-1"
+                      className="preview-title preview-span-all text-center mb-1"
                     >
                       {block.text}
                     </h1>
                   );
                 case "author":
                   return (
-                    <p key={`${block.type}-${index}`} className="text-center mb-1">
+                    <p
+                      key={`${block.type}-${index}`}
+                      className="preview-author preview-span-all text-center mb-1 whitespace-pre-line"
+                    >
                       {block.text}
                     </p>
                   );
                 case "date":
                   return (
-                    <p key={`${block.type}-${index}`} className="text-center text-[0.85em] mb-8">
+                    <p
+                      key={`${block.type}-${index}`}
+                      className="preview-span-all text-center text-[0.85em] mb-8"
+                    >
                       {block.text}
                     </p>
                   );
                 case "abstract":
                   return (
-                    <p key={`${block.type}-${index}`} className="text-justify mb-4">
-                      <strong>Abstract.</strong> {renderPreviewParagraph(block.text)}
+                    <p
+                      key={`${block.type}-${index}`}
+                      className="preview-abstract preview-span-all text-justify mb-4"
+                    >
+                      <strong>Abstract</strong>—{renderPreviewParagraph(block.text)}
                     </p>
                   );
                 case "section":
                   return (
                     <h2 key={`${block.type}-${index}`} className="preview-section mt-6 mb-2">
-                      {block.numbered ? `${block.number} ` : ""}
-                      {block.title}
+                      {formatSectionLabel(block, preview.layout)}
                     </h2>
                   );
                 case "subsection":
                   return (
                     <h3 key={`${block.type}-${index}`} className="preview-subsection mt-4 mb-2">
-                      {block.numbered ? `${block.number}. ` : ""}
-                      {block.title}
+                      {formatSectionLabel(block, preview.layout)}
                     </h3>
                   );
                 case "figure":
@@ -1742,22 +1628,27 @@ function PreviewDocument({
 function PreviewPanel({
   latex,
   assets,
-  isCompiling,
-  onCompile,
   zoom,
   onZoomChange,
   mobile = false,
 }: {
   latex: string;
   assets: ProjectAsset[];
-  isCompiling: boolean;
-  onCompile: () => void;
   zoom: number;
   onZoomChange: (z: number) => void;
   mobile?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
+  const [showLog, setShowLog] = useState(false);
+  const {
+    pdfUrl,
+    isCompiling,
+    isEngineReady,
+    compileError,
+    compileLog,
+    compile,
+  } = useLatexPdfPreview(latex, assets);
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -1777,6 +1668,7 @@ function PreviewPanel({
 
   const effectiveScale = zoom === 100 ? fitScale : zoom / 100;
   const displayZoom = Math.round(effectiveScale * 100);
+  const usePdf = Boolean(pdfUrl);
 
   return (
     <section
@@ -1787,25 +1679,38 @@ function PreviewPanel({
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 md:px-4 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <button
-            onClick={onCompile}
-            disabled={isCompiling}
+            onClick={compile}
+            disabled={isCompiling || isEngineReady === false}
             className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition disabled:opacity-60"
           >
             <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
-            {isCompiling ? "Compiling…" : "Compile"}
+            {isCompiling ? "Compiling…" : "Recompile"}
           </button>
-          <span className="font-mono text-[10px] text-muted-foreground">01 of 01</span>
+          {isEngineReady === false && (
+            <span className="font-mono text-[10px] text-amber-600">Engine not installed</span>
+          )}
+          {compileError && !isCompiling && (
+            <button
+              type="button"
+              onClick={() => setShowLog((v) => !v)}
+              className="font-mono text-[10px] text-destructive hover:underline"
+            >
+              Error — view log
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
-          <select
-            value={zoom}
-            onChange={(e) => onZoomChange(Number(e.target.value))}
-            className="rounded-md bg-transparent px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary focus:outline-none"
-          >
-            <option value={75}>75%</option>
-            <option value={100}>Zoom to fit</option>
-            <option value={125}>125%</option>
-          </select>
+          {!usePdf && (
+            <select
+              value={zoom}
+              onChange={(e) => onZoomChange(Number(e.target.value))}
+              className="rounded-md bg-transparent px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary focus:outline-none"
+            >
+              <option value={75}>75%</option>
+              <option value={100}>Zoom to fit</option>
+              <option value={125}>125%</option>
+            </select>
+          )}
           <IconBtn sm>
             <Download className="h-3.5 w-3.5" />
           </IconBtn>
@@ -1817,28 +1722,81 @@ function PreviewPanel({
         </div>
       </div>
 
+      {showLog && compileLog && (
+        <pre className="max-h-32 shrink-0 overflow-auto border-b border-border bg-muted/50 p-2 font-mono text-[10px] text-muted-foreground">
+          {compileLog.slice(-4000)}
+        </pre>
+      )}
+
       <div
         ref={viewportRef}
         className="preview-viewport soft-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-4 md:p-5 lg:p-7"
       >
-        <PreviewDocument latex={latex} assets={assets} scale={effectiveScale} />
+        {isEngineReady === false && (
+          <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">LaTeX engine chưa được cài</p>
+            <p className="mt-1 text-xs opacity-80">
+              Chạy <code className="rounded bg-amber-100 px-1">npm run download:tex-assets</code> trong thư mục frontend để bật preview PDF giống Overleaf.
+            </p>
+          </div>
+        )}
+
+        {usePdf ? (
+          <div className="relative">
+            {isCompiling && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[1px]">
+                <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs shadow-sm">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                  Recompiling PDF…
+                </div>
+              </div>
+            )}
+            <div
+              className="preview-pdf-frame mx-auto overflow-hidden rounded-lg border border-border/40 bg-white shadow-[0_8px_32px_-12px_rgba(15,23,42,0.15)]"
+              style={{
+                width: zoom === 100 ? "100%" : `${zoom}%`,
+                maxWidth: "100%",
+                minHeight: "min(100%, 900px)",
+              }}
+            >
+              <iframe
+                src={pdfUrl ?? undefined}
+                title="PDF preview"
+                className="block h-[min(85vh,1100px)] w-full border-0"
+              />
+            </div>
+          </div>
+        ) : isCompiling || isEngineReady === null ? (
+          <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+            <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+            <p>{isEngineReady === null ? "Checking LaTeX engine…" : "Compiling PDF (first run may take ~30s)…"}</p>
+          </div>
+        ) : (
+          <PreviewDocument latex={latex} assets={assets} scale={effectiveScale} />
+        )}
       </div>
 
       <div className="flex h-9 shrink-0 items-center justify-center gap-2 border-t border-border bg-card/80">
-        <IconBtn sm>
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </IconBtn>
-        <IconBtn sm>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </IconBtn>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <IconBtn sm onClick={() => onZoomChange(Math.max(50, zoom - 25))}>
-          <ZoomOut className="h-3.5 w-3.5" />
-        </IconBtn>
-        <span className="font-mono text-[10px] text-muted-foreground w-8 text-center">{displayZoom}%</span>
-        <IconBtn sm onClick={() => onZoomChange(Math.min(200, zoom + 25))}>
-          <ZoomIn className="h-3.5 w-3.5" />
-        </IconBtn>
+        {!usePdf && (
+          <>
+            <IconBtn sm>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </IconBtn>
+            <IconBtn sm>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </IconBtn>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <IconBtn sm onClick={() => onZoomChange(Math.max(50, zoom - 25))}>
+              <ZoomOut className="h-3.5 w-3.5" />
+            </IconBtn>
+            <span className="font-mono text-[10px] text-muted-foreground w-8 text-center">
+              {displayZoom}%
+            </span>
+            <IconBtn sm onClick={() => onZoomChange(Math.min(200, zoom + 25))}>
+              <ZoomIn className="h-3.5 w-3.5" />
+            </IconBtn>
+          </>
+        )}
       </div>
     </section>
   );

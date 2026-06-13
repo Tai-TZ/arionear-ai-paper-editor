@@ -21,7 +21,23 @@ from src.services.prompts import get_prompt
 from src.services.sessions import session_store
 
 STYLE_TASK_RE = re.compile(
-    r"(cải thiện|improve|style|grammar|văn phong|ngữ pháp|rewrite|chỉnh sửa|polish)",
+    r"(cải thiện|improve|style|grammar|văn phong|ngữ pháp|rewrite|chỉnh\s*sửa|polish|"
+    r"biên\s*tập|chuyên\s*nghiệp|professional|"
+    r"sửa\s*(file|bài|văn|bản|thảo|cho)|"
+    r"\bsửa\b)",
+    re.IGNORECASE,
+)
+FILE_EDIT_RE = re.compile(
+    r"(sửa\s*file|sửa\s*bài|sửa\s*văn|sửa\s*bản|sửa\s*thảo|toàn\s*bộ|cả\s*bài|"
+    r"main\.tex|whole\s*document|entire\s*(file|document|manuscript)|"
+    r"vào\s*(file|bài|latex|main\.tex))",
+    re.IGNORECASE,
+)
+EDIT_TASK_RE = re.compile(
+    r"(thêm|ghi|chèn|insert|add|write|put|điền|cập\s*nật|"
+    r"thay\s*(thế|đổi)|thay\s+.*\b(author|title|tên)\b|"
+    r"vào\s*(file|bài|latex|main\.tex)|"
+    r"in\s*(file|the\s*file|latex|main\.tex))",
     re.IGNORECASE,
 )
 STRUCTURE_TASK_RE = re.compile(
@@ -46,6 +62,41 @@ def _model(state: AgentState):
     return state.get("llm_model") or None
 
 
+def prepare_style_target(state: AgentState, query: str = "") -> dict:
+    """Pick text to edit and apply_mode (selection vs full document)."""
+    selection = (state.get("selection") or "").strip()
+    latex = (state.get("latex") or "").strip()
+    query = query or state.get("query", "")
+    use_full_document = bool(FILE_EDIT_RE.search(query)) or (not selection and bool(latex))
+
+    if selection and not FILE_EDIT_RE.search(query):
+        return {
+            **state,
+            "original_text": selection,
+            "apply_mode": "selection",
+        }
+
+    if latex and use_full_document:
+        return {
+            **state,
+            "original_text": latex,
+            "apply_mode": "document",
+        }
+
+    sections = state.get("parsed_sections") or []
+    for sec in sections:
+        content = (sec.get("content") or "").strip()
+        if content:
+            return {
+                **state,
+                "original_text": content[:8000],
+                "apply_mode": "selection",
+                "section": sec.get("name", ""),
+            }
+
+    return state
+
+
 async def route_node(state: AgentState) -> dict:
     task = state.get("task", "chat")
     query = state.get("query", "")
@@ -53,6 +104,8 @@ async def route_node(state: AgentState) -> dict:
     if not task or task == "chat":
         if TEMPLATE_TASK_RE.search(query):
             task = "template"
+        elif EDIT_TASK_RE.search(query):
+            task = "edit"
         elif STYLE_TASK_RE.search(query):
             task = "style"
         elif STRUCTURE_TASK_RE.search(query):
@@ -80,7 +133,7 @@ async def parse_node(state: AgentState) -> dict:
     selection = state.get("selection", "").strip()
     original_text = selection or state.get("original_text", "")
 
-    if state.get("task") == "style" and not original_text and sections:
+    if state.get("task") in ("style", "edit") and not original_text and sections:
         for sec in sections:
             if sec.get("content"):
                 original_text = sec["content"][:2000]
@@ -95,18 +148,116 @@ async def parse_node(state: AgentState) -> dict:
     }
 
 
+def _strip_code_fences(text: str) -> str:
+    text = text.strip()
+    fence = re.match(r"^```(?:latex|tex)?\s*\n(.*)\n```\s*$", text, re.DOTALL | re.IGNORECASE)
+    if fence:
+        return fence.group(1).strip()
+    return text
+
+
+def prepare_edit_target(state: AgentState) -> dict:
+    """Full-document target for explicit edit requests."""
+    latex = (state.get("latex") or "").strip()
+    if latex:
+        return {**state, "original_text": latex, "apply_mode": "document"}
+    return prepare_style_target(state, state.get("query", ""))
+
+
+async def edit_node(state: AgentState) -> dict:
+    prepared = prepare_edit_target(state)
+    original = (prepared.get("original_text") or "").strip()
+    query = state.get("query", "").strip()
+    if not original:
+        return {"error": "No LaTeX source available to edit."}
+    if not query:
+        return {"error": "No edit instruction provided."}
+
+    system = get_prompt("edit", "system")
+    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.1)
+
+    messages = [
+        SystemMessage(content=system),
+        HumanMessage(
+            content=(
+                f"Edit request:\n{query}\n\n"
+                f"LaTeX source:\n{original}"
+            )
+        ),
+    ]
+    response = await llm.ainvoke(messages)
+    suggestion = _strip_code_fences((response.content or "").strip())
+
+    flags = check_integrity(original, suggestion, semantic_threshold=0)
+    diff = build_diff(original, suggestion) if suggestion else ""
+    metadata: dict = {}
+
+    session_id = prepared.get("session_id", "")
+    if session_id and suggestion and not has_blocking_flags(flags):
+        record = session_store.add_revision(
+            session_id,
+            prepared.get("section", ""),
+            original,
+            suggestion,
+        )
+        if record:
+            metadata["revision_id"] = record.id
+
+    if has_blocking_flags(flags):
+        return {
+            "original_text": original,
+            "suggestion": "",
+            "diff": "",
+            "integrity_flags": flags,
+            "response": "Không thể áp dụng chỉnh sửa an toàn — phát hiện thay đổi số liệu không được phép.",
+            "metadata": metadata,
+        }
+
+    if not suggestion or suggestion == original:
+        return {
+            "original_text": original,
+            "suggestion": "",
+            "diff": "",
+            "integrity_flags": flags,
+            "response": "Không phát hiện thay đổi nào trong bản thảo.",
+            "analysis": "No edit applied.",
+            "metadata": metadata,
+        }
+
+    return {
+        "original_text": original,
+        "suggestion": suggestion,
+        "diff": diff,
+        "integrity_flags": flags,
+        "analysis": "LaTeX edit completed.",
+        "apply_mode": "document",
+        "metadata": metadata,
+    }
+
+
 async def style_node(state: AgentState) -> dict:
-    original = state.get("original_text", "").strip()
+    prepared = prepare_style_target(state)
+    original = (prepared.get("original_text") or "").strip()
+    apply_mode = prepared.get("apply_mode", "selection")
     if not original:
         return {"error": "No text selected or provided for style editing."}
 
     settings = get_settings()
     system = get_prompt("style", "system")
-    llm = get_llm(provider=_provider(state), model=_model(state), temperature=0.2)
+    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.2)
 
     suggestion = ""
     flags: list[dict] = []
     max_retries = settings.max_style_retries
+
+    if apply_mode == "document":
+        user_content = (
+            "Revise this LaTeX manuscript to be more professional and polished. "
+            "Preserve all LaTeX commands, environments, labels, and structure:\n\n"
+            f"{original}"
+        )
+    else:
+        user_content = f"Revise this academic text:\n\n{original}"
 
     for attempt in range(max_retries + 1):
         extra = ""
@@ -118,7 +269,7 @@ async def style_node(state: AgentState) -> dict:
             )
         messages = [
             SystemMessage(content=system + extra),
-            HumanMessage(content=f"Revise this academic text:\n\n{original}"),
+            HumanMessage(content=user_content),
         ]
         response = await llm.ainvoke(messages)
         suggestion = (response.content or "").strip()
@@ -133,11 +284,11 @@ async def style_node(state: AgentState) -> dict:
     diff = build_diff(original, suggestion) if suggestion else ""
     metadata: dict = {}
 
-    session_id = state.get("session_id", "")
+    session_id = prepared.get("session_id", "")
     if session_id and suggestion and not has_blocking_flags(flags):
         record = session_store.add_revision(
             session_id,
-            state.get("section", ""),
+            prepared.get("section", ""),
             original,
             suggestion,
         )
@@ -160,7 +311,7 @@ async def style_node(state: AgentState) -> dict:
         "diff": diff,
         "integrity_flags": flags,
         "analysis": "Style enhancement completed.",
-        "apply_mode": "selection",
+        "apply_mode": apply_mode,
         "metadata": metadata,
     }
 
@@ -301,7 +452,7 @@ async def chat_node(state: AgentState) -> dict:
     }
 
     if STYLE_TASK_RE.search(query) and selection:
-        style_result = await style_node({**state, "original_text": selection, "task": "style"})
+        style_result = await style_node({**state, "task": "style"})
         result.update(style_result)
         if style_result.get("suggestion"):
             result["response"] = (
@@ -320,14 +471,15 @@ async def respond_node(state: AgentState) -> dict:
         return {"response": f"Lỗi: {error}"}
 
     task = state.get("task", "chat")
-    if task == "style" and state.get("suggestion"):
+    if task in ("style", "edit") and state.get("suggestion"):
         flags = state.get("integrity_flags", [])
         flag_note = ""
         if flags:
             flag_note = "\n\n⚠️ " + "; ".join(f["message"] for f in flags)
+        label = "chỉnh sửa" if task == "edit" else "cải thiện văn phong"
         return {
             "response": (
-                f"Đề xuất cải thiện văn phong (xem diff bên dưới, Accept/Reject để áp dụng):"
+                f"Đề xuất {label} (xem diff bên dưới, Accept/Reject để áp dụng):"
                 f"{flag_note}"
             )
         }

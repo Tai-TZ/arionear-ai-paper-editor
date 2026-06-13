@@ -8,10 +8,14 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 
 from src.agents.nodes.academic_nodes import (
     CITATION_TASK_RE,
+    EDIT_TASK_RE,
+    FILE_EDIT_RE,
     STRUCTURE_TASK_RE,
     STYLE_TASK_RE,
     TEMPLATE_TASK_RE,
     citation_node,
+    edit_node,
+    prepare_style_target,
     structure_node,
     style_node,
 )
@@ -43,6 +47,8 @@ def _detect_task(query: str, explicit: str | None) -> str:
         return explicit
     if TEMPLATE_TASK_RE.search(query):
         return "template"
+    if EDIT_TASK_RE.search(query):
+        return "edit"
     if STYLE_TASK_RE.search(query):
         return "style"
     if STRUCTURE_TASK_RE.search(query):
@@ -69,9 +75,12 @@ def _activity_for_task(
     sections: list[dict],
     cite_keys: list[str],
     selection: str,
+    latex: str = "",
 ) -> str:
     if task == "template":
         return "Soạn sườn bài IMRAD (Abstract → Conclusion)"
+    if task == "edit":
+        return "Chỉnh sửa trực tiếp main.tex — xem diff và Accept/Reject"
     if task == "structure" and sections:
         names = ", ".join(s["name"] for s in sections[:4])
         suffix = f" (+{len(sections) - 4} nữa)" if len(sections) > 4 else ""
@@ -80,6 +89,8 @@ def _activity_for_task(
         if selection.strip():
             words = len(selection.split())
             return f"Biên tập văn phong — đoạn đã chọn ({words} từ)"
+        if FILE_EDIT_RE.search(query) or latex:
+            return "Biên tập toàn bộ main.tex — xem diff và Accept/Reject"
         return "Biên tập văn phong học thuật"
     if task == "citation":
         n = len(cite_keys)
@@ -148,7 +159,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         task = _detect_task(request.message, request.task)
         yield _sse(
             "activity",
-            {"text": _activity_for_task(task, request.message, sections, cite_keys, request.selection)},
+            {"text": _activity_for_task(task, request.message, sections, cite_keys, request.selection, latex)},
         )
 
         state: AgentState = {
@@ -208,16 +219,24 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             done_payload["response"] = response_text
             done_payload["analysis"] = f"{AGENT_NAME} responded."
 
-            if STYLE_TASK_RE.search(request.message) and request.selection.strip():
-                yield _sse("activity", {"text": "So sánh bản gốc với bản biên tập"})
-                style_result = await style_node(
-                    {**state, "original_text": request.selection, "task": "style"}
-                )
-                done_payload.update(style_result)
-                if style_result.get("suggestion"):
+            if EDIT_TASK_RE.search(request.message):
+                yield _sse("activity", {"text": "So sánh bản gốc với bản chỉnh sửa"})
+                edit_result = await edit_node({**state, "task": "edit"})
+                done_payload.update(edit_result)
+                if edit_result.get("suggestion"):
                     done_payload["response"] = (
-                        f"{response_text}\n\n---\nGợi ý chỉnh sửa:\n{style_result['suggestion']}"
+                        "Ario đã chỉnh sửa main.tex. Xem diff (đỏ = cũ, xanh = mới) và nhấn Accept để áp dụng."
                     )
+            elif STYLE_TASK_RE.search(request.message):
+                prepared = prepare_style_target(state, request.message)
+                if prepared.get("original_text"):
+                    yield _sse("activity", {"text": "So sánh bản gốc với bản biên tập"})
+                    style_result = await style_node({**prepared, "task": "style"})
+                    done_payload.update(style_result)
+                    if style_result.get("suggestion"):
+                        done_payload["response"] = (
+                            "Ario đã biên tập bản thảo. Xem diff (đỏ = cũ, xanh = mới) và nhấn Accept để áp dụng."
+                        )
 
         elif task == "template":
             yield _sse("activity", {"text": f"{AGENT_NAME} · dựng khung IMRAD trong main.tex"})
@@ -228,15 +247,33 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 yield _sse("token", {"delta": piece})
             done_payload["response"] = respond
 
+        elif task == "edit":
+            yield _sse("activity", {"text": f"{AGENT_NAME} · chỉnh sửa main.tex"})
+            edit_result = await edit_node({**state, "task": "edit"})
+            done_payload.update(edit_result)
+            respond = edit_result.get("response") or ""
+            if edit_result.get("suggestion"):
+                respond = (
+                    "Ario đã chỉnh sửa main.tex. Xem diff (đỏ = cũ, xanh = mới) và nhấn Accept để áp dụng."
+                )
+            elif edit_result.get("error"):
+                respond = edit_result["error"]
+            for piece in _chunk_text(respond):
+                yield _sse("token", {"delta": piece})
+            done_payload["response"] = respond
+
         elif task == "style":
             yield _sse("activity", {"text": f"{AGENT_NAME} · biên tập văn phong"})
-            style_result = await style_node(state)
+            prepared = prepare_style_target(state, request.message)
+            style_result = await style_node({**prepared, "task": "style"})
             done_payload.update(style_result)
-            respond = style_result.get("response") or style_result.get("suggestion") or ""
-            if not respond and style_result.get("suggestion"):
+            respond = style_result.get("response") or ""
+            if style_result.get("suggestion"):
                 respond = (
-                    "Đề xuất cải thiện văn phong (xem diff bên dưới, Accept/Reject để áp dụng):"
+                    "Ario đã biên tập bản thảo. Xem diff (đỏ = cũ, xanh = mới) và nhấn Accept để áp dụng."
                 )
+            elif style_result.get("error"):
+                respond = style_result["error"]
             for piece in _chunk_text(respond):
                 yield _sse("token", {"delta": piece})
             done_payload["response"] = respond

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-TaskType = Literal["style", "structure", "logic", "citation", "template", "chat"]
+TaskType = Literal["style", "edit", "structure", "logic", "citation", "template", "chat"]
 
 
 class AgentState(TypedDict, total=False):

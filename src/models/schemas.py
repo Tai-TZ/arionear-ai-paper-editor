@@ -98,3 +98,26 @@ class ProviderInfo(BaseModel):
 class ProvidersResponse(BaseModel):
     default_provider: str
     providers: list[ProviderInfo]
+
+
+class CompileAssetFile(BaseModel):
+    name: str = Field(..., min_length=1, max_length=512)
+    content_base64: str = Field(..., min_length=1, max_length=50_000_000)
+
+
+class CompileRequest(BaseModel):
+    latex: str = Field(..., min_length=1, max_length=500_000)
+    assets: list[CompileAssetFile] = Field(default_factory=list)
+
+
+class CompileResponse(BaseModel):
+    success: bool
+    pdf_base64: str = ""
+    log: str = ""
+    error: str = ""
+    engine: str = ""
+
+
+class CompileStatusResponse(BaseModel):
+    available: bool
+    engine: str | None = None

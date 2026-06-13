@@ -50,6 +50,7 @@ node_modules/
 .next/
 out/
 .nuxt/
+frontend/public/core/busytex/
 
 # Build
 *.pyc

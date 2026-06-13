@@ -3,6 +3,7 @@ from langgraph.graph import END, StateGraph
 from src.agents.nodes.academic_nodes import (
     chat_node,
     citation_node,
+    edit_node,
     integrity_node,
     parse_node,
     respond_node,
@@ -19,6 +20,7 @@ def route_by_task(state: AgentState) -> str:
     task = state.get("task", "chat")
     mapping = {
         "style": "style",
+        "edit": "edit",
         "citation": "citation",
         "structure": "structure",
         "logic": "structure",
@@ -33,6 +35,7 @@ def build_graph():
     graph.add_node("route", route_node)
     graph.add_node("parse", parse_node)
     graph.add_node("style", style_node)
+    graph.add_node("edit", edit_node)
     graph.add_node("integrity", integrity_node)
     graph.add_node("citation", citation_node)
     graph.add_node("structure", structure_node)
@@ -44,6 +47,7 @@ def build_graph():
     graph.add_conditional_edges("parse", route_by_task)
 
     graph.add_edge("style", "integrity")
+    graph.add_edge("edit", "integrity")
     graph.add_edge("integrity", "respond")
     graph.add_edge("citation", "respond")
     graph.add_edge("structure", "respond")
