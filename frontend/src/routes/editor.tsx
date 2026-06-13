@@ -1223,6 +1223,8 @@ function PreviewDocument({
   const pageRef = useRef<HTMLDivElement>(null);
   const [pageHeight, setPageHeight] = useState(0);
   const preview = useMemo(() => parseLatexPreview(latex), [latex]);
+  const previewFontClass =
+    preview.fontProfile === "times" ? "preview-font-times" : "preview-font-latin-modern";
 
   useEffect(() => {
     const el = pageRef.current;
@@ -1248,7 +1250,7 @@ function PreviewDocument({
           transformOrigin: "top left",
         }}
       >
-        <div className="preview-page-content px-10 py-12 font-serif-prose text-[13px] leading-[1.7] text-gray-900">
+        <div className={`preview-page-content px-10 py-12 text-gray-900 ${previewFontClass}`}>
           {preview.blocks.length === 0 ? (
             <p className="text-center text-sm text-gray-500">
               Upload or write LaTeX to see a live preview.
@@ -1260,20 +1262,20 @@ function PreviewDocument({
                   return (
                     <h1
                       key={`${block.type}-${index}`}
-                      className="text-center text-xl font-bold mb-1 font-serif-display"
+                      className="preview-title text-center mb-1"
                     >
                       {block.text}
                     </h1>
                   );
                 case "author":
                   return (
-                    <p key={`${block.type}-${index}`} className="text-center text-sm text-gray-600 mb-1">
+                    <p key={`${block.type}-${index}`} className="text-center mb-1">
                       {block.text}
                     </p>
                   );
                 case "date":
                   return (
-                    <p key={`${block.type}-${index}`} className="text-center text-xs text-gray-500 mb-8">
+                    <p key={`${block.type}-${index}`} className="text-center text-[0.85em] mb-8">
                       {block.text}
                     </p>
                   );
@@ -1285,14 +1287,14 @@ function PreviewDocument({
                   );
                 case "section":
                   return (
-                    <h2 key={`${block.type}-${index}`} className="text-base font-bold mt-6 mb-2">
+                    <h2 key={`${block.type}-${index}`} className="preview-section mt-6 mb-2">
                       {block.numbered ? `${block.number} ` : ""}
                       {block.title}
                     </h2>
                   );
                 case "subsection":
                   return (
-                    <h3 key={`${block.type}-${index}`} className="text-sm font-semibold mt-4 mb-2">
+                    <h3 key={`${block.type}-${index}`} className="preview-subsection mt-4 mb-2">
                       {block.numbered ? `${block.number}. ` : ""}
                       {block.title}
                     </h3>
@@ -1303,7 +1305,7 @@ function PreviewDocument({
                   return (
                     <div
                       key={`${block.type}-${index}`}
-                      className="my-3 text-center font-mono text-sm text-gray-700"
+                      className="my-3 text-center font-latex-mono text-sm text-gray-700"
                     >
                       {block.text}
                     </div>

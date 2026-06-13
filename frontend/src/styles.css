@@ -55,6 +55,77 @@
   --font-serif-prose: 'Source Serif 4', 'Lora', Georgia, serif;
   --font-sans-ui: 'Inter', 'Helvetica Neue', sans-serif;
   --font-mono-data: 'JetBrains Mono', 'Courier New', monospace;
+  --font-latex: 'Latin Modern Roman', 'Computer Modern', 'CMU Serif', serif;
+  --font-latex-mono: 'Latin Modern Mono', 'Computer Modern Typewriter', monospace;
+  --font-latex-times: 'Times New Roman', 'Nimbus Roman No9 L', 'TeX Gyre Termes', Times, serif;
+  --font-latex-times-mono: 'Courier New', Courier, monospace;
+}
+
+/* LaTeX preview — Latin Modern (official CM web derivative used by LaTeX) */
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-regular-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-bold-webfont.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-italic-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-bolditalic-webfont.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Mono';
+  src: url('/fonts/lm/lmmono-regular-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Mono';
+  src: url('/fonts/lm/lmmono-italic-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* KaTeX Main fallback (same CM lineage) */
+@font-face {
+  font-family: 'Computer Modern';
+  src: url('/fonts/cm/KaTeX_Main-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Computer Modern';
+  src: url('/fonts/cm/KaTeX_Main-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Computer Modern Typewriter';
+  src: url('/fonts/cm/KaTeX_Typewriter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* ── Home / marketing: Arionear newsprint ── */
@@ -126,6 +197,8 @@
   .font-serif-prose { font-family: var(--font-serif-prose); }
   .font-sans-ui { font-family: var(--font-sans-ui); }
   .font-mono-data { font-family: var(--font-mono-data); }
+  .font-latex { font-family: var(--font-latex); }
+  .font-latex-mono { font-family: var(--font-latex-mono); }
 
   .newsprint-texture { position: relative; }
   .newsprint-texture::before {
@@ -530,13 +603,61 @@
 }
 
 .editor-shell .preview-page-content {
+  font-family: var(--font-latex);
+  font-size: 11pt;
+  line-height: 1.35;
   word-break: normal;
   overflow-wrap: normal;
   hyphens: none;
 }
 
+/* Override global h1/h2 Playfair — preview must use LaTeX serif only */
+.editor-shell .preview-page-content h1,
+.editor-shell .preview-page-content h2,
+.editor-shell .preview-page-content h3,
+.editor-shell .preview-page-content p,
+.editor-shell .preview-page-content strong,
+.editor-shell .preview-page-content em {
+  font-family: var(--font-latex);
+}
+
+.editor-shell .preview-page-content .preview-title {
+  font-size: 17pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.editor-shell .preview-page-content .preview-section {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.editor-shell .preview-page-content .preview-subsection {
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+/* IEEE / mathptmx / times — Times New Roman stack (Nimbus Roman on Linux) */
+.editor-shell .preview-page-content.preview-font-times,
+.editor-shell .preview-page-content.preview-font-times h1,
+.editor-shell .preview-page-content.preview-font-times h2,
+.editor-shell .preview-page-content.preview-font-times h3,
+.editor-shell .preview-page-content.preview-font-times p,
+.editor-shell .preview-page-content.preview-font-times strong,
+.editor-shell .preview-page-content.preview-font-times em {
+  font-family: var(--font-latex-times);
+}
+
+.editor-shell .preview-page-content.preview-font-times .preview-inline-code {
+  font-family: var(--font-latex-times-mono);
+}
+
+.editor-shell .preview-page-content.preview-font-times .preview-figure-caption {
+  font-family: var(--font-latex-times);
+}
+
 .editor-shell .preview-inline-code {
-  font-family: var(--font-mono-data);
+  font-family: var(--font-latex-mono);
   font-size: 0.92em;
   background: oklch(0.96 0.008 90);
   padding: 0 0.2em;
@@ -554,7 +675,7 @@
 }
 
 .editor-shell .preview-figure-caption {
-  font-family: var(--font-serif-prose);
+  font-family: var(--font-latex);
   line-height: 1.5;
 }
 
