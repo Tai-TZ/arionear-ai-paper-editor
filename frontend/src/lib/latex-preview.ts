@@ -11,9 +11,12 @@ export type PreviewBlock =
   | { type: "figure"; src?: string; caption?: string; number: number }
   | { type: "equation"; text: string };
 
+export type PreviewFontProfile = "latin-modern" | "times";
+
 export type ParsedLatexPreview = {
   blocks: PreviewBlock[];
   hasDocument: boolean;
+  fontProfile: PreviewFontProfile;
 };
 
 function stripComments(latex: string) {
@@ -58,9 +61,8 @@ function extractCommandValue(source: string, command: string) {
 function formatPreviewDate(raw: string | null) {
   if (!raw || raw === "\\today" || raw.includes("\\today")) {
     return new Date().toLocaleDateString("en-US", {
-      weekday: "short",
       year: "numeric",
-      month: "short",
+      month: "long",
       day: "numeric",
     });
   }
@@ -169,6 +171,25 @@ function parseHeading(line: string) {
   }
 
   return null;
+}
+
+/** Map LaTeX preamble to preview serif — CM default; IEEE/Times packages → Times. */
+export function detectPreviewFontProfile(latex: string): PreviewFontProfile {
+  const preamble = stripComments(latex).split("\\begin{document}")[0] ?? latex;
+
+  const usesIeee =
+    /\\documentclass(?:\[[^\]]*\])?\{IEEEtran\}/i.test(preamble) ||
+    /\\usepackage(?:\[[^\]]*\])?\{IEEEtran\}/i.test(preamble);
+
+  const usesTimes =
+    /\\usepackage(?:\[[^\]]*\])?\{times\}/.test(preamble) ||
+    /\\usepackage(?:\[[^\]]*\])?\{mathptmx\}/.test(preamble) ||
+    /\\usepackage(?:\[[^\]]*\])?\{newtxtext\}/.test(preamble) ||
+    /\\usepackage(?:\[[^\]]*\])?\{tgtermes\}/.test(preamble) ||
+    /\\usepackage(?:\[[^\]]*\])?\{ptm\}/.test(preamble);
+
+  if (usesIeee || usesTimes) return "times";
+  return "latin-modern";
 }
 
 export function parseLatexPreview(latex: string): ParsedLatexPreview {
@@ -291,7 +312,7 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
     });
   }
 
-  return { blocks, hasDocument };
+  return { blocks, hasDocument, fontProfile: detectPreviewFontProfile(source) };
 }
 
 let inlineKey = 0;

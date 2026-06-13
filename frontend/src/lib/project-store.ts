@@ -65,11 +65,19 @@ Adapter-based fine-tuning with contrastive warm-up is a practical recipe for low
 
 \\end{document}`;
 
-export const BLANK_LATEX = `\\documentclass{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[a4paper, margin=2.5cm]{geometry}
+export const BLANK_LATEX = `\\documentclass[11pt]{article}
+\\usepackage[margin=1in]{geometry}
 
-\\title{Untitled Manuscript}
+% Core packages
+\\usepackage{amsmath, amssymb}
+\\usepackage{tikz-cd}
+\\usepackage{multicol}
+
+% Paragraphs
+\\setlength{\\parindent}{0pt}
+\\setlength{\\parskip}{1\\baselineskip}
+
+\\title{Untitled}
 \\author{Author Name}
 \\date{\\today}
 
@@ -78,7 +86,6 @@ export const BLANK_LATEX = `\\documentclass{article}
 \\maketitle
 
 \\section{Introduction}
-Start writing your manuscript here.
 
 \\end{document}`;
 
