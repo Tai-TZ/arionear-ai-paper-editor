@@ -7,17 +7,16 @@ from typing import Any
 from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 
 from src.agents.nodes.academic_nodes import (
-    CITATION_TASK_RE,
-    STRUCTURE_TASK_RE,
-    STYLE_TASK_RE,
-    TEMPLATE_TASK_RE,
     citation_node,
+    edit_node,
+    prepare_style_target,
     structure_node,
     style_node,
 )
 from src.agents.state import AgentState
 from src.config import get_settings
 from src.models.schemas import ChatRequest
+from src.services.intent_router import classify_intent
 from src.services.llm import get_llm
 from src.services.parser.latex import (
     extract_cite_keys,
@@ -28,6 +27,8 @@ from src.services.sessions import session_store
 from src.services.template_latex import generate_template
 
 AGENT_NAME = "Ario"
+EDIT_DONE_MSG = "Đã cập nhật main.tex — xem diff và Accept/Reject."
+STYLE_DONE_MSG = "Đã biên tập — xem diff và Accept/Reject."
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
@@ -36,20 +37,6 @@ def _sse(event: str, data: dict[str, Any]) -> str:
 
 def _chunk_text(text: str, size: int = 1) -> list[str]:
     return [text[i : i + size] for i in range(0, len(text), size)]
-
-
-def _detect_task(query: str, explicit: str | None) -> str:
-    if explicit and explicit != "chat":
-        return explicit
-    if TEMPLATE_TASK_RE.search(query):
-        return "template"
-    if STYLE_TASK_RE.search(query):
-        return "style"
-    if STRUCTURE_TASK_RE.search(query):
-        return "structure"
-    if CITATION_TASK_RE.search(query):
-        return "citation"
-    return "chat"
 
 
 def _parse_manuscript(latex: str, session_id: str) -> tuple[str, list[dict], list[str]]:
@@ -65,30 +52,26 @@ def _parse_manuscript(latex: str, session_id: str) -> tuple[str, list[dict], lis
 
 def _activity_for_task(
     task: str,
-    query: str,
     sections: list[dict],
     cite_keys: list[str],
     selection: str,
 ) -> str:
     if task == "template":
-        return "Soạn sườn bài IMRAD (Abstract → Conclusion)"
+        return "Dựng khung IMRAD trong main.tex"
+    if task == "edit":
+        return "Sửa trực tiếp main.tex"
     if task == "structure" and sections:
         names = ", ".join(s["name"] for s in sections[:4])
         suffix = f" (+{len(sections) - 4} nữa)" if len(sections) > 4 else ""
-        return f"Rà soát cấu trúc {len(sections)} phần: {names}{suffix}"
+        return f"Phân tích cấu trúc — {len(sections)} phần: {names}{suffix}"
     if task == "style":
         if selection.strip():
-            words = len(selection.split())
-            return f"Biên tập văn phong — đoạn đã chọn ({words} từ)"
-        return "Biên tập văn phong học thuật"
+            return f"Biên tập đoạn đã chọn ({len(selection.split())} từ)"
+        return "Biên tập main.tex"
     if task == "citation":
         n = len(cite_keys)
-        return f"Tra cứu {n} trích dẫn qua arXiv, CrossRef, Semantic Scholar" if n else "Quét bản thảo tìm trích dẫn"
-    if selection.strip():
-        preview = query.strip()[:72] + ("…" if len(query) > 72 else "")
-        return f"Đọc vùng chọn ({len(selection)} ký tự) — «{preview}»"
-    preview = query.strip()[:96] + ("…" if len(query) > 96 else "")
-    return f"«{preview}»"
+        return f"Tra cứu {n} trích dẫn" if n else "Quét trích dẫn trong bản thảo"
+    return "Trả lời câu hỏi"
 
 
 async def _stream_llm_tokens(llm, messages: list) -> AsyncIterator[str]:
@@ -134,6 +117,8 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             request.latex_content,
             request.session_id or "",
         )
+        has_latex = bool(latex.strip())
+        has_selection = bool((request.selection or "").strip())
 
         yield _sse(
             "activity",
@@ -145,11 +130,17 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             },
         )
 
-        task = _detect_task(request.message, request.task)
-        yield _sse(
-            "activity",
-            {"text": _activity_for_task(task, request.message, sections, cite_keys, request.selection)},
+        intent = await classify_intent(
+            request.message,
+            has_latex=has_latex,
+            has_selection=has_selection,
+            explicit_task=request.task,
+            provider=provider,
+            model=model,
         )
+        task = intent.action
+
+        yield _sse("activity", {"text": _activity_for_task(task, sections, cite_keys, request.selection)})
 
         state: AgentState = {
             "query": request.message,
@@ -161,10 +152,10 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "citation_keys": cite_keys,
             "llm_provider": provider,
             "llm_model": model or "",
+            "apply_mode": intent.scope,
         }
 
         llm = get_llm(provider=provider, model=model)
-        model_label = model or getattr(llm, "model_name", provider)
 
         done_payload: dict[str, Any] = {
             "task": task,
@@ -179,19 +170,6 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         }
 
         if task == "chat":
-            yield _sse("activity", {"text": f"{AGENT_NAME} · {model_label}"})
-
-            reasoning_prompt = get_prompt("reasoning", "system")
-            if reasoning_prompt:
-                async for delta in _stream_llm_tokens(
-                    llm,
-                    [
-                        SystemMessage(content=reasoning_prompt),
-                        HumanMessage(content=_build_chat_context(request.message, request.selection, latex)),
-                    ],
-                ):
-                    yield _sse("reasoning", {"delta": delta})
-
             chat_system = get_prompt("chat", "system")
             full_response: list[str] = []
             async for delta in _stream_llm_tokens(
@@ -203,46 +181,37 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             ):
                 full_response.append(delta)
                 yield _sse("token", {"delta": delta})
-
-            response_text = "".join(full_response).strip()
-            done_payload["response"] = response_text
-            done_payload["analysis"] = f"{AGENT_NAME} responded."
-
-            if STYLE_TASK_RE.search(request.message) and request.selection.strip():
-                yield _sse("activity", {"text": "So sánh bản gốc với bản biên tập"})
-                style_result = await style_node(
-                    {**state, "original_text": request.selection, "task": "style"}
-                )
-                done_payload.update(style_result)
-                if style_result.get("suggestion"):
-                    done_payload["response"] = (
-                        f"{response_text}\n\n---\nGợi ý chỉnh sửa:\n{style_result['suggestion']}"
-                    )
+            done_payload["response"] = "".join(full_response).strip()
 
         elif task == "template":
-            yield _sse("activity", {"text": f"{AGENT_NAME} · dựng khung IMRAD trong main.tex"})
             template_result = await generate_template(state)
             done_payload.update(template_result)
-            respond = template_result.get("response", "")
-            for piece in _chunk_text(respond):
-                yield _sse("token", {"delta": piece})
+            respond = template_result.get("response") or EDIT_DONE_MSG
+            yield _sse("token", {"delta": respond})
+            done_payload["response"] = respond
+
+        elif task == "edit":
+            edit_result = await edit_node({**state, "task": "edit"})
+            done_payload.update(edit_result)
+            if edit_result.get("suggestion"):
+                respond = EDIT_DONE_MSG
+            else:
+                respond = edit_result.get("error") or edit_result.get("response") or "Không có thay đổi."
+            yield _sse("token", {"delta": respond})
             done_payload["response"] = respond
 
         elif task == "style":
-            yield _sse("activity", {"text": f"{AGENT_NAME} · biên tập văn phong"})
-            style_result = await style_node(state)
+            prepared = prepare_style_target(state, request.message)
+            style_result = await style_node({**prepared, "task": "style"})
             done_payload.update(style_result)
-            respond = style_result.get("response") or style_result.get("suggestion") or ""
-            if not respond and style_result.get("suggestion"):
-                respond = (
-                    "Đề xuất cải thiện văn phong (xem diff bên dưới, Accept/Reject để áp dụng):"
-                )
-            for piece in _chunk_text(respond):
-                yield _sse("token", {"delta": piece})
+            if style_result.get("suggestion"):
+                respond = STYLE_DONE_MSG
+            else:
+                respond = style_result.get("error") or style_result.get("response") or "Không có thay đổi."
+            yield _sse("token", {"delta": respond})
             done_payload["response"] = respond
 
         elif task == "structure":
-            yield _sse("activity", {"text": f"{AGENT_NAME} · phân tích cấu trúc"})
             structure_result = await structure_node(state)
             done_payload.update(structure_result)
             respond = structure_result.get("response", "")
@@ -254,8 +223,6 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             keys = cite_keys
             for i, key in enumerate(keys[:8], start=1):
                 yield _sse("activity", {"text": f"Tra cứu [{i}/{len(keys)}] `{key}`"})
-            if len(keys) > 8:
-                yield _sse("activity", {"text": f"Tiếp tục {len(keys) - 8} trích dẫn còn lại"})
             citation_result = await citation_node(state)
             done_payload.update(citation_result)
             respond = citation_result.get("response", "")

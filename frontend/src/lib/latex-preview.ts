@@ -12,15 +12,28 @@ export type PreviewBlock =
   | { type: "equation"; text: string };
 
 export type PreviewFontProfile = "latin-modern" | "times";
+export type PreviewLayout = "article" | "ieee";
 
 export type ParsedLatexPreview = {
   blocks: PreviewBlock[];
   hasDocument: boolean;
   fontProfile: PreviewFontProfile;
+  layout: PreviewLayout;
 };
 
 function stripComments(latex: string) {
   return latex.replace(/%.*$/gm, "");
+}
+
+function extractBalancedBracesContent(source: string, openIndex: number): string | null {
+  if (source[openIndex] !== "{") return null;
+  let depth = 0;
+  for (let j = openIndex; j < source.length; j += 1) {
+    if (source[j] === "{") depth += 1;
+    if (source[j] === "}") depth -= 1;
+    if (depth === 0) return source.slice(openIndex + 1, j);
+  }
+  return null;
 }
 
 function unescapeLatex(text: string) {
@@ -53,9 +66,14 @@ function unescapeLatex(text: string) {
 }
 
 function extractCommandValue(source: string, command: string) {
-  const re = new RegExp(`\\\\${command}\\*?\\{([^}]*)\\}`);
-  const match = source.match(re);
-  return match ? unescapeLatex(match[1]) : null;
+  const re = new RegExp(`\\\\${command}\\*?`);
+  const match = re.exec(source);
+  if (!match) return null;
+  let i = match.index + match[0].length;
+  while (i < source.length && /\s/.test(source[i])) i += 1;
+  if (source[i] !== "{") return null;
+  const inner = extractBalancedBracesContent(source, i);
+  return inner != null ? unescapeLatex(inner) : null;
 }
 
 function formatPreviewDate(raw: string | null) {
@@ -69,6 +87,43 @@ function formatPreviewDate(raw: string | null) {
   return unescapeLatex(raw.replace(/\\today/g, formatPreviewDate("\\today")));
 }
 
+function formatTabularBlock(block: string): string {
+  const inner = block
+    .replace(/\\begin\{tabular\*?\}\{[^}]*\}/, "")
+    .replace(/\\end\{tabular\*?\}/, "");
+  return inner
+    .split(/\\\\/)
+    .map((row) =>
+      row
+        .split("&")
+        .map((cell) => cleanInlineText(cell.trim()))
+        .filter(Boolean)
+        .join("   "),
+    )
+    .filter(Boolean)
+    .join("\n");
+}
+
+function cleanInlineText(text: string) {
+  return cleanBodyText(text).replace(/\n+/g, " ").trim();
+}
+
+function formatAuthorContent(raw: string): string {
+  let text = raw
+    .replace(/\\IEEEauthorblockN\{([^}]*)\}/g, (_, name: string) => `${cleanInlineText(name)}\n`)
+    .replace(/\\IEEEauthorblockA\{([^}]*)\}/g, (_, affil: string) => `${cleanInlineText(affil)}\n`)
+    .replace(/\\thanks\{[^}]*\}/g, "")
+    .replace(/\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\}/g, (block) => formatTabularBlock(block))
+    .replace(/\\and\b/g, "\n")
+    .replace(/\\$/g, "");
+
+  return cleanInlineText(text)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 function cleanBodyText(text: string) {
   return text
     .replace(/\\maketitle/g, "")
@@ -80,22 +135,27 @@ function cleanBodyText(text: string) {
     .replace(/\\ref\{[^}]*\}/g, "[ref]")
     .replace(/\\cite[p]?\{[^}]*\}/g, "[cite]")
     .replace(/\\footnote\{([^}]*)\}/g, " ($1)")
+    .replace(/\\thanks\{[^}]*\}/g, "")
+    .replace(/\\IEEEauthorblockN\{([^}]*)\}/g, "$1")
+    .replace(/\\IEEEauthorblockA\{([^}]*)\}/g, "$1")
     .replace(/\\includegraphics(?:\[[^\]]*\])?\{[^}]*\}/g, "")
     .replace(/\\begin\{figure\*?\}[\s\S]*?\\end\{figure\*?\}/g, "\n[Figure]\n")
     .replace(/\\begin\{table\*?\}[\s\S]*?\\end\{table\*?\}/g, "\n[Table]\n")
+    .replace(/\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\}/g, "\n")
+    .replace(/\\begin\{IEEEkeywords\}[\s\S]*?\\end\{IEEEkeywords\}/g, "")
     .replace(/\\begin\{(equation|align|gather|multline)\*?\}([\s\S]*?)\\end\{\1\*?\}/g, "\n[Equation]\n")
     .replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g, (_, items: string) =>
       items
         .split(/\\item/g)
         .slice(1)
-        .map((item) => `• ${unescapeLatex(item.trim())}`)
+        .map((item) => `• ${cleanInlineText(item.trim())}`)
         .join("\n"),
     )
     .replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g, (_, items: string) =>
       items
         .split(/\\item/g)
         .slice(1)
-        .map((item, i) => `${i + 1}. ${unescapeLatex(item.trim())}`)
+        .map((item, i) => `${i + 1}. ${cleanInlineText(item.trim())}`)
         .join("\n"),
     )
     .replace(/\\begin\{verbatim\}[\s\S]*?\\end\{verbatim\}/g, "")
@@ -151,26 +211,107 @@ function parseFigureInner(inner: string): ParsedFigure {
   };
 }
 
+function stripLatexFormatting(text: string): string {
+  let t = unescapeLatex(text);
+  for (let pass = 0; pass < 3; pass += 1) {
+    t = t
+      .replace(/\\textbf\{([^{}]*)\}/g, "$1")
+      .replace(/\\textit\{([^{}]*)\}/g, "$1")
+      .replace(/\\emph\{([^{}]*)\}/g, "$1")
+      .replace(/\\texttt\{([^{}]*)\}/g, "$1");
+  }
+  return t.replace(/\s+/g, " ").trim();
+}
+
 function parseHeading(line: string) {
-  const section = line.match(/^\\section\*?\{([^}]*)\}$/);
-  if (section) {
-    return {
-      type: "section" as const,
-      title: unescapeLatex(section[1]),
-      starred: line.includes("\\section*"),
-    };
+  const section = line.match(/^\\(section|subsection)\*?/);
+  if (!section) return null;
+
+  const cmd = section[1] as "section" | "subsection";
+  const braceStart = line.indexOf("{");
+  if (braceStart < 0) return null;
+
+  const titleRaw = extractBalancedBracesContent(line, braceStart);
+  if (titleRaw == null) return null;
+
+  return {
+    type: cmd,
+    title: stripLatexFormatting(titleRaw),
+    starred: line.includes(`\\${cmd}*`),
+  };
+}
+
+function readHeadingToken(body: string, start: number): { token: string; end: number } | null {
+  const match = body.slice(start).match(/^\\(section|subsection)\*?\{/);
+  if (!match) return null;
+
+  const braceStart = start + match[0].length - 1;
+  const content = extractBalancedBracesContent(body, braceStart);
+  if (content == null) return null;
+
+  const end = braceStart + content.length + 2;
+  return { token: body.slice(start, end), end };
+}
+
+function splitBodyTokens(body: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+
+  while (i < body.length) {
+    const marker = body.slice(i).match(/^<<FIGURE:\d+>>|^<<TABLE>>|^<<EQUATION>>/);
+    if (marker) {
+      tokens.push(marker[0]);
+      i += marker[0].length;
+      continue;
+    }
+
+    const heading = readHeadingToken(body, i);
+    if (heading) {
+      tokens.push(heading.token);
+      i = heading.end;
+      continue;
+    }
+
+    let j = i + 1;
+    while (j < body.length) {
+      if (body.slice(j).match(/^<<FIGURE:\d+>>|^<<TABLE>>|^<<EQUATION>>/)) break;
+      if (readHeadingToken(body, j)) break;
+      j += 1;
+    }
+
+    const chunk = body.slice(i, j).trim();
+    if (chunk) tokens.push(chunk);
+    i = j;
   }
 
-  const subsection = line.match(/^\\subsection\*?\{([^}]*)\}$/);
-  if (subsection) {
-    return {
-      type: "subsection" as const,
-      title: unescapeLatex(subsection[1]),
-      starred: line.includes("\\subsection*"),
-    };
-  }
+  return tokens;
+}
 
-  return null;
+function toRomanNumeral(value: number): string {
+  const numerals: [number, string][] = [
+    [1000, "M"],
+    [900, "CM"],
+    [500, "D"],
+    [400, "CD"],
+    [100, "C"],
+    [90, "XC"],
+    [50, "L"],
+    [40, "XL"],
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let n = value;
+  let out = "";
+  for (const [num, sym] of numerals) {
+    while (n >= num) {
+      out += sym;
+      n -= num;
+    }
+  }
+  return out;
 }
 
 /** Map LaTeX preamble to preview serif — CM default; IEEE/Times packages → Times. */
@@ -192,20 +333,27 @@ export function detectPreviewFontProfile(latex: string): PreviewFontProfile {
   return "latin-modern";
 }
 
+export function detectPreviewLayout(latex: string): PreviewLayout {
+  const preamble = stripComments(latex).split("\\begin{document}")[0] ?? latex;
+  if (/\\documentclass(?:\[[^\]]*\])?\{IEEEtran\}/i.test(preamble)) return "ieee";
+  return "article";
+}
+
 export function parseLatexPreview(latex: string): ParsedLatexPreview {
   const source = stripComments(latex);
   const hasDocument = /\\begin\{document\}/.test(source);
   const preamble = source.split("\\begin{document}")[0] ?? source;
   const rawBody = source.split("\\begin{document}")[1]?.split("\\end{document}")[0] ?? source;
+  const layout = detectPreviewLayout(source);
 
   const blocks: PreviewBlock[] = [];
   const title = extractCommandValue(preamble + rawBody, "title");
-  const author = extractCommandValue(preamble + rawBody, "author");
+  const authorRaw = extractCommandValue(preamble + rawBody, "author");
   const dateRaw = extractCommandValue(preamble + rawBody, "date");
 
-  if (title) blocks.push({ type: "title", text: title });
-  if (author) blocks.push({ type: "author", text: author });
-  if (title || author || dateRaw) {
+  if (title) blocks.push({ type: "title", text: cleanInlineText(title) });
+  if (authorRaw) blocks.push({ type: "author", text: formatAuthorContent(authorRaw) });
+  if (title || authorRaw || dateRaw) {
     blocks.push({ type: "date", text: formatPreviewDate(dateRaw) });
   }
 
@@ -228,36 +376,35 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
   body = body
     .replace(/\\maketitle/g, "")
     .replace(/\\tableofcontents/g, "")
+    .replace(/\\begin\{IEEEkeywords\}[\s\S]*?\\end\{IEEEkeywords\}/g, "")
     .replace(/\\begin\{figure\*?\}([\s\S]*?)\\end\{figure\*?\}/g, (_, inner: string) =>
       markFigure(parseFigureInner(inner)),
     )
     .replace(/\\begin\{table\*?\}[\s\S]*?\\end\{table\*?\}/g, "\n<<TABLE>>\n")
+    .replace(/\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\}/g, "\n")
     .replace(/\\begin\{(equation|align|gather|multline)\*?\}[\s\S]*?\\end\{\1\*?\}/g, "\n<<EQUATION>>\n")
     .replace(/\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}/g, (_, src: string) =>
       markFigure({ src: unescapeLatex(src) }),
     )
     .replace(/\\epsfig\{([^}]*)\}/g, (_, args: string) => markFigure(parseFigureInner(`\\epsfig{${args}}`)));
 
-  const tokens = body
-    .split(
-      /(\\section\*?\{[^}]*\}|\\subsection\*?\{[^}]*\}|<<FIGURE:\d+>>|<<TABLE>>|<<EQUATION>>)/,
-    )
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const tokens = splitBodyTokens(body);
 
   let sectionNumber = 0;
   let subsectionNumber = 0;
   let renderedFigureNumber = 0;
 
   for (const token of tokens) {
-    const heading = parseHeading(token);
+    const heading = parseHeading(token.trim());
     if (heading) {
       if (heading.type === "section") {
         if (!heading.starred) sectionNumber += 1;
         subsectionNumber = 0;
+        const titleText =
+          layout === "ieee" ? heading.title.toUpperCase() : heading.title;
         blocks.push({
           type: "section",
-          title: heading.title,
+          title: titleText,
           numbered: !heading.starred,
           number: sectionNumber,
         });
@@ -312,7 +459,21 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
     });
   }
 
-  return { blocks, hasDocument, fontProfile: detectPreviewFontProfile(source) };
+  return { blocks, hasDocument, fontProfile: detectPreviewFontProfile(source), layout };
+}
+
+export function formatSectionLabel(
+  block: Extract<PreviewBlock, { type: "section" | "subsection" }>,
+  layout: PreviewLayout,
+): string {
+  if (!block.numbered) return block.title;
+  if (layout === "ieee" && block.type === "section") {
+    return `${toRomanNumeral(block.number)}. ${block.title}`;
+  }
+  if (block.type === "subsection") {
+    return `${block.number}. ${block.title}`;
+  }
+  return `${block.number} ${block.title}`;
 }
 
 let inlineKey = 0;

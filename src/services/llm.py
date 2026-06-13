@@ -132,6 +132,7 @@ def list_providers() -> list[dict]:
                 "default_model": settings.openrouter_default_model,
                 "models": [
                     settings.openrouter_default_model,
+                    "openai/gpt-4o-mini",
                     "anthropic/claude-sonnet-4",
                     "openai/gpt-4o",
                     "google/gemini-2.5-flash-preview",

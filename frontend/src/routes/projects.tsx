@@ -31,6 +31,7 @@ import {
   readFileAsDataUrl,
   type StoredProject,
 } from "@/lib/project-store";
+import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -61,6 +62,7 @@ function ProjectsPage() {
   );
 
   const openEditor = (projectId: string) => {
+    markEditorEntryTransition();
     navigate({ to: "/editor", search: { projectId } });
   };
 

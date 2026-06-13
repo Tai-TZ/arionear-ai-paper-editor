@@ -32,6 +32,15 @@ def test_extract_cite_keys():
     assert keys == ["smith2020", "jones2021"]
 
 
+def test_parse_intent_json():
+    from src.services.intent_router import parse_intent_payload
+
+    result = parse_intent_payload('{"action":"edit","scope":"document"}')
+    assert result is not None
+    assert result.action == "edit"
+    assert result.scope == "document"
+
+
 def test_imrad_template_adds_missing_sections():
     from src.services.template_latex import build_imrad_template
 
