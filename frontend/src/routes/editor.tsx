@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText,
   Search,
@@ -47,6 +47,17 @@ import {
   parseLatexPreview,
   renderPreviewParagraph,
 } from "@/lib/latex-preview";
+import {
+  fetchProviders,
+  streamChat,
+  syncSession,
+  verifyCitations,
+  type LLMProvider,
+  type ProviderInfo,
+} from "@/lib/api/academic";
+import { citationErrorMessage } from "@/lib/api/api-errors";
+import { SuggestionPanel } from "@/components/suggestion-panel";
+import { LatexDiffEditor } from "@/components/latex-diff-editor";
 
 type EditorSearch = {
   projectId?: string;
@@ -75,14 +86,29 @@ const today = new Date().toLocaleDateString("en-US", {
   day: "numeric",
 });
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  activities?: string[];
+  reasoning?: string;
+  isStreaming?: boolean;
+};
 type MobileTab = "files" | "editor" | "preview";
+
+type PendingSuggestion = {
+  originalText: string;
+  suggestion: string;
+  diff: string;
+  flags: { code: string; message: string; severity: string }[];
+  revisionId?: string;
+  applyMode?: "selection" | "document";
+};
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     role: "assistant",
     content:
-      "Xin chào! Tôi có thể giúp bạn cải thiện văn phong học thuật, cấu trúc bài báo, hoặc định dạng trích dẫn trong `main.tex`. Bạn muốn bắt đầu từ phần nào?",
+      "Xin chào, tôi là Ario — trợ lý biên tập học thuật của bạn. Tôi có thể giúp cải thiện văn phong, cấu trúc bài báo, hoặc định dạng trích dẫn trong bản thảo. Bạn muốn bắt đầu từ phần nào?",
   },
 ];
 
@@ -97,7 +123,7 @@ const OUTLINE_SECTIONS = ["Abstract", "Introduction", "Methods", "Results", "Con
 const PREVIEW_PAGE_WIDTH = 480;
 const CHAT_DOCK_COLLAPSED_H = 40;
 
-type ToolsTab = "info" | "versions";
+type ToolsTab = "info" | "versions" | "citations";
 
 type ProjectStats = {
   words: number;
@@ -232,6 +258,14 @@ function EditorPage() {
     }
     return SAMPLE_LATEX;
   });
+  const [savedLatex, setSavedLatex] = useState(() => {
+    if (projectId) {
+      const project = getProject(projectId);
+      if (project) return project.latex;
+    }
+    return SAMPLE_LATEX;
+  });
+  const isDirty = latex !== savedLatex;
   const [assets, setAssets] = useState<ProjectAsset[]>(() => {
     if (projectId) {
       const project = getProject(projectId);
@@ -245,6 +279,14 @@ function EditorPage() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [liveActivity, setLiveActivity] = useState<string | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
+  const [selection, setSelection] = useState("");
+  const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openai");
+  const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -259,10 +301,45 @@ function EditorPage() {
     }
   }, [projectId, navigate]);
 
-  useEffect(() => {
+  const handleSave = useCallback(() => {
     if (!projectId) return;
     updateProject(projectId, { latex });
-  }, [latex, projectId]);
+    setSavedLatex(latex);
+    syncSession(projectId, projectName, latex).catch(() => {});
+  }, [projectId, projectName, latex]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSave]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    syncSession(projectId, projectName, latex).catch(() => {});
+  }, [projectId, projectName, latex]);
+
+  useEffect(() => {
+    fetchProviders()
+      .then((data) => {
+        setProviders(data.providers);
+        setLlmProvider(data.default_provider);
+        const defaultP = data.providers.find((p) => p.id === data.default_provider);
+        if (defaultP) setLlmModel(defaultP.default_model);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (chatLoading) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, chatLoading]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -298,22 +375,131 @@ function EditorPage() {
     e.target.value = "";
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = chatInput.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    if (!text || chatLoading || !projectId) return;
+    chatAbortRef.current?.abort();
+    const abort = new AbortController();
+    chatAbortRef.current = abort;
+
+    const assistantIdx = messages.length + 1;
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: text },
+      {
+        role: "assistant",
+        content: "",
+        activities: [],
+        reasoning: "",
+        isStreaming: true,
+      },
+    ]);
     setChatInput("");
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
+    setChatLoading(true);
+    setLiveActivity(null);
+    setPendingSuggestion(null);
+
+    const patchAssistant = (updater: (msg: ChatMessage) => ChatMessage) => {
+      setMessages((prev) => {
+        const next = [...prev];
+        const msg = next[assistantIdx];
+        if (msg?.role === "assistant") {
+          next[assistantIdx] = updater(msg);
+        }
+        return next;
+      });
+    };
+
+    try {
+      await streamChat(
+        text,
         {
-          role: "assistant",
-          content:
-            "Tôi đã xem xét `main.tex`. Gợi ý: thay \"remains challenging because\" bằng \"remains challenging due to\" để văn phong học thuật hơn. Tôi không thêm kết quả hay trích dẫn mới — chỉ cải thiện cách diễn đạt. Bạn có muốn tôi áp dụng thay đổi này không?",
+          sessionId: projectId,
+          latexContent: latex,
+          selection,
+          llm_provider: llmProvider,
+          llm_model: llmModel || undefined,
         },
-      ]);
+        {
+          onActivity: (activityText) => {
+            setLiveActivity(activityText);
+            patchAssistant((msg) => {
+              const activities = [...(msg.activities ?? [])];
+              if (activities[activities.length - 1] !== activityText) {
+                activities.push(activityText);
+              }
+              return { ...msg, activities };
+            });
+          },
+          onReasoning: (delta) => {
+            patchAssistant((msg) => ({
+              ...msg,
+              reasoning: (msg.reasoning ?? "") + delta,
+            }));
+          },
+          onToken: (delta) => {
+            patchAssistant((msg) => ({
+              ...msg,
+              content: msg.content + delta,
+            }));
+          },
+          onDone: (result) => {
+            patchAssistant((msg) => ({
+              ...msg,
+              content: result.response || msg.content,
+              isStreaming: false,
+            }));
+            if (result.suggestion && result.original_text) {
+              setPendingSuggestion({
+                originalText: result.original_text,
+                suggestion: result.suggestion,
+                diff: result.diff ?? "",
+                flags: result.integrity_flags ?? [],
+                applyMode: result.apply_mode ?? "selection",
+              });
+            }
+          },
+          onError: (message) => {
+            patchAssistant((msg) => ({
+              ...msg,
+              content: message,
+              isStreaming: false,
+            }));
+          },
+        },
+        abort.signal,
+      );
+    } finally {
+      setChatLoading(false);
+      setLiveActivity(null);
+      chatAbortRef.current = null;
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 800);
+    }
+  };
+
+  const handleAcceptSuggestion = () => {
+    if (!pendingSuggestion) return;
+    const { originalText, suggestion, applyMode } = pendingSuggestion;
+    if (applyMode === "document") {
+      setLatex(suggestion);
+    } else if (latex.includes(originalText)) {
+      setLatex(latex.replace(originalText, suggestion));
+    } else {
+      setLatex(suggestion);
+    }
+    setPendingSuggestion(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file." },
+    ]);
+  };
+
+  const handleRejectSuggestion = () => {
+    setPendingSuggestion(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "Đã từ chối gợi ý. Bản thảo gốc không thay đổi." },
+    ]);
   };
 
   const handleCompile = () => {
@@ -327,6 +513,21 @@ function EditorPage() {
     onChatInputChange: setChatInput,
     onSend: handleSend,
     chatEndRef,
+    chatLoading,
+    liveActivity,
+    providers,
+    llmProvider,
+    llmModel,
+    onProviderChange: (p: LLMProvider) => {
+      setLlmProvider(p);
+      const info = providers.find((x) => x.id === p);
+      if (info) setLlmModel(info.default_model);
+    },
+    onModelChange: setLlmModel,
+    pendingSuggestion,
+    onAcceptSuggestion: handleAcceptSuggestion,
+    onRejectSuggestion: handleRejectSuggestion,
+    isDirty,
   };
 
   return (
@@ -364,12 +565,14 @@ function EditorPage() {
           onTabChange={setSidebarTab}
           onUpload={() => fileInputRef.current?.click()}
           onUploadAsset={() => assetInputRef.current?.click()}
+          isDirty={isDirty}
         />
         <ResizablePanelGroup orientation="horizontal" className="min-w-0 flex-1">
           <ResizablePanel defaultSize={58} minSize={28} className="min-w-0">
             <CenterPanel
               latex={latex}
               onLatexChange={setLatex}
+              onSelectionChange={setSelection}
               chatOpen={chatOpen}
               onToggleChat={() => setChatOpen((v) => !v)}
               toolsOpen={toolsOpen}
@@ -380,7 +583,11 @@ function EditorPage() {
           <ResizableHandle className="editor-resize-handle" />
           <ResizablePanel defaultSize={42} minSize={22} className="min-w-0">
             {toolsOpen ? (
-              <ToolsPanel latex={latex} onClose={() => setToolsOpen(false)} />
+              <ToolsPanel
+                latex={latex}
+                projectId={projectId ?? ""}
+                onClose={() => setToolsOpen(false)}
+              />
             ) : (
               <PreviewPanel
                 latex={latex}
@@ -398,11 +605,23 @@ function EditorPage() {
       {/* Mobile layout */}
       <div className="flex md:hidden flex-1 min-h-0 flex-col overflow-hidden">
         {mobileTab === "files" && (
-          <MobileFilesPanel onUpload={() => fileInputRef.current?.click()} />
+          <MobileFilesPanel onUpload={() => fileInputRef.current?.click()} isDirty={isDirty} />
         )}
         {mobileTab === "editor" && (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <LatexEditor latex={latex} onLatexChange={setLatex} fullHeight />
+            <LatexEditor
+              latex={latex}
+              onLatexChange={setLatex}
+              fullHeight
+              reviewDiff={
+                pendingSuggestion
+                  ? {
+                      original: pendingSuggestion.originalText,
+                      suggested: pendingSuggestion.suggestion,
+                    }
+                  : null
+              }
+            />
           </div>
         )}
         {mobileTab === "preview" && (
@@ -418,7 +637,7 @@ function EditorPage() {
         )}
       </div>
 
-      <MobileBottomBar onOpenChat={() => setMobileChatOpen(true)} />
+      <MobileBottomBar onOpenChat={() => setMobileChatOpen(true)} isDirty={isDirty} />
       {mobileChatOpen && (
         <MobileChatSheet onClose={() => setMobileChatOpen(false)} {...chatProps} />
       )}
@@ -501,12 +720,13 @@ function MobileTabBar({ tab, onChange }: { tab: MobileTab; onChange: (t: MobileT
   );
 }
 
-function MobileBottomBar({ onOpenChat }: { onOpenChat: () => void }) {
+function MobileBottomBar({ onOpenChat, isDirty = false }: { onOpenChat: () => void; isDirty?: boolean }) {
   return (
     <div className="flex md:hidden shrink-0 items-center justify-between border-t border-border/50 bg-card/95 px-3 py-2.5 backdrop-blur-sm safe-area-pb">
       <button className="flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-sm font-medium transition hover:bg-secondary">
         <FileText className="h-4 w-4 text-primary" />
         <span>main.tex</span>
+        {isDirty && <span className="file-dirty-mark">*</span>}
         <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
       </button>
       <div className="flex items-center gap-2">
@@ -524,7 +744,7 @@ function MobileBottomBar({ onOpenChat }: { onOpenChat: () => void }) {
   );
 }
 
-function MobileFilesPanel({ onUpload }: { onUpload: () => void }) {
+function MobileFilesPanel({ onUpload, isDirty = false }: { onUpload: () => void; isDirty?: boolean }) {
   return (
     <div className="soft-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-sidebar">
       <div className="border-b border-border/40 p-4">
@@ -558,7 +778,8 @@ function MobileFilesPanel({ onUpload }: { onUpload: () => void }) {
             }`}
           >
             <FileText className="h-4 w-4 shrink-0 text-primary" />
-            {f.name}
+            <span className="flex-1">{f.name}</span>
+            {f.active && isDirty && <span className="file-dirty-mark">*</span>}
           </button>
         ))}
       </div>
@@ -630,7 +851,7 @@ function MobileChatSheet({
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-sm font-medium">AI Assistant</span>
+            <span className="text-sm font-medium">Ario</span>
           </div>
           <button
             onClick={onClose}
@@ -662,6 +883,7 @@ function LeftSidebar({
   onTabChange,
   onUpload,
   onUploadAsset,
+  isDirty = false,
 }: {
   projectName: string;
   assets: ProjectAsset[];
@@ -669,6 +891,7 @@ function LeftSidebar({
   onTabChange: (t: "files" | "chats") => void;
   onUpload: () => void;
   onUploadAsset: () => void;
+  isDirty?: boolean;
 }) {
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
@@ -714,7 +937,8 @@ function LeftSidebar({
           <div className="flex-1 overflow-y-auto px-2">
             <button className="flex w-full items-center gap-2 rounded-md bg-sidebar-accent px-2 py-1.5 text-left text-[13px] font-medium transition">
               <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">main.tex</span>
+              <span className="truncate flex-1">main.tex</span>
+              {isDirty && <span className="file-dirty-mark">*</span>}
             </button>
             {assets.map((asset) => (
               <button
@@ -792,12 +1016,26 @@ function LeftSidebar({
 function LatexEditor({
   latex,
   onLatexChange,
+  onSelectionChange,
   fullHeight = false,
+  reviewDiff,
 }: {
   latex: string;
   onLatexChange: (v: string) => void;
+  onSelectionChange?: (v: string) => void;
   fullHeight?: boolean;
+  reviewDiff?: { original: string; suggested: string } | null;
 }) {
+  if (reviewDiff) {
+    return (
+      <LatexDiffEditor
+        originalText={reviewDiff.original}
+        suggestedText={reviewDiff.suggested}
+        fullHeight={fullHeight}
+      />
+    );
+  }
+
   const lines = latex.split("\n");
   const gutterRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -828,6 +1066,12 @@ function LatexEditor({
         ref={textareaRef}
         value={latex}
         onChange={(e) => onLatexChange(e.target.value)}
+        onSelect={() => {
+          const el = textareaRef.current;
+          if (el && onSelectionChange) {
+            onSelectionChange(el.value.slice(el.selectionStart, el.selectionEnd));
+          }
+        }}
         onScroll={syncGutterScroll}
         spellCheck={false}
         className="latex-input soft-scrollbar min-h-0 flex-1 resize-none overflow-y-auto overflow-x-auto bg-transparent py-4 pr-4 md:pr-5 font-mono text-[12px] md:text-[13px] leading-[1.65] outline-none"
@@ -856,7 +1100,32 @@ function ChatMessages({
               m.role === "user" ? "chat-bubble-user" : "chat-bubble-assistant"
             }`}
           >
+            {m.role === "assistant" && (m.activities?.length ?? 0) > 0 && (
+              <ul className="chat-activity-feed mb-2 space-y-0.5 border-b border-border/30 pb-2">
+                {m.activities!.map((line, j) => (
+                  <li
+                    key={j}
+                    className={`font-mono text-[10px] leading-snug text-muted-foreground ${
+                      m.isStreaming && j === m.activities!.length - 1 ? "chat-activity-live" : ""
+                    }`}
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {m.role === "assistant" && m.reasoning && (
+              <p className="chat-reasoning-block mb-2 text-[11px] italic leading-snug text-muted-foreground/90">
+                {m.reasoning}
+                {m.isStreaming && !m.content && (
+                  <span className="chat-stream-cursor" aria-hidden />
+                )}
+              </p>
+            )}
             {m.content}
+            {m.role === "assistant" && m.isStreaming && m.content && (
+              <span className="chat-stream-cursor" aria-hidden />
+            )}
           </div>
         </div>
       ))}
@@ -870,11 +1139,13 @@ function ChatInput({
   onChatInputChange,
   onSend,
   placeholder,
+  disabled,
 }: {
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="chat-input-shell">
@@ -900,7 +1171,7 @@ function ChatInput({
         </IconBtn>
         <button
           onClick={onSend}
-          disabled={!chatInput.trim()}
+          disabled={!chatInput.trim() || disabled}
           className="chat-send-btn"
         >
           <Send className="h-3.5 w-3.5" />
@@ -913,6 +1184,7 @@ function ChatInput({
 function CenterPanel({
   latex,
   onLatexChange,
+  onSelectionChange,
   messages,
   chatInput,
   onChatInputChange,
@@ -922,9 +1194,21 @@ function CenterPanel({
   toolsOpen,
   onToggleTools,
   chatEndRef,
+  chatLoading,
+  liveActivity,
+  providers,
+  llmProvider,
+  llmModel,
+  onProviderChange,
+  onModelChange,
+  pendingSuggestion,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+  isDirty = false,
 }: {
   latex: string;
   onLatexChange: (v: string) => void;
+  onSelectionChange?: (v: string) => void;
   messages: ChatMessage[];
   chatInput: string;
   onChatInputChange: (v: string) => void;
@@ -934,6 +1218,17 @@ function CenterPanel({
   toolsOpen: boolean;
   onToggleTools: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
+  chatLoading?: boolean;
+  liveActivity?: string | null;
+  isDirty?: boolean;
+  providers?: ProviderInfo[];
+  llmProvider?: LLMProvider;
+  llmModel?: string;
+  onProviderChange?: (p: LLMProvider) => void;
+  onModelChange?: (m: string) => void;
+  pendingSuggestion?: PendingSuggestion | null;
+  onAcceptSuggestion?: () => void;
+  onRejectSuggestion?: () => void;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [expandedH, setExpandedH] = useState(320);
@@ -958,7 +1253,8 @@ function CenterPanel({
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
         <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary shadow-sm">
           <FileText className="h-3 w-3" />
-          main.tex
+          <span>main.tex</span>
+          {isDirty && <span className="file-dirty-mark">*</span>}
         </div>
         <button
           onClick={onToggleTools}
@@ -974,8 +1270,32 @@ function CenterPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col p-3">
-        <LatexEditor latex={latex} onLatexChange={onLatexChange} />
+        <LatexEditor
+          latex={latex}
+          onLatexChange={onLatexChange}
+          onSelectionChange={onSelectionChange}
+          reviewDiff={
+            pendingSuggestion
+              ? {
+                  original: pendingSuggestion.originalText,
+                  suggested: pendingSuggestion.suggestion,
+                }
+              : null
+          }
+        />
       </div>
+
+      {pendingSuggestion && onAcceptSuggestion && onRejectSuggestion && (
+        <SuggestionPanel
+          originalText={pendingSuggestion.originalText}
+          suggestion={pendingSuggestion.suggestion}
+          diff={pendingSuggestion.diff}
+          flags={pendingSuggestion.flags}
+          applyMode={pendingSuggestion.applyMode}
+          onAccept={onAcceptSuggestion}
+          onReject={onRejectSuggestion}
+        />
+      )}
 
       <div
         className="chat-dock mx-3 mb-3 shrink-0"
@@ -990,7 +1310,7 @@ function CenterPanel({
           tabIndex={chatOpen ? -1 : 0}
         >
           <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span>Open AI Assistant</span>
+          <span>Chat with Ario</span>
         </button>
 
         <div
@@ -998,13 +1318,44 @@ function CenterPanel({
           aria-hidden={!chatOpen}
         >
           <div className="flex h-10 shrink-0 items-center justify-between border-b border-border/40 px-4">
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10">
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
               </div>
-              AI Assistant
+              <span className="shrink-0">Ario</span>
+              {liveActivity && (
+                <span className="truncate font-mono text-[10px] font-normal text-muted-foreground chat-activity-live">
+                  {liveActivity}
+                </span>
+              )}
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-2">
+              {providers && providers.length > 0 && onProviderChange && onModelChange && (
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <select
+                    value={llmProvider}
+                    onChange={(e) => onProviderChange(e.target.value as LLMProvider)}
+                    className="h-7 rounded-md border border-border bg-background px-2 text-[10px]"
+                  >
+                    {providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={llmModel}
+                    onChange={(e) => onModelChange(e.target.value)}
+                    className="h-7 max-w-[140px] rounded-md border border-border bg-background px-2 text-[10px]"
+                  >
+                    {(providers.find((p) => p.id === llmProvider)?.models ?? []).map((m) => (
+                      <option key={m} value={m}>
+                        {m.split("/").pop()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <IconBtn sm>
                 <RefreshCw className="h-3 w-3" />
               </IconBtn>
@@ -1020,7 +1371,8 @@ function CenterPanel({
                 chatInput={chatInput}
                 onChatInputChange={onChatInputChange}
                 onSend={onSend}
-                placeholder="Ask anything — e.g. improve the Introduction section..."
+                disabled={chatLoading}
+                placeholder="Hỏi Ario — ví dụ: cải thiện phần Introduction..."
               />
             </div>
           </div>
@@ -1030,8 +1382,19 @@ function CenterPanel({
   );
 }
 
-function ToolsPanel({ latex, onClose }: { latex: string; onClose: () => void }) {
+function ToolsPanel({
+  latex,
+  projectId,
+  onClose,
+}: {
+  latex: string;
+  projectId: string;
+  onClose: () => void;
+}) {
   const [tab, setTab] = useState<ToolsTab>("info");
+  const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
+  const [citationSummary, setCitationSummary] = useState("");
+  const [citationLoading, setCitationLoading] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     VERSION_HISTORY.forEach((day) => {
@@ -1059,6 +1422,20 @@ function ToolsPanel({ latex, onClose }: { latex: string; onClose: () => void }) 
     setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
+  const handleVerifyCitations = async () => {
+    if (!projectId) return;
+    setCitationLoading(true);
+    try {
+      const result = await verifyCitations(projectId);
+      setCitationResults(result.results);
+      setCitationSummary(result.summary);
+    } catch {
+      setCitationSummary(citationErrorMessage());
+    } finally {
+      setCitationLoading(false);
+    }
+  };
+
   return (
     <section className="tools-panel flex h-full min-h-0 flex-col bg-secondary/20">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 backdrop-blur-sm">
@@ -1066,6 +1443,7 @@ function ToolsPanel({ latex, onClose }: { latex: string; onClose: () => void }) 
           {(
             [
               { id: "info" as const, label: "Project Info" },
+              { id: "citations" as const, label: "Citations" },
               { id: "versions" as const, label: "Versions" },
             ] as const
           ).map((item) => (
@@ -1099,6 +1477,40 @@ function ToolsPanel({ latex, onClose }: { latex: string; onClose: () => void }) 
                 </div>
               ))}
             </div>
+          </div>
+        ) : tab === "citations" ? (
+          <div className="tools-section">
+            <div className="flex items-center justify-between">
+              <h2 className="tools-section-title mb-0">Citation Verification</h2>
+              <button
+                type="button"
+                onClick={handleVerifyCitations}
+                disabled={citationLoading}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {citationLoading ? "Verifying…" : "Verify citations"}
+              </button>
+            </div>
+            {citationSummary && (
+              <p className="mt-3 text-sm text-muted-foreground">{citationSummary}</p>
+            )}
+            <ul className="mt-4 space-y-2">
+              {citationResults.map((r, i) => (
+                <li
+                  key={i}
+                  className="rounded-lg border border-border/50 bg-card px-3 py-2 text-xs"
+                >
+                  <span
+                    className={
+                      r.status === "verified" ? "text-emerald-600 font-medium" : "text-destructive font-medium"
+                    }
+                  >
+                    {String(r.status)} — {String(r.key ?? "")}
+                  </span>
+                  <p className="mt-1 text-muted-foreground">{String(r.title || "No title in BibTeX")}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : (
           <div className="tools-section">

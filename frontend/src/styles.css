@@ -815,6 +815,115 @@
   border-bottom-right-radius: 0.25rem;
 }
 
+.editor-shell .chat-activity-feed {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-shell .chat-activity-live {
+  animation: chat-activity-pulse 1.4s ease-in-out infinite;
+}
+
+.editor-shell .chat-reasoning-block {
+  border-left: 2px solid color-mix(in oklch, var(--primary) 35%, transparent);
+  padding-left: 0.5rem;
+}
+
+.editor-shell .chat-stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 0.85em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--primary);
+  animation: chat-cursor-blink 0.9s step-end infinite;
+}
+
+@keyframes chat-activity-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes chat-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.editor-shell .file-dirty-mark {
+  color: var(--destructive);
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.editor-shell .diff-del {
+  background: oklch(0.94 0.04 25);
+  color: oklch(0.42 0.12 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.14 25 / 70%);
+}
+
+.editor-shell .diff-ins {
+  background: oklch(0.95 0.05 145);
+  color: oklch(0.38 0.1 145);
+}
+
+.editor-shell .diff-legend {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+}
+
+.editor-shell .diff-legend-del {
+  background: oklch(0.94 0.04 25);
+  color: oklch(0.42 0.12 25);
+}
+
+.editor-shell .diff-legend-ins {
+  background: oklch(0.95 0.05 145);
+  color: oklch(0.38 0.1 145);
+}
+
+.editor-shell .latex-diff-line {
+  min-height: 1.65em;
+  padding: 0 0.35rem;
+  border-radius: 2px;
+}
+
+.editor-shell .latex-diff-line-del {
+  background: oklch(0.94 0.04 25);
+  color: oklch(0.42 0.12 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.14 25 / 65%);
+}
+
+.editor-shell .latex-diff-line-ins {
+  background: oklch(0.95 0.05 145);
+  color: oklch(0.32 0.1 145);
+}
+
+.editor-shell .latex-diff-line-eq {
+  background: transparent;
+  color: inherit;
+}
+
+.editor-shell .latex-diff-banner {
+  backdrop-filter: blur(4px);
+}
+
 /* Chat input */
 .editor-shell .chat-input-shell {
   display: flex;
