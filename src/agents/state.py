@@ -1,18 +1,33 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Literal, TypedDict
+
+TaskType = Literal["style", "edit", "structure", "logic", "citation", "template", "chat"]
 
 
 class AgentState(TypedDict, total=False):
-    """State schema cho LangGraph agent.
-
-    Mỗi node đọc và ghi vào state này.
-    total=False cho phép tất cả fields là optional.
-    """
-
+    session_id: str
     query: str
-    context: str
+    task: TaskType
+    latex: str
+    selection: str
+    section: str
+    parsed_sections: list[dict]
+    citation_keys: list[str]
+    bib_content: str
+
+    original_text: str
+    suggestion: str
+    diff: str
+    integrity_flags: list[dict]
+    citation_results: list[dict]
+    structure_suggestions: list[dict]
+
+    llm_provider: str
+    llm_model: str
+
     analysis: str
     response: str
     error: str
+    apply_mode: str
     metadata: dict

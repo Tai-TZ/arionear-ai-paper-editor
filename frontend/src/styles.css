@@ -1,0 +1,1808 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-ink: var(--ink);
+  --color-newsprint: var(--newsprint);
+  --color-editorial-red: var(--editorial-red);
+  --color-divider: var(--divider);
+  --font-serif-display: 'Playfair Display', 'Times New Roman', serif;
+  --font-serif-body: 'Lora', Georgia, serif;
+  --font-serif-prose: 'Source Serif 4', 'Lora', Georgia, serif;
+  --font-sans-ui: 'Inter', 'Helvetica Neue', sans-serif;
+  --font-mono-data: 'JetBrains Mono', 'Courier New', monospace;
+  --font-latex: 'Latin Modern Roman', 'Computer Modern', 'CMU Serif', serif;
+  --font-latex-mono: 'Latin Modern Mono', 'Computer Modern Typewriter', monospace;
+  --font-latex-times: 'Times New Roman', 'Nimbus Roman No9 L', 'TeX Gyre Termes', Times, serif;
+  --font-latex-times-mono: 'Courier New', Courier, monospace;
+}
+
+/* LaTeX preview — Latin Modern (official CM web derivative used by LaTeX) */
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-regular-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-bold-webfont.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-italic-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Roman';
+  src: url('/fonts/lm/lmroman-bolditalic-webfont.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Mono';
+  src: url('/fonts/lm/lmmono-regular-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Latin Modern Mono';
+  src: url('/fonts/lm/lmmono-italic-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* KaTeX Main fallback (same CM lineage) */
+@font-face {
+  font-family: 'Computer Modern';
+  src: url('/fonts/cm/KaTeX_Main-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Computer Modern';
+  src: url('/fonts/cm/KaTeX_Main-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Computer Modern Typewriter';
+  src: url('/fonts/cm/KaTeX_Typewriter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Home / marketing: Arionear newsprint ── */
+:root {
+  --radius: 0px;
+  --ink: oklch(0.145 0 0);
+  --newsprint: oklch(0.973 0.005 90);
+  --editorial-red: oklch(0.52 0.22 27);
+  --divider: oklch(0.91 0.003 90);
+  --background: var(--newsprint);
+  --foreground: var(--ink);
+  --card: var(--newsprint);
+  --card-foreground: var(--ink);
+  --popover: var(--newsprint);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--newsprint);
+  --secondary: var(--divider);
+  --secondary-foreground: var(--ink);
+  --muted: var(--divider);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: var(--editorial-red);
+  --accent-foreground: var(--newsprint);
+  --destructive: var(--editorial-red);
+  --destructive-foreground: var(--newsprint);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--ink);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: var(--newsprint);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--newsprint);
+  --sidebar-accent: var(--divider);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--ink);
+  --sidebar-ring: var(--ink);
+}
+
+.dark {
+  /* single-mode */
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    border-radius: 0 !important;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-serif-body);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111111' fill-opacity='0.05' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif-display);
+  }
+}
+
+@layer utilities {
+  .font-serif-display { font-family: var(--font-serif-display); }
+  .font-body { font-family: var(--font-serif-body); }
+  .font-serif-prose { font-family: var(--font-serif-prose); }
+  .font-sans-ui { font-family: var(--font-sans-ui); }
+  .font-mono-data { font-family: var(--font-mono-data); }
+  .font-latex { font-family: var(--font-latex); }
+  .font-latex-mono { font-family: var(--font-latex-mono); }
+
+  .newsprint-texture { position: relative; }
+  .newsprint-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(0deg, transparent 98%, rgba(0,0,0,0.025) 100%),
+      linear-gradient(90deg, transparent 98%, rgba(0,0,0,0.025) 100%);
+    background-size: 3px 3px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .hard-shadow-hover {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .hard-shadow-hover:hover {
+    box-shadow: 6px 6px 0 0 var(--ink);
+    transform: translate(-3px, -3px);
+  }
+
+  .drop-cap::first-letter {
+    font-family: var(--font-serif-display);
+    font-weight: 900;
+    float: left;
+    font-size: 5.5rem;
+    line-height: 0.85;
+    padding: 0.35rem 0.6rem 0 0;
+  }
+}
+
+/* ── Editor workspace: insight-editor feel + Arionear accents ── */
+.editor-shell {
+  --radius: 0.375rem;
+  --ink: oklch(0.145 0 0);
+  --newsprint: oklch(0.978 0.006 90);
+  --editorial-red: oklch(0.52 0.22 27);
+  --background: oklch(0.978 0.006 90);
+  --foreground: oklch(0.24 0.03 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 255);
+  --primary: oklch(0.32 0.09 255);
+  --primary-foreground: oklch(0.985 0.003 240);
+  --secondary: oklch(0.955 0.012 90);
+  --secondary-foreground: oklch(0.32 0.09 255);
+  --muted: oklch(0.94 0.01 90);
+  --muted-foreground: oklch(0.5 0.03 255);
+  --accent: var(--editorial-red);
+  --accent-foreground: oklch(0.985 0.003 240);
+  --destructive: var(--editorial-red);
+  --destructive-foreground: oklch(0.985 0.003 240);
+  --border: oklch(0.88 0.012 90);
+  --input: oklch(0.88 0.012 90);
+  --ring: oklch(0.4 0.1 255);
+  --chart-1: oklch(0.32 0.09 255);
+  --chart-2: oklch(0.5 0.12 250);
+  --chart-3: oklch(0.65 0.08 245);
+  --chart-4: oklch(0.78 0.05 240);
+  --chart-5: oklch(0.45 0.15 260);
+  --sidebar: oklch(0.985 0.005 90);
+  --sidebar-foreground: oklch(0.24 0.03 255);
+  --sidebar-primary: oklch(0.32 0.09 255);
+  --sidebar-primary-foreground: oklch(0.985 0.003 240);
+  --sidebar-accent: oklch(0.94 0.02 90);
+  --sidebar-accent-foreground: oklch(0.28 0.08 255);
+  --sidebar-border: oklch(0.88 0.012 90);
+  --sidebar-ring: oklch(0.4 0.1 255);
+  --font-serif: var(--font-serif-prose);
+  --font-sans: var(--font-sans-ui);
+  --font-mono: var(--font-mono-data);
+  font-family: var(--font-sans-ui);
+  font-feature-settings: "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+}
+
+.editor-shell,
+.editor-shell * {
+  border-radius: revert;
+}
+
+.editor-shell .editor-masthead {
+  border-radius: 0 !important;
+}
+
+.editor-shell .font-serif { font-family: var(--font-serif-prose); }
+.editor-shell .font-mono { font-family: var(--font-mono-data); }
+
+.editor-shell .editor-prose {
+  font-family: var(--font-serif-prose);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--color-foreground);
+}
+.editor-shell .editor-prose h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
+}
+.editor-shell .editor-prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.editor-shell .editor-prose p { margin-bottom: 1rem; }
+.editor-shell .editor-prose .citation {
+  background-color: color-mix(in oklch, var(--editorial-red) 10%, transparent);
+  color: var(--editorial-red);
+  border-bottom: 1px dotted var(--editorial-red);
+  padding: 0 2px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: var(--font-mono-data);
+  font-size: 0.85em;
+}
+.editor-shell .editor-prose .citation:hover,
+.editor-shell .editor-prose .citation.is-active {
+  background-color: color-mix(in oklch, var(--editorial-red) 20%, transparent);
+}
+
+.editor-shell .pdf-highlight {
+  background-color: color-mix(in oklch, var(--editorial-red) 18%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--editorial-red) 30%, transparent);
+  border-radius: 2px;
+}
+
+/* LaTeX code editor — white + classic TeXshop-style syntax colors */
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) {
+  background: #ffffff;
+  font-family: var(--font-mono-data);
+  border-color: oklch(0.9 0.012 90 / 90%);
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-gutter {
+  border-right: 1px solid #e3e3e3;
+  background: #ffffff;
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-line-num {
+  color: #a0a0a0;
+  min-height: 1.65em;
+}
+
+.editor-shell .latex-code-area {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editor-shell .latex-highlight-layer {
+  scrollbar-width: none;
+}
+
+.editor-shell .latex-highlight-layer::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-shell .latex-code-row {
+  min-height: 1.65em;
+}
+
+/* Syntax tokens — light editor (always on) */
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-comment {
+  color: #3f7f5f;
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-cmd {
+  color: #0000c0;
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-opt {
+  color: #0000c0;
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-key {
+  color: #800000;
+}
+
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-text,
+.editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-brace {
+  color: #000000;
+}
+
+.editor-shell .latex-input-overlay {
+  color: transparent;
+  caret-color: #000000;
+  -webkit-text-fill-color: transparent;
+}
+
+.editor-shell .latex-input-overlay::selection {
+  background-color: rgba(0, 100, 255, 0.22);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.editor-shell .latex-input {
+  caret-color: #000000;
+}
+
+.editor-shell .latex-input::selection {
+  background-color: rgba(0, 100, 255, 0.22);
+}
+
+/* Thin soft scrollbars — editor workspace only */
+.editor-shell .soft-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.03 255 / 30%);
+  border-radius: 999px;
+}
+
+.editor-shell .soft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.05 255 / 45%);
+}
+
+.editor-shell .latex-input::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.03 255 / 22%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.editor-shell .latex-input::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.04 255 / 32%);
+  background-clip: padding-box;
+}
+
+/* Draggable divider between LaTeX editor and preview */
+.editor-shell .editor-resize-handle {
+  width: 3px;
+  flex-shrink: 0;
+  background: color-mix(in oklch, var(--border) 80%, var(--primary) 20%);
+  transition: background 0.15s ease;
+}
+
+.editor-shell .editor-resize-handle:hover,
+.editor-shell .editor-resize-handle[data-separator="active"] {
+  background: color-mix(in oklch, var(--primary) 45%, var(--border) 55%);
+}
+
+.editor-shell .editor-resize-handle::after {
+  width: 8px;
+}
+
+/* Mobile safe areas */
+.editor-shell .safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  .editor-shell .latex-editor-shell {
+    border-radius: 0;
+  }
+}
+
+/* Projects dashboard */
+.projects-shell {
+  --radius: 0.375rem;
+  font-family: var(--font-sans-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.projects-shell,
+.projects-shell * {
+  border-radius: revert;
+}
+
+.projects-sidebar {
+  background: oklch(0.985 0.005 90);
+}
+
+.projects-table-row:hover {
+  background: oklch(0.97 0.006 90);
+}
+
+.projects-action-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  border-radius: 0.875rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--card);
+  box-shadow: 0 1px 3px oklch(0.2 0.02 255 / 5%);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.projects-action-card:hover {
+  border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
+  box-shadow: 0 4px 16px -6px oklch(0.2 0.02 255 / 10%);
+  transform: translateY(-1px);
+}
+
+.projects-grid-card {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--card);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.projects-grid-card:hover {
+  border-color: color-mix(in oklch, var(--primary) 25%, var(--border));
+  box-shadow: 0 4px 12px -6px oklch(0.2 0.02 255 / 8%);
+}
+
+.projects-menu {
+  overflow: hidden;
+  border-radius: 0.625rem;
+  border: 1px solid oklch(0.88 0.012 90 / 90%);
+  background: var(--card);
+  box-shadow: 0 8px 24px -8px oklch(0.2 0.02 255 / 18%);
+}
+
+.projects-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.projects-menu-item:hover {
+  background: oklch(0.96 0.008 90);
+}
+
+/* Auth pages */
+.auth-spinner {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: auth-spin 0.6s linear infinite;
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+.auth-strength-bar {
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.auth-strength-empty {
+  background: oklch(0.88 0.012 90);
+}
+
+.auth-strength-1 {
+  background: oklch(0.55 0.2 27);
+}
+
+.auth-strength-2 {
+  background: oklch(0.65 0.16 55);
+}
+
+.auth-strength-3 {
+  background: oklch(0.55 0.12 250);
+}
+
+.auth-strength-4 {
+  background: oklch(0.5 0.14 155);
+}
+
+.auth-sso-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.auth-sso-btn:hover:not(:disabled) {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.auth-sso-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.auth-sso-google:hover:not(:disabled) svg path {
+  filter: brightness(1.1);
+}
+
+.auth-sso-github:hover:not(:disabled) {
+  background: #24292f;
+  border-color: #24292f;
+  color: #fff;
+}
+
+/* Preview: fixed page width, scale to fit panel */
+.editor-shell .preview-viewport {
+  display: flex;
+  justify-content: center;
+}
+
+.editor-shell .preview-page {
+  flex-shrink: 0;
+  transition: transform 0.2s ease-out;
+}
+
+.editor-shell .preview-page-content {
+  font-family: var(--font-latex);
+  font-size: 11pt;
+  line-height: 1.35;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+/* Override global h1/h2 Playfair — preview must use LaTeX serif only */
+.editor-shell .preview-page-content h1,
+.editor-shell .preview-page-content h2,
+.editor-shell .preview-page-content h3,
+.editor-shell .preview-page-content p,
+.editor-shell .preview-page-content strong,
+.editor-shell .preview-page-content em {
+  font-family: var(--font-latex);
+}
+
+.editor-shell .preview-page-content .preview-title {
+  font-size: 17pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.editor-shell .preview-page-content .preview-section {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.editor-shell .preview-page-content .preview-subsection {
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+.editor-shell .preview-layout-ieee {
+  column-count: 2;
+  column-gap: 1.35rem;
+  text-align: justify;
+}
+
+.editor-shell .preview-layout-ieee .preview-span-all {
+  column-span: all;
+  break-inside: avoid;
+}
+
+.editor-shell .preview-layout-ieee .preview-title {
+  font-size: 14pt;
+}
+
+.editor-shell .preview-layout-ieee .preview-section {
+  font-size: 10pt;
+  letter-spacing: 0.02em;
+}
+
+.editor-shell .preview-layout-ieee .preview-author {
+  font-size: 10pt;
+  line-height: 1.25;
+}
+
+/* IEEE / mathptmx / times — Times New Roman stack (Nimbus Roman on Linux) */
+.editor-shell .preview-page-content.preview-font-times,
+.editor-shell .preview-page-content.preview-font-times h1,
+.editor-shell .preview-page-content.preview-font-times h2,
+.editor-shell .preview-page-content.preview-font-times h3,
+.editor-shell .preview-page-content.preview-font-times p,
+.editor-shell .preview-page-content.preview-font-times strong,
+.editor-shell .preview-page-content.preview-font-times em {
+  font-family: var(--font-latex-times);
+}
+
+.editor-shell .preview-page-content.preview-font-times .preview-inline-code {
+  font-family: var(--font-latex-times-mono);
+}
+
+.editor-shell .preview-page-content.preview-font-times .preview-figure-caption {
+  font-family: var(--font-latex-times);
+}
+
+.editor-shell .preview-inline-code {
+  font-family: var(--font-latex-mono);
+  font-size: 0.92em;
+  background: oklch(0.96 0.008 90);
+  padding: 0 0.2em;
+  border-radius: 2px;
+}
+
+.editor-shell .preview-figure-img {
+  border: 1px solid oklch(0.82 0.01 90);
+  background: #fff;
+}
+
+.editor-shell .preview-figure-missing {
+  font-family: var(--font-mono-data);
+  letter-spacing: 0.01em;
+}
+
+.editor-shell .preview-figure-caption {
+  font-family: var(--font-latex);
+  line-height: 1.5;
+}
+
+/* Chat overlay — floats over LaTeX editor */
+.editor-shell .editor-workspace {
+  isolation: isolate;
+}
+
+.editor-shell .editor-panel-fallback-center {
+  flex: 58 1 0%;
+}
+
+.editor-shell .editor-panel-fallback-preview {
+  flex: 42 1 0%;
+}
+
+.editor-shell .editor-code-panel {
+  background: oklch(0.975 0.006 88);
+}
+
+.editor-shell .editor-history-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.editor-shell .editor-history-btn:hover:not(:disabled) {
+  background: oklch(0.94 0.01 90);
+  color: var(--foreground);
+}
+
+.editor-shell .editor-history-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.editor-shell .chat-overlay-root {
+  z-index: 20;
+}
+
+.editor-shell .chat-overlay-panel {
+  --chat-bg: color-mix(in oklch, var(--card) 96%, transparent);
+  --chat-input-bg: oklch(1 0 0 / 92%);
+  --chat-border: oklch(0.88 0.012 90 / 85%);
+  --chat-text: var(--foreground);
+  --chat-muted: var(--muted-foreground);
+  --chat-accent: var(--primary);
+  --chat-banner-bg: oklch(0.96 0.035 85 / 90%);
+  --chat-banner-text: oklch(0.42 0.07 70);
+  --chat-user-bg: var(--primary);
+  --chat-user-text: var(--primary-foreground);
+  border-radius: 1.5rem;
+  border: 1px solid var(--chat-border);
+  background: var(--chat-bg);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 -8px 32px -12px oklch(0.2 0.02 255 / 14%),
+    0 4px 24px -8px oklch(0.2 0.02 255 / 10%);
+  transition: height 0.44s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: height;
+  color: var(--chat-text);
+}
+
+.editor-shell .chat-overlay-messages-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
+    transform 0.38s cubic-bezier(0.32, 0.72, 0, 1) 0.04s,
+    flex 0.44s cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+}
+
+.editor-shell .chat-overlay-panel[data-open="true"] .chat-overlay-messages-section {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-messages-section {
+  flex: 0 0 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    flex 0.44s cubic-bezier(0.32, 0.72, 0, 1),
+    max-height 0.44s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.editor-shell .chat-overlay-panel[data-open="false"] .chat-resize-handle,
+.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-toolbar,
+.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-banner {
+  display: none;
+}
+
+.editor-shell .chat-overlay-panel[data-open="false"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.editor-shell .chat-overlay-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.75rem 0.375rem;
+}
+
+.editor-shell .chat-overlay-banner {
+  margin: 0 0.75rem 0.5rem;
+  border-radius: 0.625rem;
+  background: var(--chat-banner-bg);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--chat-banner-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-shell .chat-overlay-panel,
+  .editor-shell .chat-overlay-messages-section {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+.editor-shell .chat-resize-handle {
+  display: flex;
+  width: 100%;
+  flex-shrink: 0;
+  cursor: ns-resize;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0 0.375rem;
+  border: none;
+  background: transparent;
+  touch-action: none;
+}
+
+.editor-shell .chat-resize-handle-bar {
+  display: block;
+  height: 4px;
+  width: 2.5rem;
+  border-radius: 999px;
+  background: oklch(0.72 0.02 90 / 55%);
+  transition: background 0.15s ease;
+}
+
+.editor-shell .chat-resize-handle:hover .chat-resize-handle-bar,
+.editor-shell .chat-resize-handle:active .chat-resize-handle-bar {
+  background: oklch(0.55 0.04 90 / 70%);
+}
+
+.editor-shell .chat-overlay-icon-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell .chat-overlay-icon-btn:hover {
+  background: oklch(0.96 0.008 90);
+  color: var(--foreground);
+}
+
+.editor-shell .chat-overlay-input-wrap {
+  padding: 0.5rem 0.625rem 0.625rem;
+}
+
+.editor-shell .chat-overlay-panel[data-open="true"] .chat-overlay-input-wrap {
+  padding: 0.625rem 0.75rem 0.75rem;
+}
+
+.editor-shell .chat-overlay-input-wrap-collapsed {
+  padding: 0;
+}
+
+.editor-shell .chat-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+.editor-shell .chat-activity-feed {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-shell .chat-input-shell-collapsed {
+  height: 100%;
+  border-radius: 1.5rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: oklch(1 0 0 / 94%);
+  box-shadow:
+    0 4px 24px -8px oklch(0.2 0.02 255 / 12%),
+    0 1px 3px oklch(0.2 0.02 255 / 6%);
+}
+
+.editor-shell .chat-avatar {
+  height: 1.25rem;
+  width: 1.25rem;
+  margin-top: 0.125rem;
+  border-radius: 0.25rem;
+  object-fit: contain;
+}
+
+.editor-shell .llm-selector-dark {
+  border-color: oklch(1 0 0 / 12%);
+  background: oklch(1 0 0 / 6%);
+}
+
+.editor-shell .llm-selector-dark .llm-selector-trigger {
+  color: oklch(0.88 0.01 90);
+}
+
+.editor-shell .llm-selector-dark .llm-selector-trigger:hover {
+  background: oklch(1 0 0 / 8%);
+}
+
+.editor-shell .llm-selector-dark .llm-selector-divider {
+  background: oklch(1 0 0 / 12%);
+}
+
+.editor-shell .llm-selector-dark .llm-selector-chevron {
+  color: oklch(1 0 0 / 45%);
+}
+
+/* LLM provider / model selector */
+.editor-shell .llm-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 0.5rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: oklch(0.98 0.006 90 / 90%);
+  overflow: hidden;
+}
+
+.editor-shell .llm-selector-compact {
+  max-width: min(100%, 15rem);
+}
+
+.editor-shell .llm-selector-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.editor-shell .llm-selector-field-model {
+  max-width: 6.5rem;
+}
+
+.editor-shell .llm-selector-trigger {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0.3125rem 1.375rem 0.3125rem 0.625rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--foreground);
+  cursor: pointer;
+  outline: none;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+.editor-shell .llm-selector-field-model .llm-selector-trigger {
+  padding-right: 1.25rem;
+}
+
+.editor-shell .llm-selector-trigger:hover {
+  background: oklch(0.95 0.008 90);
+}
+
+.editor-shell .llm-selector-chevron {
+  position: absolute;
+  right: 0.375rem;
+  height: 0.75rem;
+  width: 0.75rem;
+  opacity: 0.45;
+}
+
+.editor-shell .llm-selector-divider {
+  width: 1px;
+  align-self: stretch;
+  background: oklch(0.88 0.012 90 / 80%);
+  flex-shrink: 0;
+}
+
+.editor-shell .llm-selector-refresh {
+  display: flex;
+  height: 1.625rem;
+  width: 1.625rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-left: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell .llm-selector-refresh:hover {
+  background: oklch(0.95 0.008 90);
+  color: var(--foreground);
+}
+
+/* Chat messages */
+.editor-shell .chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.editor-shell .chat-user-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.editor-shell .chat-user-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+  max-width: 85%;
+}
+
+.editor-shell .chat-bubble-user-dark {
+  border-radius: 1rem;
+  background: var(--chat-user-bg);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--chat-user-text);
+  border-bottom-right-radius: 0.25rem;
+}
+
+.editor-shell .chat-copy-btn {
+  display: flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease;
+}
+
+.editor-shell .chat-copy-btn:hover {
+  color: var(--foreground);
+}
+
+.editor-shell .chat-assistant-row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+
+.editor-shell .chat-assistant-content {
+  min-width: 0;
+  flex: 1;
+  border-radius: 1rem;
+  border-bottom-left-radius: 0.25rem;
+  background: oklch(0.96 0.008 90);
+  padding: 0.5rem 0.875rem;
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 6%);
+}
+
+.editor-shell .chat-assistant-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--chat-text);
+  white-space: pre-wrap;
+}
+
+.editor-shell .chat-thinking-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.125rem;
+}
+
+.editor-shell .chat-thinking-dot {
+  height: 0.375rem;
+  width: 0.375rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: chat-thinking-pulse 1.2s ease-in-out infinite;
+}
+
+.editor-shell .chat-thinking-label {
+  font-size: 0.8125rem;
+  color: var(--chat-accent);
+}
+
+@keyframes chat-thinking-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.editor-shell .chat-message-row {
+  animation: chat-message-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes chat-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editor-shell .chat-bubble {
+  border-radius: 1rem;
+  padding: 0.625rem 0.875rem;
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 6%);
+  transition: box-shadow 0.2s ease;
+}
+
+.editor-shell .chat-bubble-assistant {
+  background: transparent;
+  color: var(--chat-text);
+  padding: 0;
+  box-shadow: none;
+}
+
+.editor-shell .chat-bubble-user {
+  background: var(--chat-user-bg);
+  color: var(--chat-text);
+}
+
+.editor-shell .chat-reasoning-block {
+  border-left: 2px solid color-mix(in oklch, var(--primary) 35%, transparent);
+  padding-left: 0.5rem;
+}
+
+.editor-shell .chat-activity-live {
+  animation: chat-activity-pulse 1.4s ease-in-out infinite;
+  color: var(--chat-accent);
+}
+
+.editor-shell .chat-stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 0.85em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--chat-accent);
+  animation: chat-cursor-blink 0.9s step-end infinite;
+}
+
+@keyframes chat-activity-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes chat-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.editor-shell .file-dirty-mark {
+  color: var(--destructive);
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.editor-shell .diff-del {
+  background: oklch(0.94 0.04 25);
+  color: oklch(0.42 0.12 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.14 25 / 70%);
+}
+
+.editor-shell .diff-ins {
+  background: oklch(0.95 0.05 145);
+  color: oklch(0.38 0.1 145);
+}
+
+.editor-shell .diff-legend {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+}
+
+.editor-shell .diff-legend-del {
+  background: oklch(0.94 0.04 25);
+  color: oklch(0.42 0.12 25);
+}
+
+.editor-shell .diff-legend-ins {
+  background: oklch(0.95 0.05 145);
+  color: oklch(0.38 0.1 145);
+}
+
+/* LaTeX diff view — light background, red/green line highlights (same palette as editor) */
+.editor-shell .latex-diff-shell.latex-editor-shell {
+  background: #ffffff;
+  border-color: oklch(0.9 0.012 90 / 90%);
+}
+
+.editor-shell .latex-diff-shell .latex-gutter {
+  background: #ffffff;
+  border-right-color: #e3e3e3;
+}
+
+.editor-shell .latex-diff-shell .latex-line-num {
+  color: #a0a0a0;
+}
+
+.editor-shell .latex-diff-shell .latex-line-num-ins {
+  color: #15803d;
+}
+
+.editor-shell .latex-diff-shell .latex-line-num-del {
+  color: #b91c1c;
+}
+
+.editor-shell .latex-diff-shell .latex-line-num-eq {
+  color: #a0a0a0;
+}
+
+.editor-shell .latex-diff-line {
+  min-height: 1.65em;
+  padding: 0 0.5rem;
+  border-radius: 0;
+}
+
+.editor-shell .latex-diff-shell .latex-diff-line-del {
+  background: rgb(254 202 202 / 55%);
+  color: #000000;
+  text-decoration: none;
+}
+
+.editor-shell .latex-diff-shell .latex-diff-line-ins {
+  background: rgb(187 247 208 / 55%);
+  color: #000000;
+}
+
+.editor-shell .latex-diff-shell .latex-diff-line-eq {
+  background: transparent;
+  color: #000000;
+}
+
+.editor-shell .latex-diff-shell .latex-tok-comment {
+  color: #3f7f5f;
+}
+
+.editor-shell .latex-diff-shell .latex-tok-cmd {
+  color: #0000c0;
+}
+
+.editor-shell .latex-diff-shell .latex-tok-opt {
+  color: #0000c0;
+}
+
+.editor-shell .latex-diff-shell .latex-tok-key {
+  color: #800000;
+}
+
+.editor-shell .latex-diff-shell .latex-tok-brace,
+.editor-shell .latex-diff-shell .latex-tok-text {
+  color: #000000;
+}
+
+.editor-shell .latex-diff-shell .soft-scrollbar {
+  scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
+}
+
+.editor-shell .latex-diff-shell .soft-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.03 255 / 30%);
+}
+
+.editor-shell .latex-diff-shell .soft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.05 255 / 45%);
+}
+
+.editor-shell .editor-file-tab {
+  min-width: 0;
+}
+
+.editor-shell .editor-file-tab .file-dirty-mark {
+  color: var(--primary);
+}
+
+/* Chat input */
+.editor-shell .chat-input-shell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 1.75rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--chat-input-bg);
+  padding: 0.4375rem 0.5rem 0.4375rem 1rem;
+  box-shadow: inset 0 1px 2px oklch(0.2 0.02 255 / 4%);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.editor-shell .chat-input-shell:focus-within {
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+  box-shadow:
+    inset 0 1px 2px oklch(0.2 0.02 255 / 4%),
+    0 0 0 2px color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+.editor-shell .chat-input-field {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.75rem;
+  max-height: 6rem;
+  resize: none;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  outline: none;
+  align-self: center;
+  color: var(--chat-text);
+}
+
+.editor-shell .chat-input-field::placeholder {
+  color: oklch(0.5 0.03 255 / 70%);
+}
+
+.editor-shell .chat-input-icon-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell .chat-input-icon-btn:hover {
+  background: oklch(0.96 0.008 90);
+  color: var(--foreground);
+}
+
+.editor-shell .chat-send-btn {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 1px 2px oklch(0.2 0.05 255 / 15%);
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.editor-shell .chat-send-btn:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--primary) 90%, white);
+  transform: scale(1.04);
+}
+
+.editor-shell .chat-send-btn-loading {
+  background: color-mix(in oklch, var(--primary) 55%, transparent);
+  color: var(--primary-foreground);
+}
+
+.editor-shell .chat-send-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Mobile chat sheet animation */
+@keyframes mobile-chat-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mobile-chat-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.editor-shell .mobile-chat-backdrop {
+  animation: mobile-chat-backdrop-in 0.28s ease-out both;
+}
+
+.editor-shell .mobile-chat-sheet {
+  animation: mobile-chat-sheet-in 0.36s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Tools panel */
+.editor-shell .tools-tab-nav {
+  min-width: 0;
+}
+
+.editor-shell .tools-tab-btn {
+  position: relative;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.editor-shell .tools-tab-btn:hover {
+  color: var(--foreground);
+}
+
+.editor-shell .tools-tab-btn.is-active {
+  color: var(--foreground);
+}
+
+.editor-shell .tools-tab-btn.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -0.6875rem;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 999px;
+}
+
+.editor-shell .tools-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 1rem;
+}
+
+.editor-shell .tools-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .editor-shell .tools-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.editor-shell .tools-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--card);
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 4%);
+}
+
+.editor-shell .tools-stat-label {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+.editor-shell .tools-stat-value {
+  font-size: 1.375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.editor-shell .tools-version-date {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.editor-shell .tools-version-group {
+  border-radius: 0.75rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--card);
+  overflow: hidden;
+  box-shadow: 0 1px 3px oklch(0.2 0.02 255 / 5%);
+}
+
+.editor-shell .tools-version-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid oklch(0.88 0.012 90 / 60%);
+}
+
+.editor-shell .tools-version-group-header.is-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.editor-shell .tools-version-group-header.is-clickable:hover {
+  background: oklch(0.96 0.008 90);
+}
+
+.editor-shell .tools-version-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  background: oklch(0.94 0.01 90);
+  color: var(--muted-foreground);
+}
+
+.editor-shell .tools-version-pill-muted {
+  background: oklch(0.96 0.008 90);
+}
+
+.editor-shell .tools-version-entries {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-shell .tools-version-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid oklch(0.88 0.012 90 / 50%);
+}
+
+.editor-shell .tools-version-entry:first-child {
+  border-top: none;
+}
+
+.editor-shell .tools-diff {
+  display: inline-flex;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-family: var(--font-mono-data);
+  font-weight: 500;
+}
+
+.editor-shell .tools-author-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  background: var(--editorial-red);
+  color: var(--newsprint);
+}
+
+/* Editor entry splash — projects → editor transition */
+.editor-entry-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(0.995 0.003 90);
+  animation: editor-entry-fade-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.editor-entry-splash-exit {
+  animation: editor-entry-fade-out 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.editor-entry-splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.125rem;
+}
+
+.editor-entry-splash-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.editor-entry-splash-icon-glow {
+  position: absolute;
+  inset: -0.75rem;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    oklch(0.72 0.18 45 / 22%) 0%,
+    oklch(0.55 0.1 255 / 10%) 48%,
+    transparent 72%
+  );
+  animation: editor-entry-glow-pulse 1.6s ease-in-out infinite;
+}
+
+.editor-entry-splash-icon {
+  position: relative;
+  z-index: 1;
+  width: 3.25rem;
+  height: 3.25rem;
+  object-fit: contain;
+  animation: editor-entry-icon-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.editor-entry-splash-bar {
+  position: relative;
+  width: 7rem;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(0.88 0.012 90 / 80%);
+}
+
+.editor-entry-splash-bar-fill {
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary) 55%, transparent),
+    transparent
+  );
+  animation: editor-entry-bar-slide 1.15s ease-in-out infinite;
+}
+
+.editor-entry-splash-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  animation: editor-entry-label-in 0.4s ease 0.15s both;
+}
+
+@keyframes editor-entry-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes editor-entry-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes editor-entry-icon-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes editor-entry-label-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes editor-entry-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes editor-entry-bar-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-entry-splash,
+  .editor-entry-splash-icon,
+  .editor-entry-splash-icon-glow,
+  .editor-entry-splash-bar-fill,
+  .editor-entry-splash-label {
+    animation: none !important;
+  }
+}
