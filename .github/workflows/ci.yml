@@ -1,5 +1,3 @@
-# CI pipeline — chạy trên BTC self-hosted runners (shared FIFO queue).
-# BTC org không dùng GitHub-hosted runners (ubuntu-latest) do giới hạn billing.
 name: CI
 
 on:
