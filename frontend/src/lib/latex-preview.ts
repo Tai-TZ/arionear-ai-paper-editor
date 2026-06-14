@@ -1,12 +1,19 @@
 import { createElement, Fragment, type ReactNode } from "react";
 
+export type PreviewAuthorEntry = {
+  name: string;
+  affiliation: string;
+};
+
 export type PreviewBlock =
   | { type: "title"; text: string }
-  | { type: "author"; text: string }
+  | { type: "author"; entries: PreviewAuthorEntry[] }
   | { type: "date"; text: string }
   | { type: "abstract"; text: string }
+  | { type: "keywords"; text: string }
   | { type: "section"; title: string; numbered: boolean; number: number }
   | { type: "subsection"; title: string; numbered: boolean; number: number }
+  | { type: "subsubsection"; title: string; numbered: boolean; number: number }
   | { type: "paragraph"; text: string }
   | { type: "figure"; src?: string; caption?: string; number: number }
   | { type: "equation"; text: string };
@@ -76,7 +83,7 @@ function extractCommandValue(source: string, command: string) {
   return inner != null ? unescapeLatex(inner) : null;
 }
 
-function formatPreviewDate(raw: string | null) {
+function formatPreviewDate(raw: string | null): string {
   if (!raw || raw === "\\today" || raw.includes("\\today")) {
     return new Date().toLocaleDateString("en-US", {
       year: "numeric",
@@ -87,44 +94,15 @@ function formatPreviewDate(raw: string | null) {
   return unescapeLatex(raw.replace(/\\today/g, formatPreviewDate("\\today")));
 }
 
-function formatTabularBlock(block: string): string {
-  const inner = block
-    .replace(/\\begin\{tabular\*?\}\{[^}]*\}/, "")
-    .replace(/\\end\{tabular\*?\}/, "");
-  return inner
-    .split(/\\\\/)
-    .map((row) =>
-      row
-        .split("&")
-        .map((cell) => cleanInlineText(cell.trim()))
-        .filter(Boolean)
-        .join("   "),
-    )
-    .filter(Boolean)
-    .join("\n");
+function stripMinipageBlocks(text: string): string {
+  return text
+    .replace(/\\begin\{minipage\}(?:\[[^\]]*\])?\{[^}]*\}/g, "")
+    .replace(/\\end\{minipage\}/g, "")
+    .replace(/\\centering/g, "")
+    .replace(/\\vspace\{[^}]*\}/g, "");
 }
 
-function cleanInlineText(text: string) {
-  return cleanBodyText(text).replace(/\n+/g, " ").trim();
-}
-
-function formatAuthorContent(raw: string): string {
-  let text = raw
-    .replace(/\\IEEEauthorblockN\{([^}]*)\}/g, (_, name: string) => `${cleanInlineText(name)}\n`)
-    .replace(/\\IEEEauthorblockA\{([^}]*)\}/g, (_, affil: string) => `${cleanInlineText(affil)}\n`)
-    .replace(/\\thanks\{[^}]*\}/g, "")
-    .replace(/\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\}/g, (block) => formatTabularBlock(block))
-    .replace(/\\and\b/g, "\n")
-    .replace(/\\$/g, "");
-
-  return cleanInlineText(text)
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join("\n");
-}
-
-function cleanBodyText(text: string) {
+function cleanBodyText(text: string): string {
   return text
     .replace(/\\maketitle/g, "")
     .replace(/\\tableofcontents/g, "")
@@ -148,14 +126,14 @@ function cleanBodyText(text: string) {
       items
         .split(/\\item/g)
         .slice(1)
-        .map((item) => `• ${cleanInlineText(item.trim())}`)
+        .map((item: string) => `• ${cleanInlineText(item.trim())}`)
         .join("\n"),
     )
     .replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g, (_, items: string) =>
       items
         .split(/\\item/g)
         .slice(1)
-        .map((item, i) => `${i + 1}. ${cleanInlineText(item.trim())}`)
+        .map((item: string, i: number) => `${i + 1}. ${cleanInlineText(item.trim())}`)
         .join("\n"),
     )
     .replace(/\\begin\{verbatim\}[\s\S]*?\\end\{verbatim\}/g, "")
@@ -178,6 +156,102 @@ function cleanBodyText(text: string) {
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function cleanInlineText(text: string): string {
+  return cleanBodyText(text).replace(/\n+/g, " ").trim();
+}
+
+function formatTabularBlock(block: string): string {
+  const inner = block
+    .replace(/\\begin\{tabular\*?\}\{[^}]*\}/, "")
+    .replace(/\\end\{tabular\*?\}/, "");
+  return stripMinipageBlocks(inner)
+    .split(/\\\\/)
+    .map((row) =>
+      row
+        .split("&")
+        .map((cell) => cleanInlineText(cell.trim()))
+        .filter(Boolean)
+        .join("   "),
+    )
+    .filter(Boolean)
+    .join("\n");
+}
+
+function formatAuthorContent(raw: string): string {
+  let text = raw
+    .replace(/\\IEEEauthorblockN\{([^}]*)\}/g, (_, name: string) => `${cleanInlineText(name)}\n`)
+    .replace(/\\IEEEauthorblockA\{([^}]*)\}/g, (_, affil: string) => `${cleanInlineText(affil)}\n`)
+    .replace(/\\thanks\{[^}]*\}/g, "")
+    .replace(/\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\}/g, (block) => formatTabularBlock(block))
+    .replace(/\\begin\{minipage\}[\s\S]*?\\end\{minipage\}/g, (block) => formatTabularBlock(block))
+    .replace(/\\and\b/g, "\n")
+    .replace(/\\$/g, "");
+
+  return cleanInlineText(text)
+    .split("\n")
+    .map((line: string) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseIeeeAuthorBlocks(raw: string): PreviewAuthorEntry[] {
+  const entries: PreviewAuthorEntry[] = [];
+  const chunks = raw.split(/\\and\b/);
+
+  for (const chunk of chunks) {
+    const name = extractCommandValue(chunk, "IEEEauthorblockN");
+    if (!name) continue;
+
+    const affilRaw = extractCommandValue(chunk, "IEEEauthorblockA");
+    const affiliation = affilRaw
+      ? affilRaw
+          .replace(/\\\\/g, "\n")
+          .split("\n")
+          .map((line: string) => cleanInlineText(line.replace(/\\textit\{([^}]*)\}/g, "_$1_")))
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+    entries.push({ name: cleanInlineText(name), affiliation });
+  }
+
+  return entries;
+}
+
+function parseTabularAuthorBlocks(raw: string): PreviewAuthorEntry[] {
+  const entries: PreviewAuthorEntry[] = [];
+  const minipagePattern =
+    /\\begin\{minipage\}(?:\[[^\]]*\])?\{[^}]*\}([\s\S]*?)\\end\{minipage\}/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = minipagePattern.exec(raw)) !== null) {
+    const lines = stripMinipageBlocks(match[1])
+      .split(/\\\\/)
+      .map((line: string) => cleanInlineText(line.replace(/\\textit\{([^}]*)\}/g, "_$1_")))
+      .filter(Boolean);
+    if (lines.length === 0) continue;
+
+    entries.push({
+      name: lines[0],
+      affiliation: lines.slice(1).join("\n"),
+    });
+  }
+
+  return entries;
+}
+
+function parseAuthorEntries(raw: string): PreviewAuthorEntry[] {
+  const ieee = parseIeeeAuthorBlocks(raw);
+  if (ieee.length > 0) return ieee;
+
+  const tabular = parseTabularAuthorBlocks(raw);
+  if (tabular.length > 0) return tabular;
+
+  const fallback = formatAuthorContent(raw);
+  if (!fallback) return [];
+  return [{ name: fallback, affiliation: "" }];
 }
 
 function splitParagraphs(text: string) {
@@ -215,6 +289,7 @@ function stripLatexFormatting(text: string): string {
   let t = unescapeLatex(text);
   for (let pass = 0; pass < 3; pass += 1) {
     t = t
+      .replace(/\\textbfface\{([^{}]*)\}/gi, "$1")
       .replace(/\\textbf\{([^{}]*)\}/g, "$1")
       .replace(/\\textit\{([^{}]*)\}/g, "$1")
       .replace(/\\emph\{([^{}]*)\}/g, "$1")
@@ -224,10 +299,10 @@ function stripLatexFormatting(text: string): string {
 }
 
 function parseHeading(line: string) {
-  const section = line.match(/^\\(section|subsection)\*?/);
+  const section = line.match(/^\\(section|subsection|subsubsection)\*?/);
   if (!section) return null;
 
-  const cmd = section[1] as "section" | "subsection";
+  const cmd = section[1] as "section" | "subsection" | "subsubsection";
   const braceStart = line.indexOf("{");
   if (braceStart < 0) return null;
 
@@ -242,7 +317,7 @@ function parseHeading(line: string) {
 }
 
 function readHeadingToken(body: string, start: number): { token: string; end: number } | null {
-  const match = body.slice(start).match(/^\\(section|subsection)\*?\{/);
+  const match = body.slice(start).match(/^\\(section|subsection|subsubsection)\*?\{/);
   if (!match) return null;
 
   const braceStart = start + match[0].length - 1;
@@ -352,8 +427,10 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
   const dateRaw = extractCommandValue(preamble + rawBody, "date");
 
   if (title) blocks.push({ type: "title", text: cleanInlineText(title) });
-  if (authorRaw) blocks.push({ type: "author", text: formatAuthorContent(authorRaw) });
-  if (title || authorRaw || dateRaw) {
+  if (authorRaw) {
+    blocks.push({ type: "author", entries: parseAuthorEntries(authorRaw) });
+  }
+  if (dateRaw && layout !== "ieee") {
     blocks.push({ type: "date", text: formatPreviewDate(dateRaw) });
   }
 
@@ -362,6 +439,12 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
   if (abstractMatch) {
     blocks.push({ type: "abstract", text: cleanBodyText(abstractMatch[1]) });
     body = body.replace(abstractMatch[0], "");
+  }
+
+  const keywordsMatch = body.match(/\\begin\{IEEEkeywords\}([\s\S]*?)\\end\{IEEEkeywords\}/);
+  if (keywordsMatch) {
+    blocks.push({ type: "keywords", text: cleanBodyText(keywordsMatch[1]) });
+    body = body.replace(keywordsMatch[0], "");
   }
 
   const figureData: ParsedFigure[] = [];
@@ -392,6 +475,7 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
 
   let sectionNumber = 0;
   let subsectionNumber = 0;
+  let subsubsectionNumber = 0;
   let renderedFigureNumber = 0;
 
   for (const token of tokens) {
@@ -400,21 +484,29 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
       if (heading.type === "section") {
         if (!heading.starred) sectionNumber += 1;
         subsectionNumber = 0;
-        const titleText =
-          layout === "ieee" ? heading.title.toUpperCase() : heading.title;
+        subsubsectionNumber = 0;
         blocks.push({
           type: "section",
-          title: titleText,
+          title: layout === "ieee" ? heading.title.toUpperCase() : heading.title,
           numbered: !heading.starred,
           number: sectionNumber,
         });
-      } else {
+      } else if (heading.type === "subsection") {
         if (!heading.starred) subsectionNumber += 1;
+        subsubsectionNumber = 0;
         blocks.push({
           type: "subsection",
           title: heading.title,
           numbered: !heading.starred,
           number: subsectionNumber,
+        });
+      } else {
+        if (!heading.starred) subsubsectionNumber += 1;
+        blocks.push({
+          type: "subsubsection",
+          title: heading.title,
+          numbered: !heading.starred,
+          number: subsubsectionNumber,
         });
       }
       continue;
@@ -463,15 +555,18 @@ export function parseLatexPreview(latex: string): ParsedLatexPreview {
 }
 
 export function formatSectionLabel(
-  block: Extract<PreviewBlock, { type: "section" | "subsection" }>,
+  block: Extract<
+    PreviewBlock,
+    { type: "section" | "subsection" | "subsubsection" }
+  >,
   layout: PreviewLayout,
 ): string {
   if (!block.numbered) return block.title;
   if (layout === "ieee" && block.type === "section") {
-    return `${toRomanNumeral(block.number)}. ${block.title}`;
+    return `${toRomanNumeral(block.number)}. ${block.title.toUpperCase()}`;
   }
-  if (block.type === "subsection") {
-    return `${block.number}. ${block.title}`;
+  if (block.type === "subsection" || block.type === "subsubsection") {
+    return `${block.type === "subsection" ? block.number : `${block.number}`}. ${block.title}`;
   }
   return `${block.number} ${block.title}`;
 }

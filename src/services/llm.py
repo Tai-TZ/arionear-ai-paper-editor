@@ -91,6 +91,17 @@ def get_llm(
     raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
+def _dedupe_models(models: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for model in models:
+        if model in seen:
+            continue
+        seen.add(model)
+        unique.append(model)
+    return unique
+
+
 def list_providers() -> list[dict]:
     """Return configured providers for the frontend selector."""
     settings = get_settings()
@@ -102,11 +113,13 @@ def list_providers() -> list[dict]:
                 "id": "openai",
                 "name": "OpenAI",
                 "default_model": settings.openai_default_model,
-                "models": [
-                    settings.openai_default_model,
-                    "gpt-4o",
-                    "gpt-4o-mini",
-                ],
+                "models": _dedupe_models(
+                    [
+                        settings.openai_default_model,
+                        "gpt-4o",
+                        "gpt-4o-mini",
+                    ]
+                ),
             }
         )
 
@@ -116,11 +129,13 @@ def list_providers() -> list[dict]:
                 "id": "anthropic",
                 "name": "Anthropic (Claude)",
                 "default_model": settings.anthropic_default_model,
-                "models": [
-                    settings.anthropic_default_model,
-                    "claude-sonnet-4-20250514",
-                    "claude-3-5-haiku-20241022",
-                ],
+                "models": _dedupe_models(
+                    [
+                        settings.anthropic_default_model,
+                        "claude-sonnet-4-20250514",
+                        "claude-3-5-haiku-20241022",
+                    ]
+                ),
             }
         )
 
@@ -130,14 +145,16 @@ def list_providers() -> list[dict]:
                 "id": "openrouter",
                 "name": "OpenRouter",
                 "default_model": settings.openrouter_default_model,
-                "models": [
-                    settings.openrouter_default_model,
-                    "openai/gpt-4o-mini",
-                    "anthropic/claude-sonnet-4",
-                    "openai/gpt-4o",
-                    "google/gemini-2.5-flash-preview",
-                    "meta-llama/llama-3.3-70b-instruct",
-                ],
+                "models": _dedupe_models(
+                    [
+                        settings.openrouter_default_model,
+                        "openai/gpt-4o-mini",
+                        "anthropic/claude-sonnet-4",
+                        "openai/gpt-4o",
+                        "google/gemini-2.5-flash-preview",
+                        "meta-llama/llama-3.3-70b-instruct",
+                    ]
+                ),
             }
         )
 

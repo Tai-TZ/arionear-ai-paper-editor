@@ -116,6 +116,7 @@ class CompileResponse(BaseModel):
     log: str = ""
     error: str = ""
     engine: str = ""
+    warning: str = ""
 
 
 class CompileStatusResponse(BaseModel):

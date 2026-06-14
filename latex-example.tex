@@ -1,0 +1,340 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{url}
+\usepackage[font=small, justification=raggedright]{caption}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{array}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage{algorithm,algorithmic}
+\title{Vietnamese herbariums Species Classification with EfficientNetV2}
+
+
+\author{
+\IEEEauthorblockN{Anh Hoang Tuan}
+\IEEEauthorblockA{\textit{Dept. of Artificial Intelligence}\\
+\textit{FPT University}\\
+Ho Chi Minh City, Vietnam\\
+anhtse180113@fpt.edu.vn}
+\and
+\IEEEauthorblockN{Nhut Nguyen Minh}
+\IEEEauthorblockA{\textit{Dept. of Artificial Intelligence}\\
+\textit{FPT University}\\
+Ho Chi Minh City, Vietnam\\
+nhutnmse180109@fpt.edu.vn}
+\and
+\IEEEauthorblockN{Thuan Ho Hai}
+\IEEEauthorblockA{\textit{Dept. of Artificial Intelligence}\\
+\textit{FPT University}\\
+Ho Chi Minh City, Vietnam\\
+thuanhhse180160@fpt.edu.vn}
+\and
+\IEEEauthorblockN{Nguyen Nguyen Trong}
+\IEEEauthorblockA{\textit{Dept. of Artificial Intelligence}\\
+\textit{FPT University}\\
+Ho Chi Minh City, Vietnam\\
+nguyenntse180301@fpt.edu.vn}
+}
+
+\begin{document}
+
+\maketitle 
+
+\begin{abstract}
+Nowadays, the field of medical research in Vietnam in general and traditional medicine research in particular is gradually developing and making more and more progress. In addition to that development, the classification of herbariums is gradually becoming an important part of the preservation and development of traditional medicine. Although many saved documents can help us distinguish, read and apply the knowledge in that document requires users to have a fairly high amount of professional knowledge. To deal with this difficulty, our research team has built a model to classify medicinal plants using images in the literature through the application of the specialized algorithm EfficientNetV2 as well as optimizing it to produce the most accurate results. We chose EfficientNetV2 because of its ability to strike a balance between high performance and accuracy. Through the training and testing process, the accuracy reached 90,41\%, which is superior to using traditional models. Although the model still faces challenges such as the diversity of herbarium species as well as image quality, the experiments in the above model have shown that the application of EfficientNetV2 in the classification of herbarium species is quite effective and promotes the prospect of further development
+\end{abstract}
+
+\begin{IEEEkeywords}
+EfficientNetV2, Vietnamese herbariums, classification, deep learning, biological characteristics.
+\end{IEEEkeywords}
+
+
+\section{Introduction}
+In Vietnam, the rich development of natural plant species has led to the expansion of extremely diverse herbs, which have great potential in the research, manufacturing and advancement of medicinal products. While the study of traditional medicine as well as natural herbs is proliferating, the need for further research on traditional medicine literature is also increasing. In addition, a new problem arises from the fact that ordinary users who want to read and distinguish herbs in documents and books need a relatively high amount of professional knowledge, which will cause significant difficulties for ordinary users who want to access this field.\\
+
+Although the classification of Vietnamese herbs has great potential, there are still some challenges such as the number of herb species is too large and the significant similarity in the morphology of some species. In some literature describing herbs, the morphological similarities of some species are not clear, making it more difficult than ever to classify them using traditional methods. Besides, another problem is that because the number of herbs in Vietnam is enormous, there will be rare species, which leads to a shortage of species databases. The use of manual methods to classify Vietnamese herbs now not only requires a high level of knowledge in the industry but can also lead to inconsistent results.\\
+
+In order to solve this classification problem, we have researched and proposed a solution using a classification model with the application of the EfficientNetV2 model. This is considered an advanced CNN network architecture, the convolutional neural network is so popular that it is a balance between accuracy and performance. The effectiveness and suitability of this solution are achieved by the application of Fused-MBConv blocks which boost the model's ability to handle images well regardless of their size and minimize possible overfitting.  \\
+
+Through the research on the classification model conducted based on the EfficientNetV2 model, our team has achieved positive results in the classification of Vietnamese herbariums. After going through the training process as well as optimizing the accuracy of the model, the final result has produced quite superior accuracy compared to other traditional methods. Not only that, one of the new and attractive points of the research is the success in applying data augmentation techniques.\\
+
+We have organized the above report in a tight and accessible manner. First, we will go through the Introduction section to highlight the importance and challenges in classifying Vietnamese herbariums. The Related Works section will figure out the pros and cons of some researchs that are similar to ours. The Methodology section interprets our presentation in detail of the algorithm of EfficientNetV2. After that, we will describe our training process as well as present the results achieved from the model after completion in the Experiments section. Then, we'll summarize the main findings through the above model article and propose a future research direction through the Conclusion.
+
+
+\section{Related Works}
+
+\subsection{Existing Works Addressing the Same Problem}
+
+\subsubsection{Machine Learning Methodologies} \\
+
+Techniques - Some teams working on the same topic Vietnamese herbariums use Machine Learning methods. Specifically, in the study \cite{r1} the SVM, Logistic, XGBoost, AdaBoost, KNN, LightGBM algorithms were used, and the study \cite{r2} used AdaBoost to be able to identify related medicinal plants.
+
+\begin{itemize}
+    \item \textbf{Advantages:}
+    \begin{itemize}
+        \item \textit{Simplicity:} the model is simple, so it is easy to grasp and understand each characteristic in contributing to the creation of results.
+        \item \textit{Flexible:} Easy to calibrate a variety of features such as colors, shapes, and textures.
+        
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    \begin{itemize}
+        \item \textit{Performance:} The performance of traditional machine learning methods is not as accurate as that of deep learning methods, and it is especially easy to notice the difference in accuracy in complex features. This has been mentioned in the research paper of the study \cite{r3} with the accuracy of the DLNN being 93\% while the accuracy of the SVM algorithm is only 74.63\% . There is a significant dependence on the characteristic extraction technique, which is invisible in general, which not only causes time consumption, but also makes it difficult to grasp the relevant characteristics.
+        
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Group 2: Deep Learning Methodologies}
+Deep Learning is widely used because of its ability to train models from labeled data. As far as we can tell, there are some studies that have used Deep Learning to identify and classify male medicinal objects, such as using Deep Learning Neural Network\cite{r3} to automatically classify herbariums, while research using CNN algorithm \cite{r4} to identify Vietnamese herbariums leaves. There is also research \cite{A1} on the successful application of the Attention-Enhanced ResNet technique along with the Fusion feature to identify herbs. Finally, the application of the VGG16 method applied in the study \cite{A2}.
+
+\begin{itemize}
+    \item \textbf{Advantages:}
+    \begin{itemize}
+        \item \textit{High accuracy:} Higher accuracy is often achieved than machine learning, especially for large and complex datasets. 
+        \item \textit{Automation:} Automatically learns and extracts features from raw data without requiring too much manual characterization techniques.
+       
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    \begin{itemize}
+        \item \textit{Hardware resource requirements:} most Deep Learning models such as CNN, DLNN or EfficientNet have high requirements for hardware and flexibility, especially GPUs.
+        \item \textit{Training Time:} because of the complexity of the algorithms, it will often require a larger training time than methods from Machine Learning.
+        
+    \end{itemize}
+\end{itemize}
+
+\subsection{Works Using Similar Methods}
+
+
+\begin{itemize}
+    \item \textbf{Advantages:}
+    The EfficientNetV2 algorithm is selected as a suitable algorithm for the Vietnamese herbariums classification problem because it can optimize both the training speed and the accuracy of the model, specifically it has the following advantages:
+    \begin{itemize}
+        \item \textit{Scalability:} Because EfficientNet uses the Compound Scaling method to scale the model by width and back dimension and resolution.
+        \item \textit{Performance:} the ability to optimize speed and accuracy thanks to the use of the Fused-MBConv architecture.
+        
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    In addition, EfficientNetV2 still has some difficulties when implementing into the classification model such as:
+    \begin{itemize}
+        \item \textit{Complexity:}because it is more complex in design than traditional CNN models, EffcientNet V2 requires standard training techniques just to be able to effectively promote the performance of the model.
+        \item \textit{Resource requirements:} like the majority of other Deep Learning models, EfficientNetV2 requires a high level of hardware during training.
+    \end{itemize}
+\end{itemize}
+
+
+
+The EfficientNetV2 algorithm is superior to CNN because it uses optimization techniques such as compound scaling, which leads to more accurate classification results. In fact, there have been a number of research groups that have used the EfficientNet algorithm in the topic of herbariums plant classification, including one team that uses EfficientNet\cite{r5} to classify herbal medicine. Through the above studies, our team used EfficientNetV2 because it is more advanced than EfficientNet in using Fused-MBConv blocks as well as augmentation techniques to improve the network architecture.           
+
+
+\section{Methodology}
+
+After considering various models as mentioned above, we decided to choose the EfficientNetV2 - a new family of convolutional neural network (CNN) structure \cite{tan2019efficientnet,tan2021efficientnetv2,lee2023identification}.
+
+The general architecture of EfficientNetV2 can be represented as a series of successive blocks:
+\begin{equation}
+    EfficientNetV2(x) = B_k(B_{k-1}(...B_1(x)))
+\end{equation}
+where:
+\begin{itemize}
+    \item $x$ is input of the network
+    \item $B_k$ is $k_{th}$ block in EfficientNetV2 
+\end{itemize}
+EfficientNetV2 uses blocks to build the network architecture. Each block can be described by a sequence of mathematical operations as follows \cite{tan2021efficientnetv2}:
+\begin{equation}
+    y = F_{\theta}(x)
+\end{equation}
+where:
+\begin{itemize}
+    \item $y$ is the output of a block.
+    \item $F_\theta$ is a function that represent the math of a block with parameter $\theta$.
+    \item $x$ is the input of a block, it could be an output of the previous block or the first input of the entire network.
+\end{itemize}
+EfficientNetV2 typically uses the following main block types \cite{lee2023identification}: 
+\begin{itemize}
+    \item \textbf{Linear Bottleneck Block:} This is a basic block in EfficientNetV2, which typically includes operations such as Convolution (Conv), Batch Normalization (BN), Activation (ReLU), and depth optimization using a 1x1 Convolution operation.
+    \item \textbf{Inverted Residual Block:} An advanced version of the bottleneck block, it uses the inverted residual technique to reduce the amount of computation and parameters while maintaining performance.
+\end{itemize} 
+Figure \ref{fig:Diagram} illustrates a series of stages of EfficientNetV2 that have specific roles and contributions \cite{lee2023identification}:
+\begin{itemize}
+    \item \textbf{Stage 1 - Preprocessing:}
+        Input images are preprocessed to ensure dimensional consistency. Previous works like \cite{howard2018training,hoffer2019mix} have pointed out that changing image size during training often leads to a drop in accuracy. Because of that, EfficientNetV2 proposed a method called " Progressive learning with adaptive regularization" to adapt the regularization strength based on the current image size during training. At first, the network is trained with smaller image size and weaker regularization, as training progresses, the image size is gradually increases and stronger regularization is applied, this helps to handle the increasing of model capacity and potential overfitting.
+    \item \textbf{Stage 2 - Feature Extraction:} This stage extracts initial features using a series of convolutional operations: Initially, each feature is extracted by a separate kernel (depthwise kernel), each kernel operates on only a single feature. Then, a convolution 1x1 ( pointwise convolution) is applied to combine outputs from depthwise convolution into features maps. This stage is an inevitable part because it helps to extract the characteristics of the input while decrease computational complexity before coming to the next complex stages.
+    \item \textbf{Stage 3 - Fused-MBConv blocks:} 
+    These blocks are core components of the entire EfficientNetV2 architecture, providing efficiency to the model and to manage the balance between computational cost and accuracy. EfficientNetV2 uses the Fused-MBConv technique, it is an upgrade from the MBConv technique, which will be more clearly analyzed in the complexity analysis section.
+    \item \textbf{Stage 4 - SE Blocks:} 
+    Squeeze-and-Excitation blocks are used to enhance the ability to learn the characteristic of each image, help identify complex features and improve generalization, thereby improving overall accuracy, flexibility and efficiency of the architecture.
+    \item \textbf{Stage 5 - Classification:} 
+    The EfficientNetV2, which does not use a Fully Connected Layer (FCL) like other traditional networks, after the above stages have completed the feature extraction from the images, these features will be fed into a Global Average Pooling (GAP), which will then generate a one-way characteristic vector for each input image. These vectors are then fed into a classifier layer to perform the final classification. This reduces data dimensionality, reduces the number of parameters of the network, minimizes overfitting phenomenon and enhances generalization.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{EffNet Diagram.png}
+\caption{EfficientNetV2 Architecture Diagram}
+\label{fig:Diagram}
+\end{figure}
+
+\subsubsection{\textbf{Advantages and Disadvantages}}\
+\begin{itemize}
+    \item \textbf{Advantages:} 
+    Thanks to the aforementioned convolution operations, Fused-MBConv and pre-processing techniques, EfficientNetV2 achieves 5x-11x higher performance and accuracy than previous models. In addition, regularization techniques help the model achieves high generality even when trained with inputs of different sizes \cite{tan2021efficientnetv2}. Table \ref{tab:Progressive}shows
+    the minimum (for the first stage) and maximum (for the
+    last stage) values of image size and regularization. According to \cite{tan2021efficientnetv2}, this figure mainly shows the studies of the following types of regularization:\\
+    \begin{table}[h]
+    \centering
+    \begin{tabular}{c||cc|cc|cc}
+        \toprule
+        & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+        & \textbf{min} & \textbf{max} & \textbf{min} & \textbf{max} & \textbf{min} & \textbf{max} \\
+        \midrule
+        Image Size & 128 & 300 & 128 & 380 & 128 & 380 \\
+        RandAugment & 5 & 15 & 5 & 20 & 5 & 25 \\
+        Mixup alpha & 0 & 0 & 0 & 0.2 & 0 & 0.4 \\
+        Dropout rate & 0.1 & 0.3 & 0.1 & 0.4 & 0.1 & 0.5 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Progressive training for EfficientNetV2 (in this work, we used EfficientNetV2-M)}
+    \label{tab:Progressive}
+\end{table}
+\\
+    \begin{itemize}
+        \item  \textbf{Dropout:\cite{srivastava2014dropout}} A network-level regularization, which reduces co-adaptation by randomly
+        dropping channels.
+        \item \textbf{RandAugment:\cite{cubuk2021practical}} A per-image data
+        augmentation.
+        \item \textbf{Mixup:\cite{zhang2017mixup}} A cross-image data augmentation.
+    \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+    \item \textbf{Disadvantages:} Although more optimized than previous models, EfficientNetV2 still need a large computational resources, which can be a limitation for devices that are limited in memory. The use of convolutional operations and complex techniques make EfficientNetV2 become a non-as-easy-to-build-as-traditional-model. Although the depthwise separable convolution minimizes computational complexity and the amount of parameters, it may be insufficient in some cases to capture complex features needed by the network to learn and classify complex objects (we will show in the experimental results section).
+\end{itemize}
+
+\subsubsection{\textbf{Complexity Analysis}}
+
+    \begin{itemize}
+    \item \textbf{Space Complexity:} EfficientNetV2 has far fewer parameters than other models with the same performance thanks to the Fused-MBConv technique. As an improved version of MBConv (Mobile Inverted Bottleneck Convolution), Fused-MBConv combines depthwise convolution and pointwise convolution in a single step that reduces the number of calculations as well as memory space.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Fused.png}
+    \caption{MBConv (left) compared to Fused-MBConv (right)}
+    \label{fig:enter-label}
+\end{figure}
+
+    \item \textbf{Time Complexity:} The time complexity is influenced by the number of floating-point operations (FLOPs) required for each forward pass. EfficientNetV2 is designed to be computationally efficient, requiring fewer FLOPs compared to similar accuracy models.
+    \end{itemize}
+
+\section{Experiments}
+In this paper, we divided the experiment into different stages: Image acquisition, image augmentation, classification and evaluation. The experiment were conducted on a computing cluster with  Intel Xeon 2.20GHz processor and NVIDIA Tesla P100 with 32Gb RAM.
+    
+
+\subsection{\textbf{Image Acquisition}}
+Our herbariums's images were collected via a competition on kaggle (a data science competition platform and online community of data scientists and machine learning practitioners under Google LLC) which is started on February 2022. It's a part of the Fine-Grained Visual Categorization (FGVC9) workshop at the Computer Vision and Pattern Recognition Conference (CVPR2022) \cite{r2}. Our dataset has more than 11k Vietnamese's herbariums which include 204 species (Mac Mat, Bach Nhat, Co Xuoc,... )(figure \ref{fig:Frequency}). A part of data set is illustrated by figure \ref{fig:Acquisition}.
+\begin{figure}[H]
+        \centering
+        \includegraphics[width=1\linewidth]{Herb data.jpg}
+        \label{fig:image1}
+        \caption{Some Vietnamese's herbariums images from data set }
+        \label{fig:Acquisition}
+    \end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1.05\linewidth]{Data Contribu.jpg}
+    \caption{Distribution of the number of images, we have 5 herbariums which have less than 55 images and nearly 20 herbariums which have more than 75 images for each kind.}
+    \label{fig:Frequency}
+\end{figure}
+
+
+\subsection{\textbf{Image Augmentation}}
+We used some method to change our image in training and validating set such as : Resize, center crop, horizontal flip, vertical flip, brightness adjust, contrast adjust, etc. Purpose of these methods is to helps improve the synthesis of model information expansion and diversified training data by creating transformed version of existing images, making the model more resistant to variability in the input data and train the model to recognize important features without being affected by these variations. Moreover, when model is trained on a data set which is lack of diversity, it can learn in a non-general way which can lead to overfitting phenomenon \cite{chlap2021review}. Figure \ref{fig:Augmentation} shows an augmented image.
+\begin{figure}[H]
+    \centering
+ 
+     \includegraphics[width=1.07\linewidth]{Coi xay 2.jpg}
+    \caption{An augmented image from training set}
+    \label{fig:Augmentation}
+\end{figure}
+
+\subsection{\textbf{Classification}}
+In these experiments, we applied a pre-trained EfficientNetV2 model with some hyperparameters such as: dropout rate is 0.3 with 50 epochs, learning rate is $5 \times 10^{-4}$,
+min learning rate is  $1 \times 10^{-6}$ and
+batch size is 32. These hyperparameters have the effect of preventing overfitting by reducing over-dependence between units and increasing model diversity (dropout rate), ensuring that the model learns enough complexity of the data to avoid underfitting or overfitting (epochs). After testing, we realized that 50 epochs are quite a lot to train this model, in fact, the model can work well at about 20 epochs. In addition, the learning rate and min learning rate help ensure that the learning speed of the model is neither too high nor too low, ensuring the optimal size of the weighted update steps based on the gradient of the loss function, thereby making the model more stable. First, we started freezing 100 first layers of the pre-trained model and applying fine-tuning technique on others, this step involves transfer learning which aims to retain the weights from the pre-trained model in the training process to make the training process faster \cite{fine-tuning}. We tried applying fine-tuning technique on entire layers that means our model will start learning from scratch, this then leads to increasing in accuracy from $90,41\%$ to $90,64\%$ but on the other hand it also extends training time by 2 times. After several tests, we believe that freezing 100 first layers is much more efficient than the other.
+Beside that, we use Adam algorithm \cite{kingma2014adam} as an optimizer to adjust the parameters and minimise the errors of our model. 
+\begin{algorithm}[h]
+\caption{Adam Optimization Algorithm}
+\begin{algorithmic}[1]
+    \REQUIRE $\alpha$: Stepsize
+    \REQUIRE $\beta_1, \beta_2 \in [0, 1]$: Exponential decay rates for the moment estimates
+    \REQUIRE $f(\theta)$: Stochastic objective function with parameters $\theta$
+    \REQUIRE $\theta_0$: Initial parameter vector
+    \STATE $m_0 \leftarrow 0$ (Initialize 1\textsuperscript{st} moment vector)
+    \STATE $v_0 \leftarrow 0$ (Initialize 2\textsuperscript{nd} moment vector)
+    \STATE $t \leftarrow 0$ (Initialize timestep)
+    \WHILE{$\theta_t$ not converged}
+        \STATE $t \leftarrow t + 1$
+        \STATE $g_t \leftarrow \nabla_\theta f_t(\theta_{t-1})$ \COMMENT{Get gradients w.r.t. stochastic objective at timestep t}
+        \STATE $m_t \leftarrow \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t$ \COMMENT{Update biased first moment estimate}
+        \STATE $v_t \leftarrow \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2$ \COMMENT{Update biased second raw moment estimate}
+        \STATE $\hat{m_t} \leftarrow m_t / (1 - \beta_1^t)$ \COMMENT{Compute bias-corrected first moment estimate}
+        \STATE $\hat{v_t} \leftarrow v_t / (1 - \beta_2^t)$ \COMMENT{Compute bias-corrected second raw moment estimate}
+        \STATE $\theta_t \leftarrow \theta_{t-1} - \alpha \cdot \hat{m_t} / (\sqrt{\hat{v_t}} + \epsilon)$ \COMMENT{Update parameters}
+    \ENDWHILE
+    \RETURN $\theta_t$ (Resulting parameters)
+\end{algorithmic}
+\end{algorithm}
+
+After training process, we applied resize and centercrop techniques to augment images from test set, then we started evaluating our model. After all, it achieved 90,41\% in accuracy, we believe that our model is limited by the lack of sample images, if this can be improved, the accuracy of our model will be significantly increased (figure \ref{fig:Predict} shown some outcomes). We applied two classifier: ResNet50 and Xception to compare the accuracy of our model with those model's in figure \ref{fig:Metrics}.
+
+\begin{figure}[h]
+    \centering
+    \subfigure[F1-score and loss function of EfficientNetV2]{
+    \includegraphics[width=1.03\linewidth]{Eff_met.png}
+    }
+    \subfigure[F1-score and loss function of ResNet50]{
+     \includegraphics[width=1.03\linewidth]{Res_met.png}
+    }
+    \subfigure[F1-score and loss function of Xception]{
+    \includegraphics[width=1.03\linewidth]{Xception_Met.png}
+    }
+    \caption{Metrics used to evaluate accuracy}
+    \label{fig:Metrics}
+\end{figure}
+
+However, because of the characteristic of the dataset which is herbariums, we have lost some special features such as: leaf colors, leaf veins,...As a consequence, the variety of data is lacked, which leads to difficulties in classification. Besides, the strong similarity in the shape (shown in figure \ref{fig:Khoai+Cỏ}) of the herbariums is also part of the difficulty in classification progress.
+% Ảnh lỗi phân loại
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{Predict.png}
+    \caption{Predicted and actual images with a wrong prediction}
+    \label{fig:Predict}
+\end{figure}
+ % Ảnh cây cỏ xước và cây khoai 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Khoai+Cỏ.png}
+    \caption{'Co Xuoc' (left) and 'Khoai Tay' (right) - images that easily confuse the model}
+    \label{fig:Khoai+Cỏ}
+\end{figure}
+ 
+\section{\textbf{Conclusion}}
+
+In this work, we proposed a method to classify herbariums by EfficientNetV2 and compare its accuracy with that of others. Through experiments, we conclude that EfficientNetV2 is much more effective than others in image classification thanks to its novel but effective pre-processing process and optimally utilized blocks. As a matter of fact, the application of EfficientNetV2 to classify plant patterns can promote competence in many practical fields such as academics, healthcare, etc. However, there are still many limitations, such as the characteristic deficiency in the dataset and the difficulty in identifying plants with high similarities in appearance.\\
+\\
+In the future, we aim to enhance the accuracy of the model by changing the pre-processing method for the images, developing more techniques applied to the model and comparing the accuracy of the model to the up-to-date models at that time.
+
+\ifCLASSOPTIONcaptionsoff
+  \newpage
+\fi
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\begin{description}
+\end{description}
+\end{document}
