@@ -87,6 +87,11 @@ async def classify_intent(
         scope: Scope = "selection" if has_selection and explicit_task == "style" else "document"
         return IntentResult(action=explicit_task, scope=scope)  # type: ignore[arg-type]
 
+    from src.config import get_settings
+
+    if get_settings().app_env == "test":
+        return _fallback_intent(query, has_latex, has_selection)
+
     system = get_prompt("router", "system")
     if not system:
         return _fallback_intent(query, has_latex, has_selection)
