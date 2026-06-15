@@ -24,6 +24,13 @@ const IMAGE_EXTENSIONS = new Set([
   ".eps",
 ]);
 
+const LATEX_SUPPORT_EXTENSIONS = new Set([
+  ".cls",
+  ".bst",
+  ".sty",
+  ".bib",
+]);
+
 const BUILTIN_ASSET_URLS: Record<string, string> = {
   "sample.figure.eps": "/assets/sample-figure.svg",
   "sample.figure": "/assets/sample-figure.svg",
@@ -132,6 +139,15 @@ export function createProject(name: string, latex: string): StoredProject {
 export function isImageAssetFile(name: string) {
   const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
   return IMAGE_EXTENSIONS.has(ext);
+}
+
+export function isLatexSupportAssetFile(name: string) {
+  const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
+  return LATEX_SUPPORT_EXTENSIONS.has(ext);
+}
+
+export function isProjectAssetFile(name: string) {
+  return isImageAssetFile(name) || isLatexSupportAssetFile(name);
 }
 
 export function normalizeAssetName(name: string) {

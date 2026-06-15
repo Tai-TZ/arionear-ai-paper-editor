@@ -37,6 +37,9 @@ type LlmOptions = {
   llm_model?: string;
 };
 
+const COMPILE_CONNECTION_MSG =
+  "Không kết nối được backend (localhost:8000). Hãy chạy: uvicorn src.main:app --reload --port 8000";
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -48,7 +51,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error("NETWORK_ERROR");
+    throw new Error(path.startsWith("/compile") ? COMPILE_CONNECTION_MSG : "NETWORK_ERROR");
   }
   if (!res.ok) {
     let detail: unknown = res.statusText;
@@ -264,6 +267,42 @@ export async function verifyCitations(
       bib_content: bibContent,
     }),
   });
+}
+
+export type CompileAssetPayload = {
+  name: string;
+  content_base64: string;
+};
+
+export type CompileResult = {
+  success: boolean;
+  pdf_base64: string;
+  log: string;
+  error: string;
+  engine: string;
+  warning?: string;
+};
+
+export async function compileLatex(
+  latex: string,
+  assets: { name: string; dataUrl: string }[],
+): Promise<CompileResult> {
+  return apiFetch("/compile", {
+    method: "POST",
+    body: JSON.stringify({
+      latex,
+      assets: assets.map(
+        (asset): CompileAssetPayload => ({
+          name: asset.name,
+          content_base64: asset.dataUrl,
+        }),
+      ),
+    }),
+  });
+}
+
+export async function fetchCompileStatus(): Promise<{ available: boolean; engine: string | null }> {
+  return apiFetch("/compile/status");
 }
 
 export async function revisionAction(

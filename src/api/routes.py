@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -10,6 +12,9 @@ from src.models.schemas import (
     ChatResponse,
     CitationVerifyRequest,
     CitationVerifyResponse,
+    CompileRequest,
+    CompileResponse,
+    CompileStatusResponse,
     IntegrityFlagSchema,
     ProviderInfo,
     ProvidersResponse,
@@ -20,6 +25,7 @@ from src.models.schemas import (
     StyleEditRequest,
     StyleEditResponse,
 )
+from src.services.latex_compile import compile_latex, compile_status
 from src.services.chat_stream import AGENT_NAME, stream_chat
 from src.services.citations.verifier import verify_citations
 from src.services.llm import list_providers
@@ -241,6 +247,25 @@ async def verify_session_citations(request: CitationVerifyRequest):
         results=results,
         summary=f"Verified {verified}/{len(results)} citations.",
     )
+
+
+@router.get("/compile/status", response_model=CompileStatusResponse)
+async def get_compile_status():
+    return compile_status()
+
+
+@router.post("/compile", response_model=CompileResponse)
+async def compile_manuscript(body: CompileRequest):
+    try:
+        result = compile_latex(body)
+        return result
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail="LaTeX compilation timed out.") from e
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[COMPILE_ERROR] {tb}", flush=True)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
 
 
 @router.post("/revisions/{session_id}/{revision_id}")
