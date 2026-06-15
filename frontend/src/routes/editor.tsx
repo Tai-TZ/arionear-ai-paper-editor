@@ -19,10 +19,8 @@ import {
   Undo2,
   Redo2,
   Wrench,
-  LogOut,
 } from "lucide-react";
-import { getSession, signOut } from "@/lib/auth-store";
-import { authToast } from "@/lib/auth-toast";
+import { getSession } from "@/lib/auth-store";
 import {
   addProjectAssets,
   getProject,
@@ -55,6 +53,7 @@ import { LatexDiffEditor } from "@/components/latex-diff-editor";
 import { LatexCodeEditor } from "@/components/latex-code-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
 import {
   EditorEntrySplash,
 } from "@/components/editor-entry-splash";
@@ -721,18 +720,11 @@ function EditorPage() {
 }
 
 function ArionearMasthead({ className = "" }: { className?: string }) {
-  const navigate = useNavigate();
   const user = getSession();
-
-  const handleSignOut = () => {
-    signOut();
-    authToast.signOutSuccess();
-    navigate({ to: "/signin" });
-  };
 
   return (
     <div
-      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-[color:var(--ink)] px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-[color:var(--newsprint)] ${className}`}
+      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background ${className}`}
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
@@ -751,14 +743,6 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
             <span className="hidden sm:inline opacity-80 normal-case tracking-normal font-sans-ui text-[11px]">
               {user.name}
             </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-1.5 hover:text-[color:var(--editorial-red)] transition-colors"
-            >
-              <LogOut className="h-3 w-3" />
-              Sign out
-            </button>
             <span className="opacity-40">·</span>
           </>
         )}
@@ -1338,6 +1322,7 @@ function ToolsPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<ToolsTab>("info");
+  const { theme, setTheme } = useTheme();
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [citationLoading, setCitationLoading] = useState(false);
@@ -1427,6 +1412,21 @@ function ToolsPanel({
                 checked={autoCompile}
                 onCheckedChange={onAutoCompileChange}
                 aria-label="Auto-compile PDF"
+              />
+            </div>
+
+            <div className="tools-setting-row">
+              <div className="tools-setting-copy">
+                <span className="tools-setting-label">Dark mode</span>
+                <span className="tools-setting-hint">
+                  Use a darker workspace theme across the app
+                </span>
+              </div>
+              <Switch
+                id="tools-dark-mode"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                aria-label="Dark mode"
               />
             </div>
 

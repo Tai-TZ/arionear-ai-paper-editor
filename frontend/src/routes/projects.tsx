@@ -33,6 +33,13 @@ import {
   type StoredProject,
 } from "@/lib/project-store";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -55,7 +62,6 @@ function ProjectsPage() {
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
-  const [menuProjectId, setMenuProjectId] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(() => getSession());
 
   useEffect(() => {
@@ -116,7 +122,6 @@ function ProjectsPage() {
 
   const handleDelete = (id: string) => {
     deleteProject(id);
-    setMenuProjectId(null);
     refresh();
   };
 
@@ -155,12 +160,12 @@ function ProjectsPage() {
               )}
             </div>
           ) : (
-            <div className="projects-guest-card rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/80 p-3.5">
+            <div className="projects-guest-card rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/80 p-3.5 dark:border-amber-800/50 dark:from-amber-950/60 dark:to-orange-950/50">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <p className="text-xs font-semibold text-amber-950">Don't lose access</p>
-                  <p className="mt-1 text-[11px] leading-snug text-amber-900/80">
+                  <p className="text-xs font-semibold text-amber-950 dark:text-amber-100">Don't lose access</p>
+                  <p className="mt-1 text-[11px] leading-snug text-amber-900/80 dark:text-amber-200/80">
                     You are not logged in. Sign in to save projects and edit from other devices.
                   </p>
                 </div>
@@ -300,7 +305,7 @@ function ProjectsPage() {
           </div>
         </header>
 
-        <div className="soft-scrollbar flex-1 overflow-y-auto px-5 py-5 md:px-8">
+        <div className="soft-scrollbar flex-1 overflow-y-auto px-5 py-5 pb-8 md:px-8">
           {filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}
@@ -309,7 +314,7 @@ function ProjectsPage() {
               onBlank={handleCreateBlank}
             />
           ) : view === "list" ? (
-            <div className="projects-table rounded-xl border border-border/60 bg-card overflow-hidden">
+            <div className="projects-table rounded-xl border border-border/60 bg-card">
               <div className="projects-table-head grid grid-cols-[1fr_8rem_2.5rem] gap-3 border-b border-border/50 px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <span>Name</span>
                 <span>Created</span>
@@ -319,11 +324,7 @@ function ProjectsPage() {
                 <ProjectRow
                   key={project.id}
                   project={project}
-                  menuOpen={menuProjectId === project.id}
                   onOpen={() => openEditor(project.id)}
-                  onToggleMenu={() =>
-                    setMenuProjectId((id) => (id === project.id ? null : project.id))
-                  }
                   onDelete={() => handleDelete(project.id)}
                 />
               ))}
@@ -420,15 +421,11 @@ function EmptyProjects({
 
 function ProjectRow({
   project,
-  menuOpen,
   onOpen,
-  onToggleMenu,
   onDelete,
 }: {
   project: StoredProject;
-  menuOpen: boolean;
   onOpen: () => void;
-  onToggleMenu: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -441,28 +438,35 @@ function ProjectRow({
         <span className="truncate text-sm font-medium">{project.name}</span>
       </button>
       <span className="text-xs text-muted-foreground">{formatTimeAgo(project.createdAt)}</span>
-      <div className="relative flex justify-end">
-        <button
-          onClick={onToggleMenu}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-          aria-label="Project options"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-        {menuOpen && (
-          <div className="projects-menu absolute right-0 top-full z-20 mt-1 min-w-[8rem]">
-            <button onClick={onOpen} className="projects-menu-item">
-              Open
-            </button>
+      <div className="flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
-              onClick={onDelete}
-              className="projects-menu-item text-[color:var(--editorial-red)]"
+              type="button"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
+              aria-label="Project options"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              <MoreHorizontal className="h-4 w-4" />
             </button>
-          </div>
-        )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            side="bottom"
+            sideOffset={6}
+            collisionPadding={{ top: 8, bottom: 8, left: 8, right: 56 }}
+            className="min-w-[10rem]"
+          >
+            <DropdownMenuItem onClick={onOpen}>
+              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              Open
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
