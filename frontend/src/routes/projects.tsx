@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   LayoutGrid,
@@ -17,7 +17,8 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import { getSession, logoutUser, type AuthUser } from "@/lib/auth-store";
+import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
+import { authToast } from "@/lib/auth-toast";
 import {
   BLANK_LATEX,
   SAMPLE_LATEX,
@@ -56,6 +57,16 @@ function ProjectsPage() {
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [menuProjectId, setMenuProjectId] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(() => getSession());
+
+  useEffect(() => {
+    let cancelled = false;
+    refreshSession().then((sessionUser) => {
+      if (!cancelled) setUser(sessionUser);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -175,8 +186,10 @@ function ProjectsPage() {
           {user ? (
             <button
               onClick={() => {
-                logoutUser();
+                signOut();
                 setUser(null);
+                authToast.signOutSuccess();
+                navigate({ to: "/signin" });
               }}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
             >

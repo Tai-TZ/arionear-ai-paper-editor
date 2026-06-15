@@ -24,7 +24,10 @@ import {
   Undo2,
   Redo2,
   Wrench,
+  LogOut,
 } from "lucide-react";
+import { getSession, signOut } from "@/lib/auth-store";
+import { authToast } from "@/lib/auth-toast";
 import {
   addProjectAssets,
   getProject,
@@ -690,6 +693,15 @@ function EditorPage() {
 }
 
 function ArionearMasthead({ className = "" }: { className?: string }) {
+  const navigate = useNavigate();
+  const user = getSession();
+
+  const handleSignOut = () => {
+    signOut();
+    authToast.signOutSuccess();
+    navigate({ to: "/signin" });
+  };
+
   return (
     <div
       className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-[color:var(--ink)] px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-[color:var(--newsprint)] ${className}`}
@@ -705,8 +717,26 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
         <span className="opacity-40">·</span>
         <span>LaTeX Workspace</span>
       </div>
-      <span className="hidden sm:inline opacity-70">{today}</span>
-      <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      <div className="flex items-center gap-3">
+        {user && (
+          <>
+            <span className="hidden sm:inline opacity-80 normal-case tracking-normal font-sans-ui text-[11px]">
+              {user.name}
+            </span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 hover:text-[color:var(--editorial-red)] transition-colors"
+            >
+              <LogOut className="h-3 w-3" />
+              Sign out
+            </button>
+            <span className="opacity-40">·</span>
+          </>
+        )}
+        <span className="hidden sm:inline opacity-70">{today}</span>
+        <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      </div>
     </div>
   );
 }

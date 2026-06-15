@@ -153,12 +153,33 @@ class User(Base):
         Enum(UserRole, name="user_role", native_enum=False),
         default=UserRole.RESEARCHER,
     )
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     papers: Mapped[list[Paper]] = relationship(back_populates="user")
     ai_sessions: Mapped[list[AiSession]] = relationship(back_populates="user")
     audit_logs: Mapped[list[AuditLog]] = relationship(back_populates="user")
+    password_reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    __table_args__ = (Index("ix_password_reset_tokens_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    user: Mapped[User] = relationship(back_populates="password_reset_tokens")
 
 
 class Paper(Base):

@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Mail, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
+import { AuthAlert, AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
+import { requestPasswordReset } from "@/lib/auth-store";
+import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -17,12 +19,27 @@ function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
+
+    const result = await requestPasswordReset(email);
     setLoading(false);
+
+    if (!result.ok) {
+      authToast.forgotPasswordError(result.error);
+      setError(result.error);
+      return;
+    }
+
+    authToast.forgotPasswordSuccess();
+    setNotice(result.message);
+    setDevResetUrl(result.devResetUrl ?? null);
     setSubmitted(true);
   };
 
@@ -32,25 +49,37 @@ function ForgotPasswordPage() {
       title="Forgot your password?"
       lede="Send us the email on file. We'll mail back a one-time link to set a new one — no questions, no fanfare."
     >
+      {error && <AuthAlert message={error} />}
+
       {submitted ? (
         <div className="border border-foreground bg-background p-6">
           <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-3">
             Notice posted
           </p>
           <h2 className="font-serif-display text-2xl font-bold mb-2">Check your inbox.</h2>
-          <p className="font-serif-body text-sm text-foreground/70">
-            If <span className="font-semibold">{email}</span> matches an Arionear account, a reset link is on its way. The link expires in 30 minutes.
-          </p>
+          <p className="font-serif-body text-sm text-foreground/70">{notice}</p>
+          {devResetUrl && (
+            <p className="mt-4 font-serif-body text-xs text-foreground/60 border-t border-foreground/20 pt-4">
+              Dev mode:{" "}
+              <a href={devResetUrl} className="underline break-all hover:text-[color:var(--editorial-red)]">
+                Open reset link
+              </a>
+            </p>
+          )}
           <button
             type="button"
-            onClick={() => setSubmitted(false)}
+            onClick={() => {
+              setSubmitted(false);
+              setDevResetUrl(null);
+              setNotice("");
+            }}
             className="mt-5 font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
           >
             Use a different email
           </button>
         </div>
       ) : (
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           <AuthField
             id="email"
             label="Account email"
