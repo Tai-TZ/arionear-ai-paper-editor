@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<div id="erd" style="padding: 8px 0;"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+
+const diagram = `erDiagram
+  users {
+    uuid id PK
+    string email
+    string full_name
+    string institution
+    string native_language
+    string research_field
+    enum role
+    timestamp created_at
+    timestamp last_active_at
+  }
+
+  papers {
+    uuid id PK
+    uuid user_id FK
+    string title
+    enum status
+    string target_journal
+    string citation_style
+    string language_level
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  paper_sections {
+    uuid id PK
+    uuid paper_id FK
+    enum section_type
+    int order_index
+    text original_content
+    text current_content
+    int word_count
+    timestamp updated_at
+  }
+
+  ai_sessions {
+    uuid id PK
+    uuid paper_id FK
+    uuid section_id FK
+    uuid user_id FK
+    enum task_type
+    text user_input
+    text ai_output
+    json metadata
+    int tokens_used
+    float confidence_score
+    timestamp created_at
+  }
+
+  suggestions {
+    uuid id PK
+    uuid session_id FK
+    uuid section_id FK
+    enum suggestion_type
+    text original_text
+    text suggested_text
+    text explanation
+    enum status
+    timestamp created_at
+    timestamp resolved_at
+  }
+
+  citations {
+    uuid id PK
+    uuid paper_id FK
+    string citation_key
+    enum citation_type
+    string authors
+    string title
+    string journal
+    int year
+    string doi
+    string raw_text
+    json formatted_styles
+    timestamp created_at
+  }
+
+  citation_usages {
+    uuid id PK
+    uuid citation_id FK
+    uuid section_id FK
+    int position_start
+    int position_end
+    string context_snippet
+  }
+
+  reviewer_comments {
+    uuid id PK
+    uuid paper_id FK
+    string reviewer_label
+    text comment_text
+    enum severity
+    enum category
+    timestamp created_at
+  }
+
+  response_suggestions {
+    uuid id PK
+    uuid comment_id FK
+    uuid session_id FK
+    text suggested_response
+    text revision_note
+    enum status
+    timestamp created_at
+  }
+
+  audit_logs {
+    uuid id PK
+    uuid user_id FK
+    uuid paper_id FK
+    enum action_type
+    json before_state
+    json after_state
+    string ip_address
+    timestamp created_at
+  }
+
+  users ||--o{ papers : owns
+  papers ||--o{ paper_sections : contains
+  papers ||--o{ ai_sessions : has
+  papers ||--o{ citations : includes
+  papers ||--o{ reviewer_comments : receives
+  paper_sections ||--o{ ai_sessions : targets
+  paper_sections ||--o{ suggestions : gets
+  paper_sections ||--o{ citation_usages : references
+  ai_sessions ||--o{ suggestions : produces
+  ai_sessions ||--o| response_suggestions : generates
+  citations ||--o{ citation_usages : used_in
+  reviewer_comments ||--o{ response_suggestions : addressed_by
+  users ||--o{ audit_logs : tracked_in
+  papers ||--o{ audit_logs : logged_in
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
