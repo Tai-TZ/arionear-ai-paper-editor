@@ -46,8 +46,23 @@ class Settings(BaseSettings):
     anthropic_default_model: str = "claude-sonnet-4-20250514"
     openrouter_default_model: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
 
-    # Database
+    # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).
+    # Python/SQLAlchemy needs a direct postgresql:// URL via DIRECT_DATABASE_URL.
     database_url: str = "sqlite:///./data/app.db"
+    direct_database_url: str = ""
+
+    def sqlalchemy_database_url(self) -> str:
+        direct = self.direct_database_url.strip()
+        if direct:
+            if direct.startswith("postgres://"):
+                direct = "postgresql://" + direct[len("postgres://") :]
+            return direct
+        url = self.database_url.strip()
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://") :]
+        if url.startswith(("postgresql://", "sqlite://")):
+            return url
+        return ""
 
     # Guardrails
     semantic_similarity_threshold: float = Field(default=0.0, ge=0.0, le=1.0)

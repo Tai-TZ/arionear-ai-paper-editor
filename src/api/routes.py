@@ -24,6 +24,7 @@ from src.services.chat_stream import AGENT_NAME, stream_chat
 from src.services.citations.verifier import verify_citations
 from src.services.llm import list_providers
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
+from src.db.engine import db_is_ready, is_db_enabled
 from src.services.sessions import session_store
 
 router = APIRouter()
@@ -66,11 +67,21 @@ def _agent_input(**kwargs) -> dict:
 @router.get("/status")
 async def agent_status():
     settings = get_settings()
+    if db_is_ready():
+        storage = (
+            "postgresql"
+            if get_settings().sqlalchemy_database_url().startswith(("postgresql://", "postgres://"))
+            else "database"
+        )
+    elif is_db_enabled():
+        storage = "database (connection failed — check DATABASE_URL)"
+    else:
+        storage = "in-memory (set DATABASE_URL to enable persistence)"
     return {
         "status": "ready",
         "agent": f"{AGENT_NAME} v1.0",
         "default_provider": settings.llm_provider,
-        "storage": "in-memory (database deferred)",
+        "storage": storage,
     }
 
 
@@ -224,7 +235,7 @@ async def verify_session_citations(request: CitationVerifyRequest):
         entries,
         semantic_scholar_api_key=settings.semantic_scholar_api_key,
     )
-    session.citation_registry = results
+    session_store.set_citation_registry(request.session_id, results)
     verified = sum(1 for r in results if r.get("status") == "verified")
     return CitationVerifyResponse(
         results=results,
