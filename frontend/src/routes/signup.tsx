@@ -1,6 +1,6 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock, User, Building2, ArrowLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AuthAlert,
   AuthDivider,
@@ -15,15 +15,14 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { isAuthenticated, sendSignupVerificationCode, verifySignupCode } from "@/lib/auth-store";
+import { sendSignupVerificationCode, verifySignupCode } from "@/lib/auth-store";
+import { redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 import { passwordStrength, validatePassword } from "@/lib/auth-validation";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: () => {
-    if (isAuthenticated()) {
-      throw redirect({ to: "/projects" });
-    }
+    redirectIfAuthenticated("/projects");
   },
   head: () => ({
     meta: [
@@ -52,12 +51,6 @@ function SignUpPage() {
 
   const strength = useMemo(() => passwordStrength(password), [password]);
   const passwordHint = password ? validatePassword(password) : null;
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      navigate({ to: "/projects", replace: true });
-    }
-  }, [navigate]);
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();

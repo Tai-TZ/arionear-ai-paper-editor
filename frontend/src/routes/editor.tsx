@@ -78,6 +78,7 @@ type EditorSearch = {
 };
 
 export const Route = createFileRoute("/editor")({
+  ssr: false,
   beforeLoad: () => {
     requireAuth();
   },
