@@ -19,16 +19,14 @@ type EditorDesktopPanelsProps = {
   right: ReactNode;
 };
 
-function PanelFallback({ center, right }: EditorDesktopPanelsProps) {
+function PanelFallback({ center }: { center: ReactNode }) {
   return (
     <div className="editor-panel-fallback flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <div className="editor-panel-fallback-center flex min-h-0 min-w-0 flex-col overflow-hidden">
         {center}
       </div>
       <div className="editor-resize-handle w-px shrink-0" aria-hidden />
-      <div className="editor-panel-fallback-preview flex min-h-0 min-w-0 flex-col overflow-hidden">
-        {right}
-      </div>
+      <div className="editor-panel-fallback-preview flex min-h-0 min-w-0 flex-col overflow-hidden bg-muted/20" />
     </div>
   );
 }
@@ -45,7 +43,7 @@ export function EditorDesktopPanels({ center, right }: EditorDesktopPanelsProps)
   }, [mounted]);
 
   if (!mounted) {
-    return <PanelFallback center={center} right={right} />;
+    return <PanelFallback center={center} />;
   }
 
   return (

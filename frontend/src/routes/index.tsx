@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { FileText, BookOpen, Quote, MessageSquare, ShieldCheck, GitCompare, ArrowRight, Upload, Check } from "lucide-react";
+import { editorEntryPath } from "@/lib/require-auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,10 +39,9 @@ function Masthead() {
             <a href="#features" className="hover:text-[color:var(--editorial-red)]">Features</a>
             <a href="#workflow" className="hover:text-[color:var(--editorial-red)]">Workflow</a>
             <a href="#integrity" className="hover:text-[color:var(--editorial-red)]">Integrity</a>
-            <a href="#pricing" className="hover:text-[color:var(--editorial-red)]">Pricing</a>
           </nav>
           <Link
-            to="/projects"
+            to={editorEntryPath()}
             className="inline-flex items-center gap-2 border border-foreground bg-foreground text-background px-4 py-2 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
           >
             Open Editor <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
@@ -55,9 +55,9 @@ function Masthead() {
 function Ticker() {
   const items = [
     "Closer to publication",
-    "AI trợ lý viết & biên tập học thuật",
-    "Văn phong · cấu trúc · trích dẫn · phản hồi phản biện",
-    "Hỗ trợ diễn đạt — không bịa dữ liệu hay kết quả",
+    "AI academic writing & editing assistant",
+    "Style · structure · citations · peer-review replies",
+    "Expression support — never invent data or results",
     "For researchers who are not native English speakers",
   ];
   return (
@@ -101,7 +101,7 @@ function Hero() {
           </div>
           <div className="mt-10 flex flex-col sm:flex-row gap-3">
             <Link
-              to="/projects"
+              to={editorEntryPath()}
               className="inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
             >
               <Upload className="h-4 w-4" strokeWidth={1.5} /> Upload a Manuscript
@@ -253,57 +253,6 @@ function Integrity() {
   );
 }
 
-function Pricing() {
-  const tiers = [
-    { name: "Reader", price: "Free", desc: "For a single short manuscript.", feats: ["1 active document", "Language & grammar pass", "Basic structure check", "Community support"] },
-    { name: "Author", price: "$19", desc: "Per researcher, monthly.", feats: ["Unlimited manuscripts", "Citation validation", "Reviewer reply drafts", "DOCX · PDF · LaTeX export"], featured: true },
-    { name: "Bureau", price: "Custom", desc: "For labs and journals.", feats: ["Team workspaces", "Journal style packs", "On-prem deployment", "Dedicated editor support"] },
-  ];
-  return (
-    <section id="pricing" className="border-b-4 border-foreground">
-      <div className="max-w-screen-xl mx-auto px-4 py-20">
-        <div className="flex items-end justify-between border-b border-foreground pb-4">
-          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">Subscriptions</h2>
-          <span className="font-mono-data uppercase text-xs tracking-widest hidden sm:block">Section C · Pricing</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 border-l border-foreground">
-          {tiers.map((t) => (
-            <div key={t.name} className={`p-8 border-r border-b border-foreground ${t.featured ? "bg-foreground text-background" : ""}`}>
-              <div className="flex items-center justify-between">
-                <h3 className="font-serif-display text-3xl font-bold">{t.name}</h3>
-                {t.featured && <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1 font-mono-data text-[10px] uppercase tracking-widest">Picked</span>}
-              </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="font-serif-display text-5xl font-black">{t.price}</span>
-                {t.price !== "Custom" && <span className="font-mono-data text-xs uppercase tracking-widest">/ mo</span>}
-              </div>
-              <p className={`mt-2 font-body italic ${t.featured ? "text-neutral-400" : "text-neutral-600"}`}>{t.desc}</p>
-              <ul className="mt-6 space-y-3 border-t border-dashed border-current/40 pt-5">
-                {t.feats.map((f) => (
-                  <li key={f} className="flex items-start gap-3 font-body text-sm leading-relaxed">
-                    <Check className="h-4 w-4 mt-0.5 shrink-0 text-[color:var(--editorial-red)]" strokeWidth={2} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/projects"
-                className={`mt-8 inline-flex w-full items-center justify-center gap-2 border px-4 py-3 font-sans-ui uppercase text-xs tracking-widest transition-colors min-h-[44px] ${
-                  t.featured
-                    ? "border-background bg-background text-foreground hover:bg-transparent hover:text-background"
-                    : "border-foreground bg-transparent hover:bg-foreground hover:text-background"
-                }`}
-              >
-                Choose {t.name}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function Colophon() {
   return (
     <footer className="bg-background border-t border-foreground">
@@ -316,7 +265,7 @@ function Colophon() {
           </p>
         </div>
         {[
-          { h: "Desk", l: ["Features", "Workflow", "Integrity", "Pricing"] },
+          { h: "Desk", l: ["Features", "Workflow", "Integrity"] },
           { h: "Authors", l: ["Open Editor", "DOCX Guide", "LaTeX Guide", "Reviewer Replies"] },
           { h: "Bureau", l: ["About", "Contact", "Careers", "Press"] },
           { h: "Legal", l: ["Terms", "Privacy", "Ethics", "Data Use"] },
@@ -351,7 +300,6 @@ function Index() {
         <Features />
         <Workflow />
         <Integrity />
-        <Pricing />
       </main>
       <Colophon />
     </div>

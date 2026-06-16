@@ -1,45 +1,46 @@
-export type OAuthProvider = "google" | "github";
+import {
+  apiFetchMe,
+  apiForgotPassword,
+  apiLogin,
+  apiRegister,
+  apiResetPassword,
+  type AuthUser,
+} from "./auth-api";
+import { fetchDedupe, invalidateFetchKey, invalidateFetchPrefix } from "./api/fetch-dedupe";
+import { normalizeEmail, validateEmail, validateName, validatePassword } from "./auth-validation";
 
-export type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-  affiliation?: string;
-  provider?: "email" | OAuthProvider;
-};
+export type { AuthUser };
 
-type StoredUser = AuthUser & {
-  password: string;
-};
+const TOKEN_KEY = "arionear-access-token";
+const USER_KEY = "arionear-session";
 
-const USERS_KEY = "arionear-users";
-const SESSION_KEY = "arionear-session";
+type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-function readUsers(): StoredUser[] {
+function getStorages(): StorageLike[] {
   if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredUser[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  return [sessionStorage, localStorage];
+}
+
+function readFromStorages(key: string): string | null {
+  for (const storage of getStorages()) {
+    const value = storage.getItem(key);
+    if (value) return value;
   }
+  return null;
 }
 
-function writeUsers(users: StoredUser[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+function writeToStorage(storage: StorageLike, key: string, value: string | null) {
+  if (value) storage.setItem(key, value);
+  else storage.removeItem(key);
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+function readToken(): string | null {
+  return readFromStorages(TOKEN_KEY);
 }
 
-export function getSession(): AuthUser | null {
-  if (typeof window === "undefined") return null;
+function readCachedUser(): AuthUser | null {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = readFromStorages(USER_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as AuthUser;
   } catch {
@@ -47,124 +48,141 @@ export function getSession(): AuthUser | null {
   }
 }
 
-export function isAuthenticated() {
-  return getSession() !== null;
+function persistSession(user: AuthUser, accessToken: string, remember = false) {
+  clearSession();
+  const storage = remember ? localStorage : sessionStorage;
+  writeToStorage(storage, TOKEN_KEY, accessToken);
+  writeToStorage(storage, USER_KEY, JSON.stringify(user));
 }
 
-export function setSession(user: AuthUser) {
+function writeCachedUser(user: AuthUser) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  const storage = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+  writeToStorage(storage, USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(SESSION_KEY);
+  for (const storage of getStorages()) {
+    writeToStorage(storage, TOKEN_KEY, null);
+    writeToStorage(storage, USER_KEY, null);
+  }
 }
 
-export function registerUser(input: {
+/** Clear all browser storage on sign-out (local + session). */
+export function clearAllBrowserStorage() {
+  if (typeof window === "undefined") return;
+  localStorage.clear();
+  sessionStorage.clear();
+}
+
+export function signOut() {
+  invalidateFetchKey("auth:me");
+  invalidateFetchPrefix("papers:");
+  invalidateFetchPrefix("providers");
+  invalidateFetchPrefix("compile:");
+  invalidateFetchPrefix("session:");
+  clearAllBrowserStorage();
+}
+
+export function logoutUser() {
+  signOut();
+}
+
+/** SSO is not implemented — stub prevents broken imports in legacy UI. */
+export type OAuthProvider = "google" | "github";
+
+export function loginWithOAuth(
+  _provider: OAuthProvider,
+): { ok: false; error: string } {
+  return { ok: false, error: "Single sign-on is not available yet. Use email and password." };
+}
+
+export function getAccessToken() {
+  return readToken();
+}
+
+export function getSession(): AuthUser | null {
+  return readCachedUser();
+}
+
+export function isAuthenticated() {
+  return Boolean(readToken() && readCachedUser());
+}
+
+export async function registerUser(input: {
   name: string;
   email: string;
   password: string;
   affiliation?: string;
-}): { ok: true; user: AuthUser } | { ok: false; error: string } {
-  const name = input.name.trim();
-  const email = normalizeEmail(input.email);
-  const password = input.password;
-  const affiliation = input.affiliation?.trim();
+}): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+  const nameError = validateName(input.name);
+  if (nameError) return { ok: false, error: nameError };
+  const emailError = validateEmail(input.email);
+  if (emailError) return { ok: false, error: emailError };
+  const pwError = validatePassword(input.password);
+  if (pwError) return { ok: false, error: pwError };
 
-  if (!name) return { ok: false, error: "Please enter your full name." };
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, error: "Please enter a valid email address." };
-  }
-  if (password.length < 8) {
-    return { ok: false, error: "Password must be at least 8 characters." };
-  }
-
-  const users = readUsers();
-  if (users.some((u) => u.email === email)) {
-    return { ok: false, error: "An account with this email already exists." };
-  }
-
-  const user: AuthUser = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    affiliation: affiliation || undefined,
-  };
-
-  users.push({ ...user, password });
-  writeUsers(users);
-  setSession(user);
-  return { ok: true, user };
+  const result = await apiRegister({
+    name: input.name.trim(),
+    email: normalizeEmail(input.email),
+    password: input.password,
+    affiliation: input.affiliation?.trim() || undefined,
+  });
+  if (!result.ok) return result;
+  persistSession(result.user, result.accessToken);
+  return { ok: true, user: result.user };
 }
 
-export function loginUser(
+export async function loginUser(
   email: string,
   password: string,
-): { ok: true; user: AuthUser } | { ok: false; error: string } {
-  const normalized = normalizeEmail(email);
-  if (!normalized || !password) {
-    return { ok: false, error: "Please enter your email and password." };
-  }
+  remember = false,
+): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+  const emailError = validateEmail(email);
+  if (emailError) return { ok: false, error: emailError };
+  if (!password) return { ok: false, error: "Please enter your password." };
 
-  const match = readUsers().find((u) => u.email === normalized && u.password === password);
-  if (!match) {
-    return { ok: false, error: "Invalid email or password." };
-  }
-
-  const user: AuthUser = {
-    id: match.id,
-    name: match.name,
-    email: match.email,
-    affiliation: match.affiliation,
-  };
-  setSession(user);
-  return { ok: true, user };
+  const result = await apiLogin(normalizeEmail(email), password, remember);
+  if (!result.ok) return result;
+  invalidateFetchKey("auth:me");
+  persistSession(result.user, result.accessToken, remember);
+  return { ok: true, user: result.user };
 }
 
-export function logoutUser() {
-  clearSession();
+export async function requestPasswordReset(
+  email: string,
+): Promise<
+  | { ok: true; message: string; devResetUrl?: string }
+  | { ok: false; error: string }
+> {
+  const emailError = validateEmail(email);
+  if (emailError) return { ok: false, error: emailError };
+  return apiForgotPassword(normalizeEmail(email));
 }
 
-const OAUTH_PROFILES: Record<OAuthProvider, { name: string; email: string }> = {
-  google: {
-    name: "Alex Chen",
-    email: "alex.chen@gmail.com",
-  },
-  github: {
-    name: "researcher-dev",
-    email: "researcher-dev@users.noreply.github.com",
-  },
-};
+export async function resetPassword(
+  token: string,
+  password: string,
+): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const pwError = validatePassword(password);
+  if (pwError) return { ok: false, error: pwError };
+  if (!token.trim()) return { ok: false, error: "Reset link is invalid or has expired." };
+  return apiResetPassword(token.trim(), password);
+}
 
-export function loginWithOAuth(
-  provider: OAuthProvider,
-): { ok: true; user: AuthUser } | { ok: false; error: string } {
-  const profile = OAUTH_PROFILES[provider];
-  const users = readUsers();
-  const existing = users.find((u) => u.email === profile.email);
-
-  if (existing) {
-    const user: AuthUser = {
-      id: existing.id,
-      name: existing.name,
-      email: existing.email,
-      affiliation: existing.affiliation,
-      provider,
-    };
-    setSession(user);
-    return { ok: true, user };
+/** Validate cached session against API (optional on app load). */
+export async function refreshSession(): Promise<AuthUser | null> {
+  const token = readToken();
+  if (!token) {
+    clearSession();
+    return null;
   }
-
-  const user: AuthUser = {
-    id: crypto.randomUUID(),
-    name: profile.name,
-    email: profile.email,
-    provider,
-  };
-
-  users.push({ ...user, password: `oauth:${provider}` });
-  writeUsers(users);
-  setSession(user);
-  return { ok: true, user };
+  const user = await fetchDedupe("auth:me", () => apiFetchMe(token));
+  if (!user) {
+    clearSession();
+    invalidateFetchKey("auth:me");
+    return null;
+  }
+  writeCachedUser(user);
+  return user;
 }

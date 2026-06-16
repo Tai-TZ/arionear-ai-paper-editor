@@ -63,12 +63,30 @@ Hooks tự động log mọi AI prompt khi dùng Claude Code, Cursor, Codex, Gem
 ### Bước 4: Chạy server
 
 ```bash
-# Chạy FastAPI backend
+# Terminal 1 — Backend
 uvicorn src.main:app --reload --port 8000
 
-# Mở Swagger UI
-# http://localhost:8000/docs
+# Terminal 2 — Frontend editor
+cd frontend && npm install && npm run dev
+
+# Kiểm tra PDF compile engine
+curl http://localhost:8000/api/v1/compile/status
+# → {"available": true, "engine": "...pdflatex..."}
 ```
+
+### Bước 4b: PDF Preview — cài TeX (team local)
+
+Compile PDF cần `pdflatex` trên máy dev (không có trong `pip`/`npm`):
+
+| OS | Lệnh |
+|----|------|
+| **Windows** | `winget install MiKTeX.MiKTeX` |
+| **macOS** | `brew install --cask miktex` |
+| **Linux** | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
+
+Sau khi cài, **restart terminal** rồi chạy lại backend. Verify: `GET /api/v1/compile/status` → `available: true`.
+
+> Custom class từ Overleaf (vd. `RevDigMatEduInt.cls`): upload file `.cls` vào project, hoặc backend tự fallback sang IEEEtran.
 
 ### Bước 5: Đọc hướng dẫn
 
@@ -178,6 +196,54 @@ bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you a
 ```
 
 > ⚠️ Chạy `bash scripts/setup_hooks.sh` một lần sau khi clone để cài pre-push hook.
+
+## 📄 PDF Preview — Deploy production
+
+Backend compile LaTeX qua `POST /api/v1/compile`. Docker image đã gồm **TeX Live** (không cần MiKTeX trên server).
+
+### Checklist deploy
+
+1. **Backend (Docker)** — build & chạy:
+   ```bash
+   docker compose build
+   docker compose up -d
+   curl http://localhost:8000/api/v1/compile/status
+   ```
+
+2. **Env production** (`.env` hoặc platform secrets):
+   ```env
+   APP_ENV=production
+   CORS_ORIGINS=https://app.your-domain.com
+   OPENROUTER_API_KEY=...
+   ```
+
+3. **Frontend** — build với API URL production:
+   ```bash
+   cd frontend
+   VITE_API_URL=https://api.your-domain.com/api/v1 npm run build
+   ```
+   Deploy thư mục `frontend/dist` lên Vercel / Netlify / Cloudflare Pages.
+
+4. **Reverse proxy** — tăng timeout cho `/api/v1/compile` (≥ 120s, body ≥ 10MB):
+   ```nginx
+   location /api/v1/compile {
+       proxy_read_timeout 300s;
+       client_max_body_size 20m;
+   }
+   ```
+
+5. **Verify go-live**
+   - [ ] `GET /api/v1/compile/status` → `"available": true`
+   - [ ] Compile bài LaTeX thật từ editor trên domain
+   - [ ] HTTPS cả frontend lẫn API
+
+### Kiến trúc
+
+```
+Browser → Frontend (CDN) → API (Docker + TeX Live) → PDF base64 → PDF.js
+```
+
+Chi tiết kỹ thuật: `docs/pdf-preview-deploy.md`
 
 ## 📖 Đọc Technical Guidebook
 

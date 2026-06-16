@@ -170,7 +170,42 @@
 }
 
 .dark {
-  /* single-mode */
+  --ink: oklch(0.94 0.005 90);
+  --newsprint: oklch(0.16 0.01 90);
+  --editorial-red: oklch(0.62 0.22 27);
+  --divider: oklch(0.28 0.01 90);
+  --background: var(--newsprint);
+  --foreground: var(--ink);
+  --card: oklch(0.19 0.01 90);
+  --card-foreground: var(--ink);
+  --popover: oklch(0.19 0.01 90);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--newsprint);
+  --secondary: var(--divider);
+  --secondary-foreground: var(--ink);
+  --muted: var(--divider);
+  --muted-foreground: oklch(0.72 0.01 90);
+  --accent: var(--editorial-red);
+  --accent-foreground: var(--newsprint);
+  --destructive: var(--editorial-red);
+  --destructive-foreground: var(--newsprint);
+  --border: oklch(0.38 0.01 90);
+  --input: oklch(0.38 0.01 90);
+  --ring: oklch(0.72 0.01 90);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.14 0.01 90);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--newsprint);
+  --sidebar-accent: var(--divider);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: oklch(0.38 0.01 90);
+  --sidebar-ring: oklch(0.72 0.01 90);
 }
 
 @layer base {
@@ -179,11 +214,51 @@
     border-radius: 0 !important;
   }
 
+  [data-sonner-toaster],
+  [data-sonner-toaster] [data-sonner-toast],
+  [data-sonner-toaster] [data-close-button] {
+    border-radius: 0.375rem !important;
+  }
+
+  .dropdown-menu-content,
+  [data-slot="dropdown-menu-content"] {
+    border-radius: 0.5rem !important;
+  }
+
+  .dropdown-menu-item,
+  [data-slot="dropdown-menu-item"] {
+    border-radius: 0.375rem !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast] {
+    background: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.08),
+      0 4px 6px -4px rgb(0 0 0 / 0.08) !important;
+    font-family: var(--font-sans-ui);
+  }
+
+  [data-sonner-toaster] [data-description] {
+    color: var(--muted-foreground) !important;
+  }
+
+  .auth-spinner,
+  .auth-strength-bar {
+    border-radius: 999px !important;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-serif-body);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111111' fill-opacity='0.05' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23ffffff' fill-opacity='0.04' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -275,6 +350,34 @@
   font-family: var(--font-sans-ui);
   font-feature-settings: "cv11", "ss01", "ss03";
   -webkit-font-smoothing: antialiased;
+}
+
+.dark .editor-shell {
+  --ink: oklch(0.94 0.005 90);
+  --newsprint: oklch(0.18 0.02 255);
+  --background: oklch(0.15 0.02 255);
+  --foreground: oklch(0.93 0.01 90);
+  --card: oklch(0.19 0.02 255);
+  --card-foreground: oklch(0.93 0.01 90);
+  --popover: oklch(0.19 0.02 255);
+  --popover-foreground: oklch(0.93 0.01 90);
+  --primary: oklch(0.78 0.08 255);
+  --primary-foreground: oklch(0.16 0.02 255);
+  --secondary: oklch(0.24 0.02 255);
+  --secondary-foreground: oklch(0.9 0.01 90);
+  --muted: oklch(0.24 0.02 255);
+  --muted-foreground: oklch(0.68 0.02 255);
+  --border: oklch(0.32 0.02 255);
+  --input: oklch(0.32 0.02 255);
+  --ring: oklch(0.62 0.08 255);
+  --sidebar: oklch(0.13 0.02 255);
+  --sidebar-foreground: oklch(0.93 0.01 90);
+  --sidebar-primary: oklch(0.78 0.08 255);
+  --sidebar-primary-foreground: oklch(0.16 0.02 255);
+  --sidebar-accent: oklch(0.22 0.02 255);
+  --sidebar-accent-foreground: oklch(0.9 0.01 90);
+  --sidebar-border: oklch(0.32 0.02 255);
+  --sidebar-ring: oklch(0.62 0.08 255);
 }
 
 .editor-shell,
@@ -484,6 +587,8 @@
   --radius: 0.375rem;
   font-family: var(--font-sans-ui);
   -webkit-font-smoothing: antialiased;
+  background: var(--background);
+  color: var(--foreground);
 }
 
 .projects-shell,
@@ -492,11 +597,12 @@
 }
 
 .projects-sidebar {
-  background: oklch(0.985 0.005 90);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
 }
 
 .projects-table-row:hover {
-  background: oklch(0.97 0.006 90);
+  background: var(--sidebar-accent);
 }
 
 .projects-action-card {
@@ -504,9 +610,9 @@
   flex-direction: column;
   padding: 1.25rem;
   border-radius: 0.875rem;
-  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  border: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 1px 3px oklch(0.2 0.02 255 / 5%);
+  box-shadow: 0 1px 3px color-mix(in oklch, var(--foreground) 6%, transparent);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -515,14 +621,14 @@
 
 .projects-action-card:hover {
   border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
-  box-shadow: 0 4px 16px -6px oklch(0.2 0.02 255 / 10%);
+  box-shadow: 0 4px 16px -6px color-mix(in oklch, var(--foreground) 10%, transparent);
   transform: translateY(-1px);
 }
 
 .projects-grid-card {
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  border: 1px solid var(--border);
   background: var(--card);
   transition:
     border-color 0.15s ease,
@@ -531,15 +637,16 @@
 
 .projects-grid-card:hover {
   border-color: color-mix(in oklch, var(--primary) 25%, var(--border));
-  box-shadow: 0 4px 12px -6px oklch(0.2 0.02 255 / 8%);
+  box-shadow: 0 4px 12px -6px color-mix(in oklch, var(--foreground) 8%, transparent);
 }
 
 .projects-menu {
   overflow: hidden;
   border-radius: 0.625rem;
-  border: 1px solid oklch(0.88 0.012 90 / 90%);
-  background: var(--card);
-  box-shadow: 0 8px 24px -8px oklch(0.2 0.02 255 / 18%);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 8px 24px -8px color-mix(in oklch, var(--foreground) 18%, transparent);
 }
 
 .projects-menu-item {
@@ -554,7 +661,11 @@
 }
 
 .projects-menu-item:hover {
-  background: oklch(0.96 0.008 90);
+  background: var(--muted);
+}
+
+.theme-rail-btn {
+  border-radius: 0.5rem 0 0 0.5rem !important;
 }
 
 /* Auth pages */
@@ -658,6 +769,15 @@
   hyphens: none;
 }
 
+/* IEEE letter margins ≈ 0.6825in sides, 0.75in top, 1in bottom (IEEEtran conference) */
+.editor-shell .preview-padding-ieee {
+  padding: 0.75in 0.6825in 1in;
+}
+
+.editor-shell .preview-padding-article {
+  padding: 1in 0.85in;
+}
+
 /* Override global h1/h2 Playfair — preview must use LaTeX serif only */
 .editor-shell .preview-page-content h1,
 .editor-shell .preview-page-content h2,
@@ -684,10 +804,18 @@
   font-weight: 700;
 }
 
+.editor-shell .preview-page-content .preview-subsubsection {
+  font-size: 10pt;
+  font-weight: 400;
+  font-style: italic;
+}
+
 .editor-shell .preview-layout-ieee {
   column-count: 2;
-  column-gap: 1.35rem;
+  column-gap: 0.25in;
   text-align: justify;
+  font-size: 10pt;
+  line-height: 1.35;
 }
 
 .editor-shell .preview-layout-ieee .preview-span-all {
@@ -696,17 +824,118 @@
 }
 
 .editor-shell .preview-layout-ieee .preview-title {
-  font-size: 14pt;
+  font-size: 22pt;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 0.5rem;
 }
 
 .editor-shell .preview-layout-ieee .preview-section {
   font-size: 10pt;
+  font-weight: 700;
   letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
-.editor-shell .preview-layout-ieee .preview-author {
+.editor-shell .preview-layout-ieee .preview-subsection {
   font-size: 10pt;
-  line-height: 1.25;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.editor-shell .preview-layout-ieee .preview-author-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0.35in;
+  row-gap: 0.35in;
+}
+
+.editor-shell .preview-layout-ieee .preview-author-cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editor-shell .preview-layout-ieee .preview-author-name {
+  font-size: 10pt;
+  letter-spacing: 0.03em;
+}
+
+.editor-shell .preview-layout-ieee .preview-author-affiliation {
+  font-size: 9pt;
+  line-height: 1.3;
+}
+
+.editor-shell .preview-em-dash {
+  font-weight: 700;
+}
+
+/* ── PDF.js preview panel (Overleaf-style) ── */
+.editor-shell .pdf-preview-shell {
+  background: #f3f3f3;
+}
+
+.editor-shell .pdf-preview-compile-btn {
+  background: #133a5d;
+}
+
+.editor-shell .pdf-preview-compile-btn:hover:not(:disabled) {
+  background: #0f2f4a;
+}
+
+.editor-shell .pdf-preview-viewport {
+  background: #e8e8e8;
+}
+
+.editor-shell .pdf-preview-pages {
+  gap: 20px;
+}
+
+.editor-shell .pdf-preview-page-sheet {
+  margin: 0 auto 20px;
+  background: #ffffff;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.editor-shell .pdf-preview-page-inner {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.editor-shell .pdf-preview-canvas {
+  display: block;
+}
+
+.editor-shell .pdf-preview-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  opacity: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+}
+
+.editor-shell .pdf-preview-text-layer span,
+.editor-shell .pdf-preview-text-layer br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.editor-shell .pdf-preview-text-layer ::selection {
+  background: rgba(0, 100, 200, 0.25);
+}
+
+.editor-shell .pdf-preview-toolbar-bottom {
+  background: transparent;
 }
 
 /* IEEE / mathptmx / times — Times New Roman stack (Nimbus Roman on Linux) */
@@ -1525,6 +1754,37 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-bottom: 1rem;
+}
+
+.editor-shell .tools-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  background: var(--card);
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 4%);
+}
+
+.editor-shell .tools-setting-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.editor-shell .tools-setting-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.editor-shell .tools-setting-hint {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
 }
 
 .editor-shell .tools-stat-grid {

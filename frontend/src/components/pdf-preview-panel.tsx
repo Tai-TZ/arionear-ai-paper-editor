@@ -1,0 +1,440 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  RefreshCw,
+  Search,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { fetchCompileStatus } from "@/lib/api/academic";
+import {
+  computeFitScale,
+  findPageForQuery,
+  loadPdfDocument,
+  renderPageTextLayer,
+  renderPageToCanvas,
+  type PdfPageRenderResult,
+} from "@/lib/pdf-renderer";
+
+const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
+type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
+
+type PdfPreviewPanelProps = {
+  pdfData: Uint8Array | null;
+  isCompiling: boolean;
+  compileError: string | null;
+  compileWarning?: string | null;
+  onCompile: () => void;
+  mobile?: boolean;
+  projectName?: string;
+};
+
+function IconBtn({
+  children,
+  onClick,
+  disabled,
+  title,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      className="pdf-preview-icon-btn inline-flex h-7 w-7 items-center justify-center rounded transition hover:bg-black/5 disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+function PdfPageView({
+  pdf,
+  pageNumber,
+  scale,
+  onVisible,
+}: {
+  pdf: PDFDocumentProxy;
+  pageNumber: number;
+  scale: number;
+  onVisible: (pageNumber: number) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const textLayerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+  const renderTokenRef = useRef(0);
+
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.35) {
+            onVisible(pageNumber);
+          }
+        }
+      },
+      { threshold: [0.35, 0.55, 0.75] },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onVisible, pageNumber]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const textLayer = textLayerRef.current;
+    if (!canvas || !textLayer) return;
+
+    const token = ++renderTokenRef.current;
+    let cancelled = false;
+
+    (async () => {
+      const page = await pdf.getPage(pageNumber);
+      if (cancelled || token !== renderTokenRef.current) return;
+
+      const rendered: PdfPageRenderResult = await renderPageToCanvas(page, canvas, scale);
+      if (cancelled || token !== renderTokenRef.current) return;
+
+      setDimensions({ width: rendered.width, height: rendered.height });
+      await renderPageTextLayer(page, textLayer, rendered.viewport);
+    })().catch(() => {
+      if (!cancelled) setDimensions(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdf, pageNumber, scale]);
+
+  return (
+    <div
+      ref={rootRef}
+      data-page={pageNumber}
+      className="pdf-preview-page-sheet"
+      style={
+        dimensions
+          ? { width: dimensions.width, minHeight: dimensions.height }
+          : { width: 612 * scale, minHeight: 792 * scale }
+      }
+    >
+      <div
+        className="pdf-preview-page-inner"
+        style={
+          dimensions
+            ? { width: dimensions.width, height: dimensions.height }
+            : undefined
+        }
+      >
+        <canvas ref={canvasRef} className="pdf-preview-canvas" />
+        <div ref={textLayerRef} className="pdf-preview-text-layer" />
+      </div>
+    </div>
+  );
+}
+
+export function PdfPreviewPanel({
+  pdfData,
+  isCompiling,
+  compileError,
+  compileWarning = null,
+  onCompile,
+  mobile = false,
+  projectName = "document",
+}: PdfPreviewPanelProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
+  const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [zoomMode, setZoomMode] = useState<ZoomPreset>("fit");
+  const [fitScale, setFitScale] = useState(1);
+  const [basePageWidth, setBasePageWidth] = useState(612);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchStatus, setSearchStatus] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [engineReady, setEngineReady] = useState<boolean | null>(null);
+
+  const effectiveScale = useMemo(() => {
+    if (zoomMode === "fit") return fitScale;
+    return zoomMode / 100;
+  }, [fitScale, zoomMode]);
+
+  const displayZoom = Math.round(effectiveScale * 100);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCompileStatus()
+      .then((status) => {
+        if (!cancelled) setEngineReady(status.available);
+      })
+      .catch(() => {
+        if (!cancelled) setEngineReady(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pdfData) {
+      setPdf(null);
+      setNumPages(0);
+      setCurrentPage(1);
+      setLoadError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadError(null);
+
+    loadPdfDocument(pdfData)
+      .then(async (doc) => {
+        if (cancelled) return;
+        setPdf(doc);
+        setNumPages(doc.numPages);
+        setCurrentPage(1);
+        const firstPage = await doc.getPage(1);
+        setBasePageWidth(firstPage.getViewport({ scale: 1 }).width);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setPdf(null);
+        setNumPages(0);
+        setLoadError(error instanceof Error ? error.message : "Failed to load PDF.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfData]);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const updateFit = () => {
+      setFitScale(computeFitScale(el.clientWidth, basePageWidth));
+    };
+
+    updateFit();
+    const observer = new ResizeObserver(updateFit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [basePageWidth, pdf]);
+
+  const scrollToPage = useCallback(
+    (pageNumber: number) => {
+      const clamped = Math.max(1, Math.min(pageNumber, numPages || 1));
+      const node = viewportRef.current?.querySelector(`[data-page="${clamped}"]`);
+      node?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setCurrentPage(clamped);
+    },
+    [numPages],
+  );
+
+  const handlePrevPage = () => scrollToPage(currentPage - 1);
+  const handleNextPage = () => scrollToPage(currentPage + 1);
+
+  const handleZoomIn = () => {
+    const next = ZOOM_PRESETS.find((z) => z > displayZoom) ?? 150;
+    setZoomMode(next);
+  };
+
+  const handleZoomOut = () => {
+    const prev = [...ZOOM_PRESETS].reverse().find((z) => z < displayZoom) ?? 50;
+    setZoomMode(prev);
+  };
+
+  const handleDownload = () => {
+    if (!pdfData) return;
+    const blob = new Blob([pdfData.slice()], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${projectName.replace(/\s+/g, "-").toLowerCase() || "document"}.pdf`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSearch = async () => {
+    if (!pdf || !searchQuery.trim()) return;
+    setSearchStatus("Searching…");
+    const page = await findPageForQuery(pdf, searchQuery, currentPage);
+    if (page) {
+      scrollToPage(page);
+      setSearchStatus(`Found on page ${page}`);
+    } else {
+      setSearchStatus("No matches");
+    }
+  };
+
+  const pageNumbers = useMemo(
+    () => (pdf ? Array.from({ length: numPages }, (_, index) => index + 1) : []),
+    [pdf, numPages],
+  );
+
+  return (
+    <section
+      className={`pdf-preview-shell relative flex min-h-0 flex-col ${
+        mobile ? "flex-1 w-full" : "h-full w-full"
+      }`}
+    >
+      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between border-b border-[#D3D3D3] bg-white px-3 md:px-4">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={onCompile}
+            disabled={isCompiling}
+            className="pdf-preview-compile-btn inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
+            {isCompiling ? "Compiling…" : "Compile"}
+          </button>
+          <span className="font-mono text-[11px] text-[#666]">
+            {numPages > 0 ? `${currentPage} of ${numPages} pages` : "No PDF yet"}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {searchOpen ? (
+            <div className="mr-1 flex items-center gap-1 rounded border border-[#D3D3D3] bg-[#FAFAFA] px-2 py-0.5">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleSearch();
+                  if (e.key === "Escape") setSearchOpen(false);
+                }}
+                placeholder="Find in PDF…"
+                className="w-28 bg-transparent text-[11px] outline-none md:w-40"
+              />
+              <button type="button" onClick={() => setSearchOpen(false)} className="text-[#777]">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <IconBtn title="Search" onClick={() => setSearchOpen(true)}>
+              <Search className="h-3.5 w-3.5 text-[#555]" />
+            </IconBtn>
+          )}
+
+          <select
+            value={zoomMode === "fit" ? 100 : zoomMode}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
+            }}
+            className="rounded px-1 py-1 font-mono text-[11px] text-[#666] outline-none hover:bg-black/5"
+          >
+            <option value={100}>Fit</option>
+            {ZOOM_PRESETS.map((preset) => (
+              <option key={preset} value={preset}>
+                {preset}%
+              </option>
+            ))}
+          </select>
+
+          <IconBtn title="Download PDF" onClick={handleDownload} disabled={!pdfData}>
+            <Download className="h-3.5 w-3.5 text-[#555]" />
+          </IconBtn>
+        </div>
+      </header>
+
+      <div
+        ref={viewportRef}
+        className="pdf-preview-viewport soft-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-12"
+      >
+        {!pdf && !isCompiling && (
+          <div className="flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center">
+            <p className="max-w-sm text-sm text-[#666]">
+              Press <strong>Compile</strong> to generate a PDF preview with PDF.js.
+            </p>
+            {engineReady === false && !compileError && (
+              <p className="mt-3 max-w-md text-xs text-amber-800">
+                Chưa phát hiện <code className="rounded bg-amber-100 px-1">pdflatex</code>. Cài MiKTeX:{" "}
+                <code className="rounded bg-amber-100 px-1">winget install MiKTeX.MiKTeX</code>
+                {" "}rồi restart backend.
+              </p>
+            )}
+            {engineReady === null && !compileError && (
+              <p className="mt-3 max-w-md text-xs text-[#888]">Đang kiểm tra engine LaTeX…</p>
+            )}
+            {(compileError || loadError) && (
+              <pre className="mt-4 max-h-48 max-w-full overflow-auto rounded border border-red-200 bg-red-50 p-3 text-left text-[10px] text-red-700 whitespace-pre-wrap">
+                {compileError || loadError}
+              </pre>
+            )}
+          </div>
+        )}
+
+        {isCompiling && !pdf && (
+          <div className="flex h-full min-h-[24rem] items-center justify-center text-sm text-[#666]">
+            Compiling LaTeX…
+          </div>
+        )}
+
+        {pdf && compileWarning && (
+          <div className="mx-auto mb-3 max-w-2xl rounded border border-amber-300 bg-amber-50 px-3 py-2 text-left text-[11px] text-amber-900">
+            {compileWarning}
+          </div>
+        )}
+
+        {pdf && (
+          <div className="pdf-preview-pages mx-auto flex w-max flex-col items-center py-5">
+            {pageNumbers.map((pageNumber) => (
+              <PdfPageView
+                key={`${pageNumber}-${effectiveScale}`}
+                pdf={pdf}
+                pageNumber={pageNumber}
+                scale={effectiveScale}
+                onVisible={setCurrentPage}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <footer className="pdf-preview-toolbar-bottom pointer-events-none absolute bottom-3 left-0 right-0 z-10 flex justify-center">
+        <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-black/10 bg-[#1C1C1E]/80 px-1.5 py-1 backdrop-blur-md">
+          <IconBtn title="Previous page" onClick={handlePrevPage} disabled={!pdf || currentPage <= 1}>
+            <ChevronLeft className="h-4 w-4 text-white/90" />
+          </IconBtn>
+          <span className="min-w-[4rem] text-center font-mono text-[11px] text-white/80">
+            {numPages > 0 ? `${currentPage} / ${numPages}` : "— / —"}
+          </span>
+          <IconBtn title="Next page" onClick={handleNextPage} disabled={!pdf || currentPage >= numPages}>
+            <ChevronRight className="h-4 w-4 text-white/90" />
+          </IconBtn>
+          <div className="mx-1 h-3.5 w-px bg-white/20" />
+          <IconBtn title="Zoom out" onClick={handleZoomOut} disabled={!pdf}>
+            <ZoomOut className="h-3.5 w-3.5 text-white/90" />
+          </IconBtn>
+          <span className="min-w-[2.25rem] text-center font-mono text-[10px] text-white/70">{displayZoom}%</span>
+          <IconBtn title="Zoom in" onClick={handleZoomIn} disabled={!pdf}>
+            <ZoomIn className="h-3.5 w-3.5 text-white/90" />
+          </IconBtn>
+        </div>
+      </footer>
+
+      {searchStatus && searchOpen && (
+        <div className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 rounded bg-[#333] px-3 py-1 text-[11px] text-white shadow">
+          {searchStatus}
+        </div>
+      )}
+    </section>
+  );
+}

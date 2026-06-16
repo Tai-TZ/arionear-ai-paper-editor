@@ -1,4 +1,5 @@
 import { mapApiHttpError, toUserFacingMessage } from "./api-errors";
+import { fetchDedupe } from "./fetch-dedupe";
 
 const API_BASE =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -37,6 +38,9 @@ type LlmOptions = {
   llm_model?: string;
 };
 
+const COMPILE_CONNECTION_MSG =
+  "Không kết nối được backend (localhost:8000). Hãy chạy: uvicorn src.main:app --reload --port 8000";
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -48,7 +52,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error("NETWORK_ERROR");
+    throw new Error(path.startsWith("/compile") ? COMPILE_CONNECTION_MSG : "NETWORK_ERROR");
   }
   if (!res.ok) {
     let detail: unknown = res.statusText;
@@ -67,7 +71,7 @@ export async function fetchProviders(): Promise<{
   default_provider: LLMProvider;
   providers: ProviderInfo[];
 }> {
-  return apiFetch("/providers");
+  return fetchDedupe("providers", () => apiFetch("/providers"), 60_000);
 }
 
 export async function syncSession(
@@ -76,7 +80,6 @@ export async function syncSession(
   latexContent: string,
 ): Promise<void> {
   try {
-    await apiFetch(`/sessions/${sessionId}`);
     await apiFetch(`/sessions/${sessionId}`, {
       method: "PATCH",
       body: JSON.stringify({ name, latex_content: latexContent }),
@@ -264,6 +267,42 @@ export async function verifyCitations(
       bib_content: bibContent,
     }),
   });
+}
+
+export type CompileAssetPayload = {
+  name: string;
+  content_base64: string;
+};
+
+export type CompileResult = {
+  success: boolean;
+  pdf_base64: string;
+  log: string;
+  error: string;
+  engine: string;
+  warning?: string;
+};
+
+export async function compileLatex(
+  latex: string,
+  assets: { name: string; dataUrl: string }[],
+): Promise<CompileResult> {
+  return apiFetch("/compile", {
+    method: "POST",
+    body: JSON.stringify({
+      latex,
+      assets: assets.map(
+        (asset): CompileAssetPayload => ({
+          name: asset.name,
+          content_base64: asset.dataUrl,
+        }),
+      ),
+    }),
+  });
+}
+
+export async function fetchCompileStatus(): Promise<{ available: boolean; engine: string | null }> {
+  return fetchDedupe("compile:status", () => apiFetch("/compile/status"), 60_000);
 }
 
 export async function revisionAction(

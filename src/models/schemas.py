@@ -116,8 +116,39 @@ class CompileResponse(BaseModel):
     log: str = ""
     error: str = ""
     engine: str = ""
+    warning: str = ""
 
 
 class CompileStatusResponse(BaseModel):
     available: bool
     engine: str | None = None
+
+
+class PaperCreate(BaseModel):
+    name: str = Field(default="Untitled", min_length=1, max_length=512)
+    latex: str = Field(default="", max_length=500_000)
+    metadata: dict = Field(default_factory=dict)
+
+
+class PaperUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=512)
+    latex: str | None = Field(default=None, max_length=500_000)
+    metadata: dict | None = None
+    assets: list[dict] = Field(default_factory=list)
+
+
+class PaperSummary(BaseModel):
+    id: str
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class PaperResponse(BaseModel):
+    id: str
+    name: str
+    latex: str
+    metadata: dict
+    created_at: datetime
+    updated_at: datetime
+

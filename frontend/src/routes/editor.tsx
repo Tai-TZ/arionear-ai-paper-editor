@@ -1,18 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { requireAuth } from "@/lib/require-auth";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
   Search,
-  Download,
   ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
   ShieldCheck,
   ArrowLeft,
   Plus,
   Upload,
-  RefreshCw,
   MoreHorizontal,
   ChevronDown,
   ChevronUp,
@@ -25,21 +21,20 @@ import {
   Redo2,
   Wrench,
 } from "lucide-react";
+import { getSession } from "@/lib/auth-store";
 import {
-  addProjectAssets,
-  getProject,
   isImageAssetFile,
+  isProjectAssetFile,
   readFileAsDataUrl,
-  resolveProjectAsset,
-  updateProject,
   type ProjectAsset,
 } from "@/lib/project-store";
 import {
-  formatSectionLabel,
-  parseLatexPreview,
-  renderPreviewParagraph,
-} from "@/lib/latex-preview";
+  addPaperAssets,
+  fetchPaper,
+  updatePaper,
+} from "@/lib/api/papers-api";
 import {
+  compileLatex,
   fetchProviders,
   streamChat,
   syncSession,
@@ -47,6 +42,7 @@ import {
   type LLMProvider,
   type ProviderInfo,
 } from "@/lib/api/academic";
+import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { citationErrorMessage } from "@/lib/api/api-errors";
 import {
   arioAvatar,
@@ -59,17 +55,23 @@ import { SuggestionPanel } from "@/components/suggestion-panel";
 import { LatexDiffEditor } from "@/components/latex-diff-editor";
 import { LatexCodeEditor } from "@/components/latex-code-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
 import {
   EditorEntrySplash,
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { useLatexHistory } from "@/lib/use-latex-history";
+import { fetchDedupe } from "@/lib/api/fetch-dedupe";
 
 type EditorSearch = {
   projectId?: string;
 };
 
 export const Route = createFileRoute("/editor")({
+  beforeLoad: () => {
+    requireAuth();
+  },
   validateSearch: (search: Record<string, unknown>): EditorSearch => ({
     projectId: typeof search.projectId === "string" ? search.projectId : undefined,
   }),
@@ -118,8 +120,6 @@ const PROJECT_FILES = [
 ];
 
 const OUTLINE_SECTIONS = ["Abstract", "Introduction", "Methods", "Results", "Conclusion"];
-
-const PREVIEW_PAGE_WIDTH = 480;
 
 type ToolsTab = "info" | "versions" | "citations";
 
@@ -259,10 +259,13 @@ function EditorPage() {
   const isDirty = latex !== savedLatex;
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [isCompiling, setIsCompiling] = useState(false);
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
+  const [compileError, setCompileError] = useState<string | null>(null);
+  const [compileWarning, setCompileWarning] = useState<string | null>(null);
+  const [autoCompile, setAutoCompile] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
-  const [zoom, setZoom] = useState(100);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [liveActivity, setLiveActivity] = useState<string | null>(null);
@@ -281,16 +284,28 @@ function EditorPage() {
       navigate({ to: "/projects", replace: true });
       return;
     }
-    const project = getProject(projectId);
-    if (!project) {
-      navigate({ to: "/projects", replace: true });
-      return;
-    }
-    setProjectName(project.name);
-    resetHistory(project.latex);
-    setSavedLatex(project.latex);
-    setAssets(project.assets ?? []);
-    setBootState("ready");
+
+    let cancelled = false;
+    setBootState("loading");
+
+    fetchPaper(projectId)
+      .then((project) => {
+        if (cancelled) return;
+        setProjectName(project.name);
+        resetHistory(project.latex);
+        setSavedLatex(project.latex);
+        setAssets(project.assets ?? []);
+        setBootState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          navigate({ to: "/projects", replace: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, navigate, resetHistory]);
 
   useEffect(() => {
@@ -306,12 +321,44 @@ function EditorPage() {
   const showSplash = splashPhase !== "hidden";
   const showEditor = bootState === "ready";
 
+  const handleCompile = useCallback(async (latexOverride?: string) => {
+    const source = latexOverride ?? latex;
+    setIsCompiling(true);
+    setCompileError(null);
+    setCompileWarning(null);
+    try {
+      const result = await compileLatex(source, assets);
+      if (result.success && result.pdf_base64) {
+        const binary = atob(result.pdf_base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        setPdfData(bytes);
+        setCompileWarning(result.warning?.trim() || null);
+      } else {
+        const detail = [result.error, result.log?.slice(-1500)].filter(Boolean).join("\n\n");
+        setCompileError(detail || "Compilation failed.");
+      }
+    } catch (error) {
+      setCompileError(error instanceof Error ? error.message : "Compilation failed.");
+    } finally {
+      setIsCompiling(false);
+    }
+  }, [latex, assets]);
+
   const handleSave = useCallback(() => {
     if (!projectId) return;
-    updateProject(projectId, { latex });
-    setSavedLatex(latex);
-    syncSession(projectId, projectName, latex).catch(() => {});
-  }, [projectId, projectName, latex]);
+    updatePaper(projectId, { latex, name: projectName })
+      .then(() => {
+        setSavedLatex(latex);
+        syncSession(projectId, projectName, latex).catch(() => {});
+        if (autoCompile) {
+          void handleCompile(latex);
+        }
+      })
+      .catch(() => {});
+  }, [projectId, projectName, latex, autoCompile, handleCompile]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -337,7 +384,9 @@ function EditorPage() {
 
   useEffect(() => {
     if (bootState !== "ready" || !projectId) return;
-    syncSession(projectId, projectName, latex).catch(() => {});
+    void fetchDedupe(`session:init:${projectId}`, () =>
+      syncSession(projectId, projectName, latex),
+    ).catch(() => {});
   }, [bootState, projectId, projectName, latex]);
 
   const loadProviders = useCallback(() => {
@@ -366,17 +415,17 @@ function EditorPage() {
     if (!files.length) return;
 
     const texFile = files.find((f) => /\.(tex|latex)$/i.test(f.name));
-    const imageFiles = files.filter((f) => isImageAssetFile(f.name));
+    const assetFiles = files.filter((f) => isProjectAssetFile(f.name));
 
     if (texFile) {
       const text = await texFile.text();
       recordNow(text);
     }
 
-    if (imageFiles.length && projectId) {
-      const uploaded = await Promise.all(imageFiles.map(readFileAsDataUrl));
-      const updated = addProjectAssets(projectId, uploaded);
-      if (updated?.assets) setAssets(updated.assets);
+    if (assetFiles.length && projectId) {
+      const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
+      const updated = await addPaperAssets(projectId, uploaded);
+      if (updated.assets) setAssets(updated.assets);
     }
 
     e.target.value = "";
@@ -386,12 +435,12 @@ function EditorPage() {
     const files = Array.from(e.target.files ?? []);
     if (!files.length || !projectId) return;
 
-    const imageFiles = files.filter((f) => isImageAssetFile(f.name));
-    if (!imageFiles.length) return;
+    const assetFiles = files.filter((f) => isProjectAssetFile(f.name));
+    if (!assetFiles.length) return;
 
-    const uploaded = await Promise.all(imageFiles.map(readFileAsDataUrl));
-    const updated = addProjectAssets(projectId, uploaded);
-    if (updated?.assets) setAssets(updated.assets);
+    const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
+    const updated = await addPaperAssets(projectId, uploaded);
+    if (updated.assets) setAssets(updated.assets);
     e.target.value = "";
   };
 
@@ -511,9 +560,17 @@ function EditorPage() {
     }
     recordNow(next);
     setPendingSuggestion(null);
+    if (autoCompile) {
+      void handleCompile(next);
+    }
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", content: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file." },
+      {
+        role: "assistant",
+        content: autoCompile
+          ? "Đã áp dụng thay đổi vào bản thảo. Đang compile PDF…"
+          : "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file.",
+      },
     ]);
   };
 
@@ -523,11 +580,6 @@ function EditorPage() {
       ...prev,
       { role: "assistant", content: "Đã từ chối gợi ý. Bản thảo gốc không thay đổi." },
     ]);
-  };
-
-  const handleCompile = () => {
-    setIsCompiling(true);
-    setTimeout(() => setIsCompiling(false), 1200);
   };
 
   const chatProps = {
@@ -584,7 +636,7 @@ function EditorPage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps"
+        accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
         multiple
         className="hidden"
         onChange={handleUpload}
@@ -592,7 +644,7 @@ function EditorPage() {
       <input
         ref={assetInputRef}
         type="file"
-        accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps"
+        accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
         multiple
         className="hidden"
         onChange={handleAssetUpload}
@@ -626,16 +678,18 @@ function EditorPage() {
               <ToolsPanel
                 latex={latex}
                 projectId={projectId ?? ""}
+                autoCompile={autoCompile}
+                onAutoCompileChange={setAutoCompile}
                 onClose={() => setToolsOpen(false)}
               />
             ) : (
-              <PreviewPanel
-                latex={latex}
-                assets={assets}
+              <PdfPreviewPanel
+                pdfData={pdfData}
                 isCompiling={isCompiling}
-                onCompile={handleCompile}
-                zoom={zoom}
-                onZoomChange={setZoom}
+                compileError={compileError}
+                compileWarning={compileWarning}
+                onCompile={() => void handleCompile()}
+                projectName={projectName}
               />
             )
           }
@@ -665,13 +719,13 @@ function EditorPage() {
           </div>
         )}
         {mobileTab === "preview" && (
-          <PreviewPanel
-            latex={latex}
-            assets={assets}
+          <PdfPreviewPanel
+            pdfData={pdfData}
             isCompiling={isCompiling}
-            onCompile={handleCompile}
-            zoom={zoom}
-            onZoomChange={setZoom}
+            compileError={compileError}
+            compileWarning={compileWarning}
+            onCompile={() => void handleCompile()}
+            projectName={projectName}
             mobile
           />
         )}
@@ -690,9 +744,11 @@ function EditorPage() {
 }
 
 function ArionearMasthead({ className = "" }: { className?: string }) {
+  const user = getSession();
+
   return (
     <div
-      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-[color:var(--ink)] px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-[color:var(--newsprint)] ${className}`}
+      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background ${className}`}
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
@@ -705,8 +761,18 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
         <span className="opacity-40">·</span>
         <span>LaTeX Workspace</span>
       </div>
-      <span className="hidden sm:inline opacity-70">{today}</span>
-      <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      <div className="flex items-center gap-3">
+        {user && (
+          <>
+            <span className="hidden sm:inline opacity-80 normal-case tracking-normal font-sans-ui text-[11px]">
+              {user.name}
+            </span>
+            <span className="opacity-40">·</span>
+          </>
+        )}
+        <span className="hidden sm:inline opacity-70">{today}</span>
+        <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      </div>
     </div>
   );
 }
@@ -1269,13 +1335,18 @@ function CenterPanel({
 function ToolsPanel({
   latex,
   projectId,
+  autoCompile,
+  onAutoCompileChange,
   onClose,
 }: {
   latex: string;
   projectId: string;
+  autoCompile: boolean;
+  onAutoCompileChange: (enabled: boolean) => void;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<ToolsTab>("info");
+  const { theme, setTheme } = useTheme();
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [citationLoading, setCitationLoading] = useState(false);
@@ -1352,7 +1423,38 @@ function ToolsPanel({
       <div className="soft-scrollbar flex-1 overflow-y-auto p-4 md:p-5">
         {tab === "info" ? (
           <div className="tools-section">
-            <h2 className="tools-section-title">Summary</h2>
+            <h2 className="tools-section-title">Settings</h2>
+            <div className="tools-setting-row">
+              <div className="tools-setting-copy">
+                <span className="tools-setting-label">Auto-compile PDF</span>
+                <span className="tools-setting-hint">
+                  Compile when you save (Ctrl+S) or accept an agent suggestion
+                </span>
+              </div>
+              <Switch
+                id="tools-auto-compile"
+                checked={autoCompile}
+                onCheckedChange={onAutoCompileChange}
+                aria-label="Auto-compile PDF"
+              />
+            </div>
+
+            <div className="tools-setting-row">
+              <div className="tools-setting-copy">
+                <span className="tools-setting-label">Dark mode</span>
+                <span className="tools-setting-hint">
+                  Use a darker workspace theme across the app
+                </span>
+              </div>
+              <Switch
+                id="tools-dark-mode"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                aria-label="Dark mode"
+              />
+            </div>
+
+            <h2 className="tools-section-title mt-6">Summary</h2>
             <div className="tools-stat-grid">
               {statCards.map((card) => (
                 <div key={card.label} className="tools-stat-card">
@@ -1475,290 +1577,6 @@ function ToolsPanel({
   );
 }
 
-function PreviewFigure({
-  block,
-  assets,
-}: {
-  block: Extract<ReturnType<typeof parseLatexPreview>["blocks"][number], { type: "figure" }>;
-  assets: ProjectAsset[];
-}) {
-  const imageUrl = block.src ? resolveProjectAsset(block.src, assets) : null;
-  const displayName = block.src?.split("/").pop() ?? "figure";
-
-  return (
-    <figure className="preview-figure my-5">
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={block.caption ?? displayName}
-          className="preview-figure-img mx-auto block max-h-56 w-full object-contain"
-        />
-      ) : (
-        <div className="preview-figure-missing mx-auto flex min-h-[9rem] max-w-full items-center justify-center border border-gray-300 bg-white px-4 py-6 text-center text-xs text-gray-500">
-          {displayName}
-        </div>
-      )}
-      {block.caption && (
-        <figcaption className="preview-figure-caption mt-2 text-center text-xs text-gray-700">
-          Figure {block.number}: {renderPreviewParagraph(block.caption)}
-        </figcaption>
-      )}
-    </figure>
-  );
-}
-
-function PreviewDocument({
-  latex,
-  assets,
-  scale,
-}: {
-  latex: string;
-  assets: ProjectAsset[];
-  scale: number;
-}) {
-  const pageRef = useRef<HTMLDivElement>(null);
-  const [pageHeight, setPageHeight] = useState(0);
-  const preview = useMemo(() => parseLatexPreview(latex), [latex]);
-  const previewFontClass =
-    preview.fontProfile === "times" ? "preview-font-times" : "preview-font-latin-modern";
-  const previewLayoutClass =
-    preview.layout === "ieee" ? "preview-layout-ieee" : "preview-layout-article";
-
-  useEffect(() => {
-    const el = pageRef.current;
-    if (!el) return;
-    const update = () => setPageHeight(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [preview]);
-
-  return (
-    <div
-      className="preview-page-scaler mx-auto"
-      style={{ width: PREVIEW_PAGE_WIDTH * scale, height: pageHeight * scale }}
-    >
-      <div
-        ref={pageRef}
-        className="preview-page rounded-lg border border-border/40 bg-white shadow-[0_8px_32px_-12px_rgba(15,23,42,0.15)]"
-        style={{
-          width: PREVIEW_PAGE_WIDTH,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <div
-          className={`preview-page-content px-10 py-12 text-gray-900 ${previewFontClass} ${previewLayoutClass}`}
-        >
-          {preview.blocks.length === 0 ? (
-            <p className="text-center text-sm text-gray-500">
-              Upload or write LaTeX to see a live preview.
-            </p>
-          ) : (
-            preview.blocks.map((block, index) => {
-              switch (block.type) {
-                case "title":
-                  return (
-                    <h1
-                      key={`${block.type}-${index}`}
-                      className="preview-title preview-span-all text-center mb-1"
-                    >
-                      {block.text}
-                    </h1>
-                  );
-                case "author":
-                  return (
-                    <p
-                      key={`${block.type}-${index}`}
-                      className="preview-author preview-span-all text-center mb-1 whitespace-pre-line"
-                    >
-                      {block.text}
-                    </p>
-                  );
-                case "date":
-                  return (
-                    <p
-                      key={`${block.type}-${index}`}
-                      className="preview-span-all text-center text-[0.85em] mb-8"
-                    >
-                      {block.text}
-                    </p>
-                  );
-                case "abstract":
-                  return (
-                    <p
-                      key={`${block.type}-${index}`}
-                      className="preview-abstract preview-span-all text-justify mb-4"
-                    >
-                      <strong>Abstract</strong>—{renderPreviewParagraph(block.text)}
-                    </p>
-                  );
-                case "section":
-                  return (
-                    <h2 key={`${block.type}-${index}`} className="preview-section mt-6 mb-2">
-                      {formatSectionLabel(block, preview.layout)}
-                    </h2>
-                  );
-                case "subsection":
-                  return (
-                    <h3 key={`${block.type}-${index}`} className="preview-subsection mt-4 mb-2">
-                      {formatSectionLabel(block, preview.layout)}
-                    </h3>
-                  );
-                case "figure":
-                  return <PreviewFigure key={`${block.type}-${index}`} block={block} assets={assets} />;
-                case "equation":
-                  return (
-                    <div
-                      key={`${block.type}-${index}`}
-                      className="my-3 text-center font-latex-mono text-sm text-gray-700"
-                    >
-                      {block.text}
-                    </div>
-                  );
-                case "paragraph":
-                  return (
-                    <p key={`${block.type}-${index}`} className="text-justify mb-3">
-                      {renderPreviewParagraph(block.text)}
-                    </p>
-                  );
-                default:
-                  return null;
-              }
-            })
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewPanel({
-  latex,
-  assets,
-  isCompiling,
-  onCompile,
-  zoom,
-  onZoomChange,
-  mobile = false,
-}: {
-  latex: string;
-  assets: ProjectAsset[];
-  isCompiling: boolean;
-  onCompile: () => void;
-  zoom: number;
-  onZoomChange: (z: number) => void;
-  mobile?: boolean;
-}) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const [fitScale, setFitScale] = useState(1);
-
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-
-    const updateScale = () => {
-      const padding = 40;
-      const available = el.clientWidth - padding;
-      setFitScale(Math.min(1, Math.max(0.25, available / PREVIEW_PAGE_WIDTH)));
-    };
-
-    updateScale();
-    const ro = new ResizeObserver(updateScale);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const effectiveScale = zoom === 100 ? fitScale : zoom / 100;
-  const displayZoom = Math.round(effectiveScale * 100);
-
-  return (
-    <section
-      className={`flex min-h-0 flex-col bg-secondary/20 ${
-        mobile ? "flex-1 w-full" : "h-full w-full"
-      }`}
-    >
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 md:px-4 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCompile}
-            disabled={isCompiling}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition disabled:opacity-60"
-          >
-            <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
-            {isCompiling ? "Compiling…" : "Compile"}
-          </button>
-          <span className="font-mono text-[10px] text-muted-foreground">01 of 01</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <select
-            value={zoom}
-            onChange={(e) => onZoomChange(Number(e.target.value))}
-            className="rounded-md bg-transparent px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary focus:outline-none"
-          >
-            <option value={75}>75%</option>
-            <option value={100}>Zoom to fit</option>
-            <option value={125}>125%</option>
-          </select>
-          <IconBtn sm>
-            <Download className="h-3.5 w-3.5" />
-          </IconBtn>
-          {!mobile && (
-            <IconBtn sm>
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </IconBtn>
-          )}
-        </div>
-      </div>
-
-      <div
-        ref={viewportRef}
-        className="preview-viewport soft-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-4 md:p-5 lg:p-7"
-      >
-        <PreviewDocument latex={latex} assets={assets} scale={effectiveScale} />
-      </div>
-
-      <div className="flex h-9 shrink-0 items-center justify-center gap-2 border-t border-border bg-card/80">
-        <IconBtn sm>
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </IconBtn>
-        <IconBtn sm>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </IconBtn>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <IconBtn sm onClick={() => onZoomChange(Math.max(50, zoom - 25))}>
-          <ZoomOut className="h-3.5 w-3.5" />
-        </IconBtn>
-        <span className="font-mono text-[10px] text-muted-foreground w-8 text-center">{displayZoom}%</span>
-        <IconBtn sm onClick={() => onZoomChange(Math.min(200, zoom + 25))}>
-          <ZoomIn className="h-3.5 w-3.5" />
-        </IconBtn>
-      </div>
-    </section>
-  );
-}
-
-function IconBtn({
-  children,
-  sm,
-  onClick,
-}: {
-  children: React.ReactNode;
-  sm?: boolean;
-  onClick?: () => void;
-}) {
-  const size = sm ? "h-7 w-7" : "h-8 w-8";
-  return (
-    <button
-      onClick={onClick}
-      className={`flex ${size} items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function StatusBar({ lineCount, className = "" }: { lineCount: number; className?: string }) {
   return (
     <footer
@@ -1778,5 +1596,26 @@ function StatusBar({ lineCount, className = "" }: { lineCount: number; className
         <span className="text-primary">Editor</span>
       </div>
     </footer>
+  );
+}
+
+function IconBtn({
+  children,
+  sm,
+  onClick,
+}: {
+  children: React.ReactNode;
+  sm?: boolean;
+  onClick?: () => void;
+}) {
+  const size = sm ? "h-7 w-7" : "h-8 w-8";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex ${size} items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground`}
+    >
+      {children}
+    </button>
   );
 }

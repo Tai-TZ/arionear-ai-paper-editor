@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import subprocess
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.agents.graph import agent
 from src.config import get_settings
+from src.db.engine import db_is_ready, is_db_enabled
 from src.models.schemas import (
     ChatRequest,
     ChatResponse,
     CitationVerifyRequest,
     CitationVerifyResponse,
+    CompileRequest,
+    CompileResponse,
+    CompileStatusResponse,
     IntegrityFlagSchema,
     ProviderInfo,
     ProvidersResponse,
@@ -22,6 +28,7 @@ from src.models.schemas import (
 )
 from src.services.chat_stream import AGENT_NAME, stream_chat
 from src.services.citations.verifier import verify_citations
+from src.services.latex_compile import compile_latex, compile_status
 from src.services.llm import list_providers
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
 from src.services.sessions import session_store
@@ -66,11 +73,21 @@ def _agent_input(**kwargs) -> dict:
 @router.get("/status")
 async def agent_status():
     settings = get_settings()
+    if db_is_ready():
+        storage = (
+            "postgresql"
+            if get_settings().sqlalchemy_database_url().startswith(("postgresql://", "postgres://"))
+            else "database"
+        )
+    elif is_db_enabled():
+        storage = "database (connection failed — check DATABASE_URL)"
+    else:
+        storage = "in-memory (set DATABASE_URL to enable persistence)"
     return {
         "status": "ready",
         "agent": f"{AGENT_NAME} v1.0",
         "default_provider": settings.llm_provider,
-        "storage": "in-memory (database deferred)",
+        "storage": storage,
     }
 
 
@@ -110,14 +127,22 @@ async def get_session(session_id: str):
 
 @router.patch("/sessions/{session_id}", response_model=SessionResponse)
 async def update_session(session_id: str, body: SessionUpdate):
-    session = session_store.update(
-        session_id,
-        name=body.name,
-        latex_content=body.latex_content,
-        metadata=body.metadata,
-    )
+    session = session_store.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        session = session_store.get_or_create(
+            session_id,
+            name=body.name or "Untitled",
+            latex_content=body.latex_content or "",
+            metadata=body.metadata,
+        )
+    else:
+        updated = session_store.update(
+            session_id,
+            name=body.name,
+            latex_content=body.latex_content,
+            metadata=body.metadata,
+        )
+        session = updated or session
     return _session_to_response(session)
 
 
@@ -224,12 +249,31 @@ async def verify_session_citations(request: CitationVerifyRequest):
         entries,
         semantic_scholar_api_key=settings.semantic_scholar_api_key,
     )
-    session.citation_registry = results
+    session_store.set_citation_registry(request.session_id, results)
     verified = sum(1 for r in results if r.get("status") == "verified")
     return CitationVerifyResponse(
         results=results,
         summary=f"Verified {verified}/{len(results)} citations.",
     )
+
+
+@router.get("/compile/status", response_model=CompileStatusResponse)
+async def get_compile_status():
+    return compile_status()
+
+
+@router.post("/compile", response_model=CompileResponse)
+async def compile_manuscript(body: CompileRequest):
+    try:
+        result = compile_latex(body)
+        return result
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail="LaTeX compilation timed out.") from e
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[COMPILE_ERROR] {tb}", flush=True)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
 
 
 @router.post("/revisions/{session_id}/{revision_id}")
