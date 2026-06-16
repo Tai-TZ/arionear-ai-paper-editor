@@ -22,6 +22,35 @@ STANDARD_SECTIONS = [
 ]
 
 
+def find_section_for_query(query: str, sections: list[dict]) -> dict | None:
+    """Match a manuscript section mentioned in the user query."""
+    if not query or not sections:
+        return None
+
+    q = query.lower()
+    aliases: dict[str, list[str]] = {
+        "abstract": ["abstract", "tóm tắt", "tom tat", "phần abstract", "phan abstract"],
+        "introduction": ["introduction", "mở đầu", "mo dau", "phần introduction"],
+        "methods": ["methods", "methodology", "phương pháp", "phuong phap", "materials and methods"],
+        "results": ["results", "kết quả", "ket qua"],
+        "discussion": ["discussion", "thảo luận", "thao luan"],
+        "conclusion": ["conclusion", "kết luận", "ket luan"],
+    }
+
+    for section in sections:
+        name = (section.get("name") or "").strip()
+        if not name:
+            continue
+        lower_name = name.lower()
+        if lower_name in q:
+            return section
+        for key, terms in aliases.items():
+            if lower_name == key or key in lower_name:
+                if any(term in q for term in terms):
+                    return section
+    return None
+
+
 def parse_latex_sections(latex: str) -> list[dict]:
     sections: list[dict] = []
     abstract_match = re.search(

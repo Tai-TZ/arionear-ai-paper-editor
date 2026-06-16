@@ -130,7 +130,8 @@ sequenceDiagram
     FE->>R: Diff đỏ/xanh trong editor + Accept / Reject
     R->>FE: Accept
     FE->>FE: Apply vào main.tex (Ctrl+S để lưu)
-    Note over FE,SS: revisionAction API có sẵn;<br/>frontend chưa gọi khi Accept (L4 partial)
+    FE->>API: POST /revisions/{session}/{id} action=accepted
+    API->>SS: set_revision_action → DB suggestions
 ```
 
 ---
@@ -142,9 +143,10 @@ sequenceDiagram
 | Route | Chức năng | Trạng thái |
 |-------|-----------|------------|
 | `/` | Landing editorial | ✅ |
-| `/projects` | Quản lý dự án | ✅ localStorage |
+| `/projects` | Quản lý dự án | ✅ Postgres papers API |
 | `/editor` | LaTeX editor + PDF preview + chat Ario | ✅ |
-| `/signin`, `/signup` | Auth | ✅ mock |
+| `/profile` | Researcher profile & preferences | ✅ |
+| `/signin`, `/signup` | Auth JWT | ✅ |
 
 **Editor (`/editor`) — đã triển khai:**
 
@@ -152,14 +154,16 @@ sequenceDiagram
 |-----------|---------------|
 | LaTeX editor + line gutter | `routes/editor.tsx` → `LatexEditor` |
 | Diff đỏ/xanh trong editor | `components/latex-diff-editor.tsx`, `lib/text-diff.ts` |
-| Accept / Reject + integrity flags | `components/suggestion-panel.tsx` |
-| Chat streaming (activity, token, done) | `lib/api/academic.ts` → `streamChat()` |
+| Accept / Reject + L4 audit (`revisionAction`) | `editor.tsx` → `revisionAction()` |
+| Revision history panel | Tools → Versions tab, `GET /sessions/{id}/revisions` |
+| Citation registry reload | `fetchCitationRegistry()` on project open |
+| Chat streaming (activity, token, done + `revision_id`) | `lib/api/academic.ts` → `streamChat()` |
 | Citation verify panel | Tools tab → `verifyCitations()` |
 | Provider / model picker | Chat dock |
 | Ctrl+S lưu + dirty `*` indicator | `project-store.ts` |
 | Session sync API | `syncSession()` (best-effort) |
 
-**Planned:** DOCX/PDF upload & parse, logic audit UI, peer-review reply UI, gọi `revisionAction()` khi Accept.
+**Planned (P2):** DOCX/PDF upload & parse, logic audit UI, peer-review reply UI.
 
 ### 4.2 Backend (FastAPI)
 
@@ -176,7 +180,11 @@ Prefix: `/api/v1` · Health: `GET /health`
 | `POST /chat/stream` | Chat SSE (intent + template) | ✅ |
 | `POST /edit/style` | Style edit trực tiếp | ✅ |
 | `POST /citations/verify` | Xác minh trích dẫn | ✅ |
-| `POST /revisions/{session_id}/{revision_id}` | Ghi accept/reject revision | ✅ API; FE chưa wire |
+| `POST /revisions/{session_id}/{revision_id}` | Ghi accept/reject revision | ✅ |
+| `GET /sessions/{session_id}/revisions` | Lịch sử AI revision | ✅ |
+| `GET /sessions/{session_id}/citations` | Citation registry đã verify | ✅ |
+| `GET/PATCH /users/me/profile` | Researcher profile & preferences | ✅ |
+| `POST /papers`, `GET/PATCH/DELETE /papers/{id}` | Auth papers CRUD | ✅ |
 
 ### 4.3 LangGraph Orchestrator
 
@@ -422,7 +430,7 @@ cd frontend && bun run dev
 | Phase | Trọng tâm |
 |-------|-----------|
 | **P1 MVP** *(đang chạy)* | Style, structure, citation, template, diff gate, streaming — **phần lớn ✅** |
-| **P1.5** | Wire `revisionAction` on Accept, persist DB, sync architecture diagram |
+| **P1.5** | ✅ L4 audit, revision/citation persistence, researcher profile |
 | **P2** | Logic audit panel, peer-review response, OpenAlex, DOCX/PDF import |
 | **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export |
 

@@ -1,10 +1,10 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai", "anthropic", "openrouter"]
+LLMProvider = Literal["openai", "anthropic", "openrouter", "zai"]
 
 
 class Settings(BaseSettings):
@@ -23,28 +23,52 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
     # LLM — default provider & model
-    llm_provider: LLMProvider = "openrouter"
-    model_name: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
+    llm_provider: LLMProvider = "zai"
+    model_name: str = "glm-4.7-flash"
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
     # Provider API keys (set at least one)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
+    zai_api_key: str = ""
 
     # Provider base URLs
     openai_base_url: str = "https://api.openai.com/v1"
     anthropic_base_url: str = "https://api.anthropic.com"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    zai_base_url: str = "https://api.z.ai/api/paas/v4"
 
     # OpenRouter optional headers
     openrouter_site_url: str = ""
     openrouter_app_name: str = "Arionear Academic Editor"
 
+    # Inngest — chat pipeline observability
+    inngest_app_id: str = "ario-academic-editor"
+    inngest_event_key: str = ""
+    inngest_signing_key: str = ""
+    inngest_dev: bool = False
+
+    @field_validator("inngest_dev", mode="before")
+    @classmethod
+    def _parse_inngest_dev(cls, value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        return False
+
+    def inngest_enabled(self) -> bool:
+        return self.inngest_dev or bool(self.inngest_event_key.strip())
+
+    def inngest_serve_enabled(self) -> bool:
+        return self.inngest_dev or bool(self.inngest_signing_key.strip())
+
     # Default models per provider (used when client does not specify)
     openai_default_model: str = "gpt-4o-mini"
     anthropic_default_model: str = "claude-sonnet-4-20250514"
-    openrouter_default_model: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
+    openrouter_default_model: str = "meta-llama/llama-3.2-3b-instruct:free"
+    zai_default_model: str = "glm-4.7-flash"
 
     # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).
     # Python/SQLAlchemy needs a direct postgresql:// URL via DIRECT_DATABASE_URL.
@@ -65,6 +89,7 @@ class Settings(BaseSettings):
         return ""
 
     # Guardrails
+    integrity_strictness: Literal["relaxed", "standard", "strict"] = "standard"
     semantic_similarity_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
     max_style_retries: int = Field(default=2, ge=0, le=5)
 

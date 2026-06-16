@@ -418,6 +418,7 @@ function ProfilePage() {
                       )
                     }
                   >
+                    <option value="zai">Z.AI (GLM)</option>
                     <option value="openrouter">OpenRouter</option>
                     <option value="openai">OpenAI</option>
                     <option value="anthropic">Anthropic</option>
@@ -428,7 +429,7 @@ function ProfilePage() {
                     className="profile-input"
                     value={form.default_llm_model ?? ""}
                     onChange={(e) => patch("default_llm_model", e.target.value || null)}
-                    placeholder="e.g. anthropic/claude-sonnet-4"
+                    placeholder="e.g. glm-4.7-flash"
                   />
                 </Field>
                 <Field label={t.fields.rewrite_intensity}>

@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.config import LLMProvider
+
+ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
 
 
 class ChatRequest(BaseModel):
@@ -13,9 +15,24 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     latex_content: str = Field(default="", max_length=500000)
     selection: str = Field(default="", max_length=20000)
-    task: Literal["style", "structure", "logic", "citation", "chat"] | None = None
+    task: ChatTask | None = None
     llm_provider: LLMProvider | None = None
     llm_model: str | None = None
+    integrity_strictness: Literal["relaxed", "standard", "strict"] | None = None
+
+    @field_validator("llm_provider", "llm_model", "session_id", mode="before")
+    @classmethod
+    def _empty_optional_to_none(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        return value
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def _strip_message(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
 
 class IntegrityFlagSchema(BaseModel):
@@ -31,6 +48,8 @@ class ChatResponse(BaseModel):
     suggestion: str = ""
     original_text: str = ""
     diff: str = ""
+    apply_mode: Literal["selection", "document"] | None = None
+    revision_id: str = ""
     integrity_flags: list[IntegrityFlagSchema] = Field(default_factory=list)
     citation_results: list[dict] = Field(default_factory=list)
     structure_suggestions: list[dict] = Field(default_factory=list)
@@ -76,6 +95,19 @@ class StyleEditResponse(BaseModel):
 
 class RevisionAction(BaseModel):
     action: Literal["accepted", "rejected", "modified"]
+
+
+class RevisionRecordResponse(BaseModel):
+    id: str
+    section: str = ""
+    original: str
+    suggestion: str
+    action: str
+    created_at: datetime
+
+
+class RevisionsListResponse(BaseModel):
+    revisions: list[RevisionRecordResponse] = Field(default_factory=list)
 
 
 class CitationVerifyRequest(BaseModel):

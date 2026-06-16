@@ -31,3 +31,4 @@ class AgentState(TypedDict, total=False):
     error: str
     apply_mode: str
     metadata: dict
+    integrity_strictness: str

@@ -44,18 +44,19 @@ Sau merge PR [#11](https://github.com/Tai-TZ/arionear-ai-paper-editor/pull/11) v
 | **AI — Guardrail** | L1 prompt constraint, L2 integrity check + retry, L3 diff gate | |
 | **AI — Citation** | 4-layer verify: arXiv → CrossRef → Semantic Scholar | Lớp 4 LLM chưa có |
 | **Infra** | JWT auth, Prisma/Postgres papers API, dark/light theme | |
+| **Infra** | Researcher profile (`/profile`, `GET/PATCH /users/me/profile`) | ✅ |
+| **L4 Audit** | `revisionAction` on Accept/Reject, `GET /sessions/{id}/revisions` | ✅ |
+| **Persistence** | `revision_history` + `citation_registry` qua DB session store | ✅ |
 | **DevOps** | CI (pytest + ruff), Docker backend, AI usage logging hooks | |
 
-### ⚠️ Còn thiếu / partial
+### ⚠️ Còn thiếu / partial (P2+)
 
 | Thành phần | Gap |
 |------------|-----|
-| Guardrail **L4** | API `revisionAction` có; frontend **chưa gọi** khi Accept |
-| Session store | Papers lưu DB; `revision_history`, `citation_registry` session **chưa persist đầy đủ** |
-| Researcher profile | Chưa có schema/UI preference (template, citation style, LLM, integrity level) |
-| Tài liệu | `ARCHITECTURE.md` vẫn ghi mock auth / in-memory ở vài chỗ |
+| Tài liệu | `ARCHITECTURE.md` §4.1 vẫn ghi mock auth / localStorage projects ở vài chỗ |
 | Logic / Review agents | Chưa có (P2) |
 | DOCX/PDF parser | Chỉ LaTeX + ZIP (P2) |
+| Citation L4 (LLM layer) | Chưa có (P2) |
 
 ---
 
@@ -86,7 +87,7 @@ flowchart TB
         L1[L1 Prompt YAML]
         L2[L2 Integrity Monitor]
         L3[L3 Diff Gate]
-        L4[L4 Audit Log — partial]
+        L4[L4 Audit Log]
     end
 
     subgraph LLM
@@ -138,50 +139,42 @@ flowchart TB
 
 ---
 
-### Phase 1.5 — Hardening & Trust *(ưu tiên hiện tại)*
+### Phase 1.5 — Hardening & Trust ✅ *(đóng 16/06/2026)*
 
-**Mục tiêu:** Đóng gap tin cậy (L4), persistence đầy đủ, editor production-ready, docs đồng bộ.
+**Mục tiêu:** Đóng gap tin cậy (L4), persistence đầy đủ, editor production-ready.
 
-**Thời gian gợi ý:** 1–2 tuần
+#### 1.5.1 Guardrail L4 — Audit log đầy đủ ✅
 
-#### 1.5.1 Guardrail L4 — Audit log đầy đủ
+| Task | Trạng thái |
+|------|------------|
+| Wire `revisionAction` on Accept/Reject | ✅ |
+| Hiển thị revision history (Tools → Versions) | ✅ |
+| Blocking flags disable Accept | ✅ |
 
-| Task | Mô tả | File / API liên quan | Ưu tiên |
-|------|--------|----------------------|---------|
-| Wire `revisionAction` on Accept | Gọi `POST /revisions/{session_id}/{revision_id}` khi user Accept gợi ý | `editor.tsx`, `suggestion-panel.tsx` | **P0** |
-| Wire on Reject | Ghi `rejected` vào revision history | Cùng trên | P1 |
-| Hiển thị revision history | Panel hoặc tab “Revisions” trong editor | Frontend mới | P2 |
-| Blocking flags | Giữ disable Accept khi integrity blocking | Đã có — verify E2E | P1 |
+#### 1.5.2 Persistence & session store ✅
 
-**Done khi:** Mọi Accept/Reject đều persist; có thể truy vết “AI đã sửa gì”.
+| Task | Trạng thái |
+|------|------------|
+| Persist `revision_history` theo paper/session | ✅ |
+| Persist `citation_registry` sau verify / chat citation | ✅ |
+| `GET /sessions/{id}/revisions`, `GET /sessions/{id}/citations` | ✅ |
 
-#### 1.5.2 Persistence & session store
+#### 1.5.3 Editor & compile ✅
 
-| Task | Mô tả | Ưu tiên |
-|------|--------|---------|
-| Persist `revision_history` theo paper/session | Prisma schema + API | **P0** |
-| Persist `citation_registry` sau verify | Tránh verify lại mỗi lần mở project | P1 |
-| Multi-file project qua API ổn định | `files`, `mainFile`, `compiler` trong metadata | ✅ cơ bản — harden |
-| Session sync | `syncSession()` + papers API thống nhất | P1 |
+| Task | Trạng thái |
+|------|------------|
+| Dev proxy port 8000 | ✅ |
+| SyncTeX word/context disambiguation | ✅ |
+| Horizontal scroll highlight | ✅ |
 
-#### 1.5.3 Editor & compile (non-AI nhưng blocker UX)
+#### 1.5.4 Researcher profile ✅
 
-| Task | Mô tả | Trạng thái |
-|------|--------|------------|
-| Dev proxy port 8000 thống nhất | `vite.config.ts` | ✅ |
-| SyncTeX word/context disambiguation | Backend + frontend | ✅ |
-| Horizontal scroll tới từ highlight | `latex-code-editor.tsx` | ✅ — monitor edge cases |
-| Compile CI smoke test | `test_latex_compile.py` mở rộng | P2 |
+| Task | Trạng thái |
+|------|------------|
+| Schema + API `GET/PATCH /users/me/profile` | ✅ |
+| UI `/profile` + editor integration | ✅ |
 
-#### 1.5.4 Researcher profile (foundation cho P2)
-
-| Task | Mô tả | Ưu tiên |
-|------|--------|---------|
-| Schema `UserProfile` / metadata JSON | Affiliation, ORCID, default template, citation style, LLM preference, integrity strictness | P1 |
-| API `GET/PATCH /users/me/profile` | Backend | P1 |
-| UI Settings trong editor | Tab Settings hoặc `/profile` | P2 |
-
-**Deliverable P1.5:** Audit trail hoạt động + DB persist revision/citation + profile skeleton + docs cập nhật.
+**Deliverable P1.5:** ✅ Audit trail hoạt động + DB persist revision/citation + profile + docs (cập nhật tiếp).
 
 ---
 
@@ -295,8 +288,8 @@ gantt
     Core agents + guardrail L1-L3     :done, p1, 2026-05-29, 2026-06-13
     Editor PDF SyncTeX Auth DB        :done, p1b, 2026-06-14, 2026-06-16
     section P1.5 Hardening
-    L4 revisionAction + DB persist    :active, p15, 2026-06-17, 2026-06-30
-    Researcher profile + docs sync    :p15b, 2026-06-24, 2026-07-07
+    L4 revisionAction + DB persist    :done, p15, 2026-06-17, 2026-06-16
+    Researcher profile + docs sync    :done, p15b, 2026-06-17, 2026-06-16
     section P2 Intelligence
     Logic Audit Panel                 :p2a, 2026-07-01, 2026-07-21
     Peer-Review Response              :p2b, 2026-07-15, 2026-08-04
@@ -312,7 +305,7 @@ gantt
 | Phase | Tiêu chí đạt |
 |-------|----------------|
 | **P1** | User compile LaTeX, chat Ario, nhận style/citation/structure suggestion qua diff, Accept/Reject — **đạt** |
-| **P1.5** | Accept ghi audit DB; mở lại project thấy lịch sử revision; citation registry không mất |
+| **P1.5** | ✅ Accept/Reject ghi audit DB; reload project thấy revision + citation registry |
 | **P2** | Logic audit + peer-review draft; import DOCX; citation L4 + OpenAlex |
 | **P3** | Export AI contribution report; LangSmith eval pass; on-prem docker one-command |
 
@@ -330,12 +323,13 @@ gantt
 
 ---
 
-## 9. Việc tiếp theo (tuần này)
+## 9. Việc tiếp theo (Phase 2)
 
-1. **R1** — Wire `revisionAction` khi Accept/Reject trong `suggestion-panel.tsx` / `editor.tsx`  
-2. **R2** — Migration Prisma + API lưu `revision_history` theo paper  
-3. **R5** — Cập nhật `ARCHITECTURE.md` §11 (auth ✅, DB ✅, SyncTeX ✅)  
-4. Chạy E2E: compile → chat style → Accept → reload project → thấy revision trong DB  
+1. **Logic Audit Panel** — multi-agent comment-only, không auto-apply  
+2. **Peer-Review Response Agent** — draft phản hồi reviewer  
+3. **DOCX/PDF import** — unified document parser  
+4. **OpenAlex + Citation L4** — LLM relevance scoring  
+5. Cập nhật `ARCHITECTURE.md` §4.1 (auth DB, papers API)  
 
 ---
 

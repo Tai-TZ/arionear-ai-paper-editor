@@ -22,13 +22,15 @@ from src.models.schemas import (
     ProviderInfo,
     ProvidersResponse,
     RevisionAction,
+    RevisionsListResponse,
+    RevisionRecordResponse,
     SessionCreate,
     SessionResponse,
     SessionUpdate,
     StyleEditRequest,
     StyleEditResponse,
 )
-from src.services.chat_stream import AGENT_NAME, stream_chat
+from src.services.chat_stream import AGENT_NAME, flush_sse_stream, stream_chat
 from src.services.citations.verifier import verify_citations
 from src.services.latex_compile import (
     compile_latex,
@@ -56,6 +58,7 @@ def _session_to_response(session) -> SessionResponse:
 
 def _build_chat_response(result: dict) -> ChatResponse:
     flags = [IntegrityFlagSchema(**f) for f in result.get("integrity_flags", [])]
+    metadata = result.get("metadata") or {}
     return ChatResponse(
         response=result.get("response", ""),
         analysis=result.get("analysis", ""),
@@ -63,9 +66,22 @@ def _build_chat_response(result: dict) -> ChatResponse:
         suggestion=result.get("suggestion", ""),
         original_text=result.get("original_text", ""),
         diff=result.get("diff", ""),
+        apply_mode=result.get("apply_mode"),
+        revision_id=metadata.get("revision_id", result.get("revision_id", "")),
         integrity_flags=flags,
         citation_results=result.get("citation_results", []),
         structure_suggestions=result.get("structure_suggestions", []),
+    )
+
+
+def _revision_to_response(record) -> RevisionRecordResponse:
+    return RevisionRecordResponse(
+        id=record.id,
+        section=record.section,
+        original=record.original,
+        suggestion=record.suggestion,
+        action=record.action,
+        created_at=record.created_at,
     )
 
 
@@ -105,7 +121,7 @@ async def get_providers():
     if not providers:
         raise HTTPException(
             status_code=503,
-            detail="No LLM API keys configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OPENROUTER_API_KEY in .env",
+            detail="No LLM API keys configured. Set ZAI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or OPENROUTER_API_KEY in .env",
         )
     return ProvidersResponse(
         default_provider=settings.llm_provider,
@@ -153,14 +169,39 @@ async def update_session(session_id: str, body: SessionUpdate):
     return _session_to_response(session)
 
 
+@router.get("/sessions/{session_id}/revisions", response_model=RevisionsListResponse)
+async def list_session_revisions(session_id: str):
+    session = session_store.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return RevisionsListResponse(
+        revisions=[_revision_to_response(r) for r in session.revision_history],
+    )
+
+
+@router.get("/sessions/{session_id}/citations", response_model=CitationVerifyResponse)
+async def get_session_citations(session_id: str):
+    session = session_store.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    results = session.citation_registry or []
+    verified = sum(1 for r in results if r.get("status") == "verified")
+    summary = (
+        f"Verified {verified}/{len(results)} citations."
+        if results
+        else "No citation verification on file."
+    )
+    return CitationVerifyResponse(results=results, summary=summary)
+
+
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     try:
         return StreamingResponse(
-            stream_chat(request),
+            flush_sse_stream(stream_chat(request)),
             media_type="text/event-stream",
             headers={
-                "Cache-Control": "no-cache",
+                "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
             },

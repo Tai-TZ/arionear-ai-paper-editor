@@ -22,13 +22,18 @@ export function SuggestionPanel({
   const hasErrors = flags.some((f) => f.severity === "error");
 
   return (
-    <div className="suggestion-panel mx-3 mb-2 shrink-0 rounded-lg border border-primary/20 bg-card/95 shadow-sm backdrop-blur-sm">
+    <div className="suggestion-panel shrink-0 border-t border-primary/15 bg-card/98 shadow-[0_-4px_20px_-8px_oklch(0.2_0.02_255_/_12%)] backdrop-blur-sm">
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-primary">
           <ShieldAlert className="h-3.5 w-3.5" />
-          {applyMode === "document"
-            ? "Ario đề xuất thay đổi main.tex — xem diff trong editor phía trên"
-            : "Ario đề xuất chỉnh sửa — xem diff trong editor phía trên"}
+          <span>
+            {applyMode === "document"
+              ? "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)"
+              : "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)"}
+          </span>
+          <span className="text-[10px] font-normal text-muted-foreground">
+            Ctrl+Enter Accept · Esc Reject
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           <button

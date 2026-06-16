@@ -18,6 +18,7 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
         "openai": settings.openai_default_model,
         "anthropic": settings.anthropic_default_model,
         "openrouter": settings.openrouter_default_model,
+        "zai": settings.zai_default_model,
     }
     return defaults.get(provider, settings.model_name)
 
@@ -27,6 +28,7 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
         "openai": settings.openai_api_key,
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
+        "zai": settings.zai_api_key,
     }
     key = keys.get(provider, "")
     if not key:
@@ -41,8 +43,9 @@ def get_llm(
     provider: LLMProvider | None = None,
     model: str | None = None,
     temperature: float | None = None,
+    thinking: bool | None = None,
 ) -> BaseChatModel:
-    """Return a chat model for OpenAI, Anthropic (direct), or OpenRouter."""
+    """Return a chat model for OpenAI, Anthropic, OpenRouter, or Z.AI (GLM)."""
     settings = get_settings()
     provider = provider or settings.llm_provider
     model_name = _resolve_model(settings, provider, model)
@@ -86,6 +89,16 @@ def get_llm(
             base_url=settings.openrouter_base_url,
             temperature=temp,
             default_headers=default_headers or None,
+        )
+
+    if provider == "zai":
+        use_thinking = thinking if thinking is not None else False
+        return ChatOpenAI(
+            model=model_name,
+            api_key=_resolve_api_key(settings, "zai"),
+            base_url=settings.zai_base_url,
+            temperature=temp,
+            extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
         )
 
     raise ValueError(f"Unsupported LLM provider: {provider}")
@@ -148,11 +161,29 @@ def list_providers() -> list[dict]:
                 "models": _dedupe_models(
                     [
                         settings.openrouter_default_model,
+                        "meta-llama/llama-3.2-3b-instruct:free",
+                        "google/gemma-2-9b-it:free",
                         "openai/gpt-4o-mini",
                         "anthropic/claude-sonnet-4",
-                        "openai/gpt-4o",
                         "google/gemini-2.5-flash-preview",
                         "meta-llama/llama-3.3-70b-instruct",
+                    ]
+                ),
+            }
+        )
+
+    if settings.zai_api_key:
+        providers.append(
+            {
+                "id": "zai",
+                "name": "Z.AI (GLM)",
+                "default_model": settings.zai_default_model,
+                "models": _dedupe_models(
+                    [
+                        settings.zai_default_model,
+                        "glm-4.7-flash",
+                        "glm-4.7-flashx",
+                        "glm-4.7",
                     ]
                 ),
             }

@@ -1,6 +1,11 @@
-import { useImperativeHandle, useLayoutEffect, useRef, forwardRef } from "react";
+import { useImperativeHandle, useLayoutEffect, useMemo, useRef, forwardRef } from "react";
 
+import { InlineDiffLine } from "@/components/inline-diff-line";
 import { HighlightedLatexLine } from "@/lib/latex-syntax";
+import {
+  buildInlineSuggestionView,
+  type InlineSuggestionInput,
+} from "@/lib/inline-suggestion";
 import type { SynctexWordHighlight } from "@/lib/synctex-highlight";
 
 export type LatexCodeEditorHandle = {
@@ -14,6 +19,7 @@ type LatexCodeEditorProps = {
   fullHeight?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
+  inlineSuggestion?: InlineSuggestionInput | null;
 };
 
 export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditorProps>(
@@ -25,10 +31,20 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       fullHeight = false,
       highlightLine = null,
       synctexHighlight = null,
+      inlineSuggestion = null,
     },
     ref,
   ) {
-  const lines = latex.split(/\r?\n/);
+  const suggestionView = useMemo(
+    () =>
+      inlineSuggestion
+        ? buildInlineSuggestionView(latex, inlineSuggestion)
+        : null,
+    [latex, inlineSuggestion],
+  );
+  const displayLatex = suggestionView?.previewLatex ?? latex;
+  const lines = displayLatex.split(/\r?\n/);
+  const readOnly = Boolean(suggestionView);
   const gutterRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -143,6 +159,11 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
   }));
 
   useLayoutEffect(() => {
+    if (!suggestionView) return;
+    scrollToLineInternal(suggestionView.changeStartLine);
+  }, [suggestionView?.previewLatex]);
+
+  useLayoutEffect(() => {
     if (!highlightLine || highlightLine < 1) return;
     const start =
       synctexHighlight?.line === highlightLine ? synctexHighlight.start : undefined;
@@ -162,14 +183,27 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
         ref={gutterRef}
         className="latex-gutter shrink-0 overflow-hidden select-none py-4 pr-2 pl-3 md:pr-3 md:pl-4 text-right font-mono text-[11px] leading-[1.65]"
       >
-        {lines.map((_, i) => (
-          <div
-            key={i}
-            className={`latex-line-num ${highlightLine === i + 1 ? "bg-primary/15 text-primary font-semibold" : ""}`}
-          >
-            {i + 1}
-          </div>
-        ))}
+        {lines.map((_, i) => {
+          const lineNo = i + 1;
+          const inChange =
+            suggestionView &&
+            lineNo >= suggestionView.changeStartLine &&
+            lineNo <= suggestionView.changeEndLine;
+          return (
+            <div
+              key={i}
+              className={`latex-line-num ${
+                highlightLine === lineNo
+                  ? "bg-primary/15 text-primary font-semibold"
+                  : inChange
+                    ? "latex-line-num-change"
+                    : ""
+              }`}
+            >
+              {lineNo}
+            </div>
+          );
+        })}
       </div>
 
       <div className="latex-code-area relative min-h-0 min-w-0 flex-1">
@@ -180,13 +214,26 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
         >
           {lines.map((line, i) => {
             const lineNo = i + 1;
+            const viewLine = suggestionView?.lines[i];
             const range =
               synctexHighlight?.line === lineNo
                 ? { start: synctexHighlight.start, end: synctexHighlight.end }
                 : null;
+            const inChange =
+              suggestionView &&
+              lineNo >= suggestionView.changeStartLine &&
+              lineNo <= suggestionView.changeEndLine;
+
             return (
-              <div key={i} className="latex-code-row">
-                <HighlightedLatexLine text={line} highlightRange={range} />
+              <div
+                key={i}
+                className={`latex-code-row ${inChange ? "latex-code-row-change" : ""}`}
+              >
+                {viewLine?.kind === "diff" ? (
+                  <InlineDiffLine parts={viewLine.parts} />
+                ) : (
+                  <HighlightedLatexLine text={line} highlightRange={range} />
+                )}
               </div>
             );
           })}
@@ -194,9 +241,12 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
 
         <textarea
           ref={textareaRef}
-          value={latex}
+          value={displayLatex}
+          readOnly={readOnly}
           wrap="off"
-          onChange={(e) => onLatexChange(e.target.value)}
+          onChange={(e) => {
+            if (!readOnly) onLatexChange(e.target.value);
+          }}
           onSelect={() => {
             const el = textareaRef.current;
             if (el && onSelectionChange) {
@@ -205,7 +255,9 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
           }}
           onScroll={syncScroll}
           spellCheck={false}
-          className="latex-input latex-input-overlay latex-editor-canvas absolute inset-0 min-h-0 w-full resize-none overflow-auto bg-transparent outline-none"
+          className={`latex-input latex-input-overlay latex-editor-canvas absolute inset-0 min-h-0 w-full resize-none overflow-auto bg-transparent outline-none ${
+            readOnly ? "latex-input-readonly cursor-default" : ""
+          }`}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   FileText,
   Search,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
+  formatTimeAgo,
   getCompilePayload,
   isImageAssetFile,
   isProjectAssetFile,
@@ -39,13 +41,20 @@ import {
   updatePaper,
 } from "@/lib/api/papers-api";
 import {
+  applyAiState,
   compileLatex,
+  fetchCitationRegistry,
   fetchProviders,
+  fetchRevisions,
+  revisionAction,
   streamChat,
   syncSession,
   verifyCitations,
+  type ChatAiStatePayload,
+  type ChatAiStep,
   type LLMProvider,
   type ProviderInfo,
+  type RevisionRecord,
 } from "@/lib/api/academic";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
@@ -58,8 +67,8 @@ import {
   type ChatMessage,
 } from "@/components/chat-overlay";
 import { SuggestionPanel } from "@/components/suggestion-panel";
-import { LatexDiffEditor } from "@/components/latex-diff-editor";
 import { LatexCodeEditor, type LatexCodeEditorHandle } from "@/components/latex-code-editor";
+import { LlmSelector } from "@/components/llm-selector";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/components/theme-provider";
@@ -119,7 +128,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     role: "assistant",
     content:
-      "Xin chào, tôi là Ario — trợ lý biên tập học thuật của bạn. Tôi có thể giúp cải thiện văn phong, cấu trúc bài báo, hoặc định dạng trích dẫn trong bản thảo. Bạn muốn bắt đầu từ phần nào?",
+      "Xin chào — tôi là Ario, trợ lý NCKH trong Paper IDE ARIONEAR. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
   },
 ];
 
@@ -138,51 +147,25 @@ type ProjectStats = {
   mathDisplayed: number;
 };
 
-type VersionEntry = {
-  version: string;
-  timeAgo: string;
-  additions: number;
-  deletions: number;
-  author: string;
-  badge?: string;
-};
+function countDiffStats(original: string, suggestion: string) {
+  const o = original.length;
+  const s = suggestion.length;
+  if (s >= o) return { additions: s - o, deletions: 0 };
+  return { additions: 0, deletions: o - s };
+}
 
-type VersionGroup = {
-  title: string;
-  revisionCount?: number;
-  defaultOpen?: boolean;
-  entries: VersionEntry[];
-};
-
-const VERSION_HISTORY: { date: string; groups: VersionGroup[] }[] = [
-  {
-    date: "Jun 10, 2026",
-    groups: [
-      {
-        title: "Edited main.tex",
-        revisionCount: 2,
-        defaultOpen: true,
-        entries: [
-          { version: "v3", timeAgo: "17 hours ago", additions: 1, deletions: 1, author: "You" },
-          { version: "v2", timeAgo: "17 hours ago", additions: 1, deletions: 1, author: "You" },
-        ],
-      },
-      {
-        title: "Added main.tex",
-        entries: [
-          {
-            version: "v1",
-            timeAgo: "17 hours ago",
-            additions: 25,
-            deletions: 0,
-            author: "You",
-            badge: "Initial",
-          },
-        ],
-      },
-    ],
-  },
-];
+function revisionActionLabel(action: string) {
+  switch (action.toLowerCase()) {
+    case "accepted":
+      return "Accepted";
+    case "rejected":
+      return "Rejected";
+    case "modified":
+      return "Modified";
+    default:
+      return "Pending";
+  }
+}
 
 function stripLatexCommands(source: string) {
   return source
@@ -294,8 +277,11 @@ function EditorPage() {
   const chatAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState("");
   const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
+  const [revisionHistory, setRevisionHistory] = useState<RevisionRecord[]>([]);
+  const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
+  const [citationSummary, setCitationSummary] = useState("");
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("zai");
   const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -340,6 +326,24 @@ function EditorPage() {
     };
   }, []);
 
+  const loadSessionAudit = useCallback(async (sessionId: string) => {
+    const [revisions, citations] = await Promise.all([
+      fetchRevisions(sessionId).catch(() => [] as RevisionRecord[]),
+      fetchCitationRegistry(sessionId).catch(() => ({
+        results: [] as Record<string, unknown>[],
+        summary: "",
+      })),
+    ]);
+    setRevisionHistory(revisions);
+    setCitationResults(citations.results);
+    setCitationSummary(citations.summary);
+  }, []);
+
+  const refreshRevisions = useCallback(() => {
+    if (!projectId) return;
+    void fetchRevisions(projectId).then(setRevisionHistory).catch(() => {});
+  }, [projectId]);
+
   useEffect(() => {
     if (!projectId) {
       navigate({ to: "/projects", replace: true });
@@ -365,6 +369,7 @@ function EditorPage() {
         setSavedLatex(project.latex);
         setAssets(project.assets ?? []);
         setBootState("ready");
+        void loadSessionAudit(projectId);
       })
       .catch(() => {
         if (!cancelled) {
@@ -375,7 +380,7 @@ function EditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, navigate, resetHistory]);
+  }, [projectId, navigate, resetHistory, loadSessionAudit]);
 
   const persistActiveFile = useCallback(
     (content: string, files: ProjectFile[], currentActive: string) =>
@@ -696,15 +701,38 @@ function EditorPage() {
     e.target.value = "";
   };
 
+  const streamAiSteps = useMemo((): ChatAiStep[] => {
+    const streaming = [...messages].reverse().find((m) => m.role === "assistant" && m.isStreaming);
+    return streaming?.aiSteps ?? [];
+  }, [messages]);
+
+  const handleStopChat = useCallback(() => {
+    if (!chatAbortRef.current) return;
+    chatAbortRef.current.abort();
+    setChatLoading(false);
+    setLiveActivity(null);
+    setMessages((prev) => {
+      const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const msg = next[idx] as ChatMessage;
+      next[idx] = {
+        ...msg,
+        isStreaming: false,
+        content: msg.content.trim() || "Đã dừng xử lý.",
+      };
+      return next;
+    });
+  }, []);
+
   const handleSend = async () => {
     const text = chatInput.trim();
     if (!text || chatLoading || !projectId) return;
-    setChatOpen(true);
+    setChatOpen(false);
     chatAbortRef.current?.abort();
     const abort = new AbortController();
     chatAbortRef.current = abort;
 
-    const assistantIdx = messages.length + 1;
     setMessages((prev) => [
       ...prev,
       { role: "user", content: text },
@@ -712,6 +740,7 @@ function EditorPage() {
         role: "assistant",
         content: "",
         activities: [],
+        aiSteps: [],
         reasoning: "",
         isStreaming: true,
       },
@@ -724,12 +753,15 @@ function EditorPage() {
     const patchAssistant = (updater: (msg: ChatMessage) => ChatMessage) => {
       setMessages((prev) => {
         const next = [...prev];
-        const msg = next[assistantIdx];
-        if (msg?.role === "assistant") {
-          next[assistantIdx] = updater(msg);
-        }
+        const idx = next.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+        if (idx === -1) return prev;
+        next[idx] = updater(next[idx] as ChatMessage);
         return next;
       });
+    };
+
+    const pushStream = (fn: () => void) => {
+      flushSync(fn);
     };
 
     try {
@@ -741,16 +773,31 @@ function EditorPage() {
           selection,
           llm_provider: llmProvider,
           llm_model: llmModel || undefined,
+          integrity_strictness: integrityStrictness,
         },
         {
           onActivity: (activityText) => {
-            setLiveActivity(activityText);
-            patchAssistant((msg) => {
-              const activities = [...(msg.activities ?? [])];
-              if (activities[activities.length - 1] !== activityText) {
-                activities.push(activityText);
-              }
-              return { ...msg, activities };
+            pushStream(() => {
+              setLiveActivity(activityText);
+              patchAssistant((msg) => {
+                const activities = [...(msg.activities ?? [])];
+                if (activities[activities.length - 1] !== activityText) {
+                  activities.push(activityText);
+                }
+                return { ...msg, activities };
+              });
+            });
+          },
+          onState: (state: ChatAiStatePayload) => {
+            const activityText = state.detail
+              ? `${state.label} — ${state.detail}`
+              : state.label;
+            pushStream(() => {
+              setLiveActivity(activityText);
+              patchAssistant((msg) => ({
+                ...msg,
+                aiSteps: applyAiState(msg.aiSteps ?? [], state),
+              }));
             });
           },
           onReasoning: (delta) => {
@@ -778,7 +825,16 @@ function EditorPage() {
                 diff: result.diff ?? "",
                 flags: result.integrity_flags ?? [],
                 applyMode: result.apply_mode ?? "selection",
+                revisionId: result.revision_id || undefined,
               });
+              setChatOpen(false);
+            }
+            if (result.citation_results?.length) {
+              setCitationResults(result.citation_results);
+              setCitationSummary(result.response || result.analysis || "");
+            }
+            if (result.revision_id) {
+              void refreshRevisions();
             }
           },
           onError: (message) => {
@@ -795,13 +851,35 @@ function EditorPage() {
       setChatLoading(false);
       setLiveActivity(null);
       chatAbortRef.current = null;
+      setMessages((prev) => {
+        const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        const msg = next[idx] as ChatMessage;
+        if (abort.signal.aborted) {
+          next[idx] = {
+            ...msg,
+            isStreaming: false,
+            content: msg.content.trim() || "Đã dừng xử lý.",
+          };
+          return next;
+        }
+        next[idx] = {
+          ...msg,
+          isStreaming: false,
+          content:
+            msg.content.trim() ||
+            "Không nhận được phản hồi từ trợ lý. Vui lòng thử lại.",
+        };
+        return next;
+      });
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   const handleAcceptSuggestion = () => {
     if (!pendingSuggestion) return;
-    const { originalText, suggestion, applyMode } = pendingSuggestion;
+    const { originalText, suggestion, applyMode, revisionId } = pendingSuggestion;
     let next = latex;
     if (applyMode === "document") {
       next = suggestion;
@@ -812,6 +890,11 @@ function EditorPage() {
     }
     recordNow(next);
     setPendingSuggestion(null);
+    if (projectId && revisionId) {
+      void revisionAction(projectId, revisionId, "accepted")
+        .then(() => refreshRevisions())
+        .catch(() => {});
+    }
     if (autoCompile) {
       void handleCompile(next);
     }
@@ -827,21 +910,44 @@ function EditorPage() {
   };
 
   const handleRejectSuggestion = () => {
+    const revisionId = pendingSuggestion?.revisionId;
     setPendingSuggestion(null);
+    if (projectId && revisionId) {
+      void revisionAction(projectId, revisionId, "rejected")
+        .then(() => refreshRevisions())
+        .catch(() => {});
+    }
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: "Đã từ chối gợi ý. Bản thảo gốc không thay đổi." },
     ]);
   };
 
+  useEffect(() => {
+    if (!pendingSuggestion) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleRejectSuggestion();
+      } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleAcceptSuggestion();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingSuggestion]);
+
   const chatProps = {
     messages,
     chatInput,
     onChatInputChange: setChatInput,
     onSend: handleSend,
+    onStop: handleStopChat,
     chatEndRef,
     chatLoading,
     liveActivity,
+    streamAiSteps,
     providers,
     llmProvider,
     llmModel,
@@ -948,6 +1054,13 @@ function EditorPage() {
                 projectId={projectId ?? ""}
                 autoCompile={autoCompile}
                 onAutoCompileChange={setAutoCompile}
+                revisions={revisionHistory}
+                citationResults={citationResults}
+                citationSummary={citationSummary}
+                onCitationsUpdated={(results, summary) => {
+                  setCitationResults(results);
+                  setCitationSummary(summary);
+                }}
                 onClose={() => setToolsOpen(false)}
               />
             ) : (
@@ -1000,14 +1113,7 @@ function EditorPage() {
               fullHeight
               highlightLine={highlightLine}
               synctexHighlight={synctexHighlight}
-              reviewDiff={
-                pendingSuggestion
-                  ? {
-                      original: pendingSuggestion.originalText,
-                      suggested: pendingSuggestion.suggestion,
-                    }
-                  : null
-              }
+              inlineSuggestion={pendingSuggestion}
             />
           </div>
         )}
@@ -1299,19 +1405,37 @@ function MobileChatSheet({
   chatInput,
   onChatInputChange,
   onSend,
+  onStop,
   chatEndRef,
   chatLoading,
   liveActivity,
+  providers,
+  llmProvider,
+  llmModel,
+  onProviderChange,
+  onModelChange,
+  onRefreshProviders,
 }: {
   onClose: () => void;
   messages: ChatMessage[];
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   liveActivity?: string | null;
+  providers?: ProviderInfo[];
+  llmProvider?: LLMProvider;
+  llmModel?: string;
+  onProviderChange?: (p: LLMProvider) => void;
+  onModelChange?: (m: string) => void;
+  onRefreshProviders?: () => void;
 }) {
+  const canUseLlm = Boolean(
+    providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col md:hidden">
       <button
@@ -1341,12 +1465,34 @@ function MobileChatSheet({
         />
 
         <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
+          <div className="chat-dock-llm-bar mb-2">
+            {canUseLlm ? (
+              <LlmSelector
+                providers={providers!}
+                llmProvider={llmProvider!}
+                llmModel={llmModel!}
+                onProviderChange={onProviderChange!}
+                onModelChange={onModelChange!}
+                onRefresh={onRefreshProviders}
+                compact
+                variant="light"
+              />
+            ) : (
+              <p className="chat-dock-llm-hint">
+                Chưa có provider LLM — thêm <code>ZAI_API_KEY</code> vào <code>.env</code>.
+              </p>
+            )}
+          </div>
           <ChatInput
             chatInput={chatInput}
             onChatInputChange={onChatInputChange}
             onSend={onSend}
+            onStop={onStop}
+            disabled={!canUseLlm}
             loading={chatLoading}
-            placeholder="Ask anything"
+            placeholder={
+              canUseLlm ? "Ask anything" : "Cấu hình ZAI_API_KEY trong .env để chat"
+            }
           />
         </div>
       </div>
@@ -1532,7 +1678,7 @@ function LatexEditor({
   fullHeight = false,
   highlightLine = null,
   synctexHighlight = null,
-  reviewDiff,
+  inlineSuggestion = null,
   editorRef,
 }: {
   latex: string;
@@ -1541,19 +1687,9 @@ function LatexEditor({
   fullHeight?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
-  reviewDiff?: { original: string; suggested: string } | null;
+  inlineSuggestion?: PendingSuggestion | null;
   editorRef?: React.Ref<LatexCodeEditorHandle>;
 }) {
-  if (reviewDiff) {
-    return (
-      <LatexDiffEditor
-        originalText={reviewDiff.original}
-        suggestedText={reviewDiff.suggested}
-        fullHeight={fullHeight}
-      />
-    );
-  }
-
   return (
     <LatexCodeEditor
       ref={editorRef}
@@ -1563,6 +1699,15 @@ function LatexEditor({
       fullHeight={fullHeight}
       highlightLine={highlightLine}
       synctexHighlight={synctexHighlight}
+      inlineSuggestion={
+        inlineSuggestion
+          ? {
+              originalText: inlineSuggestion.originalText,
+              suggestion: inlineSuggestion.suggestion,
+              applyMode: inlineSuggestion.applyMode,
+            }
+          : null
+      }
     />
   );
 }
@@ -1579,6 +1724,7 @@ function CenterPanel({
   chatInput,
   onChatInputChange,
   onSend,
+  onStop,
   chatOpen,
   onCloseChat,
   onOpenChat,
@@ -1587,6 +1733,7 @@ function CenterPanel({
   chatEndRef,
   chatLoading,
   liveActivity,
+  streamAiSteps = [],
   providers,
   llmProvider,
   llmModel,
@@ -1613,6 +1760,7 @@ function CenterPanel({
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   chatOpen: boolean;
   onCloseChat: () => void;
   onOpenChat: () => void;
@@ -1621,6 +1769,7 @@ function CenterPanel({
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   liveActivity?: string | null;
+  streamAiSteps?: ChatAiStep[];
   isDirty?: boolean;
   providers?: ProviderInfo[];
   llmProvider?: LLMProvider;
@@ -1636,8 +1785,6 @@ function CenterPanel({
   canUndo?: boolean;
   canRedo?: boolean;
 }) {
-  const [chatOverlayH, setChatOverlayH] = useState(52);
-
   return (
     <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
@@ -1686,8 +1833,8 @@ function CenterPanel({
         </button>
       </div>
 
-      <div className="editor-workspace relative flex min-h-0 flex-1 flex-col overflow-hidden w-full">
-        <div className="flex min-h-0 flex-1 w-full min-w-0">
+      <div className="editor-workspace flex min-h-0 flex-1 flex-col overflow-hidden w-full">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden w-full min-w-0">
           <LatexEditor
             editorRef={editorRef}
             latex={latex}
@@ -1696,32 +1843,20 @@ function CenterPanel({
             fullHeight
             highlightLine={highlightLine}
             synctexHighlight={synctexHighlight}
-            reviewDiff={
-              pendingSuggestion
-                ? {
-                    original: pendingSuggestion.originalText,
-                    suggested: pendingSuggestion.suggestion,
-                  }
-                : null
-            }
+            inlineSuggestion={pendingSuggestion}
           />
         </div>
 
         {pendingSuggestion && onAcceptSuggestion && onRejectSuggestion && (
-          <div
-            className="pointer-events-auto absolute inset-x-3 z-30"
-            style={{ bottom: `calc(${chatOverlayH}px + 1.25rem)` }}
-          >
-            <SuggestionPanel
-              originalText={pendingSuggestion.originalText}
-              suggestion={pendingSuggestion.suggestion}
-              diff={pendingSuggestion.diff}
-              flags={pendingSuggestion.flags}
-              applyMode={pendingSuggestion.applyMode}
-              onAccept={onAcceptSuggestion}
-              onReject={onRejectSuggestion}
-            />
-          </div>
+          <SuggestionPanel
+            originalText={pendingSuggestion.originalText}
+            suggestion={pendingSuggestion.suggestion}
+            diff={pendingSuggestion.diff}
+            flags={pendingSuggestion.flags}
+            applyMode={pendingSuggestion.applyMode}
+            onAccept={onAcceptSuggestion}
+            onReject={onRejectSuggestion}
+          />
         )}
 
         <ChatOverlay
@@ -1732,15 +1867,16 @@ function CenterPanel({
           chatInput={chatInput}
           onChatInputChange={onChatInputChange}
           onSend={onSend}
+          onStop={onStop}
           chatEndRef={chatEndRef}
           chatLoading={chatLoading}
           liveActivity={liveActivity}
+          streamAiSteps={streamAiSteps}
           providers={providers}
           llmProvider={llmProvider}
           llmModel={llmModel}
           onProviderChange={onProviderChange}
           onModelChange={onModelChange}
-          onHeightChange={setChatOverlayH}
           onRefreshProviders={onRefreshProviders}
         />
       </div>
@@ -1753,28 +1889,40 @@ function ToolsPanel({
   projectId,
   autoCompile,
   onAutoCompileChange,
+  revisions,
+  citationResults: citationResultsProp,
+  citationSummary: citationSummaryProp,
+  onCitationsUpdated,
   onClose,
 }: {
   latex: string;
   projectId: string;
   autoCompile: boolean;
   onAutoCompileChange: (enabled: boolean) => void;
+  revisions: RevisionRecord[];
+  citationResults: Record<string, unknown>[];
+  citationSummary: string;
+  onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<ToolsTab>("info");
   const { theme, setTheme } = useTheme();
-  const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
-  const [citationSummary, setCitationSummary] = useState("");
+  const [citationResults, setCitationResults] = useState(citationResultsProp);
+  const [citationSummary, setCitationSummary] = useState(citationSummaryProp);
   const [citationLoading, setCitationLoading] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    VERSION_HISTORY.forEach((day) => {
-      day.groups.forEach((group) => {
-        if (group.defaultOpen) initial[group.title] = true;
-      });
-    });
-    return initial;
-  });
+
+  useEffect(() => {
+    setCitationResults(citationResultsProp);
+    setCitationSummary(citationSummaryProp);
+  }, [citationResultsProp, citationSummaryProp]);
+
+  const sortedRevisions = useMemo(
+    () =>
+      [...revisions].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [revisions],
+  );
 
   const stats = computeProjectStats(latex);
 
@@ -1789,10 +1937,6 @@ function ToolsPanel({
     { label: "Number of math displayed", value: stats.mathDisplayed },
   ];
 
-  const toggleGroup = (title: string) => {
-    setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
-  };
-
   const handleVerifyCitations = async () => {
     if (!projectId) return;
     setCitationLoading(true);
@@ -1800,6 +1944,7 @@ function ToolsPanel({
       const result = await verifyCitations(projectId);
       setCitationResults(result.results);
       setCitationSummary(result.summary);
+      onCitationsUpdated(result.results, result.summary);
     } catch {
       setCitationSummary(citationErrorMessage());
     } finally {
@@ -1932,7 +2077,7 @@ function ToolsPanel({
         ) : (
           <div className="tools-section">
             <div className="flex items-center gap-2">
-              <h2 className="tools-section-title mb-0">Versions</h2>
+              <h2 className="tools-section-title mb-0">AI revision history</h2>
               <button
                 className="flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                 aria-label="Versions help"
@@ -1940,67 +2085,54 @@ function ToolsPanel({
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Accept/Reject actions from Ario suggestions are recorded here (L4 audit trail).
+            </p>
 
-            {VERSION_HISTORY.map((day) => (
-              <div key={day.date} className="mt-5">
-                <p className="tools-version-date">{day.date}</p>
-                <div className="mt-3 space-y-3">
-                  {day.groups.map((group) => {
-                    const isOpen = !!openGroups[group.title];
-                    const hasMultiple = group.entries.length > 1;
-
-                    return (
-                      <div key={group.title} className="tools-version-group">
-                        <button
-                          type="button"
-                          onClick={() => hasMultiple && toggleGroup(group.title)}
-                          className={`tools-version-group-header ${hasMultiple ? "is-clickable" : ""}`}
+            {sortedRevisions.length === 0 ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                No AI revisions yet. Ask Ario to edit or polish your manuscript.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {sortedRevisions.map((rev, index) => {
+                  const { additions, deletions } = countDiffStats(rev.original, rev.suggestion);
+                  const ts = new Date(rev.created_at).getTime();
+                  return (
+                    <div key={rev.id} className="tools-version-entry flex-col items-stretch gap-2 !py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="tools-version-pill">#{sortedRevisions.length - index}</span>
+                        <span
+                          className={`tools-version-pill ${
+                            rev.action === "accepted"
+                              ? "text-emerald-700"
+                              : rev.action === "rejected"
+                                ? "text-destructive"
+                                : ""
+                          }`}
                         >
-                          <span className="font-medium text-sm">{group.title}</span>
-                          {group.revisionCount && (
-                            <span className="tools-version-pill">{group.revisionCount} revisions</span>
-                          )}
-                          {hasMultiple && (
-                            <ChevronDown
-                              className={`ml-auto h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
-                            />
-                          )}
-                        </button>
-
-                        {(isOpen || !hasMultiple) && (
-                          <div className="tools-version-entries">
-                            {group.entries.map((entry) => (
-                              <div key={entry.version} className="tools-version-entry">
-                                <div className="flex min-w-0 flex-1 items-center gap-2">
-                                  <span className="tools-version-pill">{entry.version}</span>
-                                  <span className="text-xs text-muted-foreground">{entry.timeAgo}</span>
-                                  <span className="tools-diff">
-                                    <span className="text-emerald-600">+{entry.additions}</span>
-                                    <span className="text-[color:var(--editorial-red)]">-{entry.deletions}</span>
-                                  </span>
-                                  {entry.badge && (
-                                    <span className="tools-version-pill tools-version-pill-muted">
-                                      {entry.badge}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="tools-author-badge">2</span>
-                                  <span className="text-xs text-muted-foreground">{entry.author}</span>
-                                  <IconBtn sm>
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                  </IconBtn>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          {revisionActionLabel(rev.action)}
+                        </span>
+                        {rev.section && (
+                          <span className="text-xs text-muted-foreground">{rev.section}</span>
                         )}
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {!Number.isNaN(ts) ? formatTimeAgo(ts) : ""}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <p className="line-clamp-2 text-xs text-muted-foreground">{rev.original}</p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="tools-diff">
+                          <span className="text-emerald-600">+{additions}</span>
+                          <span className="text-[color:var(--editorial-red)]">-{deletions}</span>
+                        </span>
+                        <span className="text-muted-foreground">chars vs original</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

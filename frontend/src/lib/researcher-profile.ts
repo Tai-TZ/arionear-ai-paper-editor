@@ -5,7 +5,7 @@ export type IntegrityStrictness = "relaxed" | "standard" | "strict";
 export type CitationStyle = "ieee" | "apa" | "vancouver" | "chicago" | "nature";
 export type DefaultTemplate = "imrad" | "ieee" | "acm" | "springer" | "blank";
 export type WritingLocale = "en-US" | "en-GB";
-export type LlmProviderPref = "openrouter" | "openai" | "anthropic";
+export type LlmProviderPref = "openrouter" | "openai" | "anthropic" | "zai";
 
 export type ResearcherProfile = {
   id: string;

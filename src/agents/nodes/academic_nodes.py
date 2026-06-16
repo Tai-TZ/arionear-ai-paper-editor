@@ -8,16 +8,27 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.agents.state import AgentState
 from src.config import get_settings
 from src.services.citations.verifier import verify_citations
-from src.services.guardrails.integrity import build_diff, check_integrity, has_blocking_flags
+from src.services.direct_edit import try_direct_text_edit
+from src.services.guardrails.integrity import (
+    build_diff,
+    check_integrity,
+    has_blocking_flags,
+)
+from src.services.guardrails.output_sanitize import looks_like_chatty_output, sanitize_style_output
 from src.services.llm import get_llm
 from src.services.parser.latex import (
     analyze_structure,
     extract_bib_content,
     extract_cite_keys,
+    find_section_for_query,
     parse_bib_entries,
     parse_latex_sections,
 )
-from src.services.prompts import get_prompt
+from src.services.prompts import (
+    build_system_prompt,
+    format_sections_summary,
+    render_user_prompt,
+)
 from src.services.sessions import session_store
 
 # Kept for prepare_style_target fallback when router scope is missing
@@ -35,13 +46,26 @@ def _model(state: AgentState):
     return state.get("llm_model") or None
 
 
+def _integrity_opts(state: AgentState) -> dict:
+    settings = get_settings()
+    strictness = state.get("integrity_strictness") or settings.integrity_strictness
+    scope = state.get("apply_mode")
+    if scope not in ("document", "selection"):
+        scope = None
+    return {
+        "strictness": strictness,
+        "scope": scope,
+        "semantic_threshold": settings.semantic_similarity_threshold,
+    }
+
+
 def prepare_style_target(state: AgentState, query: str = "") -> dict:
     """Pick text to edit and apply_mode (selection vs full document)."""
     selection = (state.get("selection") or "").strip()
     latex = (state.get("latex") or "").strip()
     query = query or state.get("query", "")
     scope = state.get("apply_mode") or "document"
-    use_full_document = scope == "document" or _FILE_SCOPE_RE.search(query) or (not selection and bool(latex))
+    sections = state.get("parsed_sections") or []
 
     if selection and scope == "selection":
         return {
@@ -50,6 +74,17 @@ def prepare_style_target(state: AgentState, query: str = "") -> dict:
             "apply_mode": "selection",
         }
 
+    matched = find_section_for_query(query, sections)
+    if matched and (matched.get("content") or "").strip():
+        return {
+            **state,
+            "original_text": matched["content"].strip(),
+            "apply_mode": "selection",
+            "section": matched.get("name", ""),
+        }
+
+    use_full_document = scope == "document" or _FILE_SCOPE_RE.search(query) or (not selection and bool(latex))
+
     if latex and use_full_document:
         return {
             **state,
@@ -57,7 +92,6 @@ def prepare_style_target(state: AgentState, query: str = "") -> dict:
             "apply_mode": "document",
         }
 
-    sections = state.get("parsed_sections") or []
     for sec in sections:
         content = (sec.get("content") or "").strip()
         if content:
@@ -131,39 +165,122 @@ def _strip_code_fences(text: str) -> str:
     return text
 
 
-def prepare_edit_target(state: AgentState) -> dict:
-    """Full-document target for explicit edit requests."""
+def _normalize_suggestion(
+    original: str,
+    suggestion: str,
+    *,
+    section: str = "",
+    apply_mode: str = "selection",
+) -> str:
+    """Strip LLM commentary and coerce output to the requested scope."""
+    return sanitize_style_output(
+        original,
+        _strip_code_fences(suggestion),
+        section=section,
+        apply_mode=apply_mode,
+    )
+
+
+def prepare_edit_target(state: AgentState, query: str = "") -> dict:
+    """Target for explicit edits — scope to a named section when possible."""
+    query = query or state.get("query", "")
     latex = (state.get("latex") or "").strip()
+    sections = state.get("parsed_sections") or []
+
+    if _FILE_SCOPE_RE.search(query):
+        if latex:
+            return {**state, "original_text": latex, "apply_mode": "document"}
+        return prepare_style_target(state, query)
+
+    matched = find_section_for_query(query, sections)
+    if matched and (matched.get("content") or "").strip():
+        return {
+            **state,
+            "original_text": matched["content"].strip(),
+            "apply_mode": "selection",
+            "section": matched.get("name", ""),
+        }
+
     if latex:
         return {**state, "original_text": latex, "apply_mode": "document"}
-    return prepare_style_target(state, state.get("query", ""))
+    return prepare_style_target(state, query)
 
 
 async def edit_node(state: AgentState) -> dict:
-    prepared = prepare_edit_target(state)
-    original = (prepared.get("original_text") or "").strip()
     query = state.get("query", "").strip()
+    prepared = prepare_edit_target(state, query)
+    original = (prepared.get("original_text") or "").strip()
     if not original:
         return {"error": "No LaTeX source available to edit."}
     if not query:
         return {"error": "No edit instruction provided."}
 
-    system = get_prompt("edit", "system")
+    direct = try_direct_text_edit(query, original)
+    if direct is not None and direct != original:
+        suggestion = direct
+        flags = check_integrity(
+            original,
+            suggestion,
+            **_integrity_opts(prepared),
+        )
+        diff = build_diff(original, suggestion)
+        metadata: dict = {}
+        session_id = prepared.get("session_id", "")
+        if session_id and not has_blocking_flags(flags):
+            record = session_store.add_revision(
+                session_id,
+                prepared.get("section", ""),
+                original,
+                suggestion,
+            )
+            if record:
+                metadata["revision_id"] = record.id
+        if has_blocking_flags(flags):
+            return {
+                "original_text": original,
+                "suggestion": suggestion,
+                "diff": diff,
+                "integrity_flags": flags,
+                "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
+                "apply_mode": prepared.get("apply_mode", "document"),
+                "metadata": metadata,
+            }
+        return {
+            "original_text": original,
+            "suggestion": suggestion,
+            "diff": diff,
+            "integrity_flags": flags,
+            "analysis": "Direct text replace (no LLM).",
+            "apply_mode": prepared.get("apply_mode", "document"),
+            "metadata": metadata,
+        }
+
+    system = build_system_prompt("edit")
     llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.1)
+
+    user_content = render_user_prompt(
+        "edit",
+        query=query,
+        original_text=original,
+    ) or f"Edit request:\n{query}\n\nLaTeX source:\n{original}"
 
     messages = [
         SystemMessage(content=system),
-        HumanMessage(
-            content=(
-                f"Edit request:\n{query}\n\n"
-                f"LaTeX source:\n{original}"
-            )
-        ),
+        HumanMessage(content=user_content),
     ]
     response = await llm.ainvoke(messages)
-    suggestion = _strip_code_fences((response.content or "").strip())
+    suggestion = _normalize_suggestion(
+        original,
+        (response.content or "").strip(),
+        section=str(prepared.get("section", "")),
+        apply_mode=str(prepared.get("apply_mode", "document")),
+    )
 
-    flags = check_integrity(original, suggestion, semantic_threshold=0)
+    flags = check_integrity(
+        original,
+        suggestion,
+        **_integrity_opts(prepared),
+    )
     diff = build_diff(original, suggestion) if suggestion else ""
     metadata: dict = {}
 
@@ -181,10 +298,11 @@ async def edit_node(state: AgentState) -> dict:
     if has_blocking_flags(flags):
         return {
             "original_text": original,
-            "suggestion": "",
-            "diff": "",
+            "suggestion": suggestion,
+            "diff": diff,
             "integrity_flags": flags,
-            "response": "Không thể áp dụng chỉnh sửa an toàn — phát hiện thay đổi số liệu không được phép.",
+            "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
+            "apply_mode": prepared.get("apply_mode", "document"),
             "metadata": metadata,
         }
 
@@ -205,53 +323,80 @@ async def edit_node(state: AgentState) -> dict:
         "diff": diff,
         "integrity_flags": flags,
         "analysis": "LaTeX edit completed.",
-        "apply_mode": "document",
+        "apply_mode": prepared.get("apply_mode", "document"),
         "metadata": metadata,
     }
 
 
 async def style_node(state: AgentState) -> dict:
-    prepared = prepare_style_target(state)
+    query = (state.get("query") or "").strip()
+    prepared = prepare_style_target(state, query)
     original = (prepared.get("original_text") or "").strip()
     apply_mode = prepared.get("apply_mode", "selection")
     if not original:
         return {"error": "No text selected or provided for style editing."}
 
     settings = get_settings()
-    system = get_prompt("style", "system")
+    section_label = prepared.get("section", "")
+    system = build_system_prompt("style")
     llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.2)
 
     suggestion = ""
     flags: list[dict] = []
     max_retries = settings.max_style_retries
 
-    if apply_mode == "document":
+    section_hint = f"Section: {section_label}\n" if section_label else ""
+    scope_note = (
+        "OUTPUT: Return ONLY the revised section text — no markdown, no headings, "
+        "no bullet lists, no explanations. Plain paste-ready text only.\n\n"
+    )
+    user_content = render_user_prompt(
+        "style",
+        query=query or "Revise for clearer academic tone.",
+        section_hint=section_hint,
+        original_text=original,
+    )
+    if not user_content:
         user_content = (
-            "Revise this LaTeX manuscript to be more professional and polished. "
-            "Preserve all LaTeX commands, environments, labels, and structure:\n\n"
-            f"{original}"
+            f"User request:\n{query or 'Revise for clearer academic tone.'}\n\n"
+            f"{scope_note}{section_hint}Text to revise:\n\n{original}"
         )
-    else:
-        user_content = f"Revise this academic text:\n\n{original}"
+    elif scope_note not in user_content:
+        user_content = f"{scope_note}{user_content}"
 
     for attempt in range(max_retries + 1):
         extra = ""
         if attempt > 0 and flags:
-            extra = (
-                "\n\nPrevious attempt failed integrity checks: "
-                + "; ".join(f["message"] for f in flags)
-                + ". Try again with minimal changes."
-            )
+            if any(f.get("code") == "chatty_output" for f in flags):
+                extra = (
+                    "\n\nREJECTED: Your output had markdown or commentary. "
+                    "Return ONLY the revised paragraph — no # headers, no > quotes, "
+                    "no bullet lists, no Vietnamese explanations."
+                )
+            else:
+                extra = (
+                    "\n\nPrevious attempt failed integrity checks: "
+                    + "; ".join(f["message"] for f in flags)
+                    + ". Try again with minimal changes."
+                )
         messages = [
             SystemMessage(content=system + extra),
             HumanMessage(content=user_content),
         ]
         response = await llm.ainvoke(messages)
-        suggestion = (response.content or "").strip()
+        suggestion = _normalize_suggestion(
+            original,
+            (response.content or "").strip(),
+            section=str(section_label),
+            apply_mode=str(apply_mode),
+        )
+        if looks_like_chatty_output(suggestion) and attempt < max_retries:
+            flags = [{"code": "chatty_output", "message": "retry", "severity": "warning"}]
+            continue
         flags = check_integrity(
             original,
             suggestion,
-            semantic_threshold=settings.semantic_similarity_threshold,
+            **_integrity_opts(prepared),
         )
         if not has_blocking_flags(flags):
             break
@@ -273,10 +418,10 @@ async def style_node(state: AgentState) -> dict:
     if has_blocking_flags(flags):
         return {
             "original_text": original,
-            "suggestion": "",
-            "diff": "",
+            "suggestion": suggestion,
+            "diff": diff,
             "integrity_flags": flags,
-            "response": "Không thể đưa ra gợi ý an toàn — phát hiện thay đổi số liệu hoặc nội dung không được phép.",
+            "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
             "metadata": metadata,
         }
 
@@ -297,11 +442,10 @@ async def integrity_node(state: AgentState) -> dict:
     if not suggestion:
         return {}
 
-    settings = get_settings()
     flags = check_integrity(
         original,
         suggestion,
-        semantic_threshold=settings.semantic_similarity_threshold,
+        **_integrity_opts(state),
     )
     existing = state.get("integrity_flags", [])
     merged = existing + [f for f in flags if f not in existing]
@@ -339,9 +483,7 @@ async def citation_node(state: AgentState) -> dict:
 
     session_id = state.get("session_id", "")
     if session_id:
-        session = session_store.get(session_id)
-        if session:
-            session.citation_registry = results
+        session_store.set_citation_registry(session_id, results)
 
     return {
         "citation_results": results,
@@ -359,17 +501,19 @@ async def structure_node(state: AgentState) -> dict:
     llm_suggestions: list[dict] = []
 
     if sections:
-        system = get_prompt("structure", "system")
+        system = build_system_prompt("structure")
         llm = get_llm(provider=_provider(state), model=_model(state), temperature=0.2)
-        section_summary = json.dumps(
-            [{"name": s["name"], "length": len(s.get("content", ""))} for s in sections],
-            ensure_ascii=False,
-        )
+        section_summary = format_sections_summary(sections)
+        user_content = render_user_prompt(
+            "structure",
+            sections_summary=section_summary,
+            query=state.get("query", ""),
+        ) or f"Manuscript sections:\n{section_summary}"
         try:
             response = await llm.ainvoke(
                 [
                     SystemMessage(content=system),
-                    HumanMessage(content=f"Manuscript sections:\n{section_summary}"),
+                    HumanMessage(content=user_content),
                 ]
             )
             content = (response.content or "").strip()
@@ -400,17 +544,20 @@ async def chat_node(state: AgentState) -> dict:
     query = state.get("query", "")
     selection = state.get("selection", "")
     latex = state.get("latex", "")
-    system = get_prompt("chat", "system")
+    system = build_system_prompt("chat")
 
-    context_parts = []
+    context_parts: list[str] = []
     if selection:
         context_parts.append(f"Selected text:\n{selection[:4000]}")
     elif latex:
         context_parts.append(f"Manuscript excerpt:\n{latex[:4000]}")
+    context_block = "\n\n".join(context_parts)
 
-    user_content = query
-    if context_parts:
-        user_content = "\n\n".join(context_parts) + f"\n\nUser request: {query}"
+    user_content = render_user_prompt("chat", context_block=context_block, query=query)
+    if not user_content:
+        user_content = query
+        if context_block:
+            user_content = f"{context_block}\n\nUser request: {query}"
 
     llm = get_llm(provider=_provider(state), model=_model(state))
     response = await llm.ainvoke(
