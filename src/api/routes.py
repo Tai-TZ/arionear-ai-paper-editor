@@ -16,6 +16,8 @@ from src.models.schemas import (
     CompileRequest,
     CompileResponse,
     CompileStatusResponse,
+    SyncTeXLookupRequest,
+    SyncTeXLookupResponse,
     IntegrityFlagSchema,
     ProviderInfo,
     ProvidersResponse,
@@ -28,7 +30,12 @@ from src.models.schemas import (
 )
 from src.services.chat_stream import AGENT_NAME, stream_chat
 from src.services.citations.verifier import verify_citations
-from src.services.latex_compile import compile_latex, compile_status
+from src.services.latex_compile import (
+    compile_latex,
+    compile_status,
+    parse_synctex_inverse_disambiguated,
+    resolve_synctex_line,
+)
 from src.services.llm import list_providers
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
 from src.services.sessions import session_store
@@ -274,6 +281,33 @@ async def compile_manuscript(body: CompileRequest):
         tb = traceback.format_exc()
         print(f"[COMPILE_ERROR] {tb}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
+
+
+@router.post("/compile/synctex", response_model=SyncTeXLookupResponse)
+async def synctex_lookup(body: SyncTeXLookupRequest):
+    hit = parse_synctex_inverse_disambiguated(
+        body.synctex_base64,
+        body.pdf_base64,
+        body.page,
+        body.x,
+        body.y,
+        body.jobname,
+        body.word,
+        body.latex,
+        body.context,
+    )
+    if not hit:
+        return SyncTeXLookupResponse(found=False, page=body.page)
+    raw_line = int(hit.get("line", 0))
+    resolved_line = resolve_synctex_line(body.latex, raw_line, body.word, body.context)
+    return SyncTeXLookupResponse(
+        found=True,
+        file=str(hit.get("file", "")),
+        line=resolved_line,
+        synctex_line=raw_line,
+        column=int(hit.get("column", -1)),
+        page=body.page,
+    )
 
 
 @router.post("/revisions/{session_id}/{revision_id}")

@@ -4,10 +4,20 @@ export type ProjectAsset = {
   dataUrl: string;
 };
 
+export type ProjectFile = {
+  path: string;
+  content: string;
+};
+
+export type LatexCompiler = "auto" | "pdflatex" | "xelatex" | "lualatex" | "latex";
+
 export type StoredProject = {
   id: string;
   name: string;
   latex: string;
+  files?: ProjectFile[];
+  mainFile?: string;
+  compiler?: LatexCompiler;
   assets?: ProjectAsset[];
   createdAt: number;
   updatedAt: number;
@@ -31,6 +41,8 @@ const LATEX_SUPPORT_EXTENSIONS = new Set([
   ".bib",
 ]);
 
+const TEX_EXTENSIONS = new Set([".tex", ".latex"]);
+
 const BUILTIN_ASSET_URLS: Record<string, string> = {
   "sample.figure.eps": "/assets/sample-figure.svg",
   "sample.figure": "/assets/sample-figure.svg",
@@ -38,6 +50,7 @@ const BUILTIN_ASSET_URLS: Record<string, string> = {
 };
 
 const STORAGE_KEY = "arionear-projects";
+const DEFAULT_MAIN_FILE = "main.tex";
 
 export const SAMPLE_LATEX = `\\documentclass{article}
 \\usepackage{amsmath}
@@ -102,7 +115,8 @@ function readAll(): StoredProject[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as StoredProject[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeProject);
   } catch {
     return [];
   }
@@ -113,27 +127,70 @@ function writeAll(projects: StoredProject[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 }
 
+export function normalizeProject(project: StoredProject): StoredProject {
+  const mainFile = project.mainFile ?? DEFAULT_MAIN_FILE;
+  const files =
+    project.files?.length
+      ? project.files.map((f) => ({ path: normalizeAssetName(f.path), content: f.content }))
+      : [{ path: mainFile, content: project.latex }];
+
+  const mainContent = files.find((f) => f.path === mainFile)?.content ?? files[0]?.content ?? project.latex;
+
+  return {
+    ...project,
+    mainFile,
+    compiler: project.compiler ?? "auto",
+    files,
+    latex: mainContent,
+  };
+}
+
 export function getProjects(): StoredProject[] {
   return readAll().sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function getProject(id: string): StoredProject | null {
-  return readAll().find((p) => p.id === id) ?? null;
+  const project = readAll().find((p) => p.id === id);
+  return project ? normalizeProject(project) : null;
 }
 
-export function createProject(name: string, latex: string): StoredProject {
+export function createProject(
+  name: string,
+  latex: string,
+  options?: {
+    files?: ProjectFile[];
+    mainFile?: string;
+    compiler?: LatexCompiler;
+    assets?: ProjectAsset[];
+  },
+): StoredProject {
   const now = Date.now();
-  const project: StoredProject = {
+  const mainFile = options?.mainFile ?? DEFAULT_MAIN_FILE;
+  const files = options?.files?.length
+    ? options.files.map((f) => ({ path: normalizeAssetName(f.path), content: f.content }))
+    : [{ path: mainFile, content: latex }];
+
+  const project: StoredProject = normalizeProject({
     id: crypto.randomUUID(),
     name,
     latex,
+    files,
+    mainFile,
+    compiler: options?.compiler ?? "auto",
+    assets: options?.assets,
     createdAt: now,
     updatedAt: now,
-  };
+  });
+
   const projects = readAll();
   projects.unshift(project);
   writeAll(projects);
   return project;
+}
+
+export function isTexFile(name: string) {
+  const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
+  return TEX_EXTENSIONS.has(ext);
 }
 
 export function isImageAssetFile(name: string) {
@@ -146,8 +203,12 @@ export function isLatexSupportAssetFile(name: string) {
   return LATEX_SUPPORT_EXTENSIONS.has(ext);
 }
 
-export function isProjectAssetFile(name: string) {
+export function isBinaryProjectAsset(name: string) {
   return isImageAssetFile(name) || isLatexSupportAssetFile(name);
+}
+
+export function isProjectAssetFile(name: string) {
+  return isBinaryProjectAsset(name);
 }
 
 export function normalizeAssetName(name: string) {
@@ -209,6 +270,15 @@ export function readFileAsDataUrl(file: File): Promise<ProjectAsset> {
   });
 }
 
+export function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
 export function addProjectAssets(projectId: string, newAssets: ProjectAsset[]) {
   const projects = readAll();
   const index = projects.findIndex((p) => p.id === projectId);
@@ -227,27 +297,69 @@ export function addProjectAssets(projectId: string, newAssets: ProjectAsset[]) {
     else merged.push(next);
   }
 
-  projects[index] = {
+  projects[index] = normalizeProject({
     ...projects[index],
     assets: merged,
     updatedAt: Date.now(),
-  };
+  });
   writeAll(projects);
   return projects[index];
 }
 
 export function updateProject(
   id: string,
-  patch: Partial<Pick<StoredProject, "name" | "latex" | "assets">>,
+  patch: Partial<Pick<StoredProject, "name" | "latex" | "assets" | "files" | "mainFile" | "compiler">>,
 ) {
   const projects = readAll();
   const index = projects.findIndex((p) => p.id === id);
   if (index === -1) return null;
-  projects[index] = {
-    ...projects[index],
+
+  const current = normalizeProject(projects[index]);
+  const mainFile = patch.mainFile ?? current.mainFile ?? DEFAULT_MAIN_FILE;
+  let files = patch.files ?? current.files ?? [{ path: mainFile, content: current.latex }];
+
+  if (patch.latex !== undefined && !patch.files) {
+    files = files.map((f) => (f.path === mainFile ? { ...f, content: patch.latex! } : f));
+    if (!files.some((f) => f.path === mainFile)) {
+      files = [...files, { path: mainFile, content: patch.latex }];
+    }
+  }
+
+  const mainContent = files.find((f) => f.path === mainFile)?.content ?? patch.latex ?? current.latex;
+
+  projects[index] = normalizeProject({
+    ...current,
     ...patch,
+    files,
+    mainFile,
+    latex: mainContent,
     updatedAt: Date.now(),
-  };
+  });
+  writeAll(projects);
+  return projects[index];
+}
+
+export function updateProjectFile(projectId: string, path: string, content: string) {
+  const projects = readAll();
+  const index = projects.findIndex((p) => p.id === projectId);
+  if (index === -1) return null;
+
+  const current = normalizeProject(projects[index]);
+  const normalizedPath = normalizeAssetName(path);
+  const files = [...(current.files ?? [])];
+  const fileIndex = files.findIndex((f) => f.path === normalizedPath);
+  if (fileIndex >= 0) files[fileIndex] = { path: normalizedPath, content };
+  else files.push({ path: normalizedPath, content });
+
+  const mainFile = current.mainFile ?? DEFAULT_MAIN_FILE;
+  const latex = normalizedPath === mainFile ? content : current.latex;
+
+  projects[index] = normalizeProject({
+    ...current,
+    files,
+    latex,
+    updatedAt: Date.now(),
+  });
   writeAll(projects);
   return projects[index];
 }
@@ -260,6 +372,17 @@ export function inferProjectName(latex: string, fallback = "Imported Project") {
   const match = latex.match(/\\title\{([^}]*)\}/);
   if (match?.[1]) return match[1].replace(/\\\\/g, " ").trim();
   return fallback;
+}
+
+export function detectMainTexFile(paths: string[]): string {
+  const normalized = paths.map(normalizeAssetName);
+  if (normalized.includes("main.tex")) return "main.tex";
+  const texFiles = normalized.filter(isTexFile);
+  const withDocclass = texFiles.find((path) => {
+    // caller should pass contents map when available; fallback to name heuristics
+    return /main/i.test(path);
+  });
+  return withDocclass ?? texFiles[0] ?? DEFAULT_MAIN_FILE;
 }
 
 export function formatTimeAgo(timestamp: number) {
@@ -285,4 +408,38 @@ export function formatProjectDateTime(timestamp: number) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function textToDataUrl(content: string): string {
+  const bytes = new TextEncoder().encode(content);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return `data:text/plain;base64,${btoa(binary)}`;
+}
+
+export function getCompilePayload(project: StoredProject) {
+  const normalized = normalizeProject(project);
+  const mainFile = normalized.mainFile ?? DEFAULT_MAIN_FILE;
+  const mainContent =
+    normalized.files?.find((f) => f.path === mainFile)?.content ?? normalized.latex;
+
+  const texAssets =
+    normalized.files
+      ?.filter((f) => f.path !== mainFile && isTexFile(f.path))
+      .map((f) => ({
+        name: f.path,
+        dataUrl: textToDataUrl(f.content),
+      })) ?? [];
+
+  const binaryAssets = normalized.assets ?? [];
+
+  return {
+    latex: mainContent,
+    mainFile,
+    compiler: normalized.compiler ?? "auto",
+    assets: [...texAssets, ...binaryAssets],
+  };
 }

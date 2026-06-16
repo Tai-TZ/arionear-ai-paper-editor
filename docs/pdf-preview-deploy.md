@@ -82,6 +82,19 @@ location /api/v1/compile {
 
 Docker image size increases by ~800 MB–1.5 GB due to TeX Live.
 
+## Overleaf parity (Arionear)
+
+| Feature | Supported |
+|---------|-----------|
+| pdfLaTeX / XeLaTeX / LuaLaTeX | Yes — compiler dropdown in PDF panel |
+| latexmk multi-pass build | Yes — when `latexmk` is on PATH |
+| BibTeX + Biber (biblatex) | Yes |
+| Multi-file projects (`\input`, `\include`) | Yes — file tree + `.tex` assets |
+| Overleaf ZIP import | Yes — Projects → Import → Overleaf ZIP |
+| Full compile log | Yes — **Log** button in PDF panel |
+| SyncTeX (PDF click → source line) | Yes — click PDF after compile |
+| IEEEtran stubs | `IEEEtran.cls` + `IEEEtran.bst` bundled |
+
 ## Custom Overleaf classes
 
 If the manuscript uses `\documentclass{RevDigMatEduInt}` or similar:

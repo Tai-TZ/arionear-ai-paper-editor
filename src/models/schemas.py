@@ -105,8 +105,20 @@ class CompileAssetFile(BaseModel):
     content_base64: str = Field(..., min_length=1, max_length=50_000_000)
 
 
+class CompileEnginesInfo(BaseModel):
+    pdflatex: str | None = None
+    xelatex: str | None = None
+    lualatex: str | None = None
+    latex: str | None = None
+    latexmk: str | None = None
+    biber: str | None = None
+    bibtex: str | None = None
+
+
 class CompileRequest(BaseModel):
     latex: str = Field(..., min_length=1, max_length=500_000)
+    main_file: str = Field(default="main.tex", max_length=512)
+    compiler: Literal["auto", "pdflatex", "xelatex", "lualatex", "latex"] = "auto"
     assets: list[CompileAssetFile] = Field(default_factory=list)
 
 
@@ -116,12 +128,37 @@ class CompileResponse(BaseModel):
     log: str = ""
     error: str = ""
     engine: str = ""
+    compiler: str = ""
     warning: str = ""
+    synctex_base64: str = ""
+    main_file: str = "main.tex"
 
 
 class CompileStatusResponse(BaseModel):
     available: bool
     engine: str | None = None
+    engines: CompileEnginesInfo = Field(default_factory=CompileEnginesInfo)
+
+
+class SyncTeXLookupRequest(BaseModel):
+    synctex_base64: str = Field(..., min_length=1)
+    pdf_base64: str = Field(..., min_length=1)
+    page: int = Field(..., ge=1)
+    x: float = 0.0
+    y: float = 0.0
+    jobname: str = Field(default="main", max_length=128)
+    word: str = Field(default="", max_length=256)
+    context: str = Field(default="", max_length=512)
+    latex: str = Field(default="", max_length=2_000_000)
+
+
+class SyncTeXLookupResponse(BaseModel):
+    file: str = ""
+    line: int = 0
+    synctex_line: int = 0
+    column: int = -1
+    page: int = 0
+    found: bool = False
 
 
 class PaperCreate(BaseModel):

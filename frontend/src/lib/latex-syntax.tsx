@@ -91,7 +91,24 @@ export function parseLatexTokens(text: string): LatexToken[] {
   return tokens.filter((token) => token.text.length > 0);
 }
 
-export function HighlightedLatexLine({ text }: { text: string }) {
+export function HighlightedLatexLine({
+  text,
+  highlightRange = null,
+}: {
+  text: string;
+  highlightRange?: { start: number; end: number } | null;
+}) {
+  if (highlightRange && highlightRange.start < highlightRange.end) {
+    const { start, end } = highlightRange;
+    return (
+      <span className="latex-code-line">
+        {start > 0 ? <HighlightedLatexLine text={text.slice(0, start)} /> : null}
+        <mark className="latex-synctex-word-hit">{text.slice(start, end)}</mark>
+        {end < text.length ? <HighlightedLatexLine text={text.slice(end)} /> : null}
+      </span>
+    );
+  }
+
   const tokens = parseLatexTokens(text);
 
   if (tokens.length === 0) {

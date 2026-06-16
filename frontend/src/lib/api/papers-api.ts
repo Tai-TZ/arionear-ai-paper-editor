@@ -1,7 +1,7 @@
 import { getAccessToken } from "@/lib/auth-store";
 import { mapApiHttpError } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
-import type { ProjectAsset, StoredProject } from "@/lib/project-store";
+import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
 
 const API_BASE =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -26,14 +26,20 @@ function parseApiDate(value: string): number {
 }
 
 function toStoredProject(paper: PaperResponse): StoredProject {
-  const assets = Array.isArray(paper.metadata?.assets)
-    ? (paper.metadata.assets as ProjectAsset[])
-    : [];
+  const metadata = paper.metadata ?? {};
+  const assets = Array.isArray(metadata.assets) ? (metadata.assets as ProjectAsset[]) : [];
+  const files = Array.isArray(metadata.files) ? (metadata.files as ProjectFile[]) : undefined;
+  const mainFile = typeof metadata.mainFile === "string" ? metadata.mainFile : undefined;
+  const compiler =
+    typeof metadata.compiler === "string" ? (metadata.compiler as LatexCompiler) : undefined;
   return {
     id: paper.id,
     name: paper.name,
     latex: paper.latex,
     assets,
+    files,
+    mainFile,
+    compiler,
     createdAt: parseApiDate(paper.created_at),
     updatedAt: parseApiDate(paper.updated_at),
   };
@@ -116,7 +122,7 @@ export async function createPaper(
 
 export async function updatePaper(
   id: string,
-  patch: Partial<Pick<StoredProject, "name" | "latex">> & {
+  patch: Partial<Pick<StoredProject, "name" | "latex" | "files" | "mainFile" | "compiler">> & {
     assets?: ProjectAsset[];
     metadata?: Record<string, unknown>;
   },
@@ -124,8 +130,22 @@ export async function updatePaper(
   const body: Record<string, unknown> = {};
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.latex !== undefined) body.latex = patch.latex;
-  if (patch.metadata !== undefined) body.metadata = patch.metadata;
   if (patch.assets !== undefined) body.assets = patch.assets;
+  if (patch.metadata !== undefined) {
+    body.metadata = patch.metadata;
+  } else if (
+    patch.files !== undefined ||
+    patch.mainFile !== undefined ||
+    patch.compiler !== undefined ||
+    patch.assets !== undefined
+  ) {
+    body.metadata = {
+      ...(patch.files !== undefined ? { files: patch.files } : {}),
+      ...(patch.mainFile !== undefined ? { mainFile: patch.mainFile } : {}),
+      ...(patch.compiler !== undefined ? { compiler: patch.compiler } : {}),
+      ...(patch.assets !== undefined ? { assets: patch.assets } : {}),
+    };
+  }
 
   const data = await papersFetch<PaperResponse>(`/papers/${id}`, {
     method: "PATCH",

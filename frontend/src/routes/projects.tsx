@@ -35,6 +35,7 @@ import {
   readFileAsDataUrl,
   type StoredProject,
 } from "@/lib/project-store";
+import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import {
   DropdownMenu,
@@ -63,6 +64,7 @@ export const Route = createFileRoute("/projects")({
 function ProjectsPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingLabel, setCreatingLabel] = useState<string | null>(null);
@@ -171,6 +173,34 @@ function ProjectsPage() {
     }
   };
 
+  const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCreatingLabel("Importing Overleaf ZIP…");
+    setImportMenuOpen(false);
+    try {
+      const imported = await importOverleafZip(file);
+      const mainContent =
+        imported.files.find((f) => f.path === imported.mainFile)?.content ?? "";
+      let project = await createPaper(imported.name, mainContent, {
+        files: imported.files,
+        mainFile: imported.mainFile,
+        compiler: imported.compiler,
+        assets: imported.assets,
+      });
+      if (imported.assets.length) {
+        project = await addPaperAssets(project.id, imported.assets);
+      }
+      setProjects((prev) => [project, ...prev]);
+      openEditor(project.id);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "ZIP import failed.");
+    } finally {
+      setCreatingLabel(null);
+      e.target.value = "";
+    }
+  };
+
   const handleDelete = async (id: string) => {
     setDeletingIds((prev) => new Set(prev).add(id));
     try {
@@ -202,6 +232,13 @@ function ProjectsPage() {
         multiple
         className="hidden"
         onChange={handleUpload}
+      />
+      <input
+        ref={zipInputRef}
+        type="file"
+        accept=".zip,application/zip"
+        className="hidden"
+        onChange={handleZipImport}
       />
 
       <aside className="projects-sidebar flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
@@ -303,6 +340,13 @@ function ProjectsPage() {
               </button>
               {importMenuOpen && (
                 <div className="projects-menu absolute right-0 top-full z-20 mt-1 min-w-[10rem]">
+                  <button
+                    onClick={() => zipInputRef.current?.click()}
+                    className="projects-menu-item"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Overleaf ZIP
+                  </button>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="projects-menu-item"
