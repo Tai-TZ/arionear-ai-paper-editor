@@ -1432,7 +1432,7 @@ function LeftSidebar({
         </>
       ) : (
         <div className="flex-1 overflow-y-auto p-3">
-          {["Edit Introduction", "Citation format APA", "Reviewer reply draft"].map((label, i) => (
+          {["Edit Introduction", "Citation format APA", "Improve abstract"].map((label, i) => (
             <button
               key={label}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition ${
