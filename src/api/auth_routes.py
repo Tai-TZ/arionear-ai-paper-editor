@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
@@ -13,16 +14,28 @@ from src.models.auth_schemas import (
     MessageResponse,
     RegisterRequest,
     ResetPasswordRequest,
+    VerifySignupRequest,
 )
 from src.services.auth_service import (
     authenticate_user,
     create_access_token,
     decode_access_token,
+    find_or_create_google_user,
     get_user_by_id,
-    register_user,
     request_password_reset,
+    request_signup_verification,
     reset_password_with_token,
     user_to_dict,
+    verify_signup_and_register,
+)
+from src.services.google_oauth_service import (
+    GoogleOAuthError,
+    build_google_authorization_url,
+    decode_oauth_state,
+    exchange_google_code,
+    frontend_oauth_callback_url,
+    frontend_oauth_error_url,
+    google_oauth_configured,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -30,6 +43,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 FORGOT_PASSWORD_MESSAGE = (
     "If that email is registered, we sent a password reset link. "
     "The link expires in 30 minutes."
+)
+SIGNUP_CODE_SENT_MESSAGE = (
+    "We sent a 6-digit verification code to your email. "
+    "Enter it below to finish creating your account."
 )
 INVALID_CREDENTIALS = "Invalid email or password."
 
@@ -48,15 +65,32 @@ def _get_db_session():
         yield db
 
 
-@router.post("/register", response_model=AuthTokenResponse)
-async def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
-    user, error = register_user(
+@router.post("/register/send-code", response_model=MessageResponse)
+async def register_send_code(body: RegisterRequest, db: Session = Depends(_get_db_session)):
+    dev_code, error = request_signup_verification(
         db,
         name=body.name,
         email=body.email,
         password=body.password,
         affiliation=body.affiliation,
     )
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    response = MessageResponse(message=SIGNUP_CODE_SENT_MESSAGE)
+    if dev_code:
+        response.dev_verification_code = dev_code
+        response.message = (
+            "Development mode: no email was sent. "
+            "Use the verification code shown on this page."
+        )
+        print(f"[auth] Dev signup verification code for {body.email}: {dev_code}")
+    return response
+
+
+@router.post("/register/verify", response_model=AuthTokenResponse)
+async def register_verify(body: VerifySignupRequest, db: Session = Depends(_get_db_session)):
+    user, error = verify_signup_and_register(db, email=body.email, code=body.code)
     if error or not user:
         raise HTTPException(status_code=400, detail=error or "Registration failed.")
 
@@ -64,6 +98,14 @@ async def register(body: RegisterRequest, db: Session = Depends(_get_db_session)
     return AuthTokenResponse(
         access_token=token,
         user=AuthUserResponse(**user_to_dict(user)),
+    )
+
+
+@router.post("/register", response_model=AuthTokenResponse, deprecated=True)
+async def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
+    raise HTTPException(
+        status_code=400,
+        detail="Email verification is required. Use /auth/register/send-code, then /auth/register/verify.",
     )
 
 
@@ -124,3 +166,92 @@ async def me(
         raise HTTPException(status_code=401, detail="Invalid or expired session.")
 
     return AuthUserResponse(**user_to_dict(user))
+
+
+def _safe_return_to(value: str | None) -> str:
+    if not value or not value.startswith("/") or value.startswith("//"):
+        return "/projects"
+    return value
+
+
+@router.get("/google/start")
+async def google_start(
+    return_to: str = Query(default="/projects"),
+    remember: bool = Query(default=False),
+):
+    _require_db()
+    if not google_oauth_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
+        )
+    try:
+        url = build_google_authorization_url(
+            return_to=_safe_return_to(return_to),
+            remember=remember,
+        )
+    except GoogleOAuthError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return RedirectResponse(url=url, status_code=302)
+
+
+@router.get("/google/callback")
+async def google_callback(
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    db: Session = Depends(_get_db_session),
+):
+    if error:
+        return RedirectResponse(
+            url=frontend_oauth_error_url("Google sign-in was cancelled."),
+            status_code=302,
+        )
+    if not code or not state:
+        return RedirectResponse(
+            url=frontend_oauth_error_url("Google sign-in failed. Please try again."),
+            status_code=302,
+        )
+
+    state_payload = decode_oauth_state(state)
+    if not state_payload:
+        return RedirectResponse(
+            url=frontend_oauth_error_url("Sign-in session expired. Please try again."),
+            status_code=302,
+        )
+
+    try:
+        profile = await exchange_google_code(code)
+    except GoogleOAuthError as exc:
+        return RedirectResponse(url=frontend_oauth_error_url(str(exc)), status_code=302)
+
+    google_sub = str(profile.get("sub") or "")
+    email = str(profile.get("email") or "")
+    name = str(profile.get("name") or profile.get("given_name") or "")
+    picture = str(profile.get("picture") or "")
+
+    user, auth_error = find_or_create_google_user(
+        db,
+        google_sub=google_sub,
+        email=email,
+        full_name=name,
+        avatar_url=picture or None,
+    )
+    if auth_error or not user:
+        return RedirectResponse(
+            url=frontend_oauth_error_url(auth_error or "Could not sign in with Google."),
+            status_code=302,
+        )
+
+    token = create_access_token(
+        user_id=str(user.id),
+        email=user.email,
+        remember=state_payload["remember"],
+    )
+    return RedirectResponse(
+        url=frontend_oauth_callback_url(
+            access_token=token,
+            return_to=state_payload["return_to"],
+        ),
+        status_code=302,
+    )

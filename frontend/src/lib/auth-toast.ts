@@ -17,6 +17,14 @@ export const authToast = {
   signUpError(message: string) {
     toast.error("Sign up failed", { description: message });
   },
+  signUpCodeSent() {
+    toast.success("Verification code sent", {
+      description: "Check your inbox and enter the 6-digit code below.",
+    });
+  },
+  signUpVerifyError(message: string) {
+    toast.error("Verification failed", { description: message });
+  },
   forgotPasswordSuccess() {
     toast.success("Reset link sent", {
       description: "If that email is on file, check your inbox for the next step.",
