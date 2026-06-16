@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from src.agents.graph import agent
 from src.config import get_settings
+from src.db.engine import db_is_ready, is_db_enabled
 from src.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -25,12 +26,11 @@ from src.models.schemas import (
     StyleEditRequest,
     StyleEditResponse,
 )
-from src.services.latex_compile import compile_latex, compile_status
 from src.services.chat_stream import AGENT_NAME, stream_chat
 from src.services.citations.verifier import verify_citations
+from src.services.latex_compile import compile_latex, compile_status
 from src.services.llm import list_providers
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
-from src.db.engine import db_is_ready, is_db_enabled
 from src.services.sessions import session_store
 
 router = APIRouter()

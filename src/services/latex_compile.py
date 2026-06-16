@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from src.models.schemas import CompileAssetFile, CompileRequest, CompileResponse, CompileStatusResponse
+from src.models.schemas import CompileRequest, CompileResponse, CompileStatusResponse
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _LATEX_STUB_DIRS = (

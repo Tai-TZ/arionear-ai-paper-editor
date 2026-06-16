@@ -31,12 +31,12 @@ class Base(DeclarativeBase):
 # ─── Enums (mirror Prisma) ───────────────────────────────────────────────────
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     RESEARCHER = "RESEARCHER"
     ADMIN = "ADMIN"
 
 
-class PaperStatus(str, enum.Enum):
+class PaperStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     IN_REVIEW = "IN_REVIEW"
     SUBMITTED = "SUBMITTED"
@@ -44,7 +44,7 @@ class PaperStatus(str, enum.Enum):
     ARCHIVED = "ARCHIVED"
 
 
-class SectionType(str, enum.Enum):
+class SectionType(enum.StrEnum):
     ABSTRACT = "ABSTRACT"
     INTRODUCTION = "INTRODUCTION"
     METHODS = "METHODS"
@@ -56,7 +56,7 @@ class SectionType(str, enum.Enum):
     FULL_DOCUMENT = "FULL_DOCUMENT"
 
 
-class TaskType(str, enum.Enum):
+class TaskType(enum.StrEnum):
     STYLE = "STYLE"
     STRUCTURE = "STRUCTURE"
     LOGIC = "LOGIC"
@@ -65,7 +65,7 @@ class TaskType(str, enum.Enum):
     CHAT = "CHAT"
 
 
-class SuggestionType(str, enum.Enum):
+class SuggestionType(enum.StrEnum):
     STYLE = "STYLE"
     GRAMMAR = "GRAMMAR"
     STRUCTURE = "STRUCTURE"
@@ -74,14 +74,14 @@ class SuggestionType(str, enum.Enum):
     GENERAL = "GENERAL"
 
 
-class SuggestionStatus(str, enum.Enum):
+class SuggestionStatus(enum.StrEnum):
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
     MODIFIED = "MODIFIED"
 
 
-class CitationType(str, enum.Enum):
+class CitationType(enum.StrEnum):
     JOURNAL = "JOURNAL"
     CONFERENCE = "CONFERENCE"
     BOOK = "BOOK"
@@ -90,7 +90,7 @@ class CitationType(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class CitationVerificationStatus(str, enum.Enum):
+class CitationVerificationStatus(enum.StrEnum):
     VERIFIED = "VERIFIED"
     PARTIAL = "PARTIAL"
     UNVERIFIED = "UNVERIFIED"
@@ -98,14 +98,14 @@ class CitationVerificationStatus(str, enum.Enum):
     ERROR = "ERROR"
 
 
-class ReviewSeverity(str, enum.Enum):
+class ReviewSeverity(enum.StrEnum):
     CRITICAL = "CRITICAL"
     MAJOR = "MAJOR"
     MINOR = "MINOR"
     SUGGESTION = "SUGGESTION"
 
 
-class ReviewCategory(str, enum.Enum):
+class ReviewCategory(enum.StrEnum):
     METHODOLOGY = "METHODOLOGY"
     CLARITY = "CLARITY"
     NOVELTY = "NOVELTY"
@@ -114,13 +114,13 @@ class ReviewCategory(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class ResponseStatus(str, enum.Enum):
+class ResponseStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
 
 
-class AuditActionType(str, enum.Enum):
+class AuditActionType(enum.StrEnum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"
     DELETE = "DELETE"
