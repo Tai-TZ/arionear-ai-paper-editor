@@ -9,8 +9,14 @@ export type AuthUser = {
   name: string;
   email: string;
   affiliation?: string;
-  provider?: "email";
+  provider?: "email" | "google";
 };
+
+export function getGoogleOAuthStartPath(returnTo = "/projects", remember = false): string {
+  const params = new URLSearchParams({ return_to: returnTo });
+  if (remember) params.set("remember", "true");
+  return `/api/v1/auth/google/start?${params.toString()}`;
+}
 
 export type AuthResult =
   | { ok: true; user: AuthUser; accessToken: string }
@@ -42,23 +48,48 @@ async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function apiRegister(input: {
+export async function apiSendSignupCode(input: {
   name: string;
   email: string;
   password: string;
   affiliation?: string;
-}): Promise<AuthResult> {
+}): Promise<
+  | { ok: true; message: string; devVerificationCode?: string }
+  | { ok: false; error: string }
+> {
+  try {
+    const data = await authFetch<{ message: string; dev_verification_code?: string }>(
+      "/auth/register/send-code",
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      },
+    );
+    return {
+      ok: true,
+      message: data.message,
+      devVerificationCode: data.dev_verification_code,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not send verification code." };
+  }
+}
+
+export async function apiVerifySignup(
+  email: string,
+  code: string,
+): Promise<AuthResult> {
   try {
     const data = await authFetch<{
       access_token: string;
       user: AuthUser;
-    }>("/auth/register", {
+    }>("/auth/register/verify", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: JSON.stringify({ email, code }),
     });
     return { ok: true, user: data.user, accessToken: data.access_token };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Registration failed." };
+    return { ok: false, error: e instanceof Error ? e.message : "Verification failed." };
   }
 }
 

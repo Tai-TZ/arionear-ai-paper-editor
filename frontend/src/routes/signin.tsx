@@ -1,20 +1,21 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AuthAlert,
+  AuthDivider,
   AuthField,
   AuthShell,
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
-import { isAuthenticated, loginUser } from "@/lib/auth-store";
+import { AuthSsoButtons } from "@/components/auth/sso-buttons";
+import { loginUser } from "@/lib/auth-store";
+import { redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/signin")({
   beforeLoad: () => {
-    if (isAuthenticated()) {
-      throw redirect({ to: "/projects" });
-    }
+    redirectIfAuthenticated("/projects");
   },
   head: () => ({
     meta: [
@@ -32,12 +33,6 @@ function SignInPage() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      navigate({ to: "/projects", replace: true });
-    }
-  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +107,10 @@ function SignInPage() {
           Sign in <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </AuthSubmitButton>
       </form>
+
+      <AuthDivider>or continue with Google</AuthDivider>
+
+      <AuthSsoButtons onError={setError} remember={remember} />
 
       <p className="mt-8 text-center text-sm font-serif-body">
         New to Arionear?{" "}

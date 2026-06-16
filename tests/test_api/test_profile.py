@@ -4,6 +4,7 @@ import pytest
 
 from src.config import get_settings
 from src.db.engine import init_db, reset_db_state
+from tests.test_api.auth_helpers import register_user_via_verification
 
 
 @pytest.fixture
@@ -27,24 +28,16 @@ def profile_db(monkeypatch):
         except OSError:
             pass
 
-
-def _register(client):
-    return client.post(
-      "/api/v1/auth/register",
-      json={
-          "name": "Dr. Profile",
-          "email": "profile@university.edu",
-          "password": "SecurePass1",
-          "affiliation": "VinUniversity",
-      },
-  )
-
-
 @pytest.mark.asyncio
 async def test_get_profile_defaults(client, profile_db):
-    reg = await _register(client)
-    assert reg.status_code == 200
-    token = reg.json()["access_token"]
+    reg_body = await register_user_via_verification(
+        client,
+        name="Dr. Profile",
+        email="profile@university.edu",
+        password="SecurePass1",
+        affiliation="VinUniversity",
+    )
+    token = reg_body["access_token"]
 
     res = await client.get(
         "/api/v1/users/me/profile",
@@ -62,8 +55,14 @@ async def test_get_profile_defaults(client, profile_db):
 
 @pytest.mark.asyncio
 async def test_patch_profile(client, profile_db):
-    reg = await _register(client)
-    token = reg.json()["access_token"]
+    reg_body = await register_user_via_verification(
+        client,
+        name="Dr. Profile",
+        email="profile@university.edu",
+        password="SecurePass1",
+        affiliation="VinUniversity",
+    )
+    token = reg_body["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     patch = await client.patch(
@@ -91,8 +90,14 @@ async def test_patch_profile(client, profile_db):
 
 @pytest.mark.asyncio
 async def test_patch_profile_invalid_orcid(client, profile_db):
-    reg = await _register(client)
-    token = reg.json()["access_token"]
+    reg_body = await register_user_via_verification(
+        client,
+        name="Dr. Profile",
+        email="profile@university.edu",
+        password="SecurePass1",
+        affiliation="VinUniversity",
+    )
+    token = reg_body["access_token"]
 
     bad = await client.patch(
         "/api/v1/users/me/profile",
@@ -104,8 +109,14 @@ async def test_patch_profile_invalid_orcid(client, profile_db):
 
 @pytest.mark.asyncio
 async def test_patch_profile_empty_strings_coerced(client, profile_db):
-    reg = await _register(client)
-    token = reg.json()["access_token"]
+    reg_body = await register_user_via_verification(
+        client,
+        name="Dr. Profile",
+        email="profile@university.edu",
+        password="SecurePass1",
+        affiliation="VinUniversity",
+    )
+    token = reg_body["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     patch = await client.patch(

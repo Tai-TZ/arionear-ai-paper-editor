@@ -4,6 +4,7 @@ import pytest
 
 from src.config import get_settings
 from src.db.engine import init_db, reset_db_state
+from tests.test_api.auth_helpers import register_user_via_verification
 
 
 @pytest.fixture
@@ -30,18 +31,15 @@ def auth_db(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_register_login_flow(client, auth_db):
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "name": "Dr. Test",
-            "email": "test@university.edu",
-            "password": "SecurePass1",
-            "affiliation": "VNU",
-        },
+    reg_body = await register_user_via_verification(
+        client,
+        name="Dr. Test",
+        email="test@university.edu",
+        password="SecurePass1",
+        affiliation="VNU",
     )
-    assert reg.status_code == 200
-    token = reg.json()["access_token"]
-    assert reg.json()["user"]["email"] == "test@university.edu"
+    token = reg_body["access_token"]
+    assert reg_body["user"]["email"] == "test@university.edu"
 
     me = await client.get(
         "/api/v1/auth/me",
@@ -64,9 +62,11 @@ async def test_register_login_flow(client, auth_db):
 
 @pytest.mark.asyncio
 async def test_forgot_reset_password(client, auth_db):
-    await client.post(
-        "/api/v1/auth/register",
-        json={"name": "Reset User", "email": "reset@uni.edu", "password": "OldPass123"},
+    await register_user_via_verification(
+        client,
+        name="Reset User",
+        email="reset@uni.edu",
+        password="OldPass123",
     )
 
     forgot = await client.post(
@@ -114,10 +114,9 @@ async def test_duplicate_register_rejected(client, auth_db):
         "email": "dup@university.edu",
         "password": "SecurePass1",
     }
-    first = await client.post("/api/v1/auth/register", json=payload)
-    assert first.status_code == 200
+    await register_user_via_verification(client, **payload)
 
-    second = await client.post("/api/v1/auth/register", json=payload)
+    second = await client.post("/api/v1/auth/register/send-code", json=payload)
     assert second.status_code == 400
     assert "already exists" in second.json()["detail"]
 
@@ -125,7 +124,7 @@ async def test_duplicate_register_rejected(client, auth_db):
 @pytest.mark.asyncio
 async def test_weak_password_rejected(client, auth_db):
     res = await client.post(
-        "/api/v1/auth/register",
+        "/api/v1/auth/register/send-code",
         json={"name": "Weak", "email": "weak@uni.edu", "password": "short"},
     )
     assert res.status_code == 422
@@ -133,9 +132,11 @@ async def test_weak_password_rejected(client, auth_db):
 
 @pytest.mark.asyncio
 async def test_reset_token_single_use(client, auth_db):
-    await client.post(
-        "/api/v1/auth/register",
-        json={"name": "Once", "email": "once@uni.edu", "password": "OldPass123"},
+    await register_user_via_verification(
+        client,
+        name="Once",
+        email="once@uni.edu",
+        password="OldPass123",
     )
     forgot = await client.post(
         "/api/v1/auth/forgot-password",
@@ -173,3 +174,98 @@ async def test_login_generic_error_no_user_leak(client, auth_db):
     )
     assert res.status_code == 401
     assert res.json()["detail"] == "Invalid email or password."
+
+
+@pytest.mark.asyncio
+async def test_signup_verification_flow(client, auth_db):
+    payload = {
+        "name": "Verify User",
+        "email": "verify@uni.edu",
+        "password": "SecurePass1",
+    }
+    send = await client.post("/api/v1/auth/register/send-code", json=payload)
+    assert send.status_code == 200
+    assert "verification code" in send.json()["message"].lower()
+    code = send.json()["dev_verification_code"]
+    assert code and len(code) == 6
+
+    bad = await client.post(
+        "/api/v1/auth/register/verify",
+        json={"email": payload["email"], "code": "000000"},
+    )
+    assert bad.status_code == 400
+
+    ok = await client.post(
+        "/api/v1/auth/register/verify",
+        json={"email": payload["email"], "code": code},
+    )
+    assert ok.status_code == 200
+    assert ok.json()["user"]["email"] == payload["email"]
+
+
+@pytest.mark.asyncio
+async def test_google_start_requires_configuration(client, auth_db, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "")
+    get_settings.cache_clear()
+
+    res = await client.get("/api/v1/auth/google/start", follow_redirects=False)
+    assert res.status_code == 503
+
+
+def test_find_or_create_google_user(auth_db):
+    from src.db.engine import get_db
+    from src.services.auth_service import find_or_create_google_user
+
+    with get_db() as db:
+        user, error = find_or_create_google_user(
+            db,
+            google_sub="google-sub-123",
+            email="google@uni.edu",
+            full_name="Google User",
+            avatar_url="https://lh3.googleusercontent.com/a/example-photo",
+        )
+        assert error is None
+        assert user is not None
+        assert user.google_sub == "google-sub-123"
+        assert user.email == "google@uni.edu"
+        assert user.profile_settings.get("avatar_url") == "https://lh3.googleusercontent.com/a/example-photo"
+
+        again, again_error = find_or_create_google_user(
+            db,
+            google_sub="google-sub-123",
+            email="google@uni.edu",
+            full_name="Google User",
+            avatar_url="https://lh3.googleusercontent.com/a/other-photo",
+        )
+        assert again_error is None
+        assert again.id == user.id
+        assert again.profile_settings.get("avatar_url") == "https://lh3.googleusercontent.com/a/example-photo"
+
+
+def test_find_or_create_google_user_links_existing_email(auth_db):
+    from src.db.engine import get_db
+    from src.services.auth_service import find_or_create_google_user, register_user
+
+    with get_db() as db:
+        existing, reg_error = register_user(
+            db,
+            name="Existing User",
+            email="existing@uni.edu",
+            password="SecurePass1",
+        )
+        assert reg_error is None
+        assert existing is not None
+
+        linked, link_error = find_or_create_google_user(
+            db,
+            google_sub="google-sub-456",
+            email="existing@uni.edu",
+            full_name="Existing User",
+            avatar_url="https://lh3.googleusercontent.com/a/link-photo",
+        )
+        assert link_error is None
+        assert linked is not None
+        assert linked.id == existing.id
+        assert linked.google_sub == "google-sub-456"
+        assert linked.profile_settings.get("avatar_url") == "https://lh3.googleusercontent.com/a/link-photo"

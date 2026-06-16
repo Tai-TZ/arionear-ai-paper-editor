@@ -3,8 +3,6 @@ import { requireAuth } from "@/lib/require-auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   User,
-  LogOut,
-  FolderOpen,
   Loader2,
   Save,
   Sparkles,
@@ -18,6 +16,7 @@ import {
 } from "lucide-react";
 import { getSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { fetchResearcherProfile, updateResearcherProfile } from "@/lib/api/profile-api";
 import {
   initialsFromName,
@@ -31,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
+  ssr: false,
   beforeLoad: () => {
     requireAuth();
   },
@@ -48,15 +48,6 @@ export const Route = createFileRoute("/profile")({
 
 type SectionId = "identity" | "research" | "writing" | "ai" | "workflow" | "privacy";
 
-const SECTIONS: { id: SectionId; icon: typeof User }[] = [
-  { id: "identity", icon: User },
-  { id: "research", icon: BookOpen },
-  { id: "writing", icon: Globe },
-  { id: "ai", icon: Brain },
-  { id: "workflow", icon: Settings2 },
-  { id: "privacy", icon: Shield },
-];
-
 function ProfilePage() {
   const navigate = useNavigate();
   const sessionUser = getSession();
@@ -65,7 +56,6 @@ function ProfilePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<ResearcherProfile | null>(null);
   const [baseline, setBaseline] = useState<ResearcherProfile | null>(null);
-  const [activeSection, setActiveSection] = useState<SectionId>("identity");
 
   const uiLang = form?.ui_language ?? "en";
   const t = useMemo(() => profileCopy(uiLang), [uiLang]);
@@ -137,107 +127,71 @@ function ProfilePage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  const scrollToSection = (id: SectionId) => {
-    setActiveSection(id);
-    document.getElementById(`profile-section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const navLabels = useMemo(
+    () => ({
+      projects: t.navProjects,
+      profile: t.navProfile,
+      signOut: t.signOut,
+    }),
+    [t],
+  );
+
+  const handleSignOut = () => {
+    signOut();
+    authToast.signOutSuccess();
+    navigate({ to: "/signin" });
   };
 
-  if (loading) {
-    return (
-      <div className="profile-shell flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (loadError || !form) {
-    return (
-      <div className="profile-shell flex min-h-screen flex-col items-center justify-center gap-4 px-4">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-sm text-muted-foreground">{loadError ?? t.loadError}</p>
-        <Link to="/projects" className="text-sm text-primary hover:underline">
-          {t.navProjects}
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="profile-shell flex min-h-screen">
-      <aside className="profile-sidebar flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
-        <div className="border-b border-border/50 px-4 py-4">
-          <Link to="/" className="font-serif-display text-xl font-bold tracking-tight">
-            Arionear
-          </Link>
-        </div>
-
-        <nav className="space-y-1 p-3">
-          <Link
-            to="/projects"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-          >
-            <FolderOpen className="h-4 w-4" />
-            {t.navProjects}
-          </Link>
-          <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-medium">
-            <User className="h-4 w-4 text-primary" />
-            {t.navProfile}
+    <WorkspaceLayout
+      active="profile"
+      user={sessionUser}
+      profile={form}
+      labels={navLabels}
+      onSignOut={handleSignOut}
+    >
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="workspace-main-header profile-sticky-header profile-page-header flex shrink-0 items-center justify-between gap-3 border-b border-border/50 bg-background/90 px-4 backdrop-blur-md md:px-8">
+          <div className="profile-page-header-text min-w-0">
+            <h1 className="truncate font-serif-display text-lg font-bold tracking-tight md:text-xl">
+              {t.pageTitle}
+            </h1>
           </div>
-        </nav>
-
-        <div className="mt-auto border-t border-border/50 p-3">
-          <button
-            onClick={() => {
-              signOut();
-              authToast.signOutSuccess();
-              navigate({ to: "/signin" });
-            }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            {t.signOut}
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="profile-sticky-header flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-background/90 px-5 py-4 backdrop-blur-md md:px-8">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">{t.pageTitle}</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t.pageSubtitle}</p>
-          </div>
-          <div className="flex items-center gap-3">
+          <div className="profile-page-header-actions flex shrink-0 items-center gap-2 md:gap-3">
             {isDirty && (
-              <span className="hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">
+              <span className="profile-unsaved-indicator text-xs text-amber-600 dark:text-amber-400">
                 {t.unsaved}
               </span>
             )}
             <button
               onClick={() => void handleSave()}
-              disabled={!isDirty || saving}
-              className="profile-save-btn inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading || !form || !isDirty || saving}
+              className="profile-save-btn inline-flex items-center gap-2 border border-foreground bg-foreground px-3 py-2 font-sans-ui text-[10px] font-medium uppercase tracking-widest text-background transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 md:px-4 md:text-xs"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? t.saving : t.save}
+              <span className="profile-save-label md:hidden">
+                {saving ? t.saving : uiLang === "vi" ? "Lưu" : "Save"}
+              </span>
+              <span className="profile-save-label hidden md:inline">{saving ? t.saving : t.save}</span>
             </button>
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <nav className="profile-section-nav hidden w-48 shrink-0 flex-col gap-1 border-r border-border/40 p-4 xl:flex">
-            {SECTIONS.map(({ id, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => scrollToSection(id)}
-                className={`profile-section-link ${activeSection === id ? "is-active" : ""}`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                {t.sections[id]}
-              </button>
-            ))}
-          </nav>
-
-          <div className="profile-scroll flex-1 overflow-y-auto px-5 py-6 md:px-8">
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : loadError || !form ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+            <p className="text-sm text-muted-foreground">{loadError ?? t.loadError}</p>
+            <Link to="/projects" className="text-sm text-primary hover:underline">
+              {t.navProjects}
+            </Link>
+          </div>
+        ) : (
+          <div className="profile-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5 md:px-8 md:py-6">
+              <p className="mb-6 text-sm text-muted-foreground">{t.pageSubtitle}</p>
             <section className="profile-hero-card mb-8">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                 <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-md">
@@ -564,9 +518,9 @@ function ProfilePage() {
               </ProfileSection>
             </div>
           </div>
-        </div>
+        )}
       </main>
-    </div>
+    </WorkspaceLayout>
   );
 }
 
