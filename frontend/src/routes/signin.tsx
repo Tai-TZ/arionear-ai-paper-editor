@@ -1,17 +1,21 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AuthAlert,
-  AuthDivider,
   AuthField,
   AuthShell,
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
-import { AuthSsoButtons } from "@/components/auth/sso-buttons";
-import { loginUser } from "@/lib/auth-store";
+import { isAuthenticated, loginUser } from "@/lib/auth-store";
+import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/signin")({
+  beforeLoad: () => {
+    if (isAuthenticated()) {
+      throw redirect({ to: "/projects" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Sign In — Arionear" },
@@ -25,24 +29,31 @@ function SignInPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate({ to: "/projects", replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 400));
-
-    const result = loginUser(email, password);
+    const result = await loginUser(email, password, remember);
     setLoading(false);
 
     if (!result.ok) {
+      authToast.signInError(result.error);
       setError(result.error);
       return;
     }
 
+    authToast.signInSuccess(result.user.name);
     navigate({ to: "/projects" });
   };
 
@@ -54,7 +65,7 @@ function SignInPage() {
     >
       {error && <AuthAlert message={error} />}
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <AuthField
           id="email"
           label="Email address"
@@ -70,6 +81,7 @@ function SignInPage() {
           id="password"
           label="Password"
           icon={<Lock className="h-4 w-4" strokeWidth={1.5} />}
+          type="password"
           autoComplete="current-password"
           required
           value={password}
@@ -80,7 +92,12 @@ function SignInPage() {
 
         <div className="flex items-center justify-between text-xs font-sans-ui uppercase tracking-widest">
           <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="h-4 w-4 border border-foreground accent-foreground" />
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="h-4 w-4 border border-foreground accent-foreground"
+            />
             <span>Remember me</span>
           </label>
           <Link
@@ -95,10 +112,6 @@ function SignInPage() {
           Sign in <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </AuthSubmitButton>
       </form>
-
-      <AuthDivider>or continue with</AuthDivider>
-
-      <AuthSsoButtons onError={setError} />
 
       <p className="mt-8 text-center text-sm font-serif-body">
         New to Arionear?{" "}

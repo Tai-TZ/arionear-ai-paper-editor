@@ -1,0 +1,86 @@
+import os
+
+import pytest
+
+from src.config import get_settings
+from src.db.engine import init_db, reset_db_state
+
+
+@pytest.fixture
+def papers_db(monkeypatch):
+    db_path = os.path.join(os.path.dirname(__file__), "_test_papers.db")
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.setenv("DIRECT_DATABASE_URL", url)
+    monkeypatch.setenv("AUTH_SECRET_KEY", "test-secret-key-for-jwt-signing-32chars")
+    get_settings.cache_clear()
+    reset_db_state()
+    init_db()
+    yield
+    reset_db_state()
+    get_settings.cache_clear()
+    if os.path.exists(db_path):
+        try:
+            os.remove(db_path)
+        except OSError:
+            pass
+
+
+async def _register(client, email: str, name: str = "Test User") -> str:
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={"name": name, "email": email, "password": "SecurePass1"},
+    )
+    assert reg.status_code == 200
+    return reg.json()["access_token"]
+
+
+@pytest.mark.asyncio
+async def test_papers_crud_isolated_per_user(client, papers_db):
+    token_a = await _register(client, "user-a@uni.edu", "User A")
+    token_b = await _register(client, "user-b@uni.edu", "User B")
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    create = await client.post(
+        "/api/v1/papers",
+        headers=headers_a,
+        json={"name": "My Paper", "latex": "\\documentclass{article}"},
+    )
+    assert create.status_code == 201
+    paper_id = create.json()["id"]
+    assert create.json()["name"] == "My Paper"
+
+    listed_a = await client.get("/api/v1/papers", headers=headers_a)
+    assert listed_a.status_code == 200
+    assert len(listed_a.json()) == 1
+    assert listed_a.json()[0]["id"] == paper_id
+
+    listed_b = await client.get("/api/v1/papers", headers=headers_b)
+    assert listed_b.status_code == 200
+    assert listed_b.json() == []
+
+    forbidden = await client.get(f"/api/v1/papers/{paper_id}", headers=headers_b)
+    assert forbidden.status_code == 404
+
+    updated = await client.patch(
+        f"/api/v1/papers/{paper_id}",
+        headers=headers_a,
+        json={"name": "Renamed Paper", "latex": "\\documentclass{article}\\begin{document}\\end{document}"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "Renamed Paper"
+
+    deleted = await client.delete(f"/api/v1/papers/{paper_id}", headers=headers_a)
+    assert deleted.status_code == 204
+
+    empty = await client.get("/api/v1/papers", headers=headers_a)
+    assert empty.json() == []
+
+
+@pytest.mark.asyncio
+async def test_papers_requires_auth(client, papers_db):
+    res = await client.get("/api/v1/papers")
+    assert res.status_code == 401

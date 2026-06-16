@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { requireAuth } from "@/lib/require-auth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText,
@@ -20,19 +21,23 @@ import {
   Redo2,
   Wrench,
 } from "lucide-react";
+import { getSession } from "@/lib/auth-store";
 import {
-  addProjectAssets,
-  getProject,
   getCompilePayload,
+  isImageAssetFile,
   isProjectAssetFile,
   isTexFile,
   normalizeAssetName,
   readFileAsDataUrl,
-  updateProject,
   type LatexCompiler,
   type ProjectAsset,
   type ProjectFile,
 } from "@/lib/project-store";
+import {
+  addPaperAssets,
+  fetchPaper,
+  updatePaper,
+} from "@/lib/api/papers-api";
 import {
   compileLatex,
   fetchProviders,
@@ -57,18 +62,23 @@ import { LatexDiffEditor } from "@/components/latex-diff-editor";
 import { LatexCodeEditor, type LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
 import {
   EditorEntrySplash,
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
+import { fetchDedupe } from "@/lib/api/fetch-dedupe";
 
 type EditorSearch = {
   projectId?: string;
 };
 
 export const Route = createFileRoute("/editor")({
+  beforeLoad: () => {
+    requireAuth();
+  },
   validateSearch: (search: Record<string, unknown>): EditorSearch => ({
     projectId: typeof search.projectId === "string" ? search.projectId : undefined,
   }),
@@ -298,21 +308,36 @@ function EditorPage() {
       navigate({ to: "/projects", replace: true });
       return;
     }
-    const project = getProject(projectId);
-    if (!project) {
-      navigate({ to: "/projects", replace: true });
-      return;
-    }
-    setProjectName(project.name);
-    const normalizedMain = project.mainFile ?? "main.tex";
-    setMainFile(normalizedMain);
-    setActiveFile(normalizedMain);
-    setProjectFiles(project.files ?? [{ path: normalizedMain, content: project.latex }]);
-    setCompiler(project.compiler ?? "auto");
-    resetHistory(project.latex);
-    setSavedLatex(project.latex);
-    setAssets(project.assets ?? []);
-    setBootState("ready");
+    let cancelled = false;
+    setBootState("loading");
+
+    fetchPaper(projectId)
+      .then((project) => {
+        if (cancelled) return;
+        setProjectName(project.name);
+        const normalizedMain = project.mainFile ?? "main.tex";
+        setMainFile(normalizedMain);
+        setActiveFile(normalizedMain);
+        setProjectFiles(
+          project.files?.length
+            ? project.files
+            : [{ path: normalizedMain, content: project.latex }],
+        );
+        setCompiler(project.compiler ?? "auto");
+        resetHistory(project.latex);
+        setSavedLatex(project.latex);
+        setAssets(project.assets ?? []);
+        setBootState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          navigate({ to: "/projects", replace: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, navigate, resetHistory]);
 
   const persistActiveFile = useCallback(
@@ -395,12 +420,23 @@ function EditorPage() {
     if (!projectId) return;
     const files = persistActiveFile(latex, projectFiles, activeFile);
     setProjectFiles(files);
-    updateProject(projectId, { latex, files, mainFile, compiler, assets });
-    setSavedLatex(latex);
-    syncSession(projectId, projectName, latex).catch(() => {});
-    if (autoCompile) {
-      void handleCompile(latex);
-    }
+    const mainContent = files.find((f) => f.path === mainFile)?.content ?? latex;
+    updatePaper(projectId, {
+      name: projectName,
+      latex: mainContent,
+      files,
+      mainFile,
+      compiler,
+      assets,
+    })
+      .then(() => {
+        setSavedLatex(latex);
+        syncSession(projectId, projectName, mainContent).catch(() => {});
+        if (autoCompile) {
+          void handleCompile(latex);
+        }
+      })
+      .catch(() => {});
   }, [
     projectId,
     projectName,
@@ -439,7 +475,9 @@ function EditorPage() {
 
   useEffect(() => {
     if (bootState !== "ready" || !projectId) return;
-    syncSession(projectId, projectName, latex).catch(() => {});
+    void fetchDedupe(`session:init:${projectId}`, () =>
+      syncSession(projectId, projectName, latex),
+    ).catch(() => {});
   }, [bootState, projectId, projectName, latex]);
 
   const loadProviders = useCallback(() => {
@@ -493,8 +531,8 @@ function EditorPage() {
 
     if (assetFiles.length && projectId) {
       const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-      const updated = addProjectAssets(projectId, uploaded);
-      if (updated?.assets) setAssets(updated.assets);
+      const updated = await addPaperAssets(projectId, uploaded);
+      if (updated.assets) setAssets(updated.assets);
     }
 
     e.target.value = "";
@@ -511,15 +549,18 @@ function EditorPage() {
       setCompiler(imported.compiler);
       recordNow(imported.files.find((f) => f.path === imported.mainFile)?.content ?? "");
       if (imported.assets.length) {
-        const updated = addProjectAssets(projectId, imported.assets);
-        if (updated?.assets) setAssets(updated.assets);
+        const updated = await addPaperAssets(projectId, imported.assets);
+        if (updated.assets) setAssets(updated.assets);
       }
-      updateProject(projectId, {
+      const mainContent =
+        imported.files.find((f) => f.path === imported.mainFile)?.content ?? "";
+      await updatePaper(projectId, {
         name: imported.name,
+        latex: mainContent,
         files: imported.files,
         mainFile: imported.mainFile,
         compiler: imported.compiler,
-        latex: imported.files.find((f) => f.path === imported.mainFile)?.content,
+        assets: imported.assets.length ? imported.assets : assets,
       });
       setProjectName(imported.name);
     } catch (error) {
@@ -601,8 +642,8 @@ function EditorPage() {
     if (!assetFiles.length) return;
 
     const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-    const updated = addProjectAssets(projectId, uploaded);
-    if (updated?.assets) setAssets(updated.assets);
+    const updated = await addPaperAssets(projectId, uploaded);
+    if (updated.assets) setAssets(updated.assets);
     e.target.value = "";
   };
 
@@ -873,7 +914,9 @@ function EditorPage() {
                 compiler={compiler}
                 onCompilerChange={(value) => {
                   setCompiler(value);
-                  if (projectId) updateProject(projectId, { compiler: value });
+                  if (projectId) {
+                    updatePaper(projectId, { compiler: value }).catch(() => {});
+                  }
                 }}
                 onSynctexHit={handleSynctexHit}
                 onCompile={() => void handleCompile()}
@@ -953,9 +996,11 @@ function EditorPage() {
 }
 
 function ArionearMasthead({ className = "" }: { className?: string }) {
+  const user = getSession();
+
   return (
     <div
-      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-[color:var(--ink)] px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-[color:var(--newsprint)] ${className}`}
+      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background ${className}`}
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
@@ -968,8 +1013,18 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
         <span className="opacity-40">·</span>
         <span>LaTeX Workspace</span>
       </div>
-      <span className="hidden sm:inline opacity-70">{today}</span>
-      <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      <div className="flex items-center gap-3">
+        {user && (
+          <>
+            <span className="hidden sm:inline opacity-80 normal-case tracking-normal font-sans-ui text-[11px]">
+              {user.name}
+            </span>
+            <span className="opacity-40">·</span>
+          </>
+        )}
+        <span className="hidden sm:inline opacity-70">{today}</span>
+        <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+      </div>
     </div>
   );
 }
@@ -1640,6 +1695,7 @@ function ToolsPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<ToolsTab>("info");
+  const { theme, setTheme } = useTheme();
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [citationLoading, setCitationLoading] = useState(false);
@@ -1729,6 +1785,21 @@ function ToolsPanel({
                 checked={autoCompile}
                 onCheckedChange={onAutoCompileChange}
                 aria-label="Auto-compile PDF"
+              />
+            </div>
+
+            <div className="tools-setting-row">
+              <div className="tools-setting-copy">
+                <span className="tools-setting-label">Dark mode</span>
+                <span className="tools-setting-hint">
+                  Use a darker workspace theme across the app
+                </span>
+              </div>
+              <Switch
+                id="tools-dark-mode"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                aria-label="Dark mode"
               />
             </div>
 

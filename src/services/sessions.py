@@ -4,6 +4,8 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from src.db.engine import db_is_ready, is_db_enabled
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
@@ -32,7 +34,7 @@ class PaperSession:
 
 
 class InMemorySessionStore:
-    """File-backed DB deferred — in-memory session store for MVP."""
+    """Fallback when DATABASE_URL is not configured."""
 
     def __init__(self) -> None:
         self._sessions: dict[str, PaperSession] = {}
@@ -123,5 +125,46 @@ class InMemorySessionStore:
                 return record
         return None
 
+    def set_citation_registry(self, session_id: str, registry: list[dict]) -> None:
+        session = self.get(session_id)
+        if session:
+            session.citation_registry = registry
+            session.updated_at = _utcnow()
 
-session_store = InMemorySessionStore()
+
+def _build_store():
+    if is_db_enabled() and db_is_ready():
+        from src.db.paper_repository import DatabaseSessionStore
+
+        return DatabaseSessionStore()
+    return InMemorySessionStore()
+
+
+_store: InMemorySessionStore | object | None = None
+
+
+def get_session_store():
+    """Return DB-backed store when available (lazy rebind after startup)."""
+    global _store
+    if is_db_enabled() and db_is_ready():
+        from src.db.paper_repository import DatabaseSessionStore
+
+        if not isinstance(_store, DatabaseSessionStore):
+            _store = DatabaseSessionStore()
+    elif _store is None:
+        _store = InMemorySessionStore()
+    return _store
+
+
+class SessionStoreProxy:
+    def __getattr__(self, name: str):
+        return getattr(get_session_store(), name)
+
+
+session_store = SessionStoreProxy()
+
+
+def refresh_session_store() -> None:
+    """Rebind global store after DB init (app startup / tests)."""
+    global _store
+    _store = _build_store()

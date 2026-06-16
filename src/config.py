@@ -46,8 +46,23 @@ class Settings(BaseSettings):
     anthropic_default_model: str = "claude-sonnet-4-20250514"
     openrouter_default_model: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
 
-    # Database
+    # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).
+    # Python/SQLAlchemy needs a direct postgresql:// URL via DIRECT_DATABASE_URL.
     database_url: str = "sqlite:///./data/app.db"
+    direct_database_url: str = ""
+
+    def sqlalchemy_database_url(self) -> str:
+        direct = self.direct_database_url.strip()
+        if direct:
+            if direct.startswith("postgres://"):
+                direct = "postgresql://" + direct[len("postgres://") :]
+            return direct
+        url = self.database_url.strip()
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://") :]
+        if url.startswith(("postgresql://", "sqlite://")):
+            return url
+        return ""
 
     # Guardrails
     semantic_similarity_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -55,6 +70,13 @@ class Settings(BaseSettings):
 
     # External APIs (citation verification)
     semantic_scholar_api_key: str = ""
+
+    # Auth (JWT)
+    auth_secret_key: str = "dev-only-change-in-production"
+    auth_token_expire_hours: int = Field(default=24, ge=1, le=168)
+    auth_token_remember_days: int = Field(default=30, ge=1, le=90)
+    auth_reset_expire_minutes: int = Field(default=30, ge=5, le=120)
+    frontend_base_url: str = "http://localhost:8080"
 
 
 @lru_cache

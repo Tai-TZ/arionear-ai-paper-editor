@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { loginWithOAuth, type OAuthProvider } from "@/lib/auth-store";
 
@@ -66,7 +67,7 @@ export function AuthSsoButtons({
         className="auth-sso-btn auth-sso-google"
       >
         {loadingProvider === "google" ? (
-          <span className="auth-spinner" />
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
         ) : (
           <GoogleIcon />
         )}
@@ -80,7 +81,7 @@ export function AuthSsoButtons({
         className="auth-sso-btn auth-sso-github"
       >
         {loadingProvider === "github" ? (
-          <span className="auth-spinner" />
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
         ) : (
           <GitHubIcon />
         )}

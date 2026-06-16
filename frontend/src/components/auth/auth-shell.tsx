@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 export function AuthShell({
@@ -179,7 +179,7 @@ export function AuthSubmitButton({
     >
       {loading ? (
         <>
-          <span className="auth-spinner" />
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
           Please wait…
         </>
       ) : (
