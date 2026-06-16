@@ -1,6 +1,6 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AuthAlert,
   AuthDivider,
@@ -9,14 +9,13 @@ import {
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
-import { isAuthenticated, loginUser } from "@/lib/auth-store";
+import { loginUser } from "@/lib/auth-store";
+import { redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/signin")({
   beforeLoad: () => {
-    if (isAuthenticated()) {
-      throw redirect({ to: "/projects" });
-    }
+    redirectIfAuthenticated("/projects");
   },
   head: () => ({
     meta: [
@@ -34,12 +33,6 @@ function SignInPage() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      navigate({ to: "/projects", replace: true });
-    }
-  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
