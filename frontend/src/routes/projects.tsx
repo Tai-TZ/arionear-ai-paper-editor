@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useRef, useState } from "react";
 import {
   Search,
@@ -9,24 +10,26 @@ import {
   Upload,
   FileText,
   MoreHorizontal,
-  AlertTriangle,
-  LogIn,
   FolderOpen,
   Sparkles,
   Trash2,
   LogOut,
   User,
+  Loader2,
 } from "lucide-react";
 import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
 import {
+  createPaper,
+  deletePaper,
+  fetchPapers,
+  addPaperAssets,
+} from "@/lib/api/papers-api";
+import {
   BLANK_LATEX,
   SAMPLE_LATEX,
-  addProjectAssets,
-  createProject,
-  deleteProject,
   formatTimeAgo,
-  getProjects,
+  formatProjectDateTime,
   inferProjectName,
   isImageAssetFile,
   readFileAsDataUrl,
@@ -42,6 +45,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/projects")({
+  beforeLoad: () => {
+    requireAuth();
+  },
   head: () => ({
     meta: [
       { title: "Your Projects — Arionear" },
@@ -57,7 +63,11 @@ export const Route = createFileRoute("/projects")({
 function ProjectsPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [projects, setProjects] = useState<StoredProject[]>(() => getProjects());
+  const [projects, setProjects] = useState<StoredProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creatingLabel, setCreatingLabel] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
@@ -66,9 +76,29 @@ function ProjectsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    refreshSession().then((sessionUser) => {
-      if (!cancelled) setUser(sessionUser);
-    });
+
+    async function init() {
+      setLoading(true);
+      setLoadError(null);
+
+      const cached = getSession();
+      if (cached && !cancelled) setUser(cached);
+
+      try {
+        const [sessionUser, list] = await Promise.all([refreshSession(), fetchPapers()]);
+        if (cancelled) return;
+        if (sessionUser) setUser(sessionUser);
+        setProjects(list);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : "Failed to load projects.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void init();
     return () => {
       cancelled = true;
     };
@@ -83,18 +113,32 @@ function ProjectsPage() {
     navigate({ to: "/editor", search: { projectId } });
   };
 
-  const refresh = () => setProjects(getProjects());
-
-  const handleCreateSample = () => {
-    const project = createProject("Biomedical NER (Sample)", SAMPLE_LATEX);
+  const handleCreateSample = async () => {
+    setCreatingLabel("Creating sample project…");
     setNewMenuOpen(false);
-    openEditor(project.id);
+    try {
+      const project = await createPaper("Biomedical NER (Sample)", SAMPLE_LATEX);
+      setProjects((prev) => [project, ...prev]);
+      openEditor(project.id);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to create project.");
+    } finally {
+      setCreatingLabel(null);
+    }
   };
 
-  const handleCreateBlank = () => {
-    const project = createProject("New Project", BLANK_LATEX);
+  const handleCreateBlank = async () => {
+    setCreatingLabel("Creating blank project…");
     setNewMenuOpen(false);
-    openEditor(project.id);
+    try {
+      const project = await createPaper("New Project", BLANK_LATEX);
+      setProjects((prev) => [project, ...prev]);
+      openEditor(project.id);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to create project.");
+    } finally {
+      setCreatingLabel(null);
+    }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,29 +148,53 @@ function ProjectsPage() {
     const texFile = files.find((f) => /\.(tex|latex)$/i.test(f.name));
     if (!texFile) return;
 
-    const text = await texFile.text();
-    const name = inferProjectName(text, texFile.name.replace(/\.(tex|latex)$/i, ""));
-    const project = createProject(name, text);
-
-    const imageFiles = files.filter((f) => isImageAssetFile(f.name));
-    if (imageFiles.length) {
-      const uploaded = await Promise.all(imageFiles.map(readFileAsDataUrl));
-      addProjectAssets(project.id, uploaded);
-    }
-
-    refresh();
-    openEditor(project.id);
-    e.target.value = "";
+    setCreatingLabel("Uploading project…");
     setImportMenuOpen(false);
+    try {
+      const text = await texFile.text();
+      const name = inferProjectName(text, texFile.name.replace(/\.(tex|latex)$/i, ""));
+      let project = await createPaper(name, text);
+
+      const imageFiles = files.filter((f) => isImageAssetFile(f.name));
+      if (imageFiles.length) {
+        const uploaded = await Promise.all(imageFiles.map(readFileAsDataUrl));
+        project = await addPaperAssets(project.id, uploaded);
+      }
+
+      setProjects((prev) => [project, ...prev]);
+      openEditor(project.id);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to upload project.");
+    } finally {
+      setCreatingLabel(null);
+      e.target.value = "";
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteProject(id);
-    refresh();
+  const handleDelete = async (id: string) => {
+    setDeletingIds((prev) => new Set(prev).add(id));
+    try {
+      await deletePaper(id);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to delete project.");
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   return (
     <div className="projects-shell flex h-[100dvh] w-full overflow-hidden bg-background text-foreground">
+      {creatingLabel && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">{creatingLabel}</p>
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -160,22 +228,8 @@ function ProjectsPage() {
               )}
             </div>
           ) : (
-            <div className="projects-guest-card rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/80 p-3.5 dark:border-amber-800/50 dark:from-amber-950/60 dark:to-orange-950/50">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <p className="text-xs font-semibold text-amber-950 dark:text-amber-100">Don't lose access</p>
-                  <p className="mt-1 text-[11px] leading-snug text-amber-900/80 dark:text-amber-200/80">
-                    You are not logged in. Sign in to save projects and edit from other devices.
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/signin"
-                className="mt-3 flex w-full items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
-              >
-                Sign In or Sign Up
-              </Link>
+            <div className="rounded-xl border border-border/60 bg-card p-3.5 text-xs text-muted-foreground">
+              Loading account…
             </div>
           )}
         </div>
@@ -188,36 +242,18 @@ function ProjectsPage() {
         </nav>
 
         <div className="mt-auto border-t border-border/50 p-3">
-          {user ? (
-            <button
-              onClick={() => {
-                signOut();
-                setUser(null);
-                authToast.signOutSuccess();
-                navigate({ to: "/signin" });
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Link
-                to="/signin"
-                className="flex items-center justify-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                Sign in
-              </Link>
-              <Link
-                to="/signup"
-                className="flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
-              >
-                Create account
-              </Link>
-            </div>
-          )}
+          <button
+            onClick={() => {
+              signOut();
+              setUser(null);
+              authToast.signOutSuccess();
+              navigate({ to: "/signin" });
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -259,7 +295,8 @@ function ProjectsPage() {
                   setImportMenuOpen((v) => !v);
                   setNewMenuOpen(false);
                 }}
-                className="flex items-center gap-1 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-secondary"
+                disabled={!!creatingLabel}
+                className="flex items-center gap-1 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-secondary disabled:opacity-50"
               >
                 Import
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -283,7 +320,8 @@ function ProjectsPage() {
                   setNewMenuOpen((v) => !v);
                   setImportMenuOpen(false);
                 }}
-                className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
+                disabled={!!creatingLabel}
+                className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
               >
                 <Plus className="h-3.5 w-3.5" />
                 New
@@ -306,24 +344,37 @@ function ProjectsPage() {
         </header>
 
         <div className="soft-scrollbar flex-1 overflow-y-auto px-5 py-5 pb-8 md:px-8">
-          {filtered.length === 0 ? (
+          {loadError && (
+            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              {loadError}
+            </div>
+          )}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <p className="mt-3 text-sm">Loading your projects…</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}
               onUpload={() => fileInputRef.current?.click()}
               onSample={handleCreateSample}
               onBlank={handleCreateBlank}
+              disabled={!!creatingLabel}
             />
           ) : view === "list" ? (
             <div className="projects-table rounded-xl border border-border/60 bg-card">
-              <div className="projects-table-head grid grid-cols-[1fr_8rem_2.5rem] gap-3 border-b border-border/50 px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              <div className="projects-table-head grid grid-cols-[1fr_9rem_9rem_2.5rem] gap-3 border-b border-border/50 px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <span>Name</span>
                 <span>Created</span>
+                <span>Last update</span>
                 <span />
               </div>
               {filtered.map((project) => (
                 <ProjectRow
                   key={project.id}
                   project={project}
+                  deleting={deletingIds.has(project.id)}
                   onOpen={() => openEditor(project.id)}
                   onDelete={() => handleDelete(project.id)}
                 />
@@ -335,14 +386,18 @@ function ProjectsPage() {
                 <button
                   key={project.id}
                   onClick={() => openEditor(project.id)}
-                  className="projects-grid-card text-left"
+                  disabled={deletingIds.has(project.id)}
+                  className="projects-grid-card text-left disabled:pointer-events-none disabled:opacity-40"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                     <FileText className="h-5 w-5 text-primary" />
                   </div>
                   <p className="mt-3 text-sm font-medium truncate">{project.name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatTimeAgo(project.createdAt)}
+                    Created {formatProjectDateTime(project.createdAt)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                    Updated {formatProjectDateTime(project.updatedAt)}
                   </p>
                 </button>
               ))}
@@ -359,11 +414,13 @@ function EmptyProjects({
   onUpload,
   onSample,
   onBlank,
+  disabled = false,
 }: {
   hasSearch: boolean;
   onUpload: () => void;
   onSample: () => void;
   onBlank: () => void;
+  disabled?: boolean;
 }) {
   if (hasSearch) {
     return (
@@ -383,7 +440,7 @@ function EmptyProjects({
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <button onClick={onUpload} className="projects-action-card group">
+        <button onClick={onUpload} disabled={disabled} className="projects-action-card group disabled:opacity-60">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 transition group-hover:bg-primary/15">
             <Upload className="h-5 w-5 text-primary" />
           </div>
@@ -395,7 +452,7 @@ function EmptyProjects({
           </div>
         </button>
 
-        <button onClick={onSample} className="projects-action-card group">
+        <button onClick={onSample} disabled={disabled} className="projects-action-card group disabled:opacity-60">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 transition group-hover:bg-amber-200/80">
             <Sparkles className="h-5 w-5 text-amber-700" />
           </div>
@@ -410,7 +467,8 @@ function EmptyProjects({
 
       <button
         onClick={onBlank}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+        disabled={disabled}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-60"
       >
         <FileText className="h-4 w-4" />
         Or start with a blank project
@@ -421,32 +479,49 @@ function EmptyProjects({
 
 function ProjectRow({
   project,
+  deleting,
   onOpen,
   onDelete,
 }: {
   project: StoredProject;
+  deleting: boolean;
   onOpen: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div className="projects-table-row grid grid-cols-[1fr_8rem_2.5rem] gap-3 items-center px-4 py-3 border-b border-border/40 last:border-b-0">
+    <div
+      className={`projects-table-row grid grid-cols-[1fr_9rem_9rem_2.5rem] gap-3 items-center px-4 py-3 border-b border-border/40 last:border-b-0 ${
+        deleting ? "pointer-events-none opacity-40" : ""
+      }`}
+    >
       <button
         onClick={onOpen}
-        className="flex min-w-0 items-center gap-3 text-left transition hover:text-primary"
+        disabled={deleting}
+        className="flex min-w-0 items-center gap-3 text-left transition hover:text-primary disabled:cursor-not-allowed"
       >
-        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+        {deleting ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+        ) : (
+          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
         <span className="truncate text-sm font-medium">{project.name}</span>
       </button>
-      <span className="text-xs text-muted-foreground">{formatTimeAgo(project.createdAt)}</span>
+      <span className="text-xs text-muted-foreground" title={formatProjectDateTime(project.createdAt)}>
+        {formatTimeAgo(project.createdAt)}
+      </span>
+      <span className="text-xs text-muted-foreground" title={formatProjectDateTime(project.updatedAt)}>
+        {formatTimeAgo(project.updatedAt)}
+      </span>
       <div className="flex justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
+              disabled={deleting}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground disabled:opacity-50"
               aria-label="Project options"
             >
-              <MoreHorizontal className="h-4 w-4" />
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent

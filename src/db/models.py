@@ -209,7 +209,9 @@ class Paper(Base):
     sections: Mapped[list[PaperSection]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
     )
-    ai_sessions: Mapped[list[AiSession]] = relationship(back_populates="paper")
+    ai_sessions: Mapped[list[AiSession]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan"
+    )
     citations: Mapped[list[Citation]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
     )

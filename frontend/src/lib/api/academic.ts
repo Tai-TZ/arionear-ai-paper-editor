@@ -1,4 +1,5 @@
 import { mapApiHttpError, toUserFacingMessage } from "./api-errors";
+import { fetchDedupe } from "./fetch-dedupe";
 
 const API_BASE =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -70,7 +71,7 @@ export async function fetchProviders(): Promise<{
   default_provider: LLMProvider;
   providers: ProviderInfo[];
 }> {
-  return apiFetch("/providers");
+  return fetchDedupe("providers", () => apiFetch("/providers"), 60_000);
 }
 
 export async function syncSession(
@@ -79,7 +80,6 @@ export async function syncSession(
   latexContent: string,
 ): Promise<void> {
   try {
-    await apiFetch(`/sessions/${sessionId}`);
     await apiFetch(`/sessions/${sessionId}`, {
       method: "PATCH",
       body: JSON.stringify({ name, latex_content: latexContent }),
@@ -302,7 +302,7 @@ export async function compileLatex(
 }
 
 export async function fetchCompileStatus(): Promise<{ available: boolean; engine: string | null }> {
-  return apiFetch("/compile/status");
+  return fetchDedupe("compile:status", () => apiFetch("/compile/status"), 60_000);
 }
 
 export async function revisionAction(

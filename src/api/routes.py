@@ -127,14 +127,22 @@ async def get_session(session_id: str):
 
 @router.patch("/sessions/{session_id}", response_model=SessionResponse)
 async def update_session(session_id: str, body: SessionUpdate):
-    session = session_store.update(
-        session_id,
-        name=body.name,
-        latex_content=body.latex_content,
-        metadata=body.metadata,
-    )
+    session = session_store.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        session = session_store.get_or_create(
+            session_id,
+            name=body.name or "Untitled",
+            latex_content=body.latex_content or "",
+            metadata=body.metadata,
+        )
+    else:
+        updated = session_store.update(
+            session_id,
+            name=body.name,
+            latex_content=body.latex_content,
+            metadata=body.metadata,
+        )
+        session = updated or session
     return _session_to_response(session)
 
 

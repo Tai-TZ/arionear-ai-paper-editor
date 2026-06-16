@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { requireAuth } from "@/lib/require-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
@@ -22,14 +23,16 @@ import {
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
-  addProjectAssets,
-  getProject,
   isImageAssetFile,
   isProjectAssetFile,
   readFileAsDataUrl,
-  updateProject,
   type ProjectAsset,
 } from "@/lib/project-store";
+import {
+  addPaperAssets,
+  fetchPaper,
+  updatePaper,
+} from "@/lib/api/papers-api";
 import {
   compileLatex,
   fetchProviders,
@@ -59,12 +62,16 @@ import {
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { useLatexHistory } from "@/lib/use-latex-history";
+import { fetchDedupe } from "@/lib/api/fetch-dedupe";
 
 type EditorSearch = {
   projectId?: string;
 };
 
 export const Route = createFileRoute("/editor")({
+  beforeLoad: () => {
+    requireAuth();
+  },
   validateSearch: (search: Record<string, unknown>): EditorSearch => ({
     projectId: typeof search.projectId === "string" ? search.projectId : undefined,
   }),
@@ -277,16 +284,28 @@ function EditorPage() {
       navigate({ to: "/projects", replace: true });
       return;
     }
-    const project = getProject(projectId);
-    if (!project) {
-      navigate({ to: "/projects", replace: true });
-      return;
-    }
-    setProjectName(project.name);
-    resetHistory(project.latex);
-    setSavedLatex(project.latex);
-    setAssets(project.assets ?? []);
-    setBootState("ready");
+
+    let cancelled = false;
+    setBootState("loading");
+
+    fetchPaper(projectId)
+      .then((project) => {
+        if (cancelled) return;
+        setProjectName(project.name);
+        resetHistory(project.latex);
+        setSavedLatex(project.latex);
+        setAssets(project.assets ?? []);
+        setBootState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          navigate({ to: "/projects", replace: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, navigate, resetHistory]);
 
   useEffect(() => {
@@ -330,12 +349,15 @@ function EditorPage() {
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
-    updateProject(projectId, { latex });
-    setSavedLatex(latex);
-    syncSession(projectId, projectName, latex).catch(() => {});
-    if (autoCompile) {
-      void handleCompile(latex);
-    }
+    updatePaper(projectId, { latex, name: projectName })
+      .then(() => {
+        setSavedLatex(latex);
+        syncSession(projectId, projectName, latex).catch(() => {});
+        if (autoCompile) {
+          void handleCompile(latex);
+        }
+      })
+      .catch(() => {});
   }, [projectId, projectName, latex, autoCompile, handleCompile]);
 
   useEffect(() => {
@@ -362,7 +384,9 @@ function EditorPage() {
 
   useEffect(() => {
     if (bootState !== "ready" || !projectId) return;
-    syncSession(projectId, projectName, latex).catch(() => {});
+    void fetchDedupe(`session:init:${projectId}`, () =>
+      syncSession(projectId, projectName, latex),
+    ).catch(() => {});
   }, [bootState, projectId, projectName, latex]);
 
   const loadProviders = useCallback(() => {
@@ -400,8 +424,8 @@ function EditorPage() {
 
     if (assetFiles.length && projectId) {
       const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-      const updated = addProjectAssets(projectId, uploaded);
-      if (updated?.assets) setAssets(updated.assets);
+      const updated = await addPaperAssets(projectId, uploaded);
+      if (updated.assets) setAssets(updated.assets);
     }
 
     e.target.value = "";
@@ -415,8 +439,8 @@ function EditorPage() {
     if (!assetFiles.length) return;
 
     const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-    const updated = addProjectAssets(projectId, uploaded);
-    if (updated?.assets) setAssets(updated.assets);
+    const updated = await addPaperAssets(projectId, uploaded);
+    if (updated.assets) setAssets(updated.assets);
     e.target.value = "";
   };
 

@@ -140,10 +140,31 @@ def _build_store():
     return InMemorySessionStore()
 
 
-session_store = _build_store()
+_store: InMemorySessionStore | object | None = None
+
+
+def get_session_store():
+    """Return DB-backed store when available (lazy rebind after startup)."""
+    global _store
+    if is_db_enabled() and db_is_ready():
+        from src.db.paper_repository import DatabaseSessionStore
+
+        if not isinstance(_store, DatabaseSessionStore):
+            _store = DatabaseSessionStore()
+    elif _store is None:
+        _store = InMemorySessionStore()
+    return _store
+
+
+class SessionStoreProxy:
+    def __getattr__(self, name: str):
+        return getattr(get_session_store(), name)
+
+
+session_store = SessionStoreProxy()
 
 
 def refresh_session_store() -> None:
     """Rebind global store after DB init (app startup / tests)."""
-    global session_store
-    session_store = _build_store()
+    global _store
+    _store = _build_store()

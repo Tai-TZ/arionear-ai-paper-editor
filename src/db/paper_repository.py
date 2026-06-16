@@ -131,6 +131,19 @@ class DatabaseSessionStore:
     ) -> PaperSession:
         paper_id = _parse_uuid(session_id) if session_id else uuid.uuid4()
         with get_db() as db:
+            existing = _load_paper(db, paper_id)
+            if existing:
+                if name:
+                    existing.title = name
+                if latex_content:
+                    existing.raw_latex = latex_content
+                if metadata is not None:
+                    existing.metadata_ = metadata
+                existing.updated_at = _utcnow()
+                _ensure_ai_session(db, existing)
+                db.flush()
+                return _paper_to_session(_load_paper(db, paper_id) or existing)
+
             paper = Paper(
                 id=paper_id,
                 title=name,

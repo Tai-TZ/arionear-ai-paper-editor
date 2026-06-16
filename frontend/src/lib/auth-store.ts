@@ -6,6 +6,7 @@ import {
   apiResetPassword,
   type AuthUser,
 } from "./auth-api";
+import { fetchDedupe, invalidateFetchKey, invalidateFetchPrefix } from "./api/fetch-dedupe";
 import { normalizeEmail, validateEmail, validateName, validatePassword } from "./auth-validation";
 
 export type { AuthUser };
@@ -67,8 +68,20 @@ export function clearSession() {
   }
 }
 
+/** Clear all browser storage on sign-out (local + session). */
+export function clearAllBrowserStorage() {
+  if (typeof window === "undefined") return;
+  localStorage.clear();
+  sessionStorage.clear();
+}
+
 export function signOut() {
-  clearSession();
+  invalidateFetchKey("auth:me");
+  invalidateFetchPrefix("papers:");
+  invalidateFetchPrefix("providers");
+  invalidateFetchPrefix("compile:");
+  invalidateFetchPrefix("session:");
+  clearAllBrowserStorage();
 }
 
 export function logoutUser() {
@@ -131,6 +144,7 @@ export async function loginUser(
 
   const result = await apiLogin(normalizeEmail(email), password, remember);
   if (!result.ok) return result;
+  invalidateFetchKey("auth:me");
   persistSession(result.user, result.accessToken, remember);
   return { ok: true, user: result.user };
 }
@@ -163,9 +177,10 @@ export async function refreshSession(): Promise<AuthUser | null> {
     clearSession();
     return null;
   }
-  const user = await apiFetchMe(token);
+  const user = await fetchDedupe("auth:me", () => apiFetchMe(token));
   if (!user) {
     clearSession();
+    invalidateFetchKey("auth:me");
     return null;
   }
   writeCachedUser(user);
