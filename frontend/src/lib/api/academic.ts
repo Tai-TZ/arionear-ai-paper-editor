@@ -1,8 +1,17 @@
 import { mapApiHttpError, toUserFacingMessage } from "./api-errors";
 
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:8000/api/v1";
+function resolveApiBase(): string {
+  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Dev: same-origin via Vite proxy → avoids localhost:8000 port conflicts.
+  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
+    return "/api/v1";
+  }
+  return "http://localhost:8000/api/v1";
+}
+
+const API_BASE = resolveApiBase();
 
 export type LLMProvider = "openai" | "anthropic" | "openrouter";
 
@@ -38,7 +47,7 @@ type LlmOptions = {
 };
 
 const COMPILE_CONNECTION_MSG =
-  "Không kết nối được backend (localhost:8000). Hãy chạy: uvicorn src.main:app --reload --port 8000";
+  "Không kết nối được backend. Chạy: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8001 (cổng 8000 có thể bị app khác chiếm).";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -274,23 +283,50 @@ export type CompileAssetPayload = {
   content_base64: string;
 };
 
+export type LatexCompiler = "auto" | "pdflatex" | "xelatex" | "lualatex" | "latex";
+
+export type CompileEnginesInfo = {
+  pdflatex: string | null;
+  xelatex: string | null;
+  lualatex: string | null;
+  latex: string | null;
+  latexmk: string | null;
+  biber: string | null;
+  bibtex: string | null;
+};
+
 export type CompileResult = {
   success: boolean;
   pdf_base64: string;
   log: string;
   error: string;
   engine: string;
+  compiler?: string;
   warning?: string;
+  synctex_base64?: string;
+  main_file?: string;
+};
+
+export type CompileStatus = {
+  available: boolean;
+  engine: string | null;
+  engines?: CompileEnginesInfo;
 };
 
 export async function compileLatex(
   latex: string,
   assets: { name: string; dataUrl: string }[],
+  options?: {
+    mainFile?: string;
+    compiler?: LatexCompiler;
+  },
 ): Promise<CompileResult> {
   return apiFetch("/compile", {
     method: "POST",
     body: JSON.stringify({
       latex,
+      main_file: options?.mainFile ?? "main.tex",
+      compiler: options?.compiler ?? "auto",
       assets: assets.map(
         (asset): CompileAssetPayload => ({
           name: asset.name,
@@ -301,8 +337,44 @@ export async function compileLatex(
   });
 }
 
-export async function fetchCompileStatus(): Promise<{ available: boolean; engine: string | null }> {
+export async function fetchCompileStatus(): Promise<CompileStatus> {
   return apiFetch("/compile/status");
+}
+
+export type SyncTeXHit = {
+  file: string;
+  line: number;
+  synctex_line?: number;
+  column: number;
+  page: number;
+  found: boolean;
+};
+
+export async function lookupSynctexInverse(
+  synctexBase64: string,
+  pdfBase64: string,
+  page: number,
+  x: number,
+  y: number,
+  jobname = "main",
+  word = "",
+  latex = "",
+  context = "",
+): Promise<SyncTeXHit> {
+  return apiFetch("/compile/synctex", {
+    method: "POST",
+    body: JSON.stringify({
+      synctex_base64: synctexBase64,
+      pdf_base64: pdfBase64,
+      page,
+      x,
+      y,
+      jobname,
+      word: word ?? "",
+      context: context ?? "",
+      latex: latex ?? "",
+    }),
+  });
 }
 
 export async function revisionAction(

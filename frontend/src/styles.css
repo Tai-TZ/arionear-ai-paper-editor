@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -343,12 +342,48 @@
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-line-num {
   color: #a0a0a0;
-  min-height: 1.65em;
+  height: calc(13px * 1.65);
+  line-height: calc(13px * 1.65);
+  font-size: 11px;
+}
+
+@media (max-width: 767px) {
+  .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-line-num {
+    height: calc(12px * 1.65);
+    line-height: calc(12px * 1.65);
+  }
 }
 
 .editor-shell .latex-code-area {
   min-width: 0;
   overflow: hidden;
+}
+
+/* Shared metrics — textarea selection must match syntax highlight layer exactly */
+.editor-shell .latex-editor-canvas {
+  font-family: var(--font-mono-data);
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  letter-spacing: normal;
+  font-variant-ligatures: none;
+  font-feature-settings: normal;
+  font-kerning: none;
+  padding: 1rem 1.25rem 1rem 0;
+  margin: 0;
+  border: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .editor-shell .latex-editor-canvas {
+    font-size: 12px;
+    padding-right: 1rem;
+  }
 }
 
 .editor-shell .latex-highlight-layer {
@@ -360,7 +395,25 @@
 }
 
 .editor-shell .latex-code-row {
-  min-height: 1.65em;
+  line-height: inherit;
+  white-space: inherit;
+}
+
+.editor-shell .latex-code-line,
+.editor-shell .latex-code-row [class^="latex-tok-"] {
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+.editor-shell .latex-synctex-word-hit {
+  background: rgba(255, 196, 0, 0.5);
+  color: inherit;
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 0 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* Syntax tokens — light editor (always on) */
@@ -386,15 +439,15 @@
 }
 
 .editor-shell .latex-input-overlay {
-  color: transparent;
+  color: rgba(0, 0, 0, 0.01);
   caret-color: #000000;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.01);
 }
 
 .editor-shell .latex-input-overlay::selection {
   background-color: rgba(0, 100, 255, 0.22);
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  color: rgba(0, 0, 0, 0.01);
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.01);
 }
 
 .editor-shell .latex-input {
@@ -796,31 +849,67 @@
 
 .editor-shell .pdf-preview-canvas {
   display: block;
+  pointer-events: none;
 }
 
+/* PDF.js text layer — aligned with pdf_viewer.css; scoped under editor-shell */
 .editor-shell .pdf-preview-text-layer {
   position: absolute;
+  text-align: initial;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
   line-height: 1;
   opacity: 1;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
   text-size-adjust: none;
   forced-color-adjust: none;
   transform-origin: 0 0;
   z-index: 2;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+  font: initial;
+  letter-spacing: initial;
+  word-spacing: initial;
 }
 
-.editor-shell .pdf-preview-text-layer span,
-.editor-shell .pdf-preview-text-layer br {
-  position: absolute;
+.editor-shell .pdf-preview-text-layer :is(span, br) {
   color: transparent;
+  position: absolute;
   white-space: pre;
   cursor: text;
-  transform-origin: 0 0;
+  transform-origin: 0% 0%;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.editor-shell .pdf-preview-text-layer > :not(.markedContent),
+.editor-shell .pdf-preview-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+}
+
+.editor-shell .pdf-preview-text-layer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.editor-shell .pdf-preview-text-layer ::-moz-selection {
+  background: rgba(0, 0, 255, 0.25);
+  background: color-mix(in srgb, AccentColor, transparent 75%);
 }
 
 .editor-shell .pdf-preview-text-layer ::selection {
-  background: rgba(0, 100, 200, 0.25);
+  background: rgba(0, 0, 255, 0.25);
+  background: color-mix(in srgb, AccentColor, transparent 75%);
+}
+
+.editor-shell .pdf-preview-text-layer br::-moz-selection {
+  background: transparent;
+}
+
+.editor-shell .pdf-preview-text-layer br::selection {
+  background: transparent;
 }
 
 .editor-shell .pdf-preview-toolbar-bottom {

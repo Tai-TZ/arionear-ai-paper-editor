@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText,
   Search,
@@ -23,11 +23,15 @@ import {
 import {
   addProjectAssets,
   getProject,
-  isImageAssetFile,
+  getCompilePayload,
   isProjectAssetFile,
+  isTexFile,
+  normalizeAssetName,
   readFileAsDataUrl,
   updateProject,
+  type LatexCompiler,
   type ProjectAsset,
+  type ProjectFile,
 } from "@/lib/project-store";
 import {
   compileLatex,
@@ -38,6 +42,7 @@ import {
   type LLMProvider,
   type ProviderInfo,
 } from "@/lib/api/academic";
+import { importOverleafZip } from "@/lib/overleaf-import";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { citationErrorMessage } from "@/lib/api/api-errors";
 import {
@@ -49,13 +54,14 @@ import {
 } from "@/components/chat-overlay";
 import { SuggestionPanel } from "@/components/suggestion-panel";
 import { LatexDiffEditor } from "@/components/latex-diff-editor";
-import { LatexCodeEditor } from "@/components/latex-code-editor";
+import { LatexCodeEditor, type LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import {
   EditorEntrySplash,
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
+import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
 
 type EditorSearch = {
@@ -102,12 +108,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     content:
       "Xin chào, tôi là Ario — trợ lý biên tập học thuật của bạn. Tôi có thể giúp cải thiện văn phong, cấu trúc bài báo, hoặc định dạng trích dẫn trong bản thảo. Bạn muốn bắt đầu từ phần nào?",
   },
-];
-
-const PROJECT_FILES = [
-  { name: "main.tex", active: true },
-  { name: "references.bib", active: false },
-  { name: "figures/fig1.pdf", active: false },
 ];
 
 const OUTLINE_SECTIONS = ["Abstract", "Introduction", "Methods", "Results", "Conclusion"];
@@ -249,6 +249,19 @@ function EditorPage() {
   const [savedLatex, setSavedLatex] = useState("");
   const isDirty = latex !== savedLatex;
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
+  const [activeFile, setActiveFile] = useState("main.tex");
+  const [mainFile, setMainFile] = useState("main.tex");
+  const mainLatexSource = useMemo(
+    () => projectFiles.find((f) => f.path === mainFile)?.content ?? latex,
+    [projectFiles, mainFile, latex],
+  );
+  const [compiler, setCompiler] = useState<LatexCompiler>("auto");
+  const [compileLog, setCompileLog] = useState<string | null>(null);
+  const [synctexBase64, setSynctexBase64] = useState<string | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [highlightLine, setHighlightLine] = useState<number | null>(null);
+  const [synctexHighlight, setSynctexHighlight] = useState<SynctexWordHighlight | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
@@ -268,7 +281,17 @@ function EditorPage() {
   const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const latexEditorRef = useRef<LatexCodeEditorHandle>(null);
+  const synctexFlashRef = useRef(0);
+  const pendingSynctexRef = useRef<{
+    line: number;
+    word?: string;
+    column?: number;
+    context?: string;
+    latex?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!projectId) {
@@ -281,11 +304,35 @@ function EditorPage() {
       return;
     }
     setProjectName(project.name);
+    const normalizedMain = project.mainFile ?? "main.tex";
+    setMainFile(normalizedMain);
+    setActiveFile(normalizedMain);
+    setProjectFiles(project.files ?? [{ path: normalizedMain, content: project.latex }]);
+    setCompiler(project.compiler ?? "auto");
     resetHistory(project.latex);
     setSavedLatex(project.latex);
     setAssets(project.assets ?? []);
     setBootState("ready");
   }, [projectId, navigate, resetHistory]);
+
+  const persistActiveFile = useCallback(
+    (content: string, files: ProjectFile[], currentActive: string) =>
+      files.map((f) => (f.path === currentActive ? { ...f, content } : f)),
+    [],
+  );
+
+  const switchActiveFile = useCallback(
+    (nextPath: string) => {
+      if (nextPath === activeFile) return;
+      const updatedFiles = persistActiveFile(latex, projectFiles, activeFile);
+      const nextFile = updatedFiles.find((f) => f.path === nextPath);
+      setProjectFiles(updatedFiles);
+      setActiveFile(nextPath);
+      resetHistory(nextFile?.content ?? "");
+      setSavedLatex(nextFile?.content ?? "");
+    },
+    [activeFile, latex, persistActiveFile, projectFiles, resetHistory],
+  );
 
   useEffect(() => {
     if (bootState !== "ready") return;
@@ -301,12 +348,28 @@ function EditorPage() {
   const showEditor = bootState === "ready";
 
   const handleCompile = useCallback(async (latexOverride?: string) => {
-    const source = latexOverride ?? latex;
+    const filesWithActive = persistActiveFile(latexOverride ?? latex, projectFiles, activeFile);
     setIsCompiling(true);
     setCompileError(null);
     setCompileWarning(null);
+    setCompileLog(null);
     try {
-      const result = await compileLatex(source, assets);
+      const payload = getCompilePayload({
+        id: projectId ?? "",
+        name: projectName,
+        latex: latexOverride ?? latex,
+        files: filesWithActive,
+        mainFile,
+        compiler,
+        assets,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      const result = await compileLatex(payload.latex, payload.assets, {
+        mainFile: payload.mainFile,
+        compiler: payload.compiler,
+      });
+      setCompileLog(result.log || null);
       if (result.success && result.pdf_base64) {
         const binary = atob(result.pdf_base64);
         const bytes = new Uint8Array(binary.length);
@@ -314,9 +377,11 @@ function EditorPage() {
           bytes[i] = binary.charCodeAt(i);
         }
         setPdfData(bytes);
+        setPdfBase64(result.pdf_base64);
+        setSynctexBase64(result.synctex_base64?.trim() || null);
         setCompileWarning(result.warning?.trim() || null);
       } else {
-        const detail = [result.error, result.log?.slice(-1500)].filter(Boolean).join("\n\n");
+        const detail = [result.error, result.log?.slice(-4000)].filter(Boolean).join("\n\n");
         setCompileError(detail || "Compilation failed.");
       }
     } catch (error) {
@@ -324,17 +389,31 @@ function EditorPage() {
     } finally {
       setIsCompiling(false);
     }
-  }, [latex, assets]);
+  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile]);
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
-    updateProject(projectId, { latex });
+    const files = persistActiveFile(latex, projectFiles, activeFile);
+    setProjectFiles(files);
+    updateProject(projectId, { latex, files, mainFile, compiler, assets });
     setSavedLatex(latex);
     syncSession(projectId, projectName, latex).catch(() => {});
     if (autoCompile) {
       void handleCompile(latex);
     }
-  }, [projectId, projectName, latex, autoCompile, handleCompile]);
+  }, [
+    projectId,
+    projectName,
+    latex,
+    projectFiles,
+    activeFile,
+    mainFile,
+    compiler,
+    assets,
+    autoCompile,
+    handleCompile,
+    persistActiveFile,
+  ]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -388,12 +467,28 @@ function EditorPage() {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    const texFile = files.find((f) => /\.(tex|latex)$/i.test(f.name));
+    const texFiles = files.filter((f) => isTexFile(f.name));
     const assetFiles = files.filter((f) => isProjectAssetFile(f.name));
 
-    if (texFile) {
-      const text = await texFile.text();
-      recordNow(text);
+    if (texFiles.length) {
+      const imported = await Promise.all(
+        texFiles.map(async (f) => ({
+          path: normalizeAssetName(f.name),
+          content: await f.text(),
+        })),
+      );
+      const merged = [...projectFiles];
+      for (const file of imported) {
+        const idx = merged.findIndex((f) => f.path === file.path);
+        if (idx >= 0) merged[idx] = file;
+        else merged.push(file);
+      }
+      setProjectFiles(merged);
+      const open = imported[0];
+      if (open) {
+        setActiveFile(open.path);
+        recordNow(open.content);
+      }
     }
 
     if (assetFiles.length && projectId) {
@@ -404,6 +499,99 @@ function EditorPage() {
 
     e.target.value = "";
   };
+
+  const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    try {
+      const imported = await importOverleafZip(file);
+      setProjectFiles(imported.files);
+      setMainFile(imported.mainFile);
+      setActiveFile(imported.mainFile);
+      setCompiler(imported.compiler);
+      recordNow(imported.files.find((f) => f.path === imported.mainFile)?.content ?? "");
+      if (imported.assets.length) {
+        const updated = addProjectAssets(projectId, imported.assets);
+        if (updated?.assets) setAssets(updated.assets);
+      }
+      updateProject(projectId, {
+        name: imported.name,
+        files: imported.files,
+        mainFile: imported.mainFile,
+        compiler: imported.compiler,
+        latex: imported.files.find((f) => f.path === imported.mainFile)?.content,
+      });
+      setProjectName(imported.name);
+    } catch (error) {
+      setCompileError(error instanceof Error ? error.message : "ZIP import failed.");
+    }
+    e.target.value = "";
+  };
+
+  const jumpToSynctex = useCallback(
+    (line: number, word?: string, column?: number, sourceLatex?: string, context?: string) => {
+      const content = sourceLatex ?? latex;
+      const highlight = resolveSynctexWordHighlight(content, line, word, column, 5, context);
+      const targetLine = highlight?.line ?? line;
+      const flashToken = ++synctexFlashRef.current;
+
+      setMobileTab("editor");
+      setHighlightLine(targetLine);
+      setSynctexHighlight(highlight);
+
+      const scroll = () =>
+        latexEditorRef.current?.scrollToLine(
+          targetLine,
+          highlight?.start,
+          highlight?.end,
+        );
+      requestAnimationFrame(scroll);
+      window.setTimeout(scroll, 80);
+      window.setTimeout(scroll, 220);
+      window.setTimeout(scroll, 360);
+
+      window.setTimeout(() => {
+        if (synctexFlashRef.current !== flashToken) return;
+        setHighlightLine(null);
+        setSynctexHighlight(null);
+      }, 5000);
+    },
+    [latex],
+  );
+
+  useEffect(() => {
+    const pending = pendingSynctexRef.current;
+    if (!pending) return;
+    pendingSynctexRef.current = null;
+    const timer = window.setTimeout(
+      () => jumpToSynctex(pending.line, pending.word, pending.column, pending.latex, pending.context),
+      200,
+    );
+    return () => window.clearTimeout(timer);
+  }, [activeFile, jumpToSynctex]);
+
+  const handleSynctexHit = useCallback(
+    (file: string, line: number, word?: string, column?: number, context?: string) => {
+      const normalized = normalizeAssetName(file.replace(/\\/g, "/"));
+      const basename = normalized.split("/").pop() ?? normalized;
+      const target = projectFiles.find(
+        (f) =>
+          f.path === normalized ||
+          f.path.endsWith(`/${normalized}`) ||
+          f.path.endsWith(`/${basename}`) ||
+          f.path.split("/").pop() === basename,
+      );
+
+      if (target && target.path !== activeFile) {
+        pendingSynctexRef.current = { line, word, column, context, latex: target.content };
+        switchActiveFile(target.path);
+        return;
+      }
+
+      jumpToSynctex(line, word, column, undefined, context);
+    },
+    [projectFiles, activeFile, switchActiveFile, jumpToSynctex],
+  );
 
   const handleAssetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -608,6 +796,13 @@ function EditorPage() {
       <MobileTabBar tab={mobileTab} onChange={setMobileTab} />
 
       <input
+        ref={zipInputRef}
+        type="file"
+        accept=".zip,application/zip"
+        className="hidden"
+        onChange={handleZipImport}
+      />
+      <input
         ref={fileInputRef}
         type="file"
         accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
@@ -628,10 +823,15 @@ function EditorPage() {
       <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
         <LeftSidebar
           projectName={projectName}
+          files={projectFiles}
+          activeFile={activeFile}
+          mainFile={mainFile}
           assets={assets}
           tab={sidebarTab}
           onTabChange={setSidebarTab}
+          onSelectFile={switchActiveFile}
           onUpload={() => fileInputRef.current?.click()}
+          onUploadZip={() => zipInputRef.current?.click()}
           onUploadAsset={() => assetInputRef.current?.click()}
           isDirty={isDirty}
         />
@@ -639,6 +839,10 @@ function EditorPage() {
           center={
             <CenterPanel
               latex={latex}
+              activeFile={activeFile}
+              highlightLine={highlightLine}
+              synctexHighlight={synctexHighlight}
+              editorRef={latexEditorRef}
               onLatexChange={setLatex}
               onSelectionChange={setSelection}
               chatOpen={chatOpen}
@@ -662,7 +866,18 @@ function EditorPage() {
                 isCompiling={isCompiling}
                 compileError={compileError}
                 compileWarning={compileWarning}
+                compileLog={compileLog}
+                synctexBase64={synctexBase64}
+                pdfBase64={pdfBase64}
+                mainFile={mainFile}
+                compiler={compiler}
+                onCompilerChange={(value) => {
+                  setCompiler(value);
+                  if (projectId) updateProject(projectId, { compiler: value });
+                }}
+                onSynctexHit={handleSynctexHit}
                 onCompile={() => void handleCompile()}
+                latexSource={mainLatexSource}
                 projectName={projectName}
               />
             )
@@ -673,14 +888,26 @@ function EditorPage() {
       {/* Mobile layout */}
       <div className="flex md:hidden flex-1 min-h-0 flex-col overflow-hidden">
         {mobileTab === "files" && (
-          <MobileFilesPanel onUpload={() => fileInputRef.current?.click()} isDirty={isDirty} />
+          <MobileFilesPanel
+            projectName={projectName}
+            files={projectFiles}
+            activeFile={activeFile}
+            assets={assets}
+            onSelectFile={switchActiveFile}
+            onUpload={() => fileInputRef.current?.click()}
+            onUploadZip={() => zipInputRef.current?.click()}
+            isDirty={isDirty}
+          />
         )}
         {mobileTab === "editor" && (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <LatexEditor
+              editorRef={latexEditorRef}
               latex={latex}
               onLatexChange={setLatex}
               fullHeight
+              highlightLine={highlightLine}
+              synctexHighlight={synctexHighlight}
               reviewDiff={
                 pendingSuggestion
                   ? {
@@ -698,14 +925,22 @@ function EditorPage() {
             isCompiling={isCompiling}
             compileError={compileError}
             compileWarning={compileWarning}
+            compileLog={compileLog}
+            synctexBase64={synctexBase64}
+            pdfBase64={pdfBase64}
+            mainFile={mainFile}
+            compiler={compiler}
+            onCompilerChange={setCompiler}
+            onSynctexHit={handleSynctexHit}
             onCompile={() => void handleCompile()}
             projectName={projectName}
+            latexSource={mainLatexSource}
             mobile
           />
         )}
       </div>
 
-      <MobileBottomBar onOpenChat={() => setMobileChatOpen(true)} isDirty={isDirty} />
+      <MobileBottomBar activeFile={activeFile} onOpenChat={() => setMobileChatOpen(true)} isDirty={isDirty} />
       {mobileChatOpen && (
         <MobileChatSheet onClose={() => setMobileChatOpen(false)} {...chatProps} />
       )}
@@ -790,12 +1025,20 @@ function MobileTabBar({ tab, onChange }: { tab: MobileTab; onChange: (t: MobileT
   );
 }
 
-function MobileBottomBar({ onOpenChat, isDirty = false }: { onOpenChat: () => void; isDirty?: boolean }) {
+function MobileBottomBar({
+  activeFile,
+  onOpenChat,
+  isDirty = false,
+}: {
+  activeFile: string;
+  onOpenChat: () => void;
+  isDirty?: boolean;
+}) {
   return (
     <div className="flex md:hidden shrink-0 items-center justify-between border-t border-border/50 bg-card/95 px-3 py-2.5 backdrop-blur-sm safe-area-pb">
       <button className="flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-sm font-medium transition hover:bg-secondary">
         <FileText className="h-4 w-4 text-primary" />
-        <span>main.tex</span>
+        <span className="max-w-[8rem] truncate">{activeFile}</span>
         {isDirty && <span className="file-dirty-mark">*</span>}
         <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
       </button>
@@ -814,14 +1057,32 @@ function MobileBottomBar({ onOpenChat, isDirty = false }: { onOpenChat: () => vo
   );
 }
 
-function MobileFilesPanel({ onUpload, isDirty = false }: { onUpload: () => void; isDirty?: boolean }) {
+function MobileFilesPanel({
+  projectName,
+  files,
+  activeFile,
+  assets,
+  onSelectFile,
+  onUpload,
+  onUploadZip,
+  isDirty = false,
+}: {
+  projectName: string;
+  files: ProjectFile[];
+  activeFile: string;
+  assets: ProjectAsset[];
+  onSelectFile: (path: string) => void;
+  onUpload: () => void;
+  onUploadZip: () => void;
+  isDirty?: boolean;
+}) {
   return (
     <div className="soft-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-sidebar">
       <div className="border-b border-border/40 p-4">
         <button className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-medium hover:bg-sidebar-accent transition">
           <span className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
-            Biomedical NER
+            {projectName}
           </span>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
@@ -840,22 +1101,39 @@ function MobileFilesPanel({ onUpload, isDirty = false }: { onUpload: () => void;
       </div>
 
       <div className="px-3">
-        {PROJECT_FILES.map((f) => (
+        {files.map((file) => (
           <button
-            key={f.name}
+            key={file.path}
+            type="button"
+            onClick={() => onSelectFile(file.path)}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition ${
-              f.active ? "bg-sidebar-accent font-medium" : "hover:bg-sidebar-accent/50"
+              file.path === activeFile ? "bg-sidebar-accent font-medium" : "hover:bg-sidebar-accent/50"
             }`}
           >
             <FileText className="h-4 w-4 shrink-0 text-primary" />
-            <span className="flex-1">{f.name}</span>
-            {f.active && isDirty && <span className="file-dirty-mark">*</span>}
+            <span className="flex-1 truncate">{file.path}</span>
+            {file.path === activeFile && isDirty && <span className="file-dirty-mark">*</span>}
           </button>
+        ))}
+        {assets.map((asset) => (
+          <div key={asset.name} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground">
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="truncate">{asset.name}</span>
+          </div>
         ))}
       </div>
 
-      <div className="mt-4 px-4">
+      <div className="mt-4 space-y-2 px-4">
         <button
+          type="button"
+          onClick={onUploadZip}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-sm text-primary transition hover:border-primary"
+        >
+          <Upload className="h-4 w-4" />
+          Import Overleaf ZIP
+        </button>
+        <button
+          type="button"
           onClick={onUpload}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary hover:text-foreground"
         >
@@ -956,18 +1234,28 @@ function MobileChatSheet({
 
 function LeftSidebar({
   projectName,
+  files,
+  activeFile,
+  mainFile,
   assets,
   tab,
   onTabChange,
+  onSelectFile,
   onUpload,
+  onUploadZip,
   onUploadAsset,
   isDirty = false,
 }: {
   projectName: string;
+  files: ProjectFile[];
+  activeFile: string;
+  mainFile: string;
   assets: ProjectAsset[];
   tab: "files" | "chats";
   onTabChange: (t: "files" | "chats") => void;
+  onSelectFile: (path: string) => void;
   onUpload: () => void;
+  onUploadZip: () => void;
   onUploadAsset: () => void;
   isDirty?: boolean;
 }) {
@@ -1013,15 +1301,30 @@ function LeftSidebar({
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-2">
-            <button className="flex w-full items-center gap-2 rounded-md bg-sidebar-accent px-2 py-1.5 text-left text-[13px] font-medium transition">
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate flex-1">main.tex</span>
-              {isDirty && <span className="file-dirty-mark">*</span>}
-            </button>
+            {files.map((file) => (
+              <button
+                key={file.path}
+                type="button"
+                onClick={() => onSelectFile(file.path)}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${
+                  file.path === activeFile
+                    ? "bg-sidebar-accent font-medium"
+                    : "text-foreground/80 hover:bg-sidebar-accent/50"
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate flex-1">{file.path}</span>
+                {file.path === mainFile && (
+                  <span className="rounded bg-primary/10 px-1 text-[9px] text-primary">main</span>
+                )}
+                {file.path === activeFile && isDirty && <span className="file-dirty-mark">*</span>}
+              </button>
+            ))}
             {assets.map((asset) => (
               <button
                 key={asset.name}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-foreground/80 transition hover:bg-sidebar-accent/50"
+                type="button"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-foreground/70 transition hover:bg-sidebar-accent/50"
               >
                 <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span className="truncate">{asset.name}</span>
@@ -1031,11 +1334,20 @@ function LeftSidebar({
 
           <div className="space-y-2 border-t border-border p-3">
             <button
+              type="button"
+              onClick={onUploadZip}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-xs text-primary transition hover:border-primary"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Import Overleaf ZIP
+            </button>
+            <button
+              type="button"
               onClick={onUpload}
               className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary/50 px-3 py-2.5 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
             >
               <Upload className="h-3.5 w-3.5" />
-              Upload .tex (+ images)
+              Upload .tex (+ assets)
             </button>
             <button
               onClick={onUploadAsset}
@@ -1096,13 +1408,19 @@ function LatexEditor({
   onLatexChange,
   onSelectionChange,
   fullHeight = false,
+  highlightLine = null,
+  synctexHighlight = null,
   reviewDiff,
+  editorRef,
 }: {
   latex: string;
   onLatexChange: (v: string) => void;
   onSelectionChange?: (v: string) => void;
   fullHeight?: boolean;
+  highlightLine?: number | null;
+  synctexHighlight?: SynctexWordHighlight | null;
   reviewDiff?: { original: string; suggested: string } | null;
+  editorRef?: React.Ref<LatexCodeEditorHandle>;
 }) {
   if (reviewDiff) {
     return (
@@ -1116,16 +1434,23 @@ function LatexEditor({
 
   return (
     <LatexCodeEditor
+      ref={editorRef}
       latex={latex}
       onLatexChange={onLatexChange}
       onSelectionChange={onSelectionChange}
       fullHeight={fullHeight}
+      highlightLine={highlightLine}
+      synctexHighlight={synctexHighlight}
     />
   );
 }
 
 function CenterPanel({
   latex,
+  activeFile,
+  highlightLine = null,
+  synctexHighlight = null,
+  editorRef,
   onLatexChange,
   onSelectionChange,
   messages,
@@ -1156,6 +1481,10 @@ function CenterPanel({
   isDirty = false,
 }: {
   latex: string;
+  activeFile: string;
+  highlightLine?: number | null;
+  synctexHighlight?: SynctexWordHighlight | null;
+  editorRef?: React.Ref<LatexCodeEditorHandle>;
   onLatexChange: (v: string) => void;
   onSelectionChange?: (v: string) => void;
   messages: ChatMessage[];
@@ -1196,7 +1525,7 @@ function CenterPanel({
               <AvatarImage src={arioAvatar} alt="" className="object-cover" />
               <AvatarFallback className="rounded-md text-[9px]">A</AvatarFallback>
             </Avatar>
-            <span>main.tex</span>
+            <span>{activeFile}</span>
             {isDirty && <span className="file-dirty-mark">*</span>}
           </div>
           <div className="flex items-center gap-0.5">
@@ -1238,10 +1567,13 @@ function CenterPanel({
       <div className="editor-workspace relative flex min-h-0 flex-1 flex-col overflow-hidden w-full">
         <div className="flex min-h-0 flex-1 w-full min-w-0">
           <LatexEditor
+            editorRef={editorRef}
             latex={latex}
             onLatexChange={onLatexChange}
             onSelectionChange={onSelectionChange}
             fullHeight
+            highlightLine={highlightLine}
+            synctexHighlight={synctexHighlight}
             reviewDiff={
               pendingSuggestion
                 ? {
