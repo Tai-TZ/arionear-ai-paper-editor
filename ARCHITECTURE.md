@@ -426,7 +426,7 @@ cd frontend && bun run dev
 | **P2** | Logic audit panel, peer-review response, OpenAlex, DOCX/PDF import |
 | **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export |
 
-Lộ trình chi tiết: [AutoResearchReferee.md](./AutoResearchReferee.md) và milestone team (ROADMAP.md — *planned*).
+Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · [AutoResearchReferee.md](./AutoResearchReferee.md)
 
 ---
 

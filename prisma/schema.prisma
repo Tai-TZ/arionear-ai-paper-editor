@@ -121,6 +121,7 @@ model User {
   institution    String?
   nativeLanguage String?   @map("native_language")
   researchField  String?   @map("research_field")
+  profileSettings Json     @default("{}") @map("profile_settings")
   role           UserRole  @default(RESEARCHER)
   passwordHash   String?   @map("password_hash")
   isActive       Boolean   @default(true) @map("is_active")

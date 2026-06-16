@@ -717,6 +717,174 @@
   background: var(--muted);
 }
 
+/* Researcher profile */
+.profile-shell {
+  --radius: 0.375rem;
+  font-family: var(--font-sans-ui);
+  -webkit-font-smoothing: antialiased;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.profile-sidebar {
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+}
+
+.profile-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.profile-hero-card {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--card) 92%, var(--primary) 8%) 0%,
+    var(--card) 55%
+  );
+  box-shadow: 0 4px 24px -12px color-mix(in oklch, var(--foreground) 12%, transparent);
+}
+
+.profile-completeness-bar {
+  width: 7rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.profile-completeness-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.35s ease;
+}
+
+.profile-section-nav {
+  background: color-mix(in oklch, var(--sidebar) 50%, transparent);
+}
+
+.profile-section-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  text-align: left;
+  color: var(--muted-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.profile-section-link:hover {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+
+.profile-section-link.is-active {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.profile-section-card {
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.profile-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 35%, transparent);
+}
+
+.profile-section-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .profile-section-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.profile-field-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.profile-field-hint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.profile-input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  font-size: 0.8125rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+.profile-input-readonly {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: var(--muted);
+}
+
+.profile-toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.profile-toggle-field.col-span-full,
+.profile-field.col-span-full {
+  grid-column: 1 / -1;
+}
+
+.profile-range {
+  accent-color: var(--primary);
+}
+
+.profile-save-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .theme-rail-btn {
   border-radius: 0.5rem 0 0 0.5rem !important;
 }

@@ -6,6 +6,7 @@ import {
   apiResetPassword,
   type AuthUser,
 } from "./auth-api";
+import { clearProfileCache } from "./researcher-profile";
 import { fetchDedupe, invalidateFetchKey, invalidateFetchPrefix } from "./api/fetch-dedupe";
 import { normalizeEmail, validateEmail, validateName, validatePassword } from "./auth-validation";
 
@@ -78,9 +79,11 @@ export function clearAllBrowserStorage() {
 export function signOut() {
   invalidateFetchKey("auth:me");
   invalidateFetchPrefix("papers:");
+  invalidateFetchPrefix("profile:");
   invalidateFetchPrefix("providers");
   invalidateFetchPrefix("compile:");
   invalidateFetchPrefix("session:");
+  clearProfileCache();
   clearAllBrowserStorage();
 }
 

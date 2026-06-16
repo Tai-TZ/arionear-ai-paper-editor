@@ -70,6 +70,8 @@ import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
 import { fetchDedupe } from "@/lib/api/fetch-dedupe";
+import { fetchResearcherProfile } from "@/lib/api/profile-api";
+import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 
 type EditorSearch = {
   projectId?: string;
@@ -277,6 +279,11 @@ function EditorPage() {
   const [compileError, setCompileError] = useState<string | null>(null);
   const [compileWarning, setCompileWarning] = useState<string | null>(null);
   const [autoCompile, setAutoCompile] = useState(false);
+  const [autoSave, setAutoSave] = useState(true);
+  const [synctexHighlightMs, setSynctexHighlightMs] = useState(5000);
+  const [integrityStrictness, setIntegrityStrictness] =
+    useState<ResearcherProfile["integrity_strictness"]>("standard");
+  const profilePrefsRef = useRef<ResearcherProfile | null>(getCachedProfile());
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
@@ -302,6 +309,35 @@ function EditorPage() {
     context?: string;
     latex?: string;
   } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchResearcherProfile()
+      .then((profile) => {
+        if (cancelled) return;
+        profilePrefsRef.current = profile;
+        setAutoCompile(profile.auto_compile);
+        setAutoSave(profile.auto_save);
+        setSynctexHighlightMs(profile.synctex_highlight_ms);
+        setIntegrityStrictness(profile.integrity_strictness);
+        setLlmProvider(profile.default_llm_provider);
+        if (profile.default_llm_model) setLlmModel(profile.default_llm_model);
+      })
+      .catch(() => {
+        const cached = getCachedProfile();
+        if (!cached || cancelled) return;
+        profilePrefsRef.current = cached;
+        setAutoCompile(cached.auto_compile);
+        setAutoSave(cached.auto_save);
+        setSynctexHighlightMs(cached.synctex_highlight_ms);
+        setIntegrityStrictness(cached.integrity_strictness);
+        setLlmProvider(cached.default_llm_provider);
+        if (cached.default_llm_model) setLlmModel(cached.default_llm_model);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!projectId) {
@@ -484,9 +520,13 @@ function EditorPage() {
     fetchProviders()
       .then((data) => {
         setProviders(data.providers);
-        setLlmProvider(data.default_provider);
-        const defaultP = data.providers.find((p) => p.id === data.default_provider);
-        if (defaultP) setLlmModel(defaultP.default_model);
+        const profile = profilePrefsRef.current;
+        const preferred = profile?.default_llm_provider ?? data.default_provider;
+        setLlmProvider(preferred);
+        const preferredModel = profile?.default_llm_model;
+        const providerInfo = data.providers.find((p) => p.id === preferred);
+        if (preferredModel) setLlmModel(preferredModel);
+        else if (providerInfo) setLlmModel(providerInfo.default_model);
       })
       .catch(() => {});
   }, []);
@@ -494,6 +534,14 @@ function EditorPage() {
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
+
+  useEffect(() => {
+    if (bootState !== "ready" || !projectId || !autoSave || !isDirty) return;
+    const timer = window.setTimeout(() => {
+      handleSave();
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [bootState, projectId, autoSave, isDirty, latex, handleSave]);
 
   useEffect(() => {
     if (chatLoading) {
@@ -595,9 +643,9 @@ function EditorPage() {
         if (synctexFlashRef.current !== flashToken) return;
         setHighlightLine(null);
         setSynctexHighlight(null);
-      }, 5000);
+      }, synctexHighlightMs);
     },
-    [latex],
+    [latex, synctexHighlightMs],
   );
 
   useEffect(() => {
@@ -829,7 +877,7 @@ function EditorPage() {
             showSplash ? " invisible" : ""
           }`}
         >
-      <ArionearMasthead className="hidden md:flex" />
+      <ArionearMasthead integrityStrictness={integrityStrictness} className="hidden md:flex" />
       <MobileHeader
         projectName={projectName}
         onUpload={() => fileInputRef.current?.click()}
@@ -995,8 +1043,20 @@ function EditorPage() {
   );
 }
 
-function ArionearMasthead({ className = "" }: { className?: string }) {
+function ArionearMasthead({
+  className = "",
+  integrityStrictness = "standard",
+}: {
+  className?: string;
+  integrityStrictness?: ResearcherProfile["integrity_strictness"];
+}) {
   const user = getSession();
+  const integrityLabel =
+    integrityStrictness === "strict"
+      ? "Strict"
+      : integrityStrictness === "relaxed"
+        ? "Relaxed"
+        : "On";
 
   return (
     <div
@@ -1011,6 +1071,10 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
           Projects
         </Link>
         <span className="opacity-40">·</span>
+        <Link to="/profile" className="hover:text-[color:var(--editorial-red)] transition-colors">
+          Profile
+        </Link>
+        <span className="opacity-40">·</span>
         <span>LaTeX Workspace</span>
       </div>
       <div className="flex items-center gap-3">
@@ -1023,7 +1087,9 @@ function ArionearMasthead({ className = "" }: { className?: string }) {
           </>
         )}
         <span className="hidden sm:inline opacity-70">{today}</span>
-        <span className="text-[color:var(--editorial-red)]">Integrity Guard · On</span>
+        <span className="text-[color:var(--editorial-red)]">
+          Integrity Guard · {integrityLabel}
+        </span>
       </div>
     </div>
   );
@@ -1786,6 +1852,21 @@ function ToolsPanel({
                 onCheckedChange={onAutoCompileChange}
                 aria-label="Auto-compile PDF"
               />
+            </div>
+
+            <div className="tools-setting-row">
+              <div className="tools-setting-copy">
+                <span className="tools-setting-label">Researcher profile</span>
+                <span className="tools-setting-hint">
+                  AI defaults, citation style, auto-save, and affiliation
+                </span>
+              </div>
+              <Link
+                to="/profile"
+                className="rounded-md border border-border/60 px-2.5 py-1 text-[11px] font-medium transition hover:bg-secondary"
+              >
+                Open
+              </Link>
             </div>
 
             <div className="tools-setting-row">
