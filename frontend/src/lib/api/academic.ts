@@ -1,5 +1,5 @@
-import { mapApiHttpError, toUserFacingMessage } from "./api-errors";
-import { fetchDedupe } from "./fetch-dedupe";
+import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
+import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 function resolveApiBase(): string {
   if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
@@ -14,7 +14,7 @@ function resolveApiBase(): string {
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai";
 
 export type IntegrityFlag = {
   code: string;
@@ -29,6 +29,49 @@ export type ProviderInfo = {
   models: string[];
 };
 
+export type ChatAiStepStatus = "pending" | "active" | "done" | "error";
+
+export type ChatAiStep = {
+  id: string;
+  label: string;
+  detail?: string;
+  status: ChatAiStepStatus;
+};
+
+export type ChatAiStatePayload = {
+  step_id: string;
+  status: "active" | "done";
+  label: string;
+  detail?: string;
+  task?: string;
+  section?: string;
+  elapsed_sec?: number;
+};
+
+export function applyAiState(
+  steps: ChatAiStep[],
+  payload: ChatAiStatePayload,
+): ChatAiStep[] {
+  const next = steps.map((step) =>
+    step.status === "active" && step.id !== payload.step_id
+      ? { ...step, status: "done" as const }
+      : step,
+  );
+  const step: ChatAiStep = {
+    id: payload.step_id,
+    label: payload.label,
+    detail: payload.detail,
+    status: payload.status === "done" ? "done" : "active",
+  };
+  const existing = next.findIndex((s) => s.id === payload.step_id);
+  if (existing >= 0) {
+    next[existing] = step;
+  } else {
+    next.push(step);
+  }
+  return next;
+}
+
 export type ChatResult = {
   response: string;
   analysis?: string;
@@ -37,9 +80,19 @@ export type ChatResult = {
   original_text?: string;
   diff?: string;
   apply_mode?: "selection" | "document";
+  revision_id?: string;
   integrity_flags?: IntegrityFlag[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];
+};
+
+export type RevisionRecord = {
+  id: string;
+  section: string;
+  original: string;
+  suggestion: string;
+  action: string;
+  created_at: string;
 };
 
 type LlmOptions = {
@@ -47,8 +100,51 @@ type LlmOptions = {
   llm_model?: string;
 };
 
+function buildChatRequestBody(
+  message: string,
+  opts: {
+    sessionId: string;
+    latexContent: string;
+    selection?: string;
+    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
+    integrity_strictness?: "relaxed" | "standard" | "strict";
+  } & LlmOptions,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    message,
+    latex_content: opts.latexContent,
+    selection: opts.selection ?? "",
+  };
+  if (opts.sessionId) body.session_id = opts.sessionId;
+  if (opts.task) body.task = opts.task;
+  if (opts.llm_provider) body.llm_provider = opts.llm_provider;
+  if (opts.llm_model?.trim()) body.llm_model = opts.llm_model.trim();
+  if (opts.integrity_strictness) body.integrity_strictness = opts.integrity_strictness;
+  return body;
+}
+
 const COMPILE_CONNECTION_MSG =
   "Không kết nối được backend. Chạy: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8000";
+
+const TRACE_STAGE_LABELS: Record<string, string> = {
+  request_received: "Nhận yêu cầu",
+  manuscript_parsed: "Đọc bản thảo",
+  intent_classified: "Phân loại ý định",
+  llm_stream_start: "Bắt đầu gọi LLM",
+  llm_first_token: "Token đầu tiên",
+  agent_start: "Chạy agent",
+  response_ready: "Hoàn tất",
+};
+
+function formatTraceActivity(stage: string, payload: Record<string, unknown>): string {
+  const label = TRACE_STAGE_LABELS[stage] ?? stage.replaceAll("_", " ");
+  const totalMs = typeof payload.total_ms === "number" ? payload.total_ms : 0;
+  const seconds = (totalMs / 1000).toFixed(1);
+  const intent = typeof payload.intent === "string" ? payload.intent : "";
+  const section = typeof payload.section === "string" ? payload.section : "";
+  const suffix = intent ? ` · ${intent}` : section ? ` · ${section}` : "";
+  return `${label}${suffix} · ${seconds}s`;
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -107,6 +203,7 @@ export async function syncSession(
 
 export type StreamChatCallbacks = {
   onActivity: (text: string) => void;
+  onState?: (state: ChatAiStatePayload) => void;
   onReasoning: (delta: string) => void;
   onToken: (delta: string) => void;
   onDone: (result: ChatResult) => void;
@@ -130,7 +227,8 @@ export async function streamChat(
     sessionId: string;
     latexContent: string;
     selection?: string;
-    task?: "style" | "structure" | "logic" | "citation" | "chat";
+    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
+    integrity_strictness?: "relaxed" | "standard" | "strict";
   } & LlmOptions,
   callbacks: StreamChatCallbacks,
   signal?: AbortSignal,
@@ -139,16 +237,12 @@ export async function streamChat(
   try {
     res = await fetch(`${API_BASE}/chat/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        session_id: opts.sessionId,
-        latex_content: opts.latexContent,
-        selection: opts.selection ?? "",
-        task: opts.task,
-        llm_provider: opts.llm_provider,
-        llm_model: opts.llm_model,
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+      body: JSON.stringify(buildChatRequestBody(message, opts)),
       signal,
     });
   } catch {
@@ -171,6 +265,12 @@ export async function streamChat(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let finished = false;
+
+  const onAbort = () => {
+    void reader.cancel().catch(() => {});
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
 
   const dispatch = (block: string) => {
     const parsed = parseSseBlock(block);
@@ -181,6 +281,32 @@ export async function streamChat(
         case "activity":
           if (typeof payload.text === "string") callbacks.onActivity(payload.text);
           break;
+        case "trace": {
+          const stage = typeof payload.stage === "string" ? payload.stage : "";
+          if (stage) {
+            callbacks.onActivity(formatTraceActivity(stage, payload));
+          }
+          break;
+        }
+        case "state": {
+          const stepId = typeof payload.step_id === "string" ? payload.step_id : "";
+          const status = payload.status === "done" ? "done" : "active";
+          const label = typeof payload.label === "string" ? payload.label : "";
+          if (stepId && label) {
+            const statePayload: ChatAiStatePayload = {
+              step_id: stepId,
+              status,
+              label,
+              detail: typeof payload.detail === "string" ? payload.detail : undefined,
+              task: typeof payload.task === "string" ? payload.task : undefined,
+              section: typeof payload.section === "string" ? payload.section : undefined,
+              elapsed_sec:
+                typeof payload.elapsed_sec === "number" ? payload.elapsed_sec : undefined,
+            };
+            callbacks.onState?.(statePayload);
+          }
+          break;
+        }
         case "reasoning":
           if (typeof payload.delta === "string") callbacks.onReasoning(payload.delta);
           break;
@@ -188,13 +314,15 @@ export async function streamChat(
           if (typeof payload.delta === "string") callbacks.onToken(payload.delta);
           break;
         case "done":
+          finished = true;
           callbacks.onDone(payload as ChatResult);
           break;
         case "error":
+          finished = true;
           callbacks.onError(
             typeof payload.message === "string"
-              ? toUserFacingMessage(new Error(payload.message))
-              : toUserFacingMessage(new Error("UNKNOWN")),
+              ? streamErrorMessage(payload.message)
+              : streamErrorMessage("UNKNOWN"),
           );
           break;
         default:
@@ -206,7 +334,15 @@ export async function streamChat(
   };
 
   while (true) {
-    const { done, value } = await reader.read();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch (err) {
+      if (signal?.aborted) return;
+      callbacks.onError(toUserFacingMessage(err));
+      return;
+    }
+    const { done, value } = chunk;
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const parts = buffer.split("\n\n");
@@ -216,6 +352,14 @@ export async function streamChat(
     }
   }
   if (buffer.trim()) dispatch(buffer);
+
+  if (!finished) {
+    if (signal?.aborted) return;
+    callbacks.onError(
+      streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
+    );
+  }
+  signal?.removeEventListener("abort", onAbort);
 }
 
 export async function sendChat(
@@ -224,20 +368,13 @@ export async function sendChat(
     sessionId: string;
     latexContent: string;
     selection?: string;
-    task?: "style" | "structure" | "logic" | "citation" | "chat";
+    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
+    integrity_strictness?: "relaxed" | "standard" | "strict";
   } & LlmOptions,
 ): Promise<ChatResult> {
   return apiFetch<ChatResult>("/chat", {
     method: "POST",
-    body: JSON.stringify({
-      message,
-      session_id: opts.sessionId,
-      latex_content: opts.latexContent,
-      selection: opts.selection ?? "",
-      task: opts.task,
-      llm_provider: opts.llm_provider,
-      llm_model: opts.llm_model,
-    }),
+    body: JSON.stringify(buildChatRequestBody(message, opts)),
   });
 }
 
@@ -269,13 +406,18 @@ export async function verifyCitations(
   sessionId: string,
   bibContent = "",
 ): Promise<{ results: Record<string, unknown>[]; summary: string }> {
-  return apiFetch("/citations/verify", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: sessionId,
-      bib_content: bibContent,
-    }),
-  });
+  const result = await apiFetch<{ results: Record<string, unknown>[]; summary: string }>(
+    "/citations/verify",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: sessionId,
+        bib_content: bibContent,
+      }),
+    },
+  );
+  invalidateFetchKey(`citations:${sessionId}`);
+  return result;
 }
 
 export type CompileAssetPayload = {
@@ -386,4 +528,23 @@ export async function revisionAction(
     method: "POST",
     body: JSON.stringify({ action }),
   });
+  invalidateFetchKey(`revisions:${sessionId}`);
+}
+
+export async function fetchRevisions(sessionId: string): Promise<RevisionRecord[]> {
+  const data = await fetchDedupe(`revisions:${sessionId}`, () =>
+    apiFetch<{ revisions: RevisionRecord[] }>(`/sessions/${sessionId}/revisions`),
+  );
+  return data.revisions ?? [];
+}
+
+export async function fetchCitationRegistry(sessionId: string): Promise<{
+  results: Record<string, unknown>[];
+  summary: string;
+}> {
+  return fetchDedupe(`citations:${sessionId}`, () =>
+    apiFetch<{ results: Record<string, unknown>[]; summary: string }>(
+      `/sessions/${sessionId}/citations`,
+    ),
+  );
 }

@@ -16,6 +16,21 @@ export default defineConfig({
         "/api/v1": {
           target: DEV_API_PROXY,
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, req) => {
+              if (req.url?.includes("/chat/stream")) {
+                proxyReq.setHeader("Accept", "text/event-stream");
+                proxyReq.setHeader("Cache-Control", "no-cache");
+              }
+            });
+            proxy.on("proxyRes", (proxyRes, req) => {
+              if (req.url?.includes("/chat/stream")) {
+                delete proxyRes.headers["content-length"];
+                proxyRes.headers["cache-control"] = "no-cache, no-transform";
+                proxyRes.headers["x-accel-buffering"] = "no";
+              }
+            });
+          },
         },
       },
     },

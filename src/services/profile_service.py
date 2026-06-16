@@ -26,7 +26,7 @@ DEFAULT_PROFILE_SETTINGS: dict[str, Any] = {
     "default_template": "imrad",
     "citation_style": "ieee",
     "writing_locale": "en-US",
-    "default_llm_provider": "openrouter",
+    "default_llm_provider": "zai",
     "default_llm_model": None,
     "rewrite_intensity": "light",
     "integrity_strictness": "standard",
@@ -114,8 +114,8 @@ def user_to_profile(user: User) -> ResearcherProfileResponse:
         writing_locale=_coerce_enum(settings.get("writing_locale"), "en-US", {"en-US", "en-GB"}),  # type: ignore[arg-type]
         default_llm_provider=_coerce_enum(
             settings.get("default_llm_provider"),
-            "openrouter",
-            {"openrouter", "openai", "anthropic"},
+            "zai",
+            {"openrouter", "openai", "anthropic", "zai"},
         ),  # type: ignore[arg-type]
         default_llm_model=settings.get("default_llm_model") or None,
         rewrite_intensity=_coerce_enum(

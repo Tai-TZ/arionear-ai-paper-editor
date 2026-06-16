@@ -11,7 +11,7 @@ IntegrityStrictness = Literal["relaxed", "standard", "strict"]
 CitationStyle = Literal["ieee", "apa", "vancouver", "chicago", "nature"]
 DefaultTemplate = Literal["imrad", "ieee", "acm", "springer", "blank"]
 WritingLocale = Literal["en-US", "en-GB"]
-LlmProviderPref = Literal["openrouter", "openai", "anthropic"]
+LlmProviderPref = Literal["openrouter", "openai", "anthropic", "zai"]
 
 
 class ResearcherProfileResponse(BaseModel):
@@ -34,7 +34,7 @@ class ResearcherProfileResponse(BaseModel):
     default_template: DefaultTemplate = "imrad"
     citation_style: CitationStyle = "ieee"
     writing_locale: WritingLocale = "en-US"
-    default_llm_provider: LlmProviderPref = "openrouter"
+    default_llm_provider: LlmProviderPref = "zai"
     default_llm_model: str | None = None
     rewrite_intensity: RewriteIntensity = "light"
     integrity_strictness: IntegrityStrictness = "standard"

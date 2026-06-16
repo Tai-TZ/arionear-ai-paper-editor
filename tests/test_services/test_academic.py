@@ -1,4 +1,9 @@
-from src.services.guardrails.integrity import build_diff, check_integrity, extract_numbers
+from src.services.guardrails.integrity import (
+    build_diff,
+    check_integrity,
+    extract_numbers,
+    has_blocking_flags,
+)
 from src.services.parser.latex import extract_cite_keys, parse_latex_sections
 
 
@@ -8,9 +13,17 @@ def test_extract_numbers():
 
 
 def test_numeric_drift_flag():
-    flags = check_integrity("F1 score is 92.4.", "F1 score is 95.0.")
+    flags = check_integrity("F1 score is 92.4.", "F1 score is 95.0.", scope="selection")
     codes = {f["code"] for f in flags}
     assert "numeric_drift" in codes or "numeric_removed" in codes
+    assert not any(f["severity"] == "error" for f in flags)
+
+
+def test_document_edit_skips_numeric_block():
+    original = r"\documentclass{article}\begin{document}Accuracy 92.4\end{document}"
+    suggestion = r"\documentclass{article}\begin{document}Accuracy 95.0\end{document}"
+    flags = check_integrity(original, suggestion, strictness="standard", scope="document")
+    assert not any(f.get("severity") == "error" for f in flags)
 
 
 def test_build_diff():

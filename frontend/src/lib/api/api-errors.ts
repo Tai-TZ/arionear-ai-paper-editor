@@ -56,6 +56,22 @@ export function toUserFacingMessage(error: unknown): string {
   return msg.length > 160 ? GENERIC_MSG : msg;
 }
 
+export function streamErrorMessage(message: string): string {
+  const m = message.toLowerCase();
+
+  if (m.includes("api key") || m.includes("chưa cấu hình")) {
+    return message;
+  }
+  if (m.includes("rerank") || m.includes("model llm không khả dụng")) {
+    return message;
+  }
+  if (m.includes("không thể gọi mô hình ai")) {
+    return message;
+  }
+
+  return toUserFacingMessage(new Error(message));
+}
+
 export function citationErrorMessage(): string {
   return CITATION_MSG;
 }
