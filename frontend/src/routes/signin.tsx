@@ -3,10 +3,12 @@ import { ArrowRight, Mail, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   AuthAlert,
+  AuthDivider,
   AuthField,
   AuthShell,
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
+import { AuthSsoButtons } from "@/components/auth/sso-buttons";
 import { isAuthenticated, loginUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
 
@@ -112,6 +114,10 @@ function SignInPage() {
           Sign in <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </AuthSubmitButton>
       </form>
+
+      <AuthDivider>or continue with Google</AuthDivider>
+
+      <AuthSsoButtons onError={setError} remember={remember} />
 
       <p className="mt-8 text-center text-sm font-serif-body">
         New to Arionear?{" "}

@@ -77,6 +77,18 @@ def _validate_orcid(value: str | None) -> str | None:
     return cleaned
 
 
+def apply_google_avatar_if_empty(user: User, avatar_url: str | None) -> None:
+    """Set profile avatar from Google SSO when the user has none yet."""
+    if not avatar_url or not avatar_url.strip():
+        return
+    url = avatar_url.strip()[:500]
+    settings = _normalize_settings(user.profile_settings)
+    if settings.get("avatar_url"):
+        return
+    settings["avatar_url"] = url
+    user.profile_settings = settings
+
+
 def user_to_profile(user: User) -> ResearcherProfileResponse:
     settings = _normalize_settings(user.profile_settings or {})
     updated = user.last_active_at or user.created_at

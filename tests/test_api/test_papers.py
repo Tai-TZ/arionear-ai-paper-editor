@@ -4,6 +4,7 @@ import pytest
 
 from src.config import get_settings
 from src.db.engine import init_db, reset_db_state
+from tests.test_api.auth_helpers import register_user_via_verification
 
 
 @pytest.fixture
@@ -29,12 +30,13 @@ def papers_db(monkeypatch):
 
 
 async def _register(client, email: str, name: str = "Test User") -> str:
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={"name": name, "email": email, "password": "SecurePass1"},
+    body = await register_user_via_verification(
+        client,
+        name=name,
+        email=email,
+        password="SecurePass1",
     )
-    assert reg.status_code == 200
-    return reg.json()["access_token"]
+    return body["access_token"]
 
 
 @pytest.mark.asyncio

@@ -76,7 +76,21 @@ class Settings(BaseSettings):
     auth_token_expire_hours: int = Field(default=24, ge=1, le=168)
     auth_token_remember_days: int = Field(default=30, ge=1, le=90)
     auth_reset_expire_minutes: int = Field(default=30, ge=5, le=120)
+    auth_signup_code_expire_minutes: int = Field(default=15, ge=5, le=60)
+    auth_signup_max_attempts: int = Field(default=5, ge=3, le=10)
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
     frontend_base_url: str = "http://localhost:8080"
+    backend_base_url: str = "http://127.0.0.1:8001"
+
+    # Google OAuth (SSO)
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_oauth_redirect_uri: str = ""
 
 
 @lru_cache

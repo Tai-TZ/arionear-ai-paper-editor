@@ -144,7 +144,7 @@ function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="profile-shell flex min-h-screen items-center justify-center">
+      <div className="profile-shell flex h-[100dvh] w-full items-center justify-center overflow-hidden">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -152,7 +152,7 @@ function ProfilePage() {
 
   if (loadError || !form) {
     return (
-      <div className="profile-shell flex min-h-screen flex-col items-center justify-center gap-4 px-4">
+      <div className="profile-shell flex h-[100dvh] w-full flex-col items-center justify-center gap-4 overflow-hidden px-4">
         <AlertCircle className="h-10 w-10 text-destructive" />
         <p className="text-sm text-muted-foreground">{loadError ?? t.loadError}</p>
         <Link to="/projects" className="text-sm text-primary hover:underline">
@@ -163,8 +163,8 @@ function ProfilePage() {
   }
 
   return (
-    <div className="profile-shell flex min-h-screen">
-      <aside className="profile-sidebar flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
+    <div className="profile-shell flex h-[100dvh] w-full overflow-hidden bg-background text-foreground">
+      <aside className="profile-sidebar flex h-full w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
         <div className="border-b border-border/50 px-4 py-4">
           <Link to="/" className="font-serif-display text-xl font-bold tracking-tight">
             Arionear
@@ -200,7 +200,7 @@ function ProfilePage() {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="profile-sticky-header flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-background/90 px-5 py-4 backdrop-blur-md md:px-8">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{t.pageTitle}</h1>

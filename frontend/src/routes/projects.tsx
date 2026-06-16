@@ -251,7 +251,7 @@ function ProjectsPage() {
         onChange={handleZipImport}
       />
 
-      <aside className="projects-sidebar flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
+      <aside className="projects-sidebar flex h-full w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar lg:w-64">
         <div className="border-b border-border/50 px-4 py-4">
           <Link to="/" className="font-serif-display text-xl font-bold tracking-tight">
             Arionear
