@@ -16,6 +16,7 @@ import { Route as SigninRouteImport } from './routes/signin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LatexGuideRouteImport } from './routes/latex-guide'
@@ -62,6 +63,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -204,6 +213,7 @@ export interface FileRouteTypes {
     | '/latex-guide'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/projects'
     | '/register'
     | '/reset-password'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/latex-guide'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/projects'
     | '/register'
     | '/reset-password'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/latex-guide'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/projects'
     | '/register'
     | '/reset-password'
@@ -268,6 +280,7 @@ export interface RootRouteChildren {
   LatexGuideRoute: typeof LatexGuideRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  ProfileRoute: typeof ProfileRoute
   ProjectsRoute: typeof ProjectsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -428,6 +448,7 @@ const rootRouteChildren: RootRouteChildren = {
   LatexGuideRoute: LatexGuideRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  ProfileRoute: ProfileRoute,
   ProjectsRoute: ProjectsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,

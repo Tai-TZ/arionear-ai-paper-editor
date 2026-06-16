@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.auth_routes import router as auth_router
 from src.api.paper_routes import router as papers_router
+from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.config import get_settings
 from src.db.engine import db_is_ready, init_db, is_db_enabled
@@ -56,6 +57,7 @@ app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(papers_router, prefix="/api/v1")
+app.include_router(profile_router, prefix="/api/v1")
 
 
 @app.get("/health")

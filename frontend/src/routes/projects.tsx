@@ -16,6 +16,7 @@ import {
   LogOut,
   User,
   Loader2,
+  UserCircle,
 } from "lucide-react";
 import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
@@ -37,6 +38,9 @@ import {
 } from "@/lib/project-store";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
+import { fetchResearcherProfile } from "@/lib/api/profile-api";
+import { initialsFromName, type ResearcherProfile } from "@/lib/researcher-profile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +79,7 @@ function ProjectsPage() {
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(() => getSession());
+  const [profile, setProfile] = useState<ResearcherProfile | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,9 +92,14 @@ function ProjectsPage() {
       if (cached && !cancelled) setUser(cached);
 
       try {
-        const [sessionUser, list] = await Promise.all([refreshSession(), fetchPapers()]);
+        const [sessionUser, list, researcherProfile] = await Promise.all([
+          refreshSession(),
+          fetchPapers(),
+          fetchResearcherProfile().catch(() => null),
+        ]);
         if (cancelled) return;
         if (sessionUser) setUser(sessionUser);
+        if (researcherProfile) setProfile(researcherProfile);
         setProjects(list);
       } catch (error) {
         if (!cancelled) {
@@ -250,20 +260,30 @@ function ProjectsPage() {
 
         <div className="p-3">
           {user ? (
-            <div className="rounded-xl border border-border/60 bg-card p-3.5">
+            <Link
+              to="/profile"
+              className="block rounded-xl border border-border/60 bg-card p-3.5 transition hover:border-primary/30 hover:shadow-sm"
+            >
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
+                <Avatar className="h-9 w-9">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={user.name} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                    {initialsFromName(user.name)}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{user.name}</p>
                   <p className="truncate text-[11px] text-muted-foreground">{user.email}</p>
                 </div>
               </div>
-              {user.affiliation && (
-                <p className="mt-2 text-[11px] text-muted-foreground truncate">{user.affiliation}</p>
+              {(profile?.affiliation ?? user.affiliation) && (
+                <p className="mt-2 truncate text-[11px] text-muted-foreground">
+                  {profile?.affiliation ?? user.affiliation}
+                </p>
               )}
-            </div>
+            </Link>
           ) : (
             <div className="rounded-xl border border-border/60 bg-card p-3.5 text-xs text-muted-foreground">
               Loading account…
@@ -271,11 +291,18 @@ function ProjectsPage() {
           )}
         </div>
 
-        <nav className="px-3">
+        <nav className="space-y-1 px-3">
           <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-medium">
             <FolderOpen className="h-4 w-4 text-primary" />
             Your Projects
           </div>
+          <Link
+            to="/profile"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-sidebar-accent hover:text-foreground"
+          >
+            <UserCircle className="h-4 w-4" />
+            Researcher Profile
+          </Link>
         </nav>
 
         <div className="mt-auto border-t border-border/50 p-3">

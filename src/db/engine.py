@@ -56,6 +56,13 @@ def init_db() -> bool:
     else:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            conn.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                    "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                )
+            )
+            conn.commit()
     _db_ready = True
     return True
 

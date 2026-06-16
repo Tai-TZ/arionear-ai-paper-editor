@@ -61,8 +61,25 @@ export function citationErrorMessage(): string {
 }
 
 export function mapApiHttpError(status: number, detail: unknown): string {
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const record = item as { msg?: string; loc?: unknown[] };
+        const field = Array.isArray(record.loc)
+          ? record.loc.filter((part) => typeof part === "string" && part !== "body").join(".")
+          : "";
+        const msg = typeof record.msg === "string" ? record.msg : null;
+        if (!msg) return null;
+        if (field === "name") return "Full name is required.";
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter((msg): msg is string => Boolean(msg));
+    if (messages.length) return messages[0];
+  }
+
   if (typeof detail === "string" && detail && !isTechnicalMessage(detail) && detail.length <= 160) {
-    if (status === 400) return detail;
+    if (status === 400 || status === 422) return detail;
     if (status < 500) return detail;
   }
   return mapHttpStatus(status);

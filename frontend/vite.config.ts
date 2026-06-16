@@ -6,7 +6,8 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-const DEV_API_PROXY = process.env.VITE_DEV_API_PROXY || "http://127.0.0.1:8001";
+// Default dev backend port is 8000 (override via VITE_DEV_API_PROXY).
+const DEV_API_PROXY = process.env.VITE_DEV_API_PROXY || "http://127.0.0.1:8000";
 
 export default defineConfig({
   vite: {

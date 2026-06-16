@@ -48,7 +48,7 @@ type LlmOptions = {
 };
 
 const COMPILE_CONNECTION_MSG =
-  "Không kết nối được backend. Chạy: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8001 (cổng 8000 có thể bị app khác chiếm).";
+  "Không kết nối được backend. Chạy: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8000";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
