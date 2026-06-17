@@ -2,10 +2,13 @@ import {
   apiFetchMe,
   apiForgotPassword,
   apiLogin,
-  apiRegister,
   apiResetPassword,
+  apiSendSignupCode,
+  apiVerifySignup,
+  getGoogleOAuthStartPath,
   type AuthUser,
 } from "./auth-api";
+import { clearProfileCache } from "./researcher-profile";
 import { fetchDedupe, invalidateFetchKey, invalidateFetchPrefix } from "./api/fetch-dedupe";
 import { normalizeEmail, validateEmail, validateName, validatePassword } from "./auth-validation";
 
@@ -78,9 +81,11 @@ export function clearAllBrowserStorage() {
 export function signOut() {
   invalidateFetchKey("auth:me");
   invalidateFetchPrefix("papers:");
+  invalidateFetchPrefix("profile:");
   invalidateFetchPrefix("providers");
   invalidateFetchPrefix("compile:");
   invalidateFetchPrefix("session:");
+  clearProfileCache();
   clearAllBrowserStorage();
 }
 
@@ -88,13 +93,24 @@ export function logoutUser() {
   signOut();
 }
 
-/** SSO is not implemented — stub prevents broken imports in legacy UI. */
-export type OAuthProvider = "google" | "github";
+/** Start Google OAuth — browser navigates to backend, then returns via /auth/google/callback. */
+export function startGoogleOAuth(options?: { returnTo?: string; remember?: boolean }): void {
+  if (typeof window === "undefined") return;
+  const path = getGoogleOAuthStartPath(options?.returnTo ?? "/projects", options?.remember ?? false);
+  window.location.assign(path);
+}
 
-export function loginWithOAuth(
-  _provider: OAuthProvider,
-): { ok: false; error: string } {
-  return { ok: false, error: "Single sign-on is not available yet. Use email and password." };
+export async function completeOAuthSession(
+  accessToken: string,
+  remember = false,
+): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+  invalidateFetchKey("auth:me");
+  const user = await apiFetchMe(accessToken);
+  if (!user) {
+    return { ok: false, error: "Could not verify your Google sign-in. Please try again." };
+  }
+  persistSession(user, accessToken, remember);
+  return { ok: true, user };
 }
 
 export function getAccessToken() {
@@ -109,12 +125,15 @@ export function isAuthenticated() {
   return Boolean(readToken() && readCachedUser());
 }
 
-export async function registerUser(input: {
+export async function sendSignupVerificationCode(input: {
   name: string;
   email: string;
   password: string;
   affiliation?: string;
-}): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+}): Promise<
+  | { ok: true; message: string; devVerificationCode?: string }
+  | { ok: false; error: string }
+> {
   const nameError = validateName(input.name);
   if (nameError) return { ok: false, error: nameError };
   const emailError = validateEmail(input.email);
@@ -122,12 +141,26 @@ export async function registerUser(input: {
   const pwError = validatePassword(input.password);
   if (pwError) return { ok: false, error: pwError };
 
-  const result = await apiRegister({
+  return apiSendSignupCode({
     name: input.name.trim(),
     email: normalizeEmail(input.email),
     password: input.password,
     affiliation: input.affiliation?.trim() || undefined,
   });
+}
+
+export async function verifySignupCode(
+  email: string,
+  code: string,
+): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+  const emailError = validateEmail(email);
+  if (emailError) return { ok: false, error: emailError };
+  const cleaned = code.trim();
+  if (!/^\d{6}$/.test(cleaned)) {
+    return { ok: false, error: "Please enter the 6-digit verification code." };
+  }
+
+  const result = await apiVerifySignup(normalizeEmail(email), cleaned);
   if (!result.ok) return result;
   persistSession(result.user, result.accessToken);
   return { ok: true, user: result.user };

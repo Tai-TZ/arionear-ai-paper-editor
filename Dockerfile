@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # ---- Stage 2: Production ----
 FROM python:3.11-slim
 
-# TeX Live — required for POST /api/v1/compile (PDF preview)
+# TeX Live — required for POST /api/v1/compile (PDF preview, Overleaf parity)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-latex-base \
     texlive-latex-recommended \
@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-bibtex-extra \
     texlive-science \
+    texlive-xetex \
+    texlive-luatex \
+    latexmk \
+    biber \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

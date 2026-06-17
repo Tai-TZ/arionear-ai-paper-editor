@@ -121,8 +121,10 @@ model User {
   institution    String?
   nativeLanguage String?   @map("native_language")
   researchField  String?   @map("research_field")
+  profileSettings Json     @default("{}") @map("profile_settings")
   role           UserRole  @default(RESEARCHER)
   passwordHash   String?   @map("password_hash")
+  googleSub      String?   @unique @map("google_sub")
   isActive       Boolean   @default(true) @map("is_active")
   createdAt      DateTime  @default(now()) @map("created_at")
   lastActiveAt   DateTime? @map("last_active_at")
@@ -147,6 +149,22 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+model SignupVerification {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String
+  fullName     String    @map("full_name")
+  institution  String?
+  passwordHash String    @map("password_hash")
+  codeHash     String    @map("code_hash")
+  expiresAt    DateTime  @map("expires_at")
+  usedAt       DateTime? @map("used_at")
+  attemptCount Int       @default(0) @map("attempt_count")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("signup_verifications")
 }
 
 model Paper {

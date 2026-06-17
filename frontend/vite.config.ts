@@ -6,7 +6,35 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Default dev backend port is 8000 (override via VITE_DEV_API_PROXY).
+const DEV_API_PROXY = process.env.VITE_DEV_API_PROXY || "http://127.0.0.1:8000";
+
 export default defineConfig({
+  vite: {
+    server: {
+      proxy: {
+        "/api/v1": {
+          target: DEV_API_PROXY,
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, req) => {
+              if (req.url?.includes("/chat/stream")) {
+                proxyReq.setHeader("Accept", "text/event-stream");
+                proxyReq.setHeader("Cache-Control", "no-cache");
+              }
+            });
+            proxy.on("proxyRes", (proxyRes, req) => {
+              if (req.url?.includes("/chat/stream")) {
+                delete proxyRes.headers["content-length"];
+                proxyRes.headers["cache-control"] = "no-cache, no-transform";
+                proxyRes.headers["x-accel-buffering"] = "no";
+              }
+            });
+          },
+        },
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

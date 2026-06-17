@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.config import LLMProvider
+
+ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
 
 
 class ChatRequest(BaseModel):
@@ -13,9 +15,24 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     latex_content: str = Field(default="", max_length=500000)
     selection: str = Field(default="", max_length=20000)
-    task: Literal["style", "structure", "logic", "citation", "chat"] | None = None
+    task: ChatTask | None = None
     llm_provider: LLMProvider | None = None
     llm_model: str | None = None
+    integrity_strictness: Literal["relaxed", "standard", "strict"] | None = None
+
+    @field_validator("llm_provider", "llm_model", "session_id", mode="before")
+    @classmethod
+    def _empty_optional_to_none(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        return value
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def _strip_message(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
 
 class IntegrityFlagSchema(BaseModel):
@@ -31,6 +48,8 @@ class ChatResponse(BaseModel):
     suggestion: str = ""
     original_text: str = ""
     diff: str = ""
+    apply_mode: Literal["selection", "document"] | None = None
+    revision_id: str = ""
     integrity_flags: list[IntegrityFlagSchema] = Field(default_factory=list)
     citation_results: list[dict] = Field(default_factory=list)
     structure_suggestions: list[dict] = Field(default_factory=list)
@@ -78,6 +97,19 @@ class RevisionAction(BaseModel):
     action: Literal["accepted", "rejected", "modified"]
 
 
+class RevisionRecordResponse(BaseModel):
+    id: str
+    section: str = ""
+    original: str
+    suggestion: str
+    action: str
+    created_at: datetime
+
+
+class RevisionsListResponse(BaseModel):
+    revisions: list[RevisionRecordResponse] = Field(default_factory=list)
+
+
 class CitationVerifyRequest(BaseModel):
     session_id: str
     bib_content: str = ""
@@ -88,11 +120,16 @@ class CitationVerifyResponse(BaseModel):
     summary: str
 
 
+class ModelOption(BaseModel):
+    id: str
+    label: str
+
+
 class ProviderInfo(BaseModel):
     id: str
     name: str
     default_model: str
-    models: list[str]
+    models: list[ModelOption]
 
 
 class ProvidersResponse(BaseModel):
@@ -105,8 +142,20 @@ class CompileAssetFile(BaseModel):
     content_base64: str = Field(..., min_length=1, max_length=50_000_000)
 
 
+class CompileEnginesInfo(BaseModel):
+    pdflatex: str | None = None
+    xelatex: str | None = None
+    lualatex: str | None = None
+    latex: str | None = None
+    latexmk: str | None = None
+    biber: str | None = None
+    bibtex: str | None = None
+
+
 class CompileRequest(BaseModel):
     latex: str = Field(..., min_length=1, max_length=500_000)
+    main_file: str = Field(default="main.tex", max_length=512)
+    compiler: Literal["auto", "pdflatex", "xelatex", "lualatex", "latex"] = "auto"
     assets: list[CompileAssetFile] = Field(default_factory=list)
 
 
@@ -116,12 +165,37 @@ class CompileResponse(BaseModel):
     log: str = ""
     error: str = ""
     engine: str = ""
+    compiler: str = ""
     warning: str = ""
+    synctex_base64: str = ""
+    main_file: str = "main.tex"
 
 
 class CompileStatusResponse(BaseModel):
     available: bool
     engine: str | None = None
+    engines: CompileEnginesInfo = Field(default_factory=CompileEnginesInfo)
+
+
+class SyncTeXLookupRequest(BaseModel):
+    synctex_base64: str = Field(..., min_length=1)
+    pdf_base64: str = Field(..., min_length=1)
+    page: int = Field(..., ge=1)
+    x: float = 0.0
+    y: float = 0.0
+    jobname: str = Field(default="main", max_length=128)
+    word: str = Field(default="", max_length=256)
+    context: str = Field(default="", max_length=512)
+    latex: str = Field(default="", max_length=2_000_000)
+
+
+class SyncTeXLookupResponse(BaseModel):
+    file: str = ""
+    line: int = 0
+    synctex_line: int = 0
+    column: int = -1
+    page: int = 0
+    found: bool = False
 
 
 class PaperCreate(BaseModel):

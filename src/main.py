@@ -1,13 +1,17 @@
 from contextlib import asynccontextmanager
 
+import inngest.fast_api
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.auth_routes import router as auth_router
 from src.api.paper_routes import router as papers_router
+from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.config import get_settings
 from src.db.engine import db_is_ready, init_db, is_db_enabled
+from src.inngest.client import inngest_client
+from src.inngest.functions import INNGEST_FUNCTIONS
 from src.services.sessions import refresh_session_store
 
 
@@ -26,6 +30,8 @@ async def lifespan(app: FastAPI):
             print(f"Database init failed, using in-memory store: {exc}")
     else:
         print("DATABASE_URL not set — using in-memory session store")
+    if settings.inngest_serve_enabled():
+        print("Inngest sync endpoint: /api/inngest")
     yield
     print("Shutting down...")
 
@@ -56,6 +62,10 @@ app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(papers_router, prefix="/api/v1")
+app.include_router(profile_router, prefix="/api/v1")
+
+if settings.inngest_serve_enabled():
+    inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)
 
 
 @app.get("/health")

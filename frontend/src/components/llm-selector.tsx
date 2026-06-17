@@ -60,8 +60,8 @@ export function LlmSelector({
           aria-label="LLM model"
         >
           {models.map((m) => (
-            <option key={m} value={m}>
-              {m.split("/").pop() ?? m}
+            <option key={m.id} value={m.id}>
+              {m.label}
             </option>
           ))}
         </select>

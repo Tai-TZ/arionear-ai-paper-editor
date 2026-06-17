@@ -3,21 +3,22 @@ import {
   ArrowUp,
   AudioLines,
   ChevronDown,
+  ChevronUp,
   Copy,
   PanelRightClose,
   Plus,
-  RefreshCw,
   Square,
 } from "lucide-react";
 
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
-import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
+import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   activities?: string[];
+  aiSteps?: ChatAiStep[];
   reasoning?: string;
   isStreaming?: boolean;
 };
@@ -26,11 +27,11 @@ export function hasChatHistory(messages: ChatMessage[]): boolean {
   return messages.some((m) => m.role === "user");
 }
 
-const CHAT_COLLAPSED_H = 52;
-const CHAT_MIN_H = 260;
-const CHAT_DEFAULT_RATIO = 0.42;
+const CHAT_DOCK_COLLAPSED_H = 92;
+const CHAT_MIN_H = 220;
+const CHAT_DEFAULT_RATIO = 0.38;
 
-type ChatOverlayProps = {
+type ChatDockProps = {
   open: boolean;
   onClose: () => void;
   onOpen: () => void;
@@ -38,19 +39,24 @@ type ChatOverlayProps = {
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   liveActivity?: string | null;
+  streamAiSteps?: ChatAiStep[];
   providers?: ProviderInfo[];
   llmProvider?: LLMProvider;
   llmModel?: string;
   onProviderChange?: (p: LLMProvider) => void;
   onModelChange?: (m: string) => void;
-  onHeightChange?: (h: number) => void;
   onRefreshProviders?: () => void;
 };
 
-export function ChatOverlay({
+export function ChatOverlay(props: ChatDockProps) {
+  return <ChatDock {...props} />;
+}
+
+export function ChatDock({
   open,
   onClose,
   onOpen,
@@ -58,38 +64,36 @@ export function ChatOverlay({
   chatInput,
   onChatInputChange,
   onSend,
+  onStop,
   chatEndRef,
   chatLoading,
   liveActivity,
+  streamAiSteps = [],
   providers,
   llmProvider,
   llmModel,
   onProviderChange,
   onModelChange,
-  onHeightChange,
   onRefreshProviders,
-}: ChatOverlayProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [panelH, setPanelH] = useState(360);
+}: ChatDockProps) {
+  const dockRef = useRef<HTMLElement>(null);
+  const [panelH, setPanelH] = useState(300);
   const initializedRef = useRef(false);
   const conversationStarted = hasChatHistory(messages);
 
   const clampHeight = useCallback((h: number) => {
-    const max = rootRef.current
-      ? Math.round(rootRef.current.clientHeight * 0.88)
-      : 560;
+    const max = dockRef.current?.parentElement
+      ? Math.round(dockRef.current.parentElement.clientHeight * 0.55)
+      : 480;
     return Math.min(Math.max(h, CHAT_MIN_H), Math.max(max, CHAT_MIN_H));
   }, []);
 
   useEffect(() => {
-    if (!open || initializedRef.current || !rootRef.current) return;
+    if (!open || initializedRef.current || !dockRef.current?.parentElement) return;
     initializedRef.current = true;
-    setPanelH(clampHeight(Math.round(rootRef.current.clientHeight * CHAT_DEFAULT_RATIO)));
+    const parentH = dockRef.current.parentElement.clientHeight;
+    setPanelH(clampHeight(Math.round(parentH * CHAT_DEFAULT_RATIO)));
   }, [open, clampHeight]);
-
-  useEffect(() => {
-    onHeightChange?.(open ? panelH : CHAT_COLLAPSED_H);
-  }, [open, panelH, onHeightChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -97,11 +101,7 @@ export function ChatOverlay({
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [open, chatEndRef]);
-
-  const openPanelFromInput = () => {
-    if (!open && conversationStarted) onOpen();
-  };
+  }, [open, messages, chatLoading, liveActivity, chatEndRef]);
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -124,72 +124,47 @@ export function ChatOverlay({
     window.addEventListener("mouseup", onUp);
   };
 
+  const canUseLlm = Boolean(
+    providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
+  );
+
   const handleSend = () => {
-    if (!chatInput.trim() || chatLoading) return;
-    if (!open) onOpen();
+    if (!chatInput.trim() || chatLoading || !canUseLlm) return;
     onSend();
   };
 
-  return (
-    <div ref={rootRef} className="chat-overlay-root pointer-events-none absolute inset-0 z-20">
-      <div
-        className="chat-overlay-panel pointer-events-auto absolute inset-x-4 bottom-4 flex flex-col overflow-hidden"
-        data-open={open}
-        style={{ height: open ? panelH : CHAT_COLLAPSED_H }}
-      >
-        <div className="chat-overlay-messages-section flex min-h-0 flex-1 flex-col overflow-hidden">
-          <button
-            type="button"
-            className="chat-resize-handle"
-            onMouseDown={startResize}
-            aria-label="Resize chat panel"
-            tabIndex={open ? 0 : -1}
-          >
-            <span className="chat-resize-handle-bar" />
-          </button>
+  const openFromComposer = () => {
+    if (!open && conversationStarted) onOpen();
+  };
 
-          <div className="chat-overlay-toolbar shrink-0">
+  return (
+    <aside
+      ref={dockRef}
+      className="chat-dock shrink-0"
+      data-open={open}
+      style={open ? { height: panelH + CHAT_DOCK_COLLAPSED_H } : undefined}
+    >
+      {open && (
+        <div className="chat-dock-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="chat-dock-toolbar shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="chat-overlay-icon-btn"
-              aria-label="Minimize chat"
+              className="chat-dock-icon-btn"
+              aria-label="Thu gọn chat"
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-
+            <div className="chat-dock-title">
+              <img src={arioAvatar} alt="" className="chat-dock-title-avatar" />
+              <span>Ario</span>
+            </div>
             <div className="flex-1" />
-
-            {providers &&
-              providers.length > 0 &&
-              llmProvider &&
-              llmModel &&
-              onProviderChange &&
-              onModelChange && (
-                <LlmSelector
-                  providers={providers}
-                  llmProvider={llmProvider}
-                  llmModel={llmModel}
-                  onProviderChange={onProviderChange}
-                  onModelChange={onModelChange}
-                  compact
-                  variant="light"
-                />
-              )}
-
             <button
               type="button"
-              className="chat-overlay-icon-btn"
-              aria-label="Refresh providers"
-              onClick={onRefreshProviders}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
+              className="chat-dock-icon-btn"
+              aria-label="Đóng chat"
               onClick={onClose}
-              className="chat-overlay-icon-btn"
-              aria-label="Close chat panel"
             >
               <PanelRightClose className="h-3.5 w-3.5" />
             </button>
@@ -201,34 +176,153 @@ export function ChatOverlay({
             chatLoading={chatLoading}
             liveActivity={liveActivity}
           />
+
+          <button
+            type="button"
+            className="chat-dock-resize-handle"
+            onMouseDown={startResize}
+            aria-label="Kéo để đổi chiều cao chat"
+          >
+            <span className="chat-dock-resize-bar" />
+          </button>
+        </div>
+      )}
+
+      <div className="chat-dock-composer shrink-0">
+        {!open && conversationStarted && !chatLoading && (
+          <button type="button" className="chat-dock-expand-btn" onClick={onOpen}>
+            <ChevronUp className="h-3.5 w-3.5" />
+            <span>Xem lịch sử chat</span>
+          </button>
+        )}
+
+        {chatLoading && !open && (
+          <ChatProgressStrip activity={liveActivity} steps={streamAiSteps} />
+        )}
+
+        <div className="chat-dock-llm-bar">
+          <span className="chat-dock-llm-label">AI</span>
+          {canUseLlm ? (
+            <LlmSelector
+              providers={providers!}
+              llmProvider={llmProvider!}
+              llmModel={llmModel!}
+              onProviderChange={onProviderChange!}
+              onModelChange={onModelChange!}
+              onRefresh={onRefreshProviders}
+              compact
+              variant="light"
+            />
+          ) : (
+            <p className="chat-dock-llm-hint">
+              Thêm <code>OPENROUTER_API_KEY</code> (hoặc OpenAI/Anthropic) vào <code>.env</code> rồi restart
+              backend.
+            </p>
+          )}
         </div>
 
-        <div
-          className={`chat-overlay-input-wrap shrink-0 ${open ? "" : "chat-overlay-input-wrap-collapsed"}`}
-          onMouseDown={(e) => {
-            if (!open && conversationStarted && e.target === e.currentTarget) {
-              onOpen();
-            }
-          }}
-        >
-          <ChatInput
-            chatInput={chatInput}
-            onChatInputChange={onChatInputChange}
-            onSend={handleSend}
-            onActivate={openPanelFromInput}
-            disabled={chatLoading}
-            loading={chatLoading}
-            placeholder="Ask anything"
-            collapsed={!open}
-          />
-        </div>
+        <ChatInput
+          chatInput={chatInput}
+          onChatInputChange={onChatInputChange}
+          onSend={handleSend}
+          onStop={onStop}
+          onActivate={openFromComposer}
+          disabled={!canUseLlm}
+          loading={chatLoading}
+          placeholder={canUseLlm ? "Hỏi Ario bất cứ điều gì…" : "Cấu hình API key để dùng chat"}
+        />
       </div>
-    </div>
+    </aside>
   );
 }
 
 function copyText(text: string) {
   void navigator.clipboard?.writeText(text);
+}
+
+function assistantHasBody(message: ChatMessage): boolean {
+  return Boolean(
+    message.content?.trim() ||
+      message.reasoning?.trim() ||
+      (message.activities?.length ?? 0) > 0 ||
+      (message.aiSteps?.length ?? 0) > 0,
+  );
+}
+
+function ChatProgressStrip({
+  activity,
+  steps,
+}: {
+  activity?: string | null;
+  steps: ChatAiStep[];
+}) {
+  const active = steps.find((s) => s.status === "active");
+  const label = active?.label ?? activity ?? "Đang xử lý…";
+  const detail = active?.detail ?? "";
+
+  return (
+    <div className="chat-progress-strip" role="status" aria-live="polite" aria-atomic="true">
+      <div className="chat-progress-strip-head">
+        <span className="chat-progress-strip-dot" aria-hidden />
+        <span className="chat-progress-strip-label">{label}</span>
+        {detail ? <span className="chat-progress-strip-detail">{detail}</span> : null}
+      </div>
+      {steps.length > 0 && (
+        <ol className="chat-progress-mini-steps">
+          {steps.map((step) => (
+            <li
+              key={step.id}
+              className={`chat-progress-mini-step chat-progress-mini-step--${step.status}`}
+              title={step.detail ? `${step.label} — ${step.detail}` : step.label}
+            >
+              <span className="chat-progress-mini-icon" aria-hidden>
+                {step.status === "done" ? "✓" : step.status === "active" ? "●" : "○"}
+              </span>
+              <span className="chat-progress-mini-label">{step.label}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function ChatThinkingIndicator({ label }: { label: string }) {
+  return (
+    <div className="chat-thinking-row">
+      <span className="chat-thinking-dot" aria-hidden />
+      <span className="chat-thinking-label">{label}</span>
+    </div>
+  );
+}
+
+function ChatAiStatePanel({ steps }: { steps: ChatAiStep[] }) {
+  if (!steps.length) return null;
+
+  return (
+    <div className="chat-ai-state" role="status" aria-live="polite" aria-atomic="false">
+      <p className="chat-ai-state-title">Tiến trình xử lý</p>
+      <ol className="chat-ai-steps">
+        {steps.map((step) => (
+          <li
+            key={step.id}
+            className={`chat-ai-step chat-ai-step--${step.status}`}
+            data-status={step.status}
+          >
+            <span className="chat-ai-step-icon" aria-hidden>
+              {step.status === "done" ? "✓" : step.status === "active" ? "●" : "○"}
+            </span>
+            <span className="chat-ai-step-body">
+              <span className="chat-ai-step-label">{step.label}</span>
+              {step.detail ? (
+                <span className="chat-ai-step-detail">{step.detail}</span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
 export function ChatMessages({
@@ -242,11 +336,19 @@ export function ChatMessages({
   chatLoading?: boolean;
   liveActivity?: string | null;
 }) {
-  const lastAssistantStreaming = messages.at(-1)?.role === "assistant" && messages.at(-1)?.isStreaming;
+  const visibleMessages = messages.filter(
+    (m) => m.role === "user" || assistantHasBody(m) || m.isStreaming,
+  );
 
   return (
-    <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-4">
-      {messages.map((m, i) => {
+    <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3">
+      {visibleMessages.length === 0 && !chatLoading && (
+        <p className="chat-dock-empty-hint">
+          Chọn provider và model phía dưới, sau đó gửi câu hỏi hoặc yêu cầu chỉnh sửa LaTeX.
+        </p>
+      )}
+
+      {visibleMessages.map((m, i) => {
         if (m.role === "user") {
           return (
             <div key={i} className="chat-message-row chat-user-row">
@@ -265,47 +367,61 @@ export function ChatMessages({
           );
         }
 
+        const isLast = i === visibleMessages.length - 1;
+        const waitingForFirstChunk = m.isStreaming && !assistantHasBody(m);
+        const hasAiSteps = (m.aiSteps?.length ?? 0) > 0;
+        const thinkingLabel =
+          (isLast && liveActivity) ||
+          m.aiSteps?.find((s) => s.status === "active")?.label ||
+          m.activities?.[m.activities.length - 1] ||
+          "Đang xử lý…";
+
         return (
           <div key={i} className="chat-message-row chat-assistant-row">
             <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
-            <div className="chat-assistant-content min-w-0 flex-1">
-              {(m.activities?.length ?? 0) > 0 && (
-                <ul className="chat-activity-feed mb-2 space-y-0.5">
-                  {m.activities!.map((line, j) => (
-                    <li
-                      key={j}
-                      className={`font-mono text-[10px] leading-snug text-[var(--chat-muted)] ${
-                        m.isStreaming && j === m.activities!.length - 1 ? "chat-activity-live" : ""
-                      }`}
-                    >
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {m.reasoning && (
-                <p className="chat-reasoning-block mb-2 text-[11px] italic leading-snug text-[var(--chat-muted)]">
-                  {m.reasoning}
-                  {m.isStreaming && !m.content && (
-                    <span className="chat-stream-cursor" aria-hidden />
-                  )}
-                </p>
-              )}
-              {m.content && <p className="chat-assistant-text">{m.content}</p>}
-              {m.isStreaming && m.content && (
-                <span className="chat-stream-cursor" aria-hidden />
-              )}
-            </div>
+            {waitingForFirstChunk ? (
+              <ChatThinkingIndicator label={thinkingLabel} />
+            ) : (
+              <div className="chat-assistant-content min-w-0 flex-1">
+                {hasAiSteps && (
+                  <ChatAiStatePanel steps={m.aiSteps!} />
+                )}
+                {!hasAiSteps && (m.activities?.length ?? 0) > 0 && (
+                  <ul className="chat-activity-feed mb-2 space-y-0.5">
+                    {m.activities!.map((line, j) => (
+                      <li
+                        key={j}
+                        className={`font-mono text-[10px] leading-snug text-[var(--chat-muted)] ${
+                          m.isStreaming && j === m.activities!.length - 1
+                            ? "chat-activity-live"
+                            : ""
+                        }`}
+                      >
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {m.reasoning && (
+                  <p className="chat-reasoning-block mb-2 text-[11px] italic leading-snug text-[var(--chat-muted)]">
+                    {m.reasoning}
+                    {m.isStreaming && !m.content && (
+                      <span className="chat-stream-cursor" aria-hidden />
+                    )}
+                  </p>
+                )}
+                {m.content && <p className="chat-assistant-text">{m.content}</p>}
+                {m.isStreaming && m.content && (
+                  <span className="chat-stream-cursor" aria-hidden />
+                )}
+                {m.isStreaming && assistantHasBody(m) && !m.content && !m.reasoning && (
+                  <ChatThinkingIndicator label={thinkingLabel} />
+                )}
+              </div>
+            )}
           </div>
         );
       })}
-
-      {chatLoading && !lastAssistantStreaming && (
-        <div className="chat-thinking-row">
-          <span className="chat-thinking-dot" aria-hidden />
-          <span className="chat-thinking-label">{liveActivity || "Thinking"}</span>
-        </div>
-      )}
 
       <div ref={chatEndRef} />
     </div>
@@ -316,40 +432,41 @@ export function ChatInput({
   chatInput,
   onChatInputChange,
   onSend,
+  onStop,
   onActivate,
   placeholder,
   disabled,
   loading = false,
-  collapsed = false,
 }: {
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   onActivate?: () => void;
   placeholder: string;
   disabled?: boolean;
   loading?: boolean;
-  collapsed?: boolean;
 }) {
   const canSend = chatInput.trim().length > 0 && !disabled;
 
+  const handlePrimaryAction = () => {
+    if (loading) {
+      onStop?.();
+      return;
+    }
+    onSend();
+  };
+
   return (
-    <div
-      className={`chat-input-shell ${collapsed ? "chat-input-shell-collapsed" : ""}`}
-      onMouseDown={() => {
-        if (collapsed) onActivate?.();
-      }}
-    >
+    <div className="chat-input-shell">
       <textarea
         value={chatInput}
         onChange={(e) => onChatInputChange(e.target.value)}
-        onFocus={() => {
-          if (collapsed) onActivate?.();
-        }}
+        onFocus={() => onActivate?.()}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            onSend();
+            if (!loading) onSend();
           }
         }}
         placeholder={placeholder}
@@ -365,10 +482,10 @@ export function ChatInput({
         </button>
         <button
           type="button"
-          onClick={onSend}
-          disabled={!canSend && !loading}
+          onClick={handlePrimaryAction}
+          disabled={!loading && !canSend}
           className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
-          aria-label={loading ? "Generating" : "Send message"}
+          aria-label={loading ? "Dừng xử lý" : "Send message"}
         >
           {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-4 w-4" />}
         </button>
