@@ -86,7 +86,6 @@ router:
 
     Rules:
     - "viết lại văn phong", "polish abstract", "học thuật hơn", "chỉnh sửa abstract" → style (NOT edit).
-    - "sửa lại phần introduction", "mở rộng abstract", "dài hơn", "rút gọn methods" → edit (apply to file).
     - "đổi tên", "thay author", "sửa title", "replace X with Y" → edit.
     - "kiểm tra cấu trúc", "outline", "IMRAD" → structure or template if they want skeleton.
     - Prefer style/edit over chat when the draft is open and the request implies changing text.

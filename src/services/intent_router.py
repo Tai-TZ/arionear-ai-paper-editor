@@ -31,14 +31,6 @@ _RENAME_EDIT_RE = re.compile(
     r"replace\s+.+\s+with|change\s+.+\s+to",
     re.IGNORECASE,
 )
-_CONTENT_EDIT_RE = re.compile(
-    r"sửa\s*lại|"
-    r"mở\s*r[ộo]ng|dài\s*hơn|ngắn\s*(lại|hơn)?|rút\s*gọn|"
-    r"expand|lengthen|extend|shorten|"
-    r"sửa\s+(phần|section|mục|phan)|"
-    r"viết\s+lại\s+(phần|section|mục|phan)",
-    re.IGNORECASE,
-)
 _STRUCTURE_RE = re.compile(
     r"cấu\s*trúc|structure|outline|dàn\s*bài|dan\s*bai|imrad|khung\s*bài|review\s*structure",
     re.IGNORECASE,
@@ -102,7 +94,7 @@ def _fallback_intent(query: str, has_latex: bool, has_selection: bool) -> Intent
     if _STYLE_RE.search(q):
         return IntentResult(action="style", scope="selection" if has_selection else "document")
 
-    if _RENAME_EDIT_RE.search(q) or _CONTENT_EDIT_RE.search(q):
+    if _RENAME_EDIT_RE.search(q):
         return IntentResult(action="edit", scope="selection" if has_selection else "document")
 
     if re.search(r"chỉnh\s*sửa", q, re.IGNORECASE):
@@ -134,8 +126,6 @@ def _should_use_fast_intent(query: str, has_latex: bool) -> bool:
         return True
     if _STYLE_RE.search(q) or _STRUCTURE_RE.search(q) or _CITATION_RE.search(q) or _TEMPLATE_RE.search(q):
         return True
-    if _CONTENT_EDIT_RE.search(q):
-        return True
     return bool(
         re.search(
             r"đổi\s+.+\s+thành|thay\s+.+\s+bằng|sửa\s+.+\s+thành|chỉnh\s+.+\s+thành",
@@ -143,6 +133,7 @@ def _should_use_fast_intent(query: str, has_latex: bool) -> bool:
             re.IGNORECASE,
         )
         or re.search(r"replace\s+.+\s+with|change\s+.+\s+to", q, re.IGNORECASE)
+        or (_STYLE_RE.search(q) is not None)
         or re.search(r"chỉnh\s*sửa", q, re.IGNORECASE)
     )
 
