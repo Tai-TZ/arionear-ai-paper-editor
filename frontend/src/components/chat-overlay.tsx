@@ -215,7 +215,8 @@ export function ChatDock({
             />
           ) : (
             <p className="chat-dock-llm-hint">
-              Thêm <code>ZAI_API_KEY</code> vào <code>.env</code> rồi tải lại.
+              Thêm <code>OPENROUTER_API_KEY</code> (hoặc OpenAI/Anthropic) vào <code>.env</code> rồi restart
+              backend.
             </p>
           )}
         </div>

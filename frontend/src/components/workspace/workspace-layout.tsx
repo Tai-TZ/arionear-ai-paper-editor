@@ -11,6 +11,12 @@ import type { ResearcherProfile } from "@/lib/researcher-profile";
 /** Set false to show Import in the projects header again. */
 export const SHOW_PROJECTS_IMPORT = false;
 
+/** Set false to disable Upload LaTeX on the projects empty state. */
+export const SHOW_PROJECTS_UPLOAD = false;
+
+/** Set false to hide import/upload controls in the editor sidebar. */
+export const SHOW_EDITOR_IMPORT = false;
+
 type WorkspaceLayoutProps = {
   active: WorkspaceNav;
   user: AuthUser | null;

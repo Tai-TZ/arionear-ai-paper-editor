@@ -120,11 +120,16 @@ class CitationVerifyResponse(BaseModel):
     summary: str
 
 
+class ModelOption(BaseModel):
+    id: str
+    label: str
+
+
 class ProviderInfo(BaseModel):
     id: str
     name: str
     default_model: str
-    models: list[str]
+    models: list[ModelOption]
 
 
 class ProvidersResponse(BaseModel):

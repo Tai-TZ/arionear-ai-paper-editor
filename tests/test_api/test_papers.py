@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import pytest
 
@@ -79,6 +80,46 @@ async def test_papers_crud_isolated_per_user(client, papers_db):
     assert deleted.status_code == 204
 
     empty = await client.get("/api/v1/papers", headers=headers_a)
+    assert empty.json() == []
+
+
+@pytest.mark.asyncio
+async def test_delete_paper_with_suggestions(client, papers_db):
+    from src.db.engine import get_db
+    from src.db.models import Suggestion, SuggestionStatus, SuggestionType, User
+    from src.services.paper_service import get_paper
+
+    token = await _register(client, "del-sugg@uni.edu", "Delete Sugg User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create = await client.post(
+        "/api/v1/papers",
+        headers=headers,
+        json={"name": "Paper with suggestions", "latex": "\\documentclass{article}"},
+    )
+    assert create.status_code == 201
+    paper_id = create.json()["id"]
+
+    with get_db() as db:
+        user = db.query(User).filter(User.email == "del-sugg@uni.edu").one()
+        paper = get_paper(db, user.id, uuid.UUID(paper_id))
+        assert paper is not None
+        ai_session = paper.ai_sessions[0]
+        db.add(
+            Suggestion(
+                session_id=ai_session.id,
+                suggestion_type=SuggestionType.STYLE,
+                original_text="original",
+                suggested_text="suggested",
+                status=SuggestionStatus.PENDING,
+            )
+        )
+        db.commit()
+
+    deleted = await client.delete(f"/api/v1/papers/{paper_id}", headers=headers)
+    assert deleted.status_code == 204
+
+    empty = await client.get("/api/v1/papers", headers=headers)
     assert empty.json() == []
 
 

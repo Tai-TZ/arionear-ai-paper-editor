@@ -11,3 +11,10 @@ def test_fallback_style_beats_edit_for_abstract_polish():
     query = "Chỉnh sửa lại phần Abstract để cho văn phong học thuật hơn nữa nhé"
     result = _fallback_intent(query, True, False)
     assert result.action == "style"
+
+
+def test_fallback_intent_expand_introduction():
+    query = "sửa lại phần introduction dài hơn nữa"
+    result = _fallback_intent(query, True, False)
+    assert result.action == "edit"
+    assert result.scope == "document"

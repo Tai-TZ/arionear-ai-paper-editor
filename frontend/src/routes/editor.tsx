@@ -81,6 +81,7 @@ import { useLatexHistory } from "@/lib/use-latex-history";
 import { fetchDedupe } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
+import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 
 type EditorSearch = {
   projectId?: string;
@@ -281,7 +282,7 @@ function EditorPage() {
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("zai");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -527,12 +528,19 @@ function EditorPage() {
       .then((data) => {
         setProviders(data.providers);
         const profile = profilePrefsRef.current;
-        const preferred = profile?.default_llm_provider ?? data.default_provider;
-        setLlmProvider(preferred);
-        const preferredModel = profile?.default_llm_model;
+        const profileProvider = profile?.default_llm_provider;
+        const preferred =
+          profileProvider && data.providers.some((p) => p.id === profileProvider)
+            ? profileProvider
+            : data.default_provider;
+        setLlmProvider(preferred as LLMProvider);
         const providerInfo = data.providers.find((p) => p.id === preferred);
-        if (preferredModel) setLlmModel(preferredModel);
-        else if (providerInfo) setLlmModel(providerInfo.default_model);
+        const preferredModel = profile?.default_llm_model;
+        if (preferredModel && providerInfo?.models.some((m) => m.id === preferredModel)) {
+          setLlmModel(preferredModel);
+        } else if (providerInfo) {
+          setLlmModel(providerInfo.default_model);
+        }
       })
       .catch(() => {});
   }, []);
@@ -728,7 +736,7 @@ function EditorPage() {
   const handleSend = async () => {
     const text = chatInput.trim();
     if (!text || chatLoading || !projectId) return;
-    setChatOpen(false);
+    setChatOpen(true);
     chatAbortRef.current?.abort();
     const abort = new AbortController();
     chatAbortRef.current = abort;
@@ -827,7 +835,6 @@ function EditorPage() {
                 applyMode: result.apply_mode ?? "selection",
                 revisionId: result.revision_id || undefined,
               });
-              setChatOpen(false);
             }
             if (result.citation_results?.length) {
               setCitationResults(result.citation_results);
@@ -1218,12 +1225,16 @@ function MobileHeader({
         <Settings className="h-4 w-4" />
       </Link>
       <span className="text-sm font-medium truncate px-2">{projectName}</span>
-      <button
-        onClick={onUpload}
-        className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
-      >
-        Upload
-      </button>
+      {SHOW_EDITOR_IMPORT ? (
+        <button
+          onClick={onUpload}
+          className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
+        >
+          Upload
+        </button>
+      ) : (
+        <div className="w-16 shrink-0" aria-hidden />
+      )}
     </header>
   );
 }
@@ -1322,9 +1333,11 @@ function MobileFilesPanel({
           <IconBtn sm>
             <Search className="h-3.5 w-3.5" />
           </IconBtn>
-          <IconBtn sm onClick={onUpload}>
-            <Plus className="h-3.5 w-3.5" />
-          </IconBtn>
+          {SHOW_EDITOR_IMPORT && (
+            <IconBtn sm onClick={onUpload}>
+              <Plus className="h-3.5 w-3.5" />
+            </IconBtn>
+          )}
         </div>
       </div>
 
@@ -1351,24 +1364,26 @@ function MobileFilesPanel({
         ))}
       </div>
 
-      <div className="mt-4 space-y-2 px-4">
-        <button
-          type="button"
-          onClick={onUploadZip}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-sm text-primary transition hover:border-primary"
-        >
-          <Upload className="h-4 w-4" />
-          Import Overleaf ZIP
-        </button>
-        <button
-          type="button"
-          onClick={onUpload}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary hover:text-foreground"
-        >
-          <Upload className="h-4 w-4" />
-          Upload .tex file
-        </button>
-      </div>
+      {SHOW_EDITOR_IMPORT && (
+        <div className="mt-4 space-y-2 px-4">
+          <button
+            type="button"
+            onClick={onUploadZip}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-sm text-primary transition hover:border-primary"
+          >
+            <Upload className="h-4 w-4" />
+            Import Overleaf ZIP
+          </button>
+          <button
+            type="button"
+            onClick={onUpload}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary hover:text-foreground"
+          >
+            <Upload className="h-4 w-4" />
+            Upload .tex file
+          </button>
+        </div>
+      )}
 
       <div className="mt-6 border-t border-border/40 px-4 py-4">
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>
@@ -1479,7 +1494,7 @@ function MobileChatSheet({
               />
             ) : (
               <p className="chat-dock-llm-hint">
-                Chưa có provider LLM — thêm <code>ZAI_API_KEY</code> vào <code>.env</code>.
+                Chưa có provider LLM — thêm <code>OPENROUTER_API_KEY</code> vào <code>.env</code>.
               </p>
             )}
           </div>
@@ -1491,7 +1506,7 @@ function MobileChatSheet({
             disabled={!canUseLlm}
             loading={chatLoading}
             placeholder={
-              canUseLlm ? "Ask anything" : "Cấu hình ZAI_API_KEY trong .env để chat"
+              canUseLlm ? "Ask anything" : "Cấu hình OPENROUTER_API_KEY trong .env để chat"
             }
           />
         </div>
@@ -1563,9 +1578,11 @@ function LeftSidebar({
               <IconBtn sm>
                 <Search className="h-3.5 w-3.5" />
               </IconBtn>
-              <IconBtn sm onClick={onUpload}>
-                <Plus className="h-3.5 w-3.5" />
-              </IconBtn>
+              {SHOW_EDITOR_IMPORT && (
+                <IconBtn sm onClick={onUpload}>
+                  <Plus className="h-3.5 w-3.5" />
+                </IconBtn>
+              )}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-2">
@@ -1600,31 +1617,33 @@ function LeftSidebar({
             ))}
           </div>
 
-          <div className="space-y-2 border-t border-border p-3">
-            <button
-              type="button"
-              onClick={onUploadZip}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-xs text-primary transition hover:border-primary"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Import Overleaf ZIP
-            </button>
-            <button
-              type="button"
-              onClick={onUpload}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary/50 px-3 py-2.5 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Upload .tex (+ assets)
-            </button>
-            <button
-              onClick={onUploadAsset}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Upload figure files
-            </button>
-          </div>
+          {SHOW_EDITOR_IMPORT && (
+            <div className="space-y-2 border-t border-border p-3">
+              <button
+                type="button"
+                onClick={onUploadZip}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-xs text-primary transition hover:border-primary"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import Overleaf ZIP
+              </button>
+              <button
+                type="button"
+                onClick={onUpload}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary/50 px-3 py-2.5 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Upload .tex (+ assets)
+              </button>
+              <button
+                onClick={onUploadAsset}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Upload figure files
+              </button>
+            </div>
+          )}
 
           <div className="border-t border-border p-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>

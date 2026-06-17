@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
     # LLM — default provider & model
-    llm_provider: LLMProvider = "zai"
-    model_name: str = "glm-4.7-flash"
+    llm_provider: LLMProvider = "openrouter"
+    model_name: str = "openai/gpt-4o-mini"
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
     # Provider API keys (set at least one)
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # Default models per provider (used when client does not specify)
     openai_default_model: str = "gpt-4o-mini"
     anthropic_default_model: str = "claude-sonnet-4-20250514"
-    openrouter_default_model: str = "meta-llama/llama-3.2-3b-instruct:free"
+    openrouter_default_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
 
     # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).

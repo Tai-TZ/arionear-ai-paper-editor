@@ -22,11 +22,16 @@ export type IntegrityFlag = {
   severity: string;
 };
 
+export type ModelOption = {
+  id: string;
+  label: string;
+};
+
 export type ProviderInfo = {
   id: LLMProvider;
   name: string;
   default_model: string;
-  models: string[];
+  models: ModelOption[];
 };
 
 export type ChatAiStepStatus = "pending" | "active" | "done" | "error";

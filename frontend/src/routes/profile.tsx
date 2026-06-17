@@ -418,10 +418,10 @@ function ProfilePage() {
                       )
                     }
                   >
-                    <option value="zai">Z.AI (GLM)</option>
                     <option value="openrouter">OpenRouter</option>
                     <option value="openai">OpenAI</option>
                     <option value="anthropic">Anthropic</option>
+                    <option value="zai">Z.AI (GLM)</option>
                   </select>
                 </Field>
                 <Field label={t.fields.default_llm_model}>
@@ -429,7 +429,7 @@ function ProfilePage() {
                     className="profile-input"
                     value={form.default_llm_model ?? ""}
                     onChange={(e) => patch("default_llm_model", e.target.value || null)}
-                    placeholder="e.g. glm-4.7-flash"
+                    placeholder="e.g. openai/gpt-4o-mini"
                   />
                 </Field>
                 <Field label={t.fields.rewrite_intensity}>

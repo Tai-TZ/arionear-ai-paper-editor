@@ -115,77 +115,95 @@ def _dedupe_models(models: list[str]) -> list[str]:
     return unique
 
 
+OPENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("openai/gpt-4o-mini", "GPT-4o Mini · fast & cheap"),
+    ("google/gemini-2.5-flash-preview", "Gemini 2.5 Flash · fast"),
+    ("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku · fast"),
+    ("meta-llama/llama-3.3-70b-instruct", "Llama 3.3 70B · quality"),
+    ("qwen/qwen-2.5-72b-instruct", "Qwen 2.5 72B · academic"),
+    ("meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B · free"),
+    ("google/gemma-2-9b-it:free", "Gemma 2 9B · free"),
+]
+
+OPENAI_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("gpt-4o-mini", "GPT-4o Mini"),
+    ("gpt-4o", "GPT-4o"),
+]
+
+ANTHROPIC_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("claude-3-5-haiku-20241022", "Claude 3.5 Haiku · fast"),
+    ("claude-sonnet-4-20250514", "Claude Sonnet 4 · quality"),
+]
+
+ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("glm-4.7-flash", "GLM-4.7 Flash · free"),
+    ("glm-4.7-flashx", "GLM-4.7 FlashX"),
+    ("glm-4.7", "GLM-4.7 · quality"),
+]
+
+
+def _model_options(
+    catalog: list[tuple[str, str]],
+    default_model: str,
+) -> list[dict[str, str]]:
+    """Build model dropdown entries; default model is always first."""
+    ids = _dedupe_models([default_model, *[model_id for model_id, _ in catalog]])
+    labels = {model_id: label for model_id, label in catalog}
+    return [
+        {
+            "id": model_id,
+            "label": labels.get(model_id, model_id.split("/")[-1]),
+        }
+        for model_id in ids
+    ]
+
+
 def list_providers() -> list[dict]:
     """Return configured providers for the frontend selector."""
     settings = get_settings()
     providers: list[dict] = []
 
     if settings.openai_api_key:
+        default = settings.openai_default_model
         providers.append(
             {
                 "id": "openai",
                 "name": "OpenAI",
-                "default_model": settings.openai_default_model,
-                "models": _dedupe_models(
-                    [
-                        settings.openai_default_model,
-                        "gpt-4o",
-                        "gpt-4o-mini",
-                    ]
-                ),
+                "default_model": default,
+                "models": _model_options(OPENAI_MODEL_CATALOG, default),
             }
         )
 
     if settings.anthropic_api_key:
+        default = settings.anthropic_default_model
         providers.append(
             {
                 "id": "anthropic",
                 "name": "Anthropic (Claude)",
-                "default_model": settings.anthropic_default_model,
-                "models": _dedupe_models(
-                    [
-                        settings.anthropic_default_model,
-                        "claude-sonnet-4-20250514",
-                        "claude-3-5-haiku-20241022",
-                    ]
-                ),
+                "default_model": default,
+                "models": _model_options(ANTHROPIC_MODEL_CATALOG, default),
             }
         )
 
     if settings.openrouter_api_key:
+        default = settings.openrouter_default_model
         providers.append(
             {
                 "id": "openrouter",
                 "name": "OpenRouter",
-                "default_model": settings.openrouter_default_model,
-                "models": _dedupe_models(
-                    [
-                        settings.openrouter_default_model,
-                        "meta-llama/llama-3.2-3b-instruct:free",
-                        "google/gemma-2-9b-it:free",
-                        "openai/gpt-4o-mini",
-                        "anthropic/claude-sonnet-4",
-                        "google/gemini-2.5-flash-preview",
-                        "meta-llama/llama-3.3-70b-instruct",
-                    ]
-                ),
+                "default_model": default,
+                "models": _model_options(OPENROUTER_MODEL_CATALOG, default),
             }
         )
 
     if settings.zai_api_key:
+        default = settings.zai_default_model
         providers.append(
             {
                 "id": "zai",
                 "name": "Z.AI (GLM)",
-                "default_model": settings.zai_default_model,
-                "models": _dedupe_models(
-                    [
-                        settings.zai_default_model,
-                        "glm-4.7-flash",
-                        "glm-4.7-flashx",
-                        "glm-4.7",
-                    ]
-                ),
+                "default_model": default,
+                "models": _model_options(ZAI_MODEL_CATALOG, default),
             }
         )
 

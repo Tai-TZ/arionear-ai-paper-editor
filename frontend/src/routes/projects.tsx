@@ -17,7 +17,11 @@ import {
 } from "lucide-react";
 import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
-import { SHOW_PROJECTS_IMPORT, WorkspaceLayout } from "@/components/workspace/workspace-layout";
+import {
+  SHOW_PROJECTS_IMPORT,
+  SHOW_PROJECTS_UPLOAD,
+  WorkspaceLayout,
+} from "@/components/workspace/workspace-layout";
 import {
   createPaper,
   deletePaper,
@@ -472,12 +476,25 @@ function EmptyProjects({
       <p>Upload your manuscript or explore Arionear with a ready-made sample.</p>
 
       <div className="projects-empty-actions">
-        <button type="button" onClick={onUpload} disabled={disabled} className="projects-empty-card">
+        <button
+          type="button"
+          onClick={onUpload}
+          disabled={disabled || !SHOW_PROJECTS_UPLOAD}
+          className="projects-empty-card"
+          aria-disabled={!SHOW_PROJECTS_UPLOAD || disabled}
+        >
           <div className="icon-box">
             <Upload className="h-5 w-5" strokeWidth={1.5} />
           </div>
-          <h3>Upload LaTeX</h3>
-          <p>Import a `.tex` file and figure assets together.</p>
+          <h3>
+            Upload LaTeX
+            {!SHOW_PROJECTS_UPLOAD && <span className="projects-coming-soon">Coming soon</span>}
+          </h3>
+          <p>
+            {SHOW_PROJECTS_UPLOAD
+              ? "Import a `.tex` file and figure assets together."
+              : "Import a `.tex` file and figure assets together — available in a future release."}
+          </p>
         </button>
 
         <button type="button" onClick={onSample} disabled={disabled} className="projects-empty-card">
