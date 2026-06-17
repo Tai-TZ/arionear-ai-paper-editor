@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inngest
-
 from src.inngest.client import inngest_client
 
 

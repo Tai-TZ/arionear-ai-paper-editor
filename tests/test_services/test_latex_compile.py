@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.models.schemas import CompileAssetFile, CompileRequest
+from src.models.schemas import CompileRequest
 from src.services import latex_compile as lc
 
 

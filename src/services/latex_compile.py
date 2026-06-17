@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Literal
 
 from src.models.schemas import (
-    CompileAssetFile,
     CompileEnginesInfo,
     CompileRequest,
     CompileResponse,

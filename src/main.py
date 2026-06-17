@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import inngest.fast_api
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,7 +13,6 @@ from src.db.engine import db_is_ready, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
 from src.services.sessions import refresh_session_store
-import inngest.fast_api
 
 
 @asynccontextmanager

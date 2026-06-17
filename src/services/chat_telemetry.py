@@ -7,7 +7,6 @@ import uuid
 from typing import Any
 
 import inngest
-
 from src.config import get_settings
 from src.inngest.client import inngest_client
 

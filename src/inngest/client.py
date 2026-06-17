@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 import inngest
-
 from src.config import get_settings
 
 _settings = get_settings()

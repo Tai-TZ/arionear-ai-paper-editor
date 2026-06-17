@@ -2,7 +2,6 @@ from src.services.guardrails.integrity import (
     build_diff,
     check_integrity,
     extract_numbers,
-    has_blocking_flags,
 )
 from src.services.parser.latex import extract_cite_keys, parse_latex_sections
 

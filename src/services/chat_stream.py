@@ -19,16 +19,16 @@ from src.agents.nodes.academic_nodes import (
 from src.agents.state import AgentState
 from src.config import get_settings
 from src.models.schemas import ChatRequest
+from src.services.chat_telemetry import ChatRunTracker
 from src.services.intent_router import classify_intent
 from src.services.llm import get_llm
+from src.services.llm_errors import friendly_llm_error
 from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
 )
 from src.services.prompts import build_system_prompt, render_user_prompt
 from src.services.sessions import session_store
-from src.services.chat_telemetry import ChatRunTracker
-from src.services.llm_errors import friendly_llm_error
 from src.services.template_latex import generate_template
 
 AGENT_NAME = "Ario"
@@ -140,7 +140,7 @@ async def _monitor_long_task(
             result = await asyncio.wait_for(asyncio.shield(task), timeout=interval)
             yield result
             return
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = round(time.perf_counter() - started, 1)
             state_evt, act_evt = on_tick(elapsed)
             yield state_evt
@@ -362,7 +362,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "integrity_strictness": strictness,
         }
 
-        llm = get_llm(provider=provider, model=model)
+        get_llm(provider=provider, model=model)
 
         done_payload: dict[str, Any] = {
             "task": task,

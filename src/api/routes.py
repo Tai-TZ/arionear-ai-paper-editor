@@ -16,19 +16,19 @@ from src.models.schemas import (
     CompileRequest,
     CompileResponse,
     CompileStatusResponse,
-    SyncTeXLookupRequest,
-    SyncTeXLookupResponse,
     IntegrityFlagSchema,
     ProviderInfo,
     ProvidersResponse,
     RevisionAction,
-    RevisionsListResponse,
     RevisionRecordResponse,
+    RevisionsListResponse,
     SessionCreate,
     SessionResponse,
     SessionUpdate,
     StyleEditRequest,
     StyleEditResponse,
+    SyncTeXLookupRequest,
+    SyncTeXLookupResponse,
 )
 from src.services.chat_stream import AGENT_NAME, flush_sse_stream, stream_chat
 from src.services.citations.verifier import verify_citations

@@ -25,7 +25,7 @@ def load_prompts() -> dict:
 def _stage_dict(key: str) -> dict[str, Any]:
     prompts = load_prompts()
     stages = prompts.get("stages", {})
-    if isinstance(stages, dict):
+    if isinstance(stages, dict) and key in stages:
         section = stages.get(key, {})
         if isinstance(section, dict):
             return section
