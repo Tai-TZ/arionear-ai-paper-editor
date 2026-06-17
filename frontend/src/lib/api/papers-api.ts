@@ -1,11 +1,10 @@
 import { getAccessToken } from "@/lib/auth-store";
 import { mapApiHttpError } from "@/lib/api/api-errors";
+import { resolveApiBase } from "@/lib/api/base-url";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
 
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:8000/api/v1";
+const API_BASE = resolveApiBase();
 
 type PaperSummaryResponse = {
   id: string;

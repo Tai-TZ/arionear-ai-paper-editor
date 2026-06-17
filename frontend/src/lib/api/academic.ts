@@ -1,16 +1,6 @@
+import { resolveApiBase } from "./base-url";
 import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
-
-function resolveApiBase(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  // Dev: same-origin via Vite proxy → avoids localhost:8000 port conflicts.
-  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
-    return "/api/v1";
-  }
-  return "http://localhost:8000/api/v1";
-}
 
 const API_BASE = resolveApiBase();
 

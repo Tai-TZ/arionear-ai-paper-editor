@@ -1,18 +1,9 @@
 import { getAccessToken } from "@/lib/auth-store";
 import { mapApiHttpError } from "@/lib/api/api-errors";
+import { resolveApiBase } from "@/lib/api/base-url";
 import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import type { ResearcherProfile, ResearcherProfilePatch } from "@/lib/researcher-profile";
 import { setCachedProfile } from "@/lib/researcher-profile";
-
-function resolveApiBase(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
-    return "/api/v1";
-  }
-  return "http://localhost:8000/api/v1";
-}
 
 const API_BASE = resolveApiBase();
 

@@ -1,8 +1,7 @@
+import { resolveApiBase } from "./api/base-url";
 import { mapAuthHttpError } from "./auth-api-errors";
 
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:8000/api/v1";
+const API_BASE = resolveApiBase();
 
 export type AuthUser = {
   id: string;

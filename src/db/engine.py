@@ -31,12 +31,16 @@ def _get_engine() -> Engine:
                 "Add DIRECT_DATABASE_URL=postgresql://... to .env "
                 "(copy 'Direct connection' from Prisma Console)."
             )
-        connect_args = {}
+        connect_args: dict = {}
         if db_url.startswith("sqlite"):
             connect_args["check_same_thread"] = False
+        elif db_url.startswith("postgresql"):
+            # Avoid hanging forever when Prisma/remote Postgres is slow or unreachable.
+            connect_args["connect_timeout"] = 10
         _engine = create_engine(
             db_url,
             pool_pre_ping=True,
+            pool_timeout=10,
             connect_args=connect_args,
         )
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
@@ -55,14 +59,19 @@ def init_db() -> bool:
         Base.metadata.create_all(bind=engine)
     else:
         with engine.connect() as conn:
+            conn.execute(text("SET statement_timeout = 15000"))
             conn.execute(text("SELECT 1"))
-            conn.execute(
-                text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                    "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+            try:
+                conn.execute(
+                    text(
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                        "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                    )
                 )
-            )
-            conn.commit()
+                conn.commit()
+            except Exception as exc:
+                conn.rollback()
+                print(f"Warning: profile_settings migration skipped: {exc}")
     _db_ready = True
     return True
 
