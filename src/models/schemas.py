@@ -41,6 +41,16 @@ class IntegrityFlagSchema(BaseModel):
     severity: str
 
 
+class ProposedEditSchema(BaseModel):
+    id: str = ""
+    file: str = "main.tex"
+    section: str = ""
+    apply_mode: Literal["selection", "document"] | None = None
+    original_text: str = ""
+    replacement_text: str = ""
+    description: str = ""
+
+
 class ChatResponse(BaseModel):
     response: str
     analysis: str = ""
@@ -51,6 +61,7 @@ class ChatResponse(BaseModel):
     apply_mode: Literal["selection", "document"] | None = None
     revision_id: str = ""
     integrity_flags: list[IntegrityFlagSchema] = Field(default_factory=list)
+    edits: list[ProposedEditSchema] = Field(default_factory=list)
     citation_results: list[dict] = Field(default_factory=list)
     structure_suggestions: list[dict] = Field(default_factory=list)
 

@@ -1,16 +1,6 @@
+import { resolveApiBase } from "./base-url";
 import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
-
-function resolveApiBase(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  // Dev: same-origin via Vite proxy → avoids localhost:8000 port conflicts.
-  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
-    return "/api/v1";
-  }
-  return "http://localhost:8000/api/v1";
-}
 
 const API_BASE = resolveApiBase();
 
@@ -87,6 +77,15 @@ export type ChatResult = {
   apply_mode?: "selection" | "document";
   revision_id?: string;
   integrity_flags?: IntegrityFlag[];
+  edits?: {
+    id: string;
+    file: string;
+    section?: string;
+    apply_mode?: "selection" | "document";
+    original_text: string;
+    replacement_text: string;
+    description?: string;
+  }[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];
 };

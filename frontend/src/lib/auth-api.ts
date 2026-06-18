@@ -1,8 +1,7 @@
+import { resolveApiBase } from "./api/base-url";
 import { mapAuthHttpError } from "./auth-api-errors";
 
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:8000/api/v1";
+const API_BASE = resolveApiBase();
 
 export type AuthUser = {
   id: string;
@@ -22,18 +21,26 @@ export type AuthResult =
   | { ok: true; user: AuthUser; accessToken: string }
   | { ok: false; error: string };
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...init?.headers,
       },
     });
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error("Request timed out. The server may be busy — try again in a moment.");
+    }
     throw new Error("Cannot reach the server. Check that the backend is running.");
+  } finally {
+    window.clearTimeout(timer);
   }
   if (!res.ok) {
     let detail: unknown = res.statusText;

@@ -38,12 +38,27 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    try {
+      reportLovableError(error instanceof Error ? error : new Error(String(error)), {
+        boundary: "tanstack_root_error_component",
+      });
+    } catch {
+      // Ignore secondary failures while already in an error boundary.
+    }
   }, [error]);
+
+  const detail =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`.trim()
+      : typeof error === "string"
+        ? error
+        : error
+          ? JSON.stringify(error)
+          : "";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -54,6 +69,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+        {detail ? (
+          <pre className="mt-4 max-h-40 overflow-auto rounded-md border border-border bg-card p-3 text-left text-[11px] leading-snug text-muted-foreground">
+            {detail}
+          </pre>
+        ) : null}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

@@ -11,7 +11,11 @@ const DEV_API_PROXY = process.env.VITE_DEV_API_PROXY || "http://127.0.0.1:8000";
 
 export default defineConfig({
   vite: {
+    preview: {
+      allowedHosts: ["localhost", "127.0.0.1"],
+    },
     server: {
+      allowedHosts: ["localhost", "127.0.0.1"],
       proxy: {
         "/api/v1": {
           target: DEV_API_PROXY,

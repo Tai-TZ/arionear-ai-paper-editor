@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from src.config import get_settings
 from src.db.models import Base
@@ -31,14 +32,21 @@ def _get_engine() -> Engine:
                 "Add DIRECT_DATABASE_URL=postgresql://... to .env "
                 "(copy 'Direct connection' from Prisma Console)."
             )
-        connect_args = {}
+        connect_args: dict = {}
+        engine_kwargs: dict = {
+            "pool_pre_ping": True,
+            "connect_args": connect_args,
+        }
         if db_url.startswith("sqlite"):
             connect_args["check_same_thread"] = False
-        _engine = create_engine(
-            db_url,
-            pool_pre_ping=True,
-            connect_args=connect_args,
-        )
+        elif db_url.startswith("postgresql"):
+            connect_args["connect_timeout"] = 10
+            connect_args["options"] = "-c statement_timeout=15000 -c lock_timeout=5000"
+            if settings.app_env == "development":
+                engine_kwargs["poolclass"] = NullPool
+            else:
+                engine_kwargs["pool_timeout"] = 10
+        _engine = create_engine(db_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
 
@@ -55,14 +63,30 @@ def init_db() -> bool:
         Base.metadata.create_all(bind=engine)
     else:
         with engine.connect() as conn:
+            conn.execute(text("SET statement_timeout = 15000"))
             conn.execute(text("SELECT 1"))
-            conn.execute(
+            has_profile_col = conn.execute(
                 text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                    "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'users' "
+                    "AND column_name = 'profile_settings' LIMIT 1"
                 )
-            )
-            conn.commit()
+            ).scalar()
+            if not has_profile_col:
+                try:
+                    conn.execute(text("SET lock_timeout = '8s'"))
+                    conn.execute(
+                        text(
+                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                            "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                        )
+                    )
+                    conn.commit()
+                except Exception as exc:
+                    conn.rollback()
+                    print(f"Warning: profile_settings migration skipped: {exc}")
+            else:
+                conn.commit()
     _db_ready = True
     return True
 

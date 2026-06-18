@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,7 +9,7 @@ import {
   Plus,
   Upload,
   FileText,
-  MoreHorizontal,
+  Pencil,
   FolderOpen,
   Sparkles,
   Trash2,
@@ -27,6 +27,7 @@ import {
   deletePaper,
   fetchPapers,
   addPaperAssets,
+  updatePaper,
 } from "@/lib/api/papers-api";
 import {
   BLANK_LATEX,
@@ -42,13 +43,6 @@ import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { type ResearcherProfile } from "@/lib/researcher-profile";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/projects")({
   ssr: false,
@@ -123,8 +117,12 @@ function ProjectsPage() {
   );
 
   const openEditor = (projectId: string) => {
+    if (!projectId.trim()) return;
     markEditorEntryTransition();
-    navigate({ to: "/editor", search: { projectId } });
+    void navigate({
+      to: "/editor",
+      search: { projectId: projectId.trim() },
+    });
   };
 
   const handleCreateSample = async () => {
@@ -211,6 +209,11 @@ function ProjectsPage() {
       setCreatingLabel(null);
       e.target.value = "";
     }
+  };
+
+  const handleRename = async (id: string, name: string) => {
+    const updated = await updatePaper(id, { name });
+    setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
   };
 
   const handleDelete = async (id: string) => {
@@ -413,6 +416,7 @@ function ProjectsPage() {
                   project={project}
                   deleting={deletingIds.has(project.id)}
                   onOpen={() => openEditor(project.id)}
+                  onRename={(name) => handleRename(project.id, name)}
                   onDelete={() => handleDelete(project.id)}
                 />
               ))}
@@ -518,28 +522,55 @@ function ProjectRow({
   project,
   deleting,
   onOpen,
+  onRename,
   onDelete,
 }: {
   project: StoredProject;
   deleting: boolean;
   onOpen: () => void;
+  onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
+  const openSearch = { projectId: project.id };
+
   return (
-    <div className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}`}>
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={deleting}
-        className="projects-row-open projects-col-name"
-      >
+    <div
+      className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}`}
+      onClick={(e) => {
+        if (deleting) return;
+        const target = e.target as HTMLElement;
+        if (target.closest(".projects-col-actions")) return;
+        onOpen();
+      }}
+      onKeyDown={(e) => {
+        if (deleting) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={deleting ? -1 : 0}
+      aria-label={`Open ${project.name}`}
+    >
+      <div className="projects-col-name flex min-w-0 items-center gap-2">
         {deleting ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
         ) : (
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         )}
-        <span className="projects-row-name">{project.name}</span>
-      </button>
+        <Link
+          to="/editor"
+          search={openSearch}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!deleting) markEditorEntryTransition();
+          }}
+          className="projects-row-open min-w-0 flex-1 text-left"
+        >
+          <span className="projects-row-name block truncate">{project.name}</span>
+        </Link>
+      </div>
       <span
         className="projects-row-date projects-col-created hidden md:block"
         title={formatProjectDateTime(project.createdAt)}
@@ -552,37 +583,83 @@ function ProjectRow({
       >
         {formatTimeAgo(project.updatedAt)}
       </span>
-      <div className="projects-col-actions flex justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              disabled={deleting}
-              className="projects-row-menu"
-              aria-label="Project options"
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            side="bottom"
-            sideOffset={6}
-            collisionPadding={{ top: 8, bottom: 8, left: 8, right: 56 }}
-            className="min-w-[10rem]"
-          >
-            <DropdownMenuItem onClick={onOpen}>
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-              Open
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="projects-col-actions flex justify-end gap-1">
+        <RenameProjectButton name={project.name} disabled={deleting} onRename={onRename} />
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={onDelete}
+          className="projects-row-menu text-destructive hover:bg-destructive/10 hover:text-destructive"
+          aria-label="Delete project"
+          title="Delete project"
+        >
+          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </button>
       </div>
     </div>
+  );
+}
+
+function RenameProjectButton({
+  name,
+  disabled,
+  onRename,
+}: {
+  name: string;
+  disabled?: boolean;
+  onRename: (name: string) => void | Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+
+  useEffect(() => {
+    if (!editing) setDraft(name);
+  }, [name, editing]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={disabled}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={async () => {
+          const trimmed = draft.trim();
+          setEditing(false);
+          if (trimmed && trimmed !== name) await onRename(trimmed);
+        }}
+        onKeyDown={async (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const trimmed = draft.trim();
+            setEditing(false);
+            if (trimmed && trimmed !== name) await onRename(trimmed);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setDraft(name);
+            setEditing(false);
+          }
+        }}
+        className="h-8 min-w-[8rem] max-w-[12rem] rounded-md border border-border bg-background px-2 text-sm outline-none ring-primary/30 focus:ring-2"
+        aria-label="Rename project"
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+      className="projects-row-menu"
+      aria-label="Rename project"
+      title="Rename project"
+    >
+      <Pencil className="h-4 w-4" />
+    </button>
   );
 }

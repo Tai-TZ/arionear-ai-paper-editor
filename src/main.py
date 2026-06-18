@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import inngest.fast_api
@@ -23,9 +24,11 @@ async def lifespan(app: FastAPI):
         print("WARNING: AUTH_SECRET_KEY is still the default. Set a strong secret before production.")
     if is_db_enabled():
         try:
-            init_db()
+            await asyncio.wait_for(asyncio.to_thread(init_db), timeout=20.0)
             refresh_session_store()
             print("Database connected")
+        except TimeoutError:
+            print("Database init timed out after 20s, using in-memory store")
         except Exception as exc:
             print(f"Database init failed, using in-memory store: {exc}")
     else:

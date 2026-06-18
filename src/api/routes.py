@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from src.agents.graph import agent
@@ -69,6 +69,7 @@ def _build_chat_response(result: dict) -> ChatResponse:
         apply_mode=result.get("apply_mode"),
         revision_id=metadata.get("revision_id", result.get("revision_id", "")),
         integrity_flags=flags,
+        edits=result.get("edits", []),
         citation_results=result.get("citation_results", []),
         structure_suggestions=result.get("structure_suggestions", []),
     )
@@ -195,10 +196,16 @@ async def get_session_citations(session_id: str):
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, http_request: Request):
+    async def stream_with_disconnect():
+        async for chunk in flush_sse_stream(stream_chat(request)):
+            if await http_request.is_disconnected():
+                break
+            yield chunk
+
     try:
         return StreamingResponse(
-            flush_sse_stream(stream_chat(request)),
+            stream_with_disconnect(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache, no-transform",

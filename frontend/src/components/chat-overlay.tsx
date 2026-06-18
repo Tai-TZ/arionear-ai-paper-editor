@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, forwardRef } from "react";
 import {
   ArrowUp,
   AudioLines,
@@ -7,11 +7,14 @@ import {
   Copy,
   PanelRightClose,
   Plus,
+  Sparkles,
   Square,
+  X,
 } from "lucide-react";
 
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
+import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 
 export type ChatMessage = {
@@ -50,6 +53,9 @@ type ChatDockProps = {
   onProviderChange?: (p: LLMProvider) => void;
   onModelChange?: (m: string) => void;
   onRefreshProviders?: () => void;
+  composerMode?: "normal" | "quick-edit";
+  selectionContext?: EditorSelectionContext | null;
+  onClearSelectionContext?: () => void;
 };
 
 export function ChatOverlay(props: ChatDockProps) {
@@ -75,8 +81,12 @@ export function ChatDock({
   onProviderChange,
   onModelChange,
   onRefreshProviders,
+  composerMode = "normal",
+  selectionContext = null,
+  onClearSelectionContext,
 }: ChatDockProps) {
   const dockRef = useRef<HTMLElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const [panelH, setPanelH] = useState(300);
   const initializedRef = useRef(false);
   const conversationStarted = hasChatHistory(messages);
@@ -94,6 +104,14 @@ export function ChatDock({
     const parentH = dockRef.current.parentElement.clientHeight;
     setPanelH(clampHeight(Math.round(parentH * CHAT_DEFAULT_RATIO)));
   }, [open, clampHeight]);
+
+  useEffect(() => {
+    if (composerMode !== "quick-edit" || !open) return;
+    const frame = requestAnimationFrame(() => {
+      chatInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [composerMode, open, selectionContext?.start]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,6 +154,14 @@ export function ChatDock({
   const openFromComposer = () => {
     if (!open && conversationStarted) onOpen();
   };
+
+  const placeholder = !canUseLlm
+    ? "Cấu hình API key để dùng chat"
+    : composerMode === "quick-edit"
+      ? "Mô tả cách sửa đoạn đã chọn…"
+      : selectionContext
+        ? "Hỏi về vùng đã chọn…"
+        : "Hỏi Ario bất cứ điều gì…";
 
   return (
     <aside
@@ -200,6 +226,37 @@ export function ChatDock({
           <ChatProgressStrip activity={liveActivity} steps={streamAiSteps} />
         )}
 
+        {composerMode === "quick-edit" && (
+          <div className="chat-quick-edit-banner" role="status">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>Quick Edit — chỉnh sửa vùng đã chọn trong editor</span>
+          </div>
+        )}
+
+        {selectionContext && (
+          <div className="chat-selection-chip">
+            <span className="chat-selection-chip-label">
+              {selectionContext.lineStart === selectionContext.lineEnd
+                ? `Dòng ${selectionContext.lineStart}`
+                : `Dòng ${selectionContext.lineStart}–${selectionContext.lineEnd}`}
+              <span className="chat-selection-chip-preview">
+                {selectionContext.text.trim().slice(0, 72)}
+                {selectionContext.text.trim().length > 72 ? "…" : ""}
+              </span>
+            </span>
+            {onClearSelectionContext && (
+              <button
+                type="button"
+                className="chat-selection-chip-clear"
+                onClick={onClearSelectionContext}
+                aria-label="Bỏ vùng chọn"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="chat-dock-llm-bar">
           <span className="chat-dock-llm-label">AI</span>
           {canUseLlm ? (
@@ -222,6 +279,7 @@ export function ChatDock({
         </div>
 
         <ChatInput
+          ref={chatInputRef}
           chatInput={chatInput}
           onChatInputChange={onChatInputChange}
           onSend={handleSend}
@@ -229,7 +287,7 @@ export function ChatDock({
           onActivate={openFromComposer}
           disabled={!canUseLlm}
           loading={chatLoading}
-          placeholder={canUseLlm ? "Hỏi Ario bất cứ điều gì…" : "Cấu hình API key để dùng chat"}
+          placeholder={placeholder}
         />
       </div>
     </aside>
@@ -428,16 +486,7 @@ export function ChatMessages({
   );
 }
 
-export function ChatInput({
-  chatInput,
-  onChatInputChange,
-  onSend,
-  onStop,
-  onActivate,
-  placeholder,
-  disabled,
-  loading = false,
-}: {
+export const ChatInput = forwardRef<HTMLTextAreaElement, {
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
@@ -446,7 +495,19 @@ export function ChatInput({
   placeholder: string;
   disabled?: boolean;
   loading?: boolean;
-}) {
+}>(function ChatInput(
+  {
+    chatInput,
+    onChatInputChange,
+    onSend,
+    onStop,
+    onActivate,
+    placeholder,
+    disabled,
+    loading = false,
+  },
+  ref,
+) {
   const canSend = chatInput.trim().length > 0 && !disabled;
 
   const handlePrimaryAction = () => {
@@ -460,6 +521,7 @@ export function ChatInput({
   return (
     <div className="chat-input-shell">
       <textarea
+        ref={ref}
         value={chatInput}
         onChange={(e) => onChatInputChange(e.target.value)}
         onFocus={() => onActivate?.()}
@@ -492,6 +554,6 @@ export function ChatInput({
       </div>
     </div>
   );
-}
+});
 
 export { arioAvatar };

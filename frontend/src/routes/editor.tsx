@@ -21,6 +21,7 @@ import {
   Undo2,
   Redo2,
   Wrench,
+  Sparkles,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
@@ -68,6 +69,12 @@ import {
 } from "@/components/chat-overlay";
 import { SuggestionPanel } from "@/components/suggestion-panel";
 import { LatexCodeEditor, type LatexCodeEditorHandle } from "@/components/latex-code-editor";
+import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
+import {
+  type EditorSelectionContext,
+  type SelectionAnchor,
+} from "@/lib/editor-selection-anchor";
+import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { LlmSelector } from "@/components/llm-selector";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
@@ -76,9 +83,11 @@ import {
   EditorEntrySplash,
 } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
+import { EditableProjectName } from "@/components/editable-project-name";
+import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
-import { fetchDedupe } from "@/lib/api/fetch-dedupe";
+import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
@@ -92,9 +101,12 @@ export const Route = createFileRoute("/editor")({
   beforeLoad: () => {
     requireAuth();
   },
-  validateSearch: (search: Record<string, unknown>): EditorSearch => ({
-    projectId: typeof search.projectId === "string" ? search.projectId : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): EditorSearch => {
+    const raw = search.projectId;
+    const projectId =
+      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
+    return { projectId };
+  },
   head: () => ({
     meta: [
       { title: "Editor — Arionear" },
@@ -123,6 +135,23 @@ type PendingSuggestion = {
   flags: { code: string; message: string; severity: string }[];
   revisionId?: string;
   applyMode?: "selection" | "document";
+  selectionStart?: number;
+  selectionEnd?: number;
+};
+
+type PendingEdit = {
+  id: string;
+  file: string;
+  section?: string;
+  applyMode: "selection" | "document";
+  originalText: string;
+  replacementText: string;
+  description?: string;
+  flags: { code: string; message: string; severity: string }[];
+  revisionId?: string;
+  accepted?: boolean;
+  selectionStart?: number;
+  selectionEnd?: number;
 };
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -132,8 +161,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
       "Xin chào — tôi là Ario, trợ lý NCKH trong Paper IDE ARIONEAR. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
   },
 ];
-
-const OUTLINE_SECTIONS = ["Abstract", "Introduction", "Methods", "Results", "Conclusion"];
 
 type ToolsTab = "info" | "versions" | "citations";
 
@@ -148,11 +175,60 @@ type ProjectStats = {
   mathDisplayed: number;
 };
 
+function parseCompileErrorLine(error: string): number | undefined {
+  const lineMatch = error.match(/:(\d+):/);
+  if (lineMatch) return Number.parseInt(lineMatch[1], 10);
+  const latexMatch = error.match(/l\.(\d+)/);
+  if (latexMatch) return Number.parseInt(latexMatch[1], 10);
+  return undefined;
+}
+
 function countDiffStats(original: string, suggestion: string) {
   const o = original.length;
   const s = suggestion.length;
   if (s >= o) return { additions: s - o, deletions: 0 };
   return { additions: 0, deletions: o - s };
+}
+
+function toInlineSuggestion(
+  pendingEdits: PendingEdit[] | null | undefined,
+  activeEditId: string | null | undefined,
+  pendingSuggestion: PendingSuggestion | null | undefined,
+) {
+  const withSelectionScope = (input: {
+    originalText: string;
+    suggestion: string;
+    applyMode?: "selection" | "document";
+    selectionStart?: number;
+    selectionEnd?: number;
+  }) => {
+    const hasAnchor =
+      input.selectionStart != null &&
+      input.selectionEnd != null &&
+      input.selectionEnd > input.selectionStart;
+    return hasAnchor ? { ...input, applyMode: "selection" as const } : input;
+  };
+
+  if (pendingEdits?.length) {
+    const edit = pendingEdits.find((e) => e.id === activeEditId) ?? pendingEdits[0];
+    return withSelectionScope({
+      originalText: edit.originalText,
+      suggestion: edit.replacementText,
+      applyMode: edit.applyMode,
+      selectionStart: edit.selectionStart,
+      selectionEnd: edit.selectionEnd,
+    });
+  }
+  if (pendingSuggestion) {
+    return withSelectionScope({
+      originalText: pendingSuggestion.originalText,
+      suggestion: pendingSuggestion.suggestion,
+      applyMode: pendingSuggestion.applyMode,
+      selectionStart: pendingSuggestion.selectionStart,
+      selectionEnd: pendingSuggestion.selectionEnd,
+    });
+  }
+  return null;
 }
 
 function revisionActionLabel(action: string) {
@@ -230,7 +306,8 @@ function EditorPage() {
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [bootState, setBootState] = useState<"loading" | "ready">("loading");
+  const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
+  const [bootError, setBootError] = useState<string | null>(null);
   const [splashPhase, setSplashPhase] = useState<"visible" | "exiting" | "hidden">("visible");
   const [projectName, setProjectName] = useState("");
   const {
@@ -277,7 +354,17 @@ function EditorPage() {
   const [liveActivity, setLiveActivity] = useState<string | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState("");
+  const [selectionPick, setSelectionPick] = useState<{
+    context: EditorSelectionContext;
+    anchor: SelectionAnchor;
+  } | null>(null);
+  const [chatSelectionContext, setChatSelectionContext] = useState<EditorSelectionContext | null>(
+    null,
+  );
+  const [chatComposerMode, setChatComposerMode] = useState<"normal" | "quick-edit">("normal");
   const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
+  const [pendingEdits, setPendingEdits] = useState<PendingEdit[] | null>(null);
+  const [activeEditId, setActiveEditId] = useState<string | null>(null);
   const [revisionHistory, setRevisionHistory] = useState<RevisionRecord[]>([]);
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
@@ -352,6 +439,8 @@ function EditorPage() {
     }
     let cancelled = false;
     setBootState("loading");
+    setBootError(null);
+    setSplashPhase("visible");
 
     fetchPaper(projectId)
       .then((project) => {
@@ -372,10 +461,13 @@ function EditorPage() {
         setBootState("ready");
         void loadSessionAudit(projectId);
       })
-      .catch(() => {
-        if (!cancelled) {
-          navigate({ to: "/projects", replace: true });
-        }
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        invalidateFetchKey(`papers:${projectId}`);
+        const message =
+          error instanceof Error ? error.message : "Failed to load this project.";
+        setBootError(message);
+        setBootState("error");
       });
 
     return () => {
@@ -662,6 +754,24 @@ function EditorPage() {
     [latex, synctexHighlightMs],
   );
 
+  const jumpToOutlineLine = useCallback((line: number) => {
+    setMobileTab("editor");
+    setHighlightLine(line);
+    setSynctexHighlight(null);
+    const scroll = () => latexEditorRef.current?.scrollToLine(line);
+    requestAnimationFrame(scroll);
+    window.setTimeout(scroll, 80);
+  }, []);
+
+  const handleRenameProject = useCallback(
+    async (name: string) => {
+      if (!projectId) return;
+      setProjectName(name);
+      await updatePaper(projectId, { name });
+    },
+    [projectId],
+  );
+
   useEffect(() => {
     const pending = pendingSynctexRef.current;
     if (!pending) return;
@@ -714,6 +824,75 @@ function EditorPage() {
     return streaming?.aiSteps ?? [];
   }, [messages]);
 
+  const openChatPanel = useCallback(() => {
+    setChatOpen(true);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setMobileChatOpen(true);
+    }
+  }, []);
+
+  const handleSelectionContextChange = useCallback(
+    (payload: { context: EditorSelectionContext; anchor: SelectionAnchor } | null) => {
+      setSelectionPick(payload);
+    },
+    [],
+  );
+
+  const openQuickEditFromPick = useCallback(
+    (pick: { context: EditorSelectionContext; anchor: SelectionAnchor }) => {
+      setChatSelectionContext(pick.context);
+      setSelection(pick.context.text);
+      setChatComposerMode("quick-edit");
+      openChatPanel();
+      setSelectionPick(null);
+    },
+    [openChatPanel],
+  );
+
+  const handleAddSelectionToChat = useCallback(() => {
+    if (!selectionPick) return;
+    setChatSelectionContext(selectionPick.context);
+    setSelection(selectionPick.context.text);
+    setChatComposerMode("normal");
+    openChatPanel();
+    setSelectionPick(null);
+  }, [selectionPick, openChatPanel]);
+
+  const handleQuickEditSelection = useCallback(() => {
+    if (!selectionPick) return;
+    openQuickEditFromPick(selectionPick);
+  }, [selectionPick, openQuickEditFromPick]);
+
+  const handleClearChatSelectionContext = useCallback(() => {
+    setChatSelectionContext(null);
+    setChatComposerMode("normal");
+    setSelection("");
+  }, []);
+
+  const handleAskArioFixCompile = useCallback(() => {
+    if (!compileError) return;
+    const line = parseCompileErrorLine(compileError);
+    setChatComposerMode("quick-edit");
+    setChatSelectionContext(null);
+    setSelection("");
+    setChatInput(`Fix this LaTeX compile error:\n\n${compileError.slice(0, 1500)}`);
+    if (line) setHighlightLine(line);
+    openChatPanel();
+  }, [compileError, openChatPanel]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "k") return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest(".latex-input")) return;
+      if (!selectionPick?.context.text.trim()) return;
+      e.preventDefault();
+      handleQuickEditSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectionPick, handleQuickEditSelection]);
+
   const handleStopChat = useCallback(() => {
     if (!chatAbortRef.current) return;
     chatAbortRef.current.abort();
@@ -736,7 +915,10 @@ function EditorPage() {
   const handleSend = async () => {
     const text = chatInput.trim();
     if (!text || chatLoading || !projectId) return;
-    setChatOpen(true);
+    const activeSelection = chatSelectionContext?.text ?? selection;
+    const sentSelection = chatSelectionContext;
+    const task = chatComposerMode === "quick-edit" ? ("edit" as const) : undefined;
+    openChatPanel();
     chatAbortRef.current?.abort();
     const abort = new AbortController();
     chatAbortRef.current = abort;
@@ -754,9 +936,12 @@ function EditorPage() {
       },
     ]);
     setChatInput("");
+    setChatComposerMode("normal");
     setChatLoading(true);
     setLiveActivity(null);
     setPendingSuggestion(null);
+    setPendingEdits(null);
+    setActiveEditId(null);
 
     const patchAssistant = (updater: (msg: ChatMessage) => ChatMessage) => {
       setMessages((prev) => {
@@ -778,7 +963,8 @@ function EditorPage() {
         {
           sessionId: projectId,
           latexContent: latex,
-          selection,
+          selection: activeSelection,
+          task,
           llm_provider: llmProvider,
           llm_model: llmModel || undefined,
           integrity_strictness: integrityStrictness,
@@ -826,15 +1012,54 @@ function EditorPage() {
               content: result.response || msg.content,
               isStreaming: false,
             }));
-            if (result.suggestion && result.original_text) {
+            const edits = (result.edits ?? []).filter(
+              (e) => e?.replacement_text && e?.original_text,
+            );
+            const selectionAnchor =
+              sentSelection &&
+              sentSelection.end > sentSelection.start
+                ? sentSelection
+                : null;
+            if (edits.length > 0) {
+              const mapped: PendingEdit[] = edits.map((e) => ({
+                id: e.id,
+                file: e.file || "main.tex",
+                section: e.section,
+                applyMode: selectionAnchor
+                  ? "selection"
+                  : ((e.apply_mode ?? result.apply_mode ?? "selection") as
+                      | "selection"
+                      | "document"),
+                originalText: selectionAnchor?.text ?? e.original_text,
+                replacementText: selectionAnchor
+                  ? clampSelectionReplacement(selectionAnchor.text, e.replacement_text)
+                  : e.replacement_text,
+                description: e.description,
+                flags: result.integrity_flags ?? [],
+                revisionId: result.revision_id || undefined,
+                accepted: false,
+                selectionStart: selectionAnchor?.start,
+                selectionEnd: selectionAnchor?.end,
+              }));
+              setPendingEdits(mapped);
+              setActiveEditId(mapped[0]?.id ?? null);
+              setChatOpen(false);
+            } else if (result.suggestion && result.original_text) {
               setPendingSuggestion({
-                originalText: result.original_text,
-                suggestion: result.suggestion,
+                originalText: selectionAnchor?.text ?? result.original_text,
+                suggestion: selectionAnchor
+                  ? clampSelectionReplacement(selectionAnchor.text, result.suggestion)
+                  : result.suggestion,
                 diff: result.diff ?? "",
                 flags: result.integrity_flags ?? [],
-                applyMode: result.apply_mode ?? "selection",
+                applyMode: selectionAnchor
+                  ? "selection"
+                  : (result.apply_mode ?? "selection"),
                 revisionId: result.revision_id || undefined,
+                selectionStart: selectionAnchor?.start,
+                selectionEnd: selectionAnchor?.end,
               });
+              setChatOpen(false);
             }
             if (result.citation_results?.length) {
               setCitationResults(result.citation_results);
@@ -886,10 +1111,22 @@ function EditorPage() {
 
   const handleAcceptSuggestion = () => {
     if (!pendingSuggestion) return;
-    const { originalText, suggestion, applyMode, revisionId } = pendingSuggestion;
+    const { originalText, suggestion, applyMode, revisionId, selectionStart, selectionEnd } =
+      pendingSuggestion;
     let next = latex;
     if (applyMode === "document") {
       next = suggestion;
+    } else if (
+      selectionStart != null &&
+      selectionEnd != null &&
+      selectionEnd > selectionStart &&
+      selectionEnd <= latex.length
+    ) {
+      const originalSlice = latex.slice(selectionStart, selectionEnd);
+      next =
+        latex.slice(0, selectionStart) +
+        clampSelectionReplacement(originalSlice, suggestion) +
+        latex.slice(selectionEnd);
     } else if (latex.includes(originalText)) {
       next = latex.replace(originalText, suggestion);
     } else {
@@ -930,6 +1167,83 @@ function EditorPage() {
     ]);
   };
 
+  const applySingleEdit = useCallback((base: string, edit: PendingEdit): string => {
+    if (edit.applyMode === "document") return edit.replacementText;
+    if (
+      edit.selectionStart != null &&
+      edit.selectionEnd != null &&
+      edit.selectionEnd > edit.selectionStart &&
+      edit.selectionEnd <= base.length
+    ) {
+      const originalSlice = base.slice(edit.selectionStart, edit.selectionEnd);
+      const replacement = clampSelectionReplacement(originalSlice, edit.replacementText);
+      return base.slice(0, edit.selectionStart) + replacement + base.slice(edit.selectionEnd);
+    }
+    if (base.includes(edit.originalText)) {
+      return base.replace(edit.originalText, edit.replacementText);
+    }
+    return base;
+  }, []);
+
+  const handleAcceptEdit = useCallback(
+    (editId: string) => {
+      if (!pendingEdits) return;
+      const edit = pendingEdits.find((e) => e.id === editId);
+      if (!edit) return;
+      const nextLatex = applySingleEdit(latex, edit);
+      if (nextLatex !== latex) {
+        recordNow(nextLatex);
+      }
+      const remaining = pendingEdits.filter((e) => e.id !== editId);
+      setPendingEdits(remaining.length ? remaining : null);
+      setActiveEditId(remaining[0]?.id ?? null);
+      if (projectId && edit.revisionId) {
+        void revisionAction(projectId, edit.revisionId, "accepted")
+          .then(() => refreshRevisions())
+          .catch(() => {});
+      }
+      if (autoCompile) {
+        void handleCompile(nextLatex);
+      }
+    },
+    [pendingEdits, latex, projectId, autoCompile, applySingleEdit, recordNow, refreshRevisions, handleCompile],
+  );
+
+  const handleRejectEdit = useCallback(
+    (editId: string) => {
+      if (!pendingEdits) return;
+      const edit = pendingEdits.find((e) => e.id === editId);
+      const remaining = pendingEdits.filter((e) => e.id !== editId);
+      setPendingEdits(remaining.length ? remaining : null);
+      setActiveEditId(remaining[0]?.id ?? null);
+      if (projectId && edit?.revisionId) {
+        void revisionAction(projectId, edit.revisionId, "rejected")
+          .then(() => refreshRevisions())
+          .catch(() => {});
+      }
+    },
+    [pendingEdits, projectId, refreshRevisions],
+  );
+
+  const handleAcceptAllEdits = useCallback(() => {
+    if (!pendingEdits?.length) return;
+    let nextLatex = latex;
+    for (const edit of pendingEdits) {
+      nextLatex = applySingleEdit(nextLatex, edit);
+    }
+    if (nextLatex !== latex) {
+      recordNow(nextLatex);
+      if (autoCompile) void handleCompile(nextLatex);
+    }
+    setPendingEdits(null);
+    setActiveEditId(null);
+  }, [pendingEdits, latex, applySingleEdit, recordNow, autoCompile, handleCompile]);
+
+  const handleRejectAllEdits = useCallback(() => {
+    setPendingEdits(null);
+    setActiveEditId(null);
+  }, []);
+
   useEffect(() => {
     if (!pendingSuggestion) return;
     const onKey = (e: KeyboardEvent) => {
@@ -967,6 +1281,9 @@ function EditorPage() {
     onRefreshProviders: loadProviders,
     onOpenChat: () => setChatOpen(true),
     onCloseChat: () => setChatOpen(false),
+    chatComposerMode,
+    chatSelectionContext,
+    onClearChatSelectionContext: handleClearChatSelectionContext,
     onUndo: undo,
     onRedo: redo,
     canUndo,
@@ -979,13 +1296,62 @@ function EditorPage() {
 
   return (
     <div className="editor-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground">
-      {showSplash && (
+      {bootState === "error" && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="font-serif-body text-lg font-semibold">Could not open project</p>
+          <p className="max-w-md text-sm text-muted-foreground">{bootError}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!projectId) return;
+                setBootState("loading");
+                setBootError(null);
+                invalidateFetchKey(`papers:${projectId}`);
+                fetchPaper(projectId)
+                  .then((project) => {
+                    setProjectName(project.name);
+                    const normalizedMain = project.mainFile ?? "main.tex";
+                    setMainFile(normalizedMain);
+                    setActiveFile(normalizedMain);
+                    setProjectFiles(
+                      project.files?.length
+                        ? project.files
+                        : [{ path: normalizedMain, content: project.latex }],
+                    );
+                    setCompiler(project.compiler ?? "auto");
+                    resetHistory(project.latex);
+                    setSavedLatex(project.latex);
+                    setAssets(project.assets ?? []);
+                    setBootState("ready");
+                  })
+                  .catch((error: unknown) => {
+                    setBootError(
+                      error instanceof Error ? error.message : "Failed to load this project.",
+                    );
+                    setBootState("error");
+                  });
+              }}
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Retry
+            </button>
+            <Link
+              to="/projects"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Back to projects
+            </Link>
+          </div>
+        </div>
+      )}
+      {bootState !== "error" && showSplash && (
         <EditorEntrySplash
           exiting={splashPhase === "exiting"}
           label={bootState === "loading" ? "Loading project…" : "Opening editor…"}
         />
       )}
-      {showEditor && (
+      {bootState !== "error" && showEditor && (
         <div
           className={`flex min-h-0 flex-1 flex-col overflow-hidden${
             showSplash ? " invisible" : ""
@@ -1026,6 +1392,10 @@ function EditorPage() {
       <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
         <LeftSidebar
           projectName={projectName}
+          outlineLatex={mainLatexSource}
+          highlightLine={highlightLine}
+          onRenameProject={handleRenameProject}
+          onOutlineJump={jumpToOutlineLine}
           files={projectFiles}
           activeFile={activeFile}
           mainFile={mainFile}
@@ -1048,9 +1418,22 @@ function EditorPage() {
               editorRef={latexEditorRef}
               onLatexChange={setLatex}
               onSelectionChange={setSelection}
+              onSelectionContextChange={handleSelectionContextChange}
+              selectionPick={selectionPick}
+              onAddSelectionToChat={handleAddSelectionToChat}
+              onQuickEditSelection={handleQuickEditSelection}
+              onDismissSelectionToolbar={() => setSelectionPick(null)}
+              onQuickEditRequest={openQuickEditFromPick}
               chatOpen={chatOpen}
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
+              pendingEdits={pendingEdits}
+              activeEditId={activeEditId}
+              onSelectEdit={setActiveEditId}
+              onAcceptEdit={handleAcceptEdit}
+              onRejectEdit={handleRejectEdit}
+              onAcceptAllEdits={handleAcceptAllEdits}
+              onRejectAllEdits={handleRejectAllEdits}
               {...chatProps}
             />
           }
@@ -1089,6 +1472,7 @@ function EditorPage() {
                 }}
                 onSynctexHit={handleSynctexHit}
                 onCompile={() => void handleCompile()}
+                onAskArioFix={handleAskArioFixCompile}
                 latexSource={mainLatexSource}
                 projectName={projectName}
               />
@@ -1102,6 +1486,10 @@ function EditorPage() {
         {mobileTab === "files" && (
           <MobileFilesPanel
             projectName={projectName}
+            outlineLatex={mainLatexSource}
+            highlightLine={highlightLine}
+            onRenameProject={handleRenameProject}
+            onOutlineJump={jumpToOutlineLine}
             files={projectFiles}
             activeFile={activeFile}
             assets={assets}
@@ -1112,16 +1500,28 @@ function EditorPage() {
           />
         )}
         {mobileTab === "editor" && (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
             <LatexEditor
               editorRef={latexEditorRef}
               latex={latex}
               onLatexChange={setLatex}
+              onSelectionChange={setSelection}
+              onSelectionContextChange={handleSelectionContextChange}
+              onQuickEditRequest={openQuickEditFromPick}
               fullHeight
               highlightLine={highlightLine}
               synctexHighlight={synctexHighlight}
-              inlineSuggestion={pendingSuggestion}
+              inlineSuggestion={toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion)}
             />
+            {selectionPick && (
+              <EditorSelectionToolbar
+                context={selectionPick.context}
+                anchor={selectionPick.anchor}
+                onAddToChat={handleAddSelectionToChat}
+                onQuickEdit={handleQuickEditSelection}
+                onDismiss={() => setSelectionPick(null)}
+              />
+            )}
           </div>
         )}
         {mobileTab === "preview" && (
@@ -1138,6 +1538,7 @@ function EditorPage() {
             onCompilerChange={setCompiler}
             onSynctexHit={handleSynctexHit}
             onCompile={() => void handleCompile()}
+            onAskArioFix={handleAskArioFixCompile}
             projectName={projectName}
             latexSource={mainLatexSource}
             mobile
@@ -1298,6 +1699,10 @@ function MobileBottomBar({
 
 function MobileFilesPanel({
   projectName,
+  outlineLatex,
+  highlightLine = null,
+  onRenameProject,
+  onOutlineJump,
   files,
   activeFile,
   assets,
@@ -1307,6 +1712,10 @@ function MobileFilesPanel({
   isDirty = false,
 }: {
   projectName: string;
+  outlineLatex: string;
+  highlightLine?: number | null;
+  onRenameProject: (name: string) => void | Promise<void>;
+  onOutlineJump?: (line: number) => void;
   files: ProjectFile[];
   activeFile: string;
   assets: ProjectAsset[];
@@ -1318,13 +1727,7 @@ function MobileFilesPanel({
   return (
     <div className="soft-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-sidebar">
       <div className="border-b border-border/40 p-4">
-        <button className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-sm font-medium hover:bg-sidebar-accent transition">
-          <span className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-            {projectName}
-          </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </button>
+        <EditableProjectName name={projectName} onRename={onRenameProject} />
       </div>
 
       <div className="flex items-center justify-between px-4 py-3">
@@ -1387,19 +1790,13 @@ function MobileFilesPanel({
 
       <div className="mt-6 border-t border-border/40 px-4 py-4">
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>
-        <nav className="mt-3 flex flex-col gap-1">
-          {OUTLINE_SECTIONS.map((s, i) => (
-            <button
-              key={s}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-foreground/80 hover:bg-sidebar-accent/50 transition"
-            >
-              <span className="font-mono text-[10px] text-muted-foreground w-5">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              {s}
-            </button>
-          ))}
-        </nav>
+        <div className="mt-3">
+          <LatexOutlineNav
+            latex={outlineLatex}
+            activeLine={highlightLine}
+            onJumpToLine={onOutlineJump}
+          />
+        </div>
       </div>
 
       <div className="mt-auto border-t border-border/40 p-4">
@@ -1430,6 +1827,9 @@ function MobileChatSheet({
   onProviderChange,
   onModelChange,
   onRefreshProviders,
+  chatComposerMode = "normal",
+  chatSelectionContext = null,
+  onClearChatSelectionContext,
 }: {
   onClose: () => void;
   messages: ChatMessage[];
@@ -1446,10 +1846,28 @@ function MobileChatSheet({
   onProviderChange?: (p: LLMProvider) => void;
   onModelChange?: (m: string) => void;
   onRefreshProviders?: () => void;
+  chatComposerMode?: "normal" | "quick-edit";
+  chatSelectionContext?: EditorSelectionContext | null;
+  onClearChatSelectionContext?: () => void;
 }) {
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const canUseLlm = Boolean(
     providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
   );
+
+  useEffect(() => {
+    if (chatComposerMode !== "quick-edit") return;
+    const frame = requestAnimationFrame(() => chatInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [chatComposerMode, chatSelectionContext?.start]);
+
+  const placeholder = !canUseLlm
+    ? "Cấu hình OPENROUTER_API_KEY trong .env để chat"
+    : chatComposerMode === "quick-edit"
+      ? "Mô tả cách sửa đoạn đã chọn…"
+      : chatSelectionContext
+        ? "Hỏi về vùng đã chọn…"
+        : "Ask anything";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col md:hidden">
@@ -1480,6 +1898,35 @@ function MobileChatSheet({
         />
 
         <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
+          {chatComposerMode === "quick-edit" && (
+            <div className="chat-quick-edit-banner mb-2" role="status">
+              <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>Quick Edit — chỉnh sửa vùng đã chọn</span>
+            </div>
+          )}
+          {chatSelectionContext && (
+            <div className="chat-selection-chip mb-2">
+              <span className="chat-selection-chip-label">
+                {chatSelectionContext.lineStart === chatSelectionContext.lineEnd
+                  ? `Dòng ${chatSelectionContext.lineStart}`
+                  : `Dòng ${chatSelectionContext.lineStart}–${chatSelectionContext.lineEnd}`}
+                <span className="chat-selection-chip-preview">
+                  {chatSelectionContext.text.trim().slice(0, 72)}
+                  {chatSelectionContext.text.trim().length > 72 ? "…" : ""}
+                </span>
+              </span>
+              {onClearChatSelectionContext && (
+                <button
+                  type="button"
+                  className="chat-selection-chip-clear"
+                  onClick={onClearChatSelectionContext}
+                  aria-label="Bỏ vùng chọn"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
           <div className="chat-dock-llm-bar mb-2">
             {canUseLlm ? (
               <LlmSelector
@@ -1499,15 +1946,14 @@ function MobileChatSheet({
             )}
           </div>
           <ChatInput
+            ref={chatInputRef}
             chatInput={chatInput}
             onChatInputChange={onChatInputChange}
             onSend={onSend}
             onStop={onStop}
             disabled={!canUseLlm}
             loading={chatLoading}
-            placeholder={
-              canUseLlm ? "Ask anything" : "Cấu hình OPENROUTER_API_KEY trong .env để chat"
-            }
+            placeholder={placeholder}
           />
         </div>
       </div>
@@ -1517,6 +1963,10 @@ function MobileChatSheet({
 
 function LeftSidebar({
   projectName,
+  outlineLatex,
+  highlightLine = null,
+  onRenameProject,
+  onOutlineJump,
   files,
   activeFile,
   mainFile,
@@ -1530,6 +1980,10 @@ function LeftSidebar({
   isDirty = false,
 }: {
   projectName: string;
+  outlineLatex: string;
+  highlightLine?: number | null;
+  onRenameProject: (name: string) => void | Promise<void>;
+  onOutlineJump?: (line: number) => void;
   files: ProjectFile[];
   activeFile: string;
   mainFile: string;
@@ -1545,13 +1999,7 @@ function LeftSidebar({
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
       <div className="border-b border-border p-3">
-        <button className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm font-medium hover:bg-sidebar-accent transition">
-          <span className="flex items-center gap-2 truncate">
-            <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-            {projectName}
-          </span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        </button>
+        <EditableProjectName name={projectName} onRename={onRenameProject} />
       </div>
 
       <div className="flex border-b border-border">
@@ -1647,19 +2095,14 @@ function LeftSidebar({
 
           <div className="border-t border-border p-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>
-            <nav className="mt-2 flex flex-col gap-0.5">
-              {OUTLINE_SECTIONS.map((s, i) => (
-                <button
-                  key={s}
-                  className="flex items-center gap-2 rounded-md px-2 py-1 text-left text-[12px] text-foreground/70 hover:bg-sidebar-accent/50 hover:text-foreground transition"
-                >
-                  <span className="font-mono text-[9px] text-muted-foreground w-4">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {s}
-                </button>
-              ))}
-            </nav>
+            <div className="mt-2">
+              <LatexOutlineNav
+                latex={outlineLatex}
+                activeLine={highlightLine}
+                onJumpToLine={onOutlineJump}
+                compact
+              />
+            </div>
           </div>
         </>
       ) : (
@@ -1694,6 +2137,8 @@ function LatexEditor({
   latex,
   onLatexChange,
   onSelectionChange,
+  onSelectionContextChange,
+  onQuickEditRequest,
   fullHeight = false,
   highlightLine = null,
   synctexHighlight = null,
@@ -1703,6 +2148,12 @@ function LatexEditor({
   latex: string;
   onLatexChange: (v: string) => void;
   onSelectionChange?: (v: string) => void;
+  onSelectionContextChange?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor } | null,
+  ) => void;
+  onQuickEditRequest?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
+  ) => void;
   fullHeight?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
@@ -1715,6 +2166,8 @@ function LatexEditor({
       latex={latex}
       onLatexChange={onLatexChange}
       onSelectionChange={onSelectionChange}
+      onSelectionContextChange={onSelectionContextChange}
+      onQuickEditRequest={onQuickEditRequest}
       fullHeight={fullHeight}
       highlightLine={highlightLine}
       synctexHighlight={synctexHighlight}
@@ -1724,6 +2177,8 @@ function LatexEditor({
               originalText: inlineSuggestion.originalText,
               suggestion: inlineSuggestion.suggestion,
               applyMode: inlineSuggestion.applyMode,
+              selectionStart: inlineSuggestion.selectionStart,
+              selectionEnd: inlineSuggestion.selectionEnd,
             }
           : null
       }
@@ -1739,6 +2194,12 @@ function CenterPanel({
   editorRef,
   onLatexChange,
   onSelectionChange,
+  onSelectionContextChange,
+  selectionPick,
+  onAddSelectionToChat,
+  onQuickEditSelection,
+  onDismissSelectionToolbar,
+  onQuickEditRequest,
   messages,
   chatInput,
   onChatInputChange,
@@ -1760,6 +2221,13 @@ function CenterPanel({
   onModelChange,
   onRefreshProviders,
   pendingSuggestion,
+  pendingEdits,
+  activeEditId,
+  onSelectEdit,
+  onAcceptEdit,
+  onRejectEdit,
+  onAcceptAllEdits,
+  onRejectAllEdits,
   onAcceptSuggestion,
   onRejectSuggestion,
   onUndo,
@@ -1767,6 +2235,9 @@ function CenterPanel({
   canUndo = false,
   canRedo = false,
   isDirty = false,
+  chatComposerMode = "normal",
+  chatSelectionContext = null,
+  onClearChatSelectionContext,
 }: {
   latex: string;
   activeFile: string;
@@ -1775,6 +2246,16 @@ function CenterPanel({
   editorRef?: React.Ref<LatexCodeEditorHandle>;
   onLatexChange: (v: string) => void;
   onSelectionChange?: (v: string) => void;
+  onSelectionContextChange?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor } | null,
+  ) => void;
+  selectionPick?: { context: EditorSelectionContext; anchor: SelectionAnchor } | null;
+  onAddSelectionToChat?: () => void;
+  onQuickEditSelection?: () => void;
+  onDismissSelectionToolbar?: () => void;
+  onQuickEditRequest?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
+  ) => void;
   messages: ChatMessage[];
   chatInput: string;
   onChatInputChange: (v: string) => void;
@@ -1797,12 +2278,22 @@ function CenterPanel({
   onModelChange?: (m: string) => void;
   onRefreshProviders?: () => void;
   pendingSuggestion?: PendingSuggestion | null;
+  pendingEdits?: PendingEdit[] | null;
+  activeEditId?: string | null;
+  onSelectEdit?: (id: string) => void;
+  onAcceptEdit?: (id: string) => void;
+  onRejectEdit?: (id: string) => void;
+  onAcceptAllEdits?: () => void;
+  onRejectAllEdits?: () => void;
   onAcceptSuggestion?: () => void;
   onRejectSuggestion?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  chatComposerMode?: "normal" | "quick-edit";
+  chatSelectionContext?: EditorSelectionContext | null;
+  onClearChatSelectionContext?: () => void;
 }) {
   return (
     <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
@@ -1859,14 +2350,102 @@ function CenterPanel({
             latex={latex}
             onLatexChange={onLatexChange}
             onSelectionChange={onSelectionChange}
+            onSelectionContextChange={onSelectionContextChange}
+            onQuickEditRequest={onQuickEditRequest}
             fullHeight
             highlightLine={highlightLine}
             synctexHighlight={synctexHighlight}
-            inlineSuggestion={pendingSuggestion}
+            inlineSuggestion={toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion)}
           />
+          {selectionPick && onAddSelectionToChat && onQuickEditSelection && onDismissSelectionToolbar && (
+            <EditorSelectionToolbar
+              context={selectionPick.context}
+              anchor={selectionPick.anchor}
+              onAddToChat={onAddSelectionToChat}
+              onQuickEdit={onQuickEditSelection}
+              onDismiss={onDismissSelectionToolbar}
+            />
+          )}
         </div>
 
-        {pendingSuggestion && onAcceptSuggestion && onRejectSuggestion && (
+        {pendingEdits?.length ? (
+          <div className="suggestion-panel shrink-0 border-t border-primary/15 bg-card/98 shadow-[0_-4px_20px_-8px_oklch(0.2_0.02_255_/_12%)] backdrop-blur-sm">
+            <div className="flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                <span>Các thay đổi từ Ario ({pendingEdits.length})</span>
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  Click để preview · Ctrl+Enter Accept · Esc Reject
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={onRejectAllEdits}
+                  className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:bg-secondary"
+                >
+                  Reject all
+                </button>
+                <button
+                  type="button"
+                  onClick={onAcceptAllEdits}
+                  className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
+                >
+                  Accept all
+                </button>
+              </div>
+            </div>
+            <div className="px-3 pb-2">
+              <div className="flex flex-col gap-1">
+                {pendingEdits.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => onSelectEdit?.(e.id)}
+                    className={`text-left rounded-md border px-2.5 py-2 text-xs transition ${
+                      activeEditId === e.id
+                        ? "border-primary/35 bg-primary/10"
+                        : "border-border/60 hover:bg-secondary/60"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {e.description || "Proposed change"}
+                          {e.section ? ` · ${e.section}` : ""}
+                        </div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {e.file} · {e.applyMode}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            onRejectEdit?.(e.id);
+                          }}
+                          className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-secondary"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            onAcceptEdit?.(e.id);
+                          }}
+                          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90"
+                        >
+                          Accept
+                        </button>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : pendingSuggestion && onAcceptSuggestion && onRejectSuggestion ? (
           <SuggestionPanel
             originalText={pendingSuggestion.originalText}
             suggestion={pendingSuggestion.suggestion}
@@ -1876,7 +2455,7 @@ function CenterPanel({
             onAccept={onAcceptSuggestion}
             onReject={onRejectSuggestion}
           />
-        )}
+        ) : null}
 
         <ChatOverlay
           open={chatOpen}
@@ -1897,6 +2476,9 @@ function CenterPanel({
           onProviderChange={onProviderChange}
           onModelChange={onModelChange}
           onRefreshProviders={onRefreshProviders}
+          composerMode={chatComposerMode}
+          selectionContext={chatSelectionContext}
+          onClearSelectionContext={onClearChatSelectionContext}
         />
       </div>
     </section>

@@ -148,7 +148,11 @@ async def classify_intent(
     model: str | None = None,
 ) -> IntentResult:
     if explicit_task and explicit_task != "chat":
-        scope: Scope = "selection" if has_selection and explicit_task == "style" else "document"
+        scope: Scope = (
+            "selection"
+            if has_selection and explicit_task in ("style", "edit")
+            else "document"
+        )
         return IntentResult(action=explicit_task, scope=scope)  # type: ignore[arg-type]
 
     from src.config import get_settings
