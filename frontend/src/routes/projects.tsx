@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -117,8 +117,12 @@ function ProjectsPage() {
   );
 
   const openEditor = (projectId: string) => {
+    if (!projectId.trim()) return;
     markEditorEntryTransition();
-    navigate({ to: "/editor", search: { projectId } });
+    void navigate({
+      to: "/editor",
+      search: { projectId: projectId.trim() },
+    });
   };
 
   const handleCreateSample = async () => {
@@ -527,22 +531,45 @@ function ProjectRow({
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
+  const openSearch = { projectId: project.id };
+
   return (
-    <div className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}`}>
+    <div
+      className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}`}
+      onClick={(e) => {
+        if (deleting) return;
+        const target = e.target as HTMLElement;
+        if (target.closest(".projects-col-actions")) return;
+        onOpen();
+      }}
+      onKeyDown={(e) => {
+        if (deleting) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={deleting ? -1 : 0}
+      aria-label={`Open ${project.name}`}
+    >
       <div className="projects-col-name flex min-w-0 items-center gap-2">
         {deleting ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
         ) : (
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         )}
-        <button
-          type="button"
-          onClick={onOpen}
-          disabled={deleting}
+        <Link
+          to="/editor"
+          search={openSearch}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!deleting) markEditorEntryTransition();
+          }}
           className="projects-row-open min-w-0 flex-1 text-left"
         >
           <span className="projects-row-name block truncate">{project.name}</span>
-        </button>
+        </Link>
       </div>
       <span
         className="projects-row-date projects-col-created hidden md:block"
