@@ -159,6 +159,7 @@ def _merge_agent_into_done(done_payload: dict[str, Any], result: dict[str, Any])
         "original_text",
         "diff",
         "integrity_flags",
+        "edits",
         "citation_results",
         "structure_suggestions",
     ):
@@ -348,6 +349,10 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         settings = get_settings()
         strictness = request.integrity_strictness or settings.integrity_strictness
 
+        apply_mode: str = intent.scope
+        if has_selection:
+            apply_mode = "selection"
+
         state: AgentState = {
             "query": request.message,
             "task": task,  # type: ignore[arg-type]
@@ -358,7 +363,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "citation_keys": cite_keys,
             "llm_provider": provider,
             "llm_model": model or "",
-            "apply_mode": intent.scope,
+            "apply_mode": apply_mode,
             "integrity_strictness": strictness,
         }
 

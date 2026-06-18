@@ -1,31 +1,38 @@
-import { diffWords, type DiffPart } from "@/lib/text-diff";
+export type DiffLineKind = "normal" | "del" | "ins";
 
 export type InlineSuggestionInput = {
   originalText: string;
   suggestion: string;
   applyMode?: string;
+  selectionStart?: number;
+  selectionEnd?: number;
 };
 
-export type SuggestionViewLine =
-  | { kind: "normal"; text: string; lineNo: number }
-  | { kind: "diff"; parts: DiffPart[]; lineNo: number };
+export type SuggestionViewLine = { kind: DiffLineKind; text: string; lineNo: number };
 
 export type InlineSuggestionView = {
-  previewLatex: string;
+  displayLatex: string;
   lines: SuggestionViewLine[];
   changeStartLine: number;
   changeEndLine: number;
 };
 
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
-}
-
 export function findOriginalRange(
   latex: string,
   originalText: string,
   applyMode?: string,
+  selectionRange?: { start: number; end: number },
 ): { start: number; end: number; matched: string } | null {
+  if (
+    selectionRange &&
+    selectionRange.end > selectionRange.start &&
+    selectionRange.start >= 0 &&
+    selectionRange.end <= latex.length
+  ) {
+    const { start, end } = selectionRange;
+    return { start, end, matched: latex.slice(start, end) };
+  }
+
   if (applyMode === "document") {
     return { start: 0, end: latex.length, matched: latex };
   }
@@ -43,49 +50,70 @@ export function findOriginalRange(
     return { start: trimmed, end: trimmed + needle.length, matched: needle };
   }
 
-  const normLatex = normalizeWhitespace(latex);
-  const normNeedle = normalizeWhitespace(needle);
-  const normIdx = normLatex.indexOf(normNeedle);
-  if (normIdx < 0) return null;
-
-  const words = needle.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return null;
-  const first = words[0];
-  const last = words[words.length - 1];
-  const start = latex.indexOf(first);
-  if (start < 0) return null;
-  const endSearch = latex.indexOf(last, start);
-  if (endSearch < 0) return null;
-  const end = endSearch + last.length;
-  return { start, end, matched: latex.slice(start, end) };
+  return null;
 }
 
 function offsetToLine(text: string, offset: number): number {
-  return text.slice(0, offset).split("\n").length;
+  return text.slice(0, Math.max(0, offset)).split("\n").length;
 }
 
-function sliceDiffPartsForLine(
-  parts: DiffPart[],
-  lineStart: number,
-  lineEnd: number,
-): DiffPart[] {
-  const sliced: DiffPart[] = [];
-  let cursor = 0;
+function splitLinesKeepEmpty(text: string): string[] {
+  return text.replace(/\r\n/g, "\n").split("\n");
+}
 
-  for (const part of parts) {
-    const partStart = cursor;
-    const partEnd = cursor + part.text.length;
-    cursor = partEnd;
+function wordOverlap(a: string, b: string): number {
+  const wordsA = new Set(a.toLowerCase().match(/\w+/g) ?? []);
+  const wordsB = new Set(b.toLowerCase().match(/\w+/g) ?? []);
+  if (!wordsA.size || !wordsB.size) return 0;
+  let shared = 0;
+  for (const w of wordsA) {
+    if (wordsB.has(w)) shared += 1;
+  }
+  return shared / Math.max(wordsA.size, wordsB.size);
+}
 
-    if (partEnd <= lineStart || partStart >= lineEnd) continue;
+function bestMatchingLine(original: string, suggestion: string): string | null {
+  const orig = original.trim();
+  if (!orig) return null;
+  const lines = suggestion.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
 
-    const sliceStart = Math.max(0, lineStart - partStart);
-    const sliceEnd = Math.min(part.text.length, lineEnd - partStart);
-    const text = part.text.slice(sliceStart, sliceEnd);
-    if (text) sliced.push({ type: part.type, text });
+  const cmd = orig.match(/^(\\[a-zA-Z@*]+)/)?.[1];
+  if (cmd) {
+    const sameCmd = lines.find((line) => line.startsWith(cmd));
+    if (sameCmd) return sameCmd;
   }
 
-  return sliced;
+  let best = "";
+  let bestScore = 0;
+  for (const line of lines) {
+    const score = wordOverlap(line, orig);
+    if (score > bestScore) {
+      bestScore = score;
+      best = line;
+    }
+  }
+  if (bestScore >= 0.15) return best;
+  return lines.length === 1 ? lines[0] : null;
+}
+
+/** Strip full-document LLM leakage when previewing a selection edit. */
+export function clampSelectionReplacement(original: string, suggestion: string): string {
+  const orig = original.trim();
+  const sugg = suggestion.trim();
+  if (!orig || !sugg) return sugg;
+
+  const leaked =
+    /\\documentclass\b/i.test(sugg) || /\\begin\{document\}/i.test(sugg);
+  const origLines = Math.max(1, orig.split("\n").length);
+  const suggLines = Math.max(1, sugg.split("\n").length);
+  const oversized =
+    suggLines > origLines + 1 || sugg.length > Math.max(orig.length * 3, orig.length + 120);
+
+  if (leaked || oversized) {
+    return bestMatchingLine(orig, sugg) ?? orig;
+  }
+  return sugg;
 }
 
 export function buildInlineSuggestionView(
@@ -96,44 +124,52 @@ export function buildInlineSuggestionView(
   const suggestion = input.suggestion ?? "";
   if (!suggestion.trim()) return null;
 
-  const range = findOriginalRange(latex, originalText, input.applyMode);
+  const selectionRange =
+    input.selectionStart != null &&
+    input.selectionEnd != null &&
+    input.selectionEnd > input.selectionStart
+      ? { start: input.selectionStart, end: input.selectionEnd }
+      : undefined;
+
+  const range = findOriginalRange(latex, originalText, input.applyMode, selectionRange);
   if (!range) return null;
 
-  const previewLatex =
-    latex.slice(0, range.start) + suggestion + latex.slice(range.end);
-  const changeStart = range.start;
-  const changeEnd = range.start + suggestion.length;
-  const diffParts = diffWords(range.matched, suggestion);
+  const suggestionScoped = selectionRange
+    ? clampSelectionReplacement(range.matched, suggestion)
+    : suggestion;
 
-  const previewLines = previewLatex.split("\n");
-  let charOffset = 0;
+  const before = latex.slice(0, range.start);
+  const after = latex.slice(range.end);
+
+  const originalLines = splitLinesKeepEmpty(range.matched);
+  const suggestionLines = splitLinesKeepEmpty(suggestionScoped);
+
+  // Cursor-like view: keep file context, but show original (red) then suggestion (green).
+  const displayLatex = before + range.matched + "\n" + suggestionScoped + after;
+  const displayLines = displayLatex.split("\n");
+
+  const startLine = offsetToLine(displayLatex, range.start);
+
+  // Change block occupies: originalLines + suggestionLines (+ maybe join newline)
+  const changeStartLine = startLine;
+  const changeEndLine =
+    changeStartLine + Math.max(1, originalLines.length + suggestionLines.length) - 1;
+
   const lines: SuggestionViewLine[] = [];
-
-  for (let i = 0; i < previewLines.length; i += 1) {
-    const lineText = previewLines[i];
-    const lineStart = charOffset;
-    const lineEnd = charOffset + lineText.length;
+  for (let i = 0; i < displayLines.length; i += 1) {
     const lineNo = i + 1;
-
-    const overlapsChange = lineEnd > changeStart && lineStart < changeEnd;
-    if (overlapsChange) {
-      const parts = sliceDiffPartsForLine(diffParts, lineStart, lineEnd);
-      lines.push({
-        kind: "diff",
-        parts: parts.length > 0 ? parts : [{ type: "equal", text: lineText }],
-        lineNo,
-      });
+    const text = displayLines[i] ?? "";
+    if (lineNo >= changeStartLine && lineNo < changeStartLine + originalLines.length) {
+      lines.push({ kind: "del", text, lineNo });
+    } else if (
+      lineNo >= changeStartLine + originalLines.length &&
+      lineNo < changeStartLine + originalLines.length + suggestionLines.length
+    ) {
+      lines.push({ kind: "ins", text, lineNo });
     } else {
-      lines.push({ kind: "normal", text: lineText, lineNo });
+      lines.push({ kind: "normal", text, lineNo });
     }
-
-    charOffset = lineEnd + 1;
   }
 
-  return {
-    previewLatex,
-    lines,
-    changeStartLine: offsetToLine(previewLatex, changeStart),
-    changeEndLine: offsetToLine(previewLatex, Math.max(changeEnd - 1, changeStart)),
-  };
+  return { displayLatex, lines, changeStartLine, changeEndLine };
 }

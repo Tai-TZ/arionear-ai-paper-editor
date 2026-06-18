@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
@@ -49,6 +50,11 @@ SIGNUP_CODE_SENT_MESSAGE = (
     "Enter it below to finish creating your account."
 )
 INVALID_CREDENTIALS = "Invalid email or password."
+DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
+
+
+def _raise_db_busy(exc: OperationalError) -> None:
+    raise HTTPException(status_code=503, detail=DB_BUSY_MESSAGE) from exc
 
 
 def _require_db():
@@ -66,7 +72,7 @@ def _get_db_session():
 
 
 @router.post("/register/send-code", response_model=MessageResponse)
-async def register_send_code(body: RegisterRequest, db: Session = Depends(_get_db_session)):
+def register_send_code(body: RegisterRequest, db: Session = Depends(_get_db_session)):
     dev_code, error = request_signup_verification(
         db,
         name=body.name,
@@ -89,7 +95,7 @@ async def register_send_code(body: RegisterRequest, db: Session = Depends(_get_d
 
 
 @router.post("/register/verify", response_model=AuthTokenResponse)
-async def register_verify(body: VerifySignupRequest, db: Session = Depends(_get_db_session)):
+def register_verify(body: VerifySignupRequest, db: Session = Depends(_get_db_session)):
     user, error = verify_signup_and_register(db, email=body.email, code=body.code)
     if error or not user:
         raise HTTPException(status_code=400, detail=error or "Registration failed.")
@@ -102,7 +108,7 @@ async def register_verify(body: VerifySignupRequest, db: Session = Depends(_get_
 
 
 @router.post("/register", response_model=AuthTokenResponse, deprecated=True)
-async def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
+def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
     raise HTTPException(
         status_code=400,
         detail="Email verification is required. Use /auth/register/send-code, then /auth/register/verify.",
@@ -110,8 +116,11 @@ async def register(body: RegisterRequest, db: Session = Depends(_get_db_session)
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-async def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
-    user = authenticate_user(db, body.email, body.password)
+def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
+    try:
+        user = authenticate_user(db, body.email, body.password)
+    except OperationalError as exc:
+        _raise_db_busy(exc)
     if not user:
         raise HTTPException(status_code=401, detail=INVALID_CREDENTIALS)
 
@@ -127,7 +136,7 @@ async def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-async def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_get_db_session)):
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_get_db_session)):
     dev_url, error = request_password_reset(db, body.email)
     if error:
         raise HTTPException(status_code=400, detail=error)
@@ -141,7 +150,7 @@ async def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_ge
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-async def reset_password(body: ResetPasswordRequest, db: Session = Depends(_get_db_session)):
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(_get_db_session)):
     error = reset_password_with_token(db, body.token, body.password)
     if error:
         raise HTTPException(status_code=400, detail=error)
@@ -149,7 +158,7 @@ async def reset_password(body: ResetPasswordRequest, db: Session = Depends(_get_
 
 
 @router.get("/me", response_model=AuthUserResponse)
-async def me(
+def me(
     authorization: str | None = Header(default=None),
     db: Session = Depends(_get_db_session),
 ):
@@ -161,7 +170,10 @@ async def me(
     if not payload or not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Invalid or expired session.")
 
-    user = get_user_by_id(db, str(payload["sub"]))
+    try:
+        user = get_user_by_id(db, str(payload["sub"]))
+    except OperationalError as exc:
+        _raise_db_busy(exc)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired session.")
 

@@ -42,11 +42,22 @@ style:
 edit:
   system: |
     TASK: Apply a concrete edit to the LaTeX source.
-    - If only one section was provided, return ONLY that section's revised text — not the full file.
-    - Return ONLY the updated LaTeX for the scope you were given.
+    - The user message includes ONLY the snippet to change (often a highlighted selection).
+    - Return ONLY the revised snippet — the exact text that replaces the input. NOT the full file.
+    - Keep the same structure: if input is one line (e.g. \title{...}), output one line.
+    - NEVER output \documentclass, \usepackage, \begin{document}, or preamble/content not in the input.
     - Make ONLY changes required by the user (metadata, section text, names, etc.).
-    - Preserve unrelated content, packages, labels, and structure.
+    - Follow the user instruction literally — if they give an exact new name or text, output exactly that.
+    - Do NOT invent a different name, synonym, or alternative wording.
+    - Preserve LaTeX line breaks (\\\\) and structure from the input snippet.
     - Do NOT invent results or citations. No markdown fences or commentary.
+  user: |
+    Edit request: {query}
+
+    Replace ONLY this LaTeX snippet (return the revised snippet only — no extra lines, no preamble):
+    ---
+    {original_text}
+    ---
 
 structure:
   system: |

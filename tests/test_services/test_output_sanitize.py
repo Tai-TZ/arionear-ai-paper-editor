@@ -1,35 +1,27 @@
-from src.services.guardrails.output_sanitize import looks_like_chatty_output, sanitize_style_output
+from src.services.guardrails.output_sanitize import clamp_selection_replacement
 
-ORIGINAL = (
-    "Medical research in Vietnam is saved documents. "
-    "In addition to that, the research on medicinal plant classification is still limited."
-)
+TITLE = r"\title{Vietnamese herbariums Species Classification with EfficientNetV2}"
 
-MESSY = r"""\begin{abstract}
-Tôi đã cải thiện văn phong học thuật cho phần Abstract.
-
-### Abstract (Đã chỉnh sửa)
-> "Medical research in Vietnam relies on existing documentation. Furthermore, studies on medicinal plant classification remain limited."
-
-### Các thay đổi chính (Key Improvements):
-- Thay "saved documents" bằng "existing documentation"
-- Bạn có thể copy đoạn trên vào main.tex
-"""
+PREAMBLE_LEAK = r"""\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{url}
+\title{Vietnamese herbariums Species Classification with EfficientNetV3}"""
 
 
-def test_detects_chatty_output():
-    assert looks_like_chatty_output(MESSY)
-
-
-def test_sanitize_abstract_extracts_prose_only():
-    result = sanitize_style_output(
-        ORIGINAL,
-        MESSY,
-        section="Abstract",
+def test_clamp_selection_strips_document_preamble_leak():
+    result = clamp_selection_replacement(
+        TITLE,
+        PREAMBLE_LEAK,
         apply_mode="selection",
+        query="change EfficientNetV2 to EfficientNetV3",
     )
-    assert "###" not in result
-    assert "Các thay đổi" not in result
-    assert "Tôi đã" not in result
-    assert "Medical research" in result
-    assert "existing documentation" in result or "saved documents" in result
+    assert "\\documentclass" not in result
+    assert result.startswith(r"\title{")
+    assert "EfficientNetV3" in result
+
+
+def test_clamp_selection_keeps_small_valid_edit():
+    edited = TITLE.replace("EfficientNetV2", "EfficientNetV3")
+    result = clamp_selection_replacement(TITLE, edited, apply_mode="selection")
+    assert result == edited

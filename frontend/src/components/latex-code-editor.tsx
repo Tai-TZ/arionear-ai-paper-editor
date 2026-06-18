@@ -1,11 +1,15 @@
-import { useImperativeHandle, useLayoutEffect, useMemo, useRef, forwardRef } from "react";
+import { useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef, forwardRef } from "react";
 
-import { InlineDiffLine } from "@/components/inline-diff-line";
 import { HighlightedLatexLine } from "@/lib/latex-syntax";
 import {
   buildInlineSuggestionView,
   type InlineSuggestionInput,
 } from "@/lib/inline-suggestion";
+import {
+  readEditorSelection,
+  type EditorSelectionContext,
+  type SelectionAnchor,
+} from "@/lib/editor-selection-anchor";
 import type { SynctexWordHighlight } from "@/lib/synctex-highlight";
 
 export type LatexCodeEditorHandle = {
@@ -16,6 +20,12 @@ type LatexCodeEditorProps = {
   latex: string;
   onLatexChange: (v: string) => void;
   onSelectionChange?: (v: string) => void;
+  onSelectionContextChange?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor } | null,
+  ) => void;
+  onQuickEditRequest?: (
+    payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
+  ) => void;
   fullHeight?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
@@ -28,6 +38,8 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       latex,
       onLatexChange,
       onSelectionChange,
+      onSelectionContextChange,
+      onQuickEditRequest,
       fullHeight = false,
       highlightLine = null,
       synctexHighlight = null,
@@ -42,13 +54,29 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
         : null,
     [latex, inlineSuggestion],
   );
-  const displayLatex = suggestionView?.previewLatex ?? latex;
+  const displayLatex = suggestionView?.displayLatex ?? latex;
   const lines = displayLatex.split(/\r?\n/);
   const readOnly = Boolean(suggestionView);
   const gutterRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const measureProbeRef = useRef<HTMLSpanElement | null>(null);
+
+  const publishSelection = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta || readOnly) {
+      onSelectionContextChange?.(null);
+      return;
+    }
+    const picked = readEditorSelection(ta);
+    if (picked) {
+      onSelectionChange?.(picked.context.text);
+      onSelectionContextChange?.(picked);
+      return;
+    }
+    onSelectionChange?.("");
+    onSelectionContextChange?.(null);
+  }, [readOnly, onSelectionChange, onSelectionContextChange]);
 
   const syncScroll = () => {
     const ta = textareaRef.current;
@@ -58,6 +86,7 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       highlightRef.current.scrollTop = ta.scrollTop;
       highlightRef.current.scrollLeft = ta.scrollLeft;
     }
+    publishSelection();
   };
 
   const measurePrefixWidth = (prefix: string, reference: HTMLElement): number => {
@@ -93,7 +122,6 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
     const layer = highlightRef.current;
     if (!ta) return;
 
-    // Ensure scrollWidth reflects the full longest line before measuring.
     void ta.scrollWidth;
 
     const margin = 72;
@@ -161,7 +189,7 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
   useLayoutEffect(() => {
     if (!suggestionView) return;
     scrollToLineInternal(suggestionView.changeStartLine);
-  }, [suggestionView?.previewLatex]);
+  }, [suggestionView?.displayLatex]);
 
   useLayoutEffect(() => {
     if (!highlightLine || highlightLine < 1) return;
@@ -229,8 +257,14 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
                 key={i}
                 className={`latex-code-row ${inChange ? "latex-code-row-change" : ""}`}
               >
-                {viewLine?.kind === "diff" ? (
-                  <InlineDiffLine parts={viewLine.parts} />
+                {viewLine?.kind === "del" ? (
+                  <span className="latex-code-line diff-del">
+                    <HighlightedLatexLine text={line} />
+                  </span>
+                ) : viewLine?.kind === "ins" ? (
+                  <span className="latex-code-line diff-ins">
+                    <HighlightedLatexLine text={line} />
+                  </span>
                 ) : (
                   <HighlightedLatexLine text={line} highlightRange={range} />
                 )}
@@ -247,11 +281,20 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
           onChange={(e) => {
             if (!readOnly) onLatexChange(e.target.value);
           }}
-          onSelect={() => {
-            const el = textareaRef.current;
-            if (el && onSelectionChange) {
-              onSelectionChange(el.value.slice(el.selectionStart, el.selectionEnd));
-            }
+          onMouseUp={publishSelection}
+          onKeyUp={publishSelection}
+          onKeyDown={(e) => {
+            if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "k" || readOnly) return;
+            const ta = textareaRef.current;
+            if (!ta || !onQuickEditRequest) return;
+            const picked = readEditorSelection(ta);
+            if (!picked?.context.text.trim()) return;
+            e.preventDefault();
+            onQuickEditRequest(picked);
+          }}
+          onSelect={publishSelection}
+          onBlur={() => {
+            window.setTimeout(() => onSelectionContextChange?.(null), 180);
           }}
           onScroll={syncScroll}
           spellCheck={false}

@@ -77,6 +77,15 @@ export type ChatResult = {
   apply_mode?: "selection" | "document";
   revision_id?: string;
   integrity_flags?: IntegrityFlag[];
+  edits?: {
+    id: string;
+    file: string;
+    section?: string;
+    apply_mode?: "selection" | "document";
+    original_text: string;
+    replacement_text: string;
+    description?: string;
+  }[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];
 };
