@@ -389,7 +389,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             chat_llm = get_llm(
                 provider=provider,
                 model=model,
-                thinking=True if provider == "zai" else None,
+                thinking=False if provider == "zai" else None,
             )
             state_evt, act_evt = _emit_state(
                 "llm",

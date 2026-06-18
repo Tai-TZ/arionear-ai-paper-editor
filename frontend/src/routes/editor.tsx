@@ -87,7 +87,7 @@ import { EditableProjectName } from "@/components/editable-project-name";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
-import { fetchDedupe } from "@/lib/api/fetch-dedupe";
+import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
@@ -101,9 +101,12 @@ export const Route = createFileRoute("/editor")({
   beforeLoad: () => {
     requireAuth();
   },
-  validateSearch: (search: Record<string, unknown>): EditorSearch => ({
-    projectId: typeof search.projectId === "string" ? search.projectId : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): EditorSearch => {
+    const raw = search.projectId;
+    const projectId =
+      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
+    return { projectId };
+  },
   head: () => ({
     meta: [
       { title: "Editor — Arionear" },
@@ -303,7 +306,8 @@ function EditorPage() {
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [bootState, setBootState] = useState<"loading" | "ready">("loading");
+  const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
+  const [bootError, setBootError] = useState<string | null>(null);
   const [splashPhase, setSplashPhase] = useState<"visible" | "exiting" | "hidden">("visible");
   const [projectName, setProjectName] = useState("");
   const {
@@ -435,6 +439,8 @@ function EditorPage() {
     }
     let cancelled = false;
     setBootState("loading");
+    setBootError(null);
+    setSplashPhase("visible");
 
     fetchPaper(projectId)
       .then((project) => {
@@ -455,10 +461,13 @@ function EditorPage() {
         setBootState("ready");
         void loadSessionAudit(projectId);
       })
-      .catch(() => {
-        if (!cancelled) {
-          navigate({ to: "/projects", replace: true });
-        }
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        invalidateFetchKey(`papers:${projectId}`);
+        const message =
+          error instanceof Error ? error.message : "Failed to load this project.";
+        setBootError(message);
+        setBootState("error");
       });
 
     return () => {
@@ -1287,13 +1296,62 @@ function EditorPage() {
 
   return (
     <div className="editor-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground">
-      {showSplash && (
+      {bootState === "error" && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="font-serif-body text-lg font-semibold">Could not open project</p>
+          <p className="max-w-md text-sm text-muted-foreground">{bootError}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!projectId) return;
+                setBootState("loading");
+                setBootError(null);
+                invalidateFetchKey(`papers:${projectId}`);
+                fetchPaper(projectId)
+                  .then((project) => {
+                    setProjectName(project.name);
+                    const normalizedMain = project.mainFile ?? "main.tex";
+                    setMainFile(normalizedMain);
+                    setActiveFile(normalizedMain);
+                    setProjectFiles(
+                      project.files?.length
+                        ? project.files
+                        : [{ path: normalizedMain, content: project.latex }],
+                    );
+                    setCompiler(project.compiler ?? "auto");
+                    resetHistory(project.latex);
+                    setSavedLatex(project.latex);
+                    setAssets(project.assets ?? []);
+                    setBootState("ready");
+                  })
+                  .catch((error: unknown) => {
+                    setBootError(
+                      error instanceof Error ? error.message : "Failed to load this project.",
+                    );
+                    setBootState("error");
+                  });
+              }}
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Retry
+            </button>
+            <Link
+              to="/projects"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Back to projects
+            </Link>
+          </div>
+        </div>
+      )}
+      {bootState !== "error" && showSplash && (
         <EditorEntrySplash
           exiting={splashPhase === "exiting"}
           label={bootState === "loading" ? "Loading project…" : "Opening editor…"}
         />
       )}
-      {showEditor && (
+      {bootState !== "error" && showEditor && (
         <div
           className={`flex min-h-0 flex-1 flex-col overflow-hidden${
             showSplash ? " invisible" : ""
