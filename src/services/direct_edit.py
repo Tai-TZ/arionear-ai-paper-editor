@@ -11,6 +11,17 @@ _RENAME_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"replace\s+(.+?)\s+with\s+(.+)", re.IGNORECASE),
 )
 
+# Quick Edit on a selection: "đổi thành X" = replace whole selection with X
+_SELECTION_REPLACE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^đổi\s+thành\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^thay\s+bằng\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^sửa\s+thành\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^chỉnh\s+thành\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^change\s+to\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^replace\s+with\s+(.+)$", re.IGNORECASE),
+    re.compile(r"^set\s+to\s+(.+)$", re.IGNORECASE),
+)
+
 
 def _clean_fragment(text: str) -> str:
     return text.strip().strip("*#.,;:!?\"'""''")
@@ -73,10 +84,67 @@ def parse_rename_instruction(query: str) -> tuple[str, str] | None:
     return None
 
 
+def parse_selection_replace_instruction(query: str) -> str | None:
+    """Parse 'change selection to X' when the whole highlight should become X."""
+    text = query.strip()
+    for pattern in _SELECTION_REPLACE_PATTERNS:
+        match = pattern.match(text)
+        if not match:
+            continue
+        replacement = _clean_fragment(match.group(1))
+        if replacement:
+            return replacement
+    return None
+
+
+def _split_latex_line_suffix(text: str) -> tuple[str, str]:
+    match = re.search(r"((?:\\\\)+)\s*$", text)
+    if match:
+        return text[: match.start()].rstrip(), match.group(1)
+    return text.rstrip(), ""
+
+
+def apply_selection_replace(source: str, replacement: str) -> str:
+    """Replace selected span; keep LaTeX command wrappers and trailing \\\\."""
+    new_body = _clean_fragment(replacement)
+    if not new_body:
+        return source
+
+    if new_body.startswith("\\"):
+        body, suffix = _split_latex_line_suffix(source)
+        if suffix and not re.search(r"(?:\\\\)+\s*$", new_body):
+            return new_body + suffix
+        return new_body
+
+    cmd_wrap = re.match(
+        r"^(\s*\\[a-zA-Z@*]+(?:\[[^\]]*\])?\{)(.*?)(\}\s*)((?:\\\\)*)$",
+        source,
+        re.DOTALL,
+    )
+    if cmd_wrap:
+        return f"{cmd_wrap.group(1)}{new_body}{cmd_wrap.group(3)}{cmd_wrap.group(4)}"
+
+    body, suffix = _split_latex_line_suffix(source)
+    if re.search(r"(?:\\\\)+\s*$", new_body):
+        return new_body
+    if suffix:
+        return new_body + suffix
+    return new_body
+
+
 def try_direct_text_edit(query: str, source: str) -> str | None:
     """Apply simple rename/replace instructions without calling an LLM."""
     parsed = parse_rename_instruction(query)
-    if not parsed:
-        return None
-    old_text, new_text = parsed
-    return _replace_flexible(source, old_text, new_text)
+    if parsed:
+        old_text, new_text = parsed
+        replaced = _replace_flexible(source, old_text, new_text)
+        if replaced is not None:
+            return replaced
+
+    whole = parse_selection_replace_instruction(query)
+    if whole is not None:
+        result = apply_selection_replace(source, whole)
+        if result != source:
+            return result
+
+    return None

@@ -109,6 +109,76 @@ def _pick_best_prose_chunk(text: str, original: str) -> str:
     return best
 
 
+def _best_matching_line(original: str, suggestion: str) -> str | None:
+    orig = original.strip()
+    if not orig:
+        return None
+
+    cand_lines = [line.strip() for line in suggestion.splitlines() if line.strip()]
+    if not cand_lines:
+        return None
+
+    cmd_match = re.match(r"(\\[a-zA-Z@*]+)", orig)
+    if cmd_match:
+        cmd = cmd_match.group(1)
+        for line in cand_lines:
+            if line.startswith(cmd):
+                return line
+
+    best_line = ""
+    best_score = 0.0
+    for line in cand_lines:
+        score = _word_overlap(line, orig)
+        if score > best_score:
+            best_score = score
+            best_line = line
+    if best_score >= 0.15:
+        return best_line
+    return cand_lines[0] if len(cand_lines) == 1 else None
+
+
+def clamp_selection_replacement(
+    original: str,
+    suggestion: str,
+    *,
+    apply_mode: str = "selection",
+    query: str = "",
+) -> str:
+    """Prevent selection edits from leaking full-document LLM output."""
+    if apply_mode == "document":
+        return suggestion.strip()
+
+    orig = original.strip()
+    sugg = suggestion.strip()
+    if not orig:
+        return sugg
+    if not sugg:
+        return orig
+
+    leaked_preamble = bool(
+        re.search(r"\\documentclass\b", sugg, re.IGNORECASE)
+        or re.search(r"\\begin\{document\}", sugg, re.IGNORECASE)
+    )
+    orig_lines = max(1, orig.count("\n") + 1)
+    sugg_lines = max(1, sugg.count("\n") + 1)
+    oversized = sugg_lines > orig_lines + 1 or len(sugg) > max(len(orig) * 3, len(orig) + 120)
+
+    if leaked_preamble or oversized:
+        if query:
+            from src.services.direct_edit import try_direct_text_edit
+
+            direct = try_direct_text_edit(query, orig)
+            if direct and direct.strip() and direct.strip() != orig:
+                return direct.strip()
+
+        picked = _best_matching_line(orig, sugg)
+        if picked:
+            return picked
+        return orig
+
+    return sugg
+
+
 def sanitize_style_output(
     original: str,
     suggestion: str,
@@ -156,5 +226,11 @@ def sanitize_style_output(
 
     if not text or looks_like_chatty_output(text) or len(text) < 20:
         return original.strip()
+
+    text = clamp_selection_replacement(
+        original,
+        text,
+        apply_mode=apply_mode,
+    )
 
     return text.strip()

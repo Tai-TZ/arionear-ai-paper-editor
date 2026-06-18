@@ -1,6 +1,6 @@
-import { getAccessToken } from "@/lib/auth-store";
-import { mapApiHttpError } from "@/lib/api/api-errors";
+import { getAccessToken, logoutUser } from "@/lib/auth-store";
 import { resolveApiBase } from "@/lib/api/base-url";
+import { mapApiHttpError } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
 
@@ -79,6 +79,13 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      logoutUser();
+      if (typeof window !== "undefined") {
+        window.location.assign("/signin");
+      }
+      throw new Error("Not authenticated.");
+    }
     let detail: unknown = res.statusText;
     try {
       const body = await res.json();

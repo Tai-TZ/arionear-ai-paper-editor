@@ -5,6 +5,7 @@ import {
   Download,
   RefreshCw,
   Search,
+  Sparkles,
   X,
   ZoomIn,
   ZoomOut,
@@ -48,6 +49,7 @@ type PdfPreviewPanelProps = {
     context?: string,
   ) => void;
   onCompile: () => void;
+  onAskArioFix?: () => void;
   mobile?: boolean;
   projectName?: string;
   latexSource?: string;
@@ -220,6 +222,7 @@ export function PdfPreviewPanel({
   onCompilerChange,
   onSynctexHit,
   onCompile,
+  onAskArioFix,
   mobile = false,
   projectName = "document",
   latexSource = "",
@@ -561,9 +564,21 @@ export function PdfPreviewPanel({
               <p className="mt-3 max-w-md text-xs text-[#888]">Đang kiểm tra engine LaTeX…</p>
             )}
             {(compileError || loadError) && (
-              <pre className="mt-4 max-h-48 max-w-full overflow-auto rounded border border-red-200 bg-red-50 p-3 text-left text-[10px] text-red-700 whitespace-pre-wrap">
-                {compileError || loadError}
-              </pre>
+              <div className="mt-4 flex max-w-full flex-col items-center gap-3">
+                <pre className="max-h-48 w-full max-w-lg overflow-auto rounded border border-red-200 bg-red-50 p-3 text-left text-[10px] text-red-700 whitespace-pre-wrap">
+                  {compileError || loadError}
+                </pre>
+                {onAskArioFix && compileError && (
+                  <button
+                    type="button"
+                    onClick={onAskArioFix}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                    Ask Ario to fix
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

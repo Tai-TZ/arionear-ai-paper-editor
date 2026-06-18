@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -14,7 +15,11 @@ from src.services.guardrails.integrity import (
     check_integrity,
     has_blocking_flags,
 )
-from src.services.guardrails.output_sanitize import looks_like_chatty_output, sanitize_style_output
+from src.services.guardrails.output_sanitize import (
+    clamp_selection_replacement,
+    looks_like_chatty_output,
+    sanitize_style_output,
+)
 from src.services.llm import get_llm
 from src.services.parser.latex import (
     analyze_structure,
@@ -67,7 +72,7 @@ def prepare_style_target(state: AgentState, query: str = "") -> dict:
     scope = state.get("apply_mode") or "document"
     sections = state.get("parsed_sections") or []
 
-    if selection and scope == "selection":
+    if selection:
         return {
             **state,
             "original_text": selection,
@@ -182,7 +187,15 @@ def _normalize_suggestion(
 
 
 def prepare_edit_target(state: AgentState, query: str = "") -> dict:
-    """Target for explicit edits — scope to a named section when possible."""
+    """Target for explicit edits — prefer editor selection, then section, then document."""
+    selection = (state.get("selection") or "").strip()
+    if selection:
+        return {
+            **state,
+            "original_text": selection,
+            "apply_mode": "selection",
+        }
+
     query = query or state.get("query", "")
     latex = (state.get("latex") or "").strip()
     sections = state.get("parsed_sections") or []
@@ -241,6 +254,17 @@ async def edit_node(state: AgentState) -> dict:
                 "suggestion": suggestion,
                 "diff": diff,
                 "integrity_flags": flags,
+                "edits": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "file": "main.tex",
+                        "section": prepared.get("section", ""),
+                        "apply_mode": prepared.get("apply_mode", "document"),
+                        "original_text": original,
+                        "replacement_text": suggestion,
+                        "description": "Proposed edit (review required)",
+                    }
+                ],
                 "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
                 "apply_mode": prepared.get("apply_mode", "document"),
                 "metadata": metadata,
@@ -250,6 +274,17 @@ async def edit_node(state: AgentState) -> dict:
             "suggestion": suggestion,
             "diff": diff,
             "integrity_flags": flags,
+            "edits": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "file": "main.tex",
+                    "section": prepared.get("section", ""),
+                    "apply_mode": prepared.get("apply_mode", "document"),
+                    "original_text": original,
+                    "replacement_text": suggestion,
+                    "description": "Proposed edit",
+                }
+            ],
             "analysis": "Direct text replace (no LLM).",
             "apply_mode": prepared.get("apply_mode", "document"),
             "metadata": metadata,
@@ -262,7 +297,10 @@ async def edit_node(state: AgentState) -> dict:
         "edit",
         query=query,
         original_text=original,
-    ) or f"Edit request:\n{query}\n\nLaTeX source:\n{original}"
+    ) or (
+        f"Edit request: {query}\n\n"
+        f"Replace ONLY this LaTeX snippet (return the revised snippet only):\n---\n{original}\n---"
+    )
 
     messages = [
         SystemMessage(content=system),
@@ -274,6 +312,12 @@ async def edit_node(state: AgentState) -> dict:
         (response.content or "").strip(),
         section=str(prepared.get("section", "")),
         apply_mode=str(prepared.get("apply_mode", "document")),
+    )
+    suggestion = clamp_selection_replacement(
+        original,
+        suggestion,
+        apply_mode=str(prepared.get("apply_mode", "selection")),
+        query=query,
     )
 
     flags = check_integrity(
@@ -301,6 +345,17 @@ async def edit_node(state: AgentState) -> dict:
             "suggestion": suggestion,
             "diff": diff,
             "integrity_flags": flags,
+            "edits": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "file": "main.tex",
+                    "section": prepared.get("section", ""),
+                    "apply_mode": prepared.get("apply_mode", "document"),
+                    "original_text": original,
+                    "replacement_text": suggestion,
+                    "description": "Proposed edit (review required)",
+                }
+            ],
             "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
             "apply_mode": prepared.get("apply_mode", "document"),
             "metadata": metadata,
@@ -312,6 +367,7 @@ async def edit_node(state: AgentState) -> dict:
             "suggestion": "",
             "diff": "",
             "integrity_flags": flags,
+            "edits": [],
             "response": "Không phát hiện thay đổi nào trong bản thảo.",
             "analysis": "No edit applied.",
             "metadata": metadata,
@@ -322,6 +378,17 @@ async def edit_node(state: AgentState) -> dict:
         "suggestion": suggestion,
         "diff": diff,
         "integrity_flags": flags,
+        "edits": [
+            {
+                "id": str(uuid.uuid4()),
+                "file": "main.tex",
+                "section": prepared.get("section", ""),
+                "apply_mode": prepared.get("apply_mode", "document"),
+                "original_text": original,
+                "replacement_text": suggestion,
+                "description": "Proposed edit",
+            }
+        ],
         "analysis": "LaTeX edit completed.",
         "apply_mode": prepared.get("apply_mode", "document"),
         "metadata": metadata,
@@ -390,6 +457,12 @@ async def style_node(state: AgentState) -> dict:
             section=str(section_label),
             apply_mode=str(apply_mode),
         )
+        suggestion = clamp_selection_replacement(
+            original,
+            suggestion,
+            apply_mode=str(apply_mode),
+            query=query,
+        )
         if looks_like_chatty_output(suggestion) and attempt < max_retries:
             flags = [{"code": "chatty_output", "message": "retry", "severity": "warning"}]
             continue
@@ -421,6 +494,17 @@ async def style_node(state: AgentState) -> dict:
             "suggestion": suggestion,
             "diff": diff,
             "integrity_flags": flags,
+            "edits": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "file": "main.tex",
+                    "section": prepared.get("section", ""),
+                    "apply_mode": apply_mode,
+                    "original_text": original,
+                    "replacement_text": suggestion,
+                    "description": "Proposed style edit (review required)",
+                }
+            ],
             "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
             "metadata": metadata,
         }
@@ -430,6 +514,17 @@ async def style_node(state: AgentState) -> dict:
         "suggestion": suggestion,
         "diff": diff,
         "integrity_flags": flags,
+        "edits": [
+            {
+                "id": str(uuid.uuid4()),
+                "file": "main.tex",
+                "section": prepared.get("section", ""),
+                "apply_mode": apply_mode,
+                "original_text": original,
+                "replacement_text": suggestion,
+                "description": "Proposed style edit",
+            }
+        ],
         "analysis": "Style enhancement completed.",
         "apply_mode": apply_mode,
         "metadata": metadata,

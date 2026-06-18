@@ -21,6 +21,18 @@ def test_direct_edit_name_permutation():
     assert "Thuan Ho Hai" not in result
 
 
+def test_direct_edit_selection_replace_vietnamese():
+    latex = r"NGUYEN NGUYEN TRONG\\"
+    result = try_direct_text_edit("Đổi thành NGUYEN VAN A", latex)
+    assert result == r"NGUYEN VAN A\\"
+
+
+def test_direct_edit_selection_replace_english():
+    latex = r"\title{Old Title}"
+    result = try_direct_text_edit("change to New Title", latex)
+    assert result == r"\title{New Title}"
+
+
 @pytest.mark.asyncio
 async def test_classify_intent_skips_llm_for_rename():
     intent = await classify_intent(

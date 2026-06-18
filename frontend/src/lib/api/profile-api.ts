@@ -1,6 +1,6 @@
 import { getAccessToken } from "@/lib/auth-store";
-import { mapApiHttpError } from "@/lib/api/api-errors";
 import { resolveApiBase } from "@/lib/api/base-url";
+import { mapApiHttpError } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import type { ResearcherProfile, ResearcherProfilePatch } from "@/lib/researcher-profile";
 import { setCachedProfile } from "@/lib/researcher-profile";
