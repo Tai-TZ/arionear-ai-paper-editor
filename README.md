@@ -1,82 +1,129 @@
-# 🤖 Arionear Agent Template
+# Arionear — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học
 
-Template chính thức cho học viên **VinUni Arionear Build Phase** — cung cấp sẵn cấu trúc dự án, code mẫu, và hướng dẫn kỹ thuật chi tiết để xây dựng AI Agent đạt điểm cao (35+/50).
+> **Tagline:** *Closer to Publication*  
+> **Chương trình:** [Arionear](https://github.com/Tai-TZ/arionear-ai-paper-editor)
 
-> 📖 **Technical Guidebook:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
+Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện bản thảo LaTeX bằng trợ lý AI **Ario**. Mọi thay đổi hiển thị dưới dạng **diff** — người dùng **Accept/Reject** trước khi áp dụng; AI không tự publish thay tác giả.
 
-## 🎯 Template này dùng để làm gì?
+**Luồng MVP chính:** đăng nhập → mở project → soạn LaTeX trong editor → chat Ario (style / structure / citation / template) → xem diff → Accept → compile PDF.
 
-Khi tham gia Arionear Build Phase, mỗi đội cần xây dựng một AI Agent hoàn chỉnh — từ kiến trúc, code, test, đến deploy. Thay vì bắt đầu từ con số không, template này cung cấp:
+---
 
-- **Cấu trúc thư mục chuẩn** — đã được thiết kế theo best practices (separation of concerns)
-- **Code mẫu** cho các phần cốt lõi: LangGraph agent, FastAPI API, config, schemas
-- **Docker + CI/CD sẵn** — Dockerfile multi-stage, GitHub Actions workflow
-- **Hướng dẫn kỹ thuật 10 chương** — từ clone template đến nộp bài Demo Day
-- **Checklist 10 deliverables** — đảm bảo không bỏ sót yêu cầu BTC
-- **AI Usage Logging tự động** — Pre-configured hooks cho Claude Code, Cursor, Codex, Gemini CLI, Antigravity, và GitHub Copilot
+## Tech Stack
 
-## ⚡ Quick Start
+| Layer | Công nghệ |
+|-------|-----------|
+| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite |
+| Backend | FastAPI, Python 3.11+, LangGraph |
+| LLM | OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
+| Database | Prisma + PostgreSQL (prod) / SQLite (quick dev) |
+| PDF | pdflatex + PDF.js + SyncTeX |
 
-### Bước 1: Fork hoặc Clone
+---
+
+## Prerequisites
+
+- **Python 3.11+**
+- **Node.js 20+** và npm (hoặc Bun)
+- **Git**
+- **LLM API key** — ít nhất một trong: `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ZAI_API_KEY`, `ANTHROPIC_API_KEY`
+- **TeX distribution** (tùy chọn, cho PDF preview): MiKTeX (Windows) / TeX Live (Linux/macOS)
+
+---
+
+## Setup
+
+### 1. Clone repository
 
 ```bash
-# Clone template
-git clone https://github.com/starter-code-template.git team-YOUR_TEAM_NAME
-cd team-YOUR_TEAM_NAME
-
-# Xóa git history cũ và khởi tạo lại
-rm -rf .git
-git init
-git add .
-git commit -m "feat: khởi tạo dự án từ template"
+git clone https://github.com/Tai-TZ/arionear-ai-paper-editor.git
+cd Arionear
 ```
 
-### Bước 2: Setup môi trường
+### 2. Cấu hình môi trường
 
 ```bash
-# Tạo virtual environment
-python3.11 -m venv .venv
-source .venv/bin/activate
-
-# Cài dependencies
-pip install -e ".[dev]"
-
-# Cấu hình API keys
 cp .env.example .env
-# Mở .env và thêm OPENAI_API_KEY của bạn
-# Đồng thời cập nhật AI_LOG_API_KEY bằng key riêng từ link mời của BTC
-# (giá trị trong .env.example chỉ là placeholder)
+# Mở .env và điền API keys + DATABASE_URL (xem bảng bên dưới)
 ```
 
-### Bước 3: Cài AI Logging Hooks
+### 3. Backend (Python)
+
+```bash
+python -m venv .venv
+
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# macOS / Linux
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+**Database (chọn một):**
+
+```bash
+# Option A — SQLite nhanh (không cần Postgres)
+# Trong .env: DATABASE_URL=sqlite:///./data/app.db
+
+# Option B — PostgreSQL + Prisma (khuyến nghị cho auth/papers)
+npm install
+npm run db:generate
+npm run db:migrate
+```
+
+### 4. Frontend
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+### 5. AI Usage Logging hooks (BTC deliverable)
 
 ```bash
 # Linux / macOS / Git Bash
 bash scripts/setup_hooks.sh
 
 # Windows PowerShell
-# powershell -ExecutionPolicy Bypass -File scripts\setup_hooks.ps1
+powershell -ExecutionPolicy Bypass -File scripts\setup_hooks.ps1
 ```
 
-Hooks tự động log mọi AI prompt khi dùng Claude Code, Cursor, Codex, Gemini CLI, Antigravity, hoặc GitHub Copilot. Không cần thao tác thủ công.
+### 6. Chạy development
 
-### Bước 4: Chạy server
+Mở **hai terminal**. Backend và frontend phải dùng **cùng port** với `.env` (`APP_PORT`, mặc định trong `.env.example` là `8001`).
 
 ```bash
 # Terminal 1 — Backend
-uvicorn src.main:app --reload --port 8000
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8001 --reload
 
-# Terminal 2 — Frontend editor
-cd frontend && npm install && npm run dev
-
-# Kiểm tra PDF compile engine
-curl http://localhost:8000/api/v1/compile/status
-# → {"available": true, "engine": "...pdflatex..."}
+# Terminal 2 — Frontend (proxy /api/v1 → backend)
+cd frontend
+# Nếu backend không chạy ở 8000, set proxy target:
+# Windows PowerShell:
+#   $env:VITE_DEV_API_PROXY="http://127.0.0.1:8001"; npm run dev
+# macOS / Linux:
+#   VITE_DEV_API_PROXY=http://127.0.0.1:8001 npm run dev
+npm run dev
 ```
 
-### Bước 4b: PDF Preview — cài TeX (team local)
+Mở trình duyệt tại URL Vite in ra (thường `http://localhost:8080`).
 
-Compile PDF cần `pdflatex` trên máy dev (không có trong `pip`/`npm`):
+### 7. Kiểm tra nhanh
+
+```bash
+curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8001/api/v1/status
+curl http://127.0.0.1:8001/api/v1/compile/status
+```
+
+Kỳ vọng: `health` → `"status": "ok"`; `compile/status` → `"available": true` nếu đã cài TeX.
+
+> **Lưu ý:** Chỉ chạy **một** instance uvicorn để tránh DB lock khi dùng PostgreSQL remote.
+
+### 8. PDF Preview — cài TeX (local)
 
 | OS | Lệnh |
 |----|------|
@@ -84,183 +131,239 @@ Compile PDF cần `pdflatex` trên máy dev (không có trong `pip`/`npm`):
 | **macOS** | `brew install --cask miktex` |
 | **Linux** | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
 
-Sau khi cài, **restart terminal** rồi chạy lại backend. Verify: `GET /api/v1/compile/status` → `available: true`.
+Sau khi cài, restart terminal và chạy lại backend.
 
-> Custom class từ Overleaf (vd. `RevDigMatEduInt.cls`): upload file `.cls` vào project, hoặc backend tự fallback sang IEEEtran.
+### 9. Docker (production backend)
 
-### Bước 5: Đọc hướng dẫn
-
-📖 Mở **[Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book)** và làm theo từng chương.
-
-## 📁 Cấu trúc dự án
-
-```
-├── src/
-│   ├── agents/           # 🧠 LangGraph Agent
-│   │   ├── graph.py      #    State graph (nodes + edges)
-│   │   ├── state.py      #    State schema (TypedDict)
-│   │   ├── nodes/        #    Node functions
-│   │   └── tools/        #    Agent tools (@tool)
-│   ├── api/              # 🌐 FastAPI Backend
-│   │   └── routes.py     #    API endpoints
-│   ├── models/           # 📋 Pydantic schemas
-│   ├── services/         # 🔧 Business logic (LLM, etc.)
-│   ├── config.py         # ⚙️ Pydantic Settings
-│   └── main.py           # 🚀 App entry point
-├── tests/                # 🧪 pytest suite
-│   ├── test_agents/      #    Agent/graph tests
-│   └── test_api/         #    API endpoint tests
-├── scripts/              # 🔌 AI Logging Hooks
-│   ├── log_hook.py       #    Auto-log cho Claude/Cursor/Codex/Gemini/Copilot
-│   ├── log_antigravity.py#    Antigravity IDE prompt scanner
-│   ├── log_manual.py     #    Manual log cho ChatGPT / web tools
-│   ├── submit_log.py     #    Submit logs on git push
-│   └── setup_hooks.sh    #    One-time hook installer
-├── .claude/ .codex/ .cursor/ .gemini/  # Per-tool hook configs
-├── .agents/              # Antigravity rules + workflows
-├── .ai-log/              # 📊 AI usage logs (auto-generated)
-├── docs/
-│   ├── guide/            # 📖 Technical Guidebook (10 chapters)
-│   └── architecture_diagram.md
-├── eval/                 # 📊 Evaluation results
-├── presentation/         # 🎤 Demo Day slides
-├── .github/workflows/    # ⚡ CI/CD (GitHub Actions)
-├── .github/hooks/        # 🪝 Copilot hook config
-├── Dockerfile            # 🐳 Multi-stage build
-├── docker-compose.yml    # 🐙 Full stack orchestration
-└── README_boilerplate.md # 📝 README template cho đội của bạn
-```
-
-## 📚 Technical Guidebook — 10 Chương
-
-| Chương | Nội dung | Thời gian |
-|---------|----------|-----------|
-| 1 | Lời mở đầu — Mục tiêu, cách sử dụng | 15 phút |
-| 2 | Khởi tạo dự án — Clone, setup, git workflow | 4 giờ |
-| 3 | Thiết kế kiến trúc — 3-tier, diagrams, ADR | 6 giờ |
-| 4 | **LangGraph Agent** — State, nodes, edges, tools, RAG | 8 giờ |
-| 5 | FastAPI — Routes, validation, error handling, streaming | 6 giờ |
-| 6 | Giao diện — Next.js + Streamlit quickstart | 6 giờ |
-| 7 | DevOps — Docker, CI/CD, deploy, logging | 6 giờ |
-| 8 | Kiểm thử — Unit test, integration test, RAGAS | 4 giờ |
-| 9 | Demo Day — 10 deliverables, checklist, tips | 2 giờ |
-| 10 | Tài nguyên — Khóa học, docs, BMAD method | tham khảo |
-
-📖 **Đọc online:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-
-## 📋 10 Deliverables cho Demo Day
-
-| # | Deliverable | File vị trí | Template có sẵn |
-|---|-------------|-------------|:---:|
-| 1 | Source Code | `src/` | ✅ |
-| 2 | README.md | `README_boilerplate.md` → copy thành `README.md` | ✅ |
-| 3 | Architecture Diagram | `docs/architecture_diagram.md` | ✅ |
-| 4 | AI Logs | LangSmith (3 env vars) + Auto AI Usage Logging | ✅ |
-| 5 | Live URL | Deploy lên Render/Vercel | ⚡ CI/CD sẵn |
-| 6 | Video Demo | `presentation/` | 📝 |
-| 7 | Pitch Deck | `presentation/` | 📝 |
-| 8 | Development Journal | `JOURNAL.md` | ✅ |
-| 9 | Worklog | `WORKLOG.md` | ✅ |
-| 10 | Evaluation Evidence | `eval/` | 📝 |
-
-## 🛠 Tech Stack
-
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| AI Agent | LangGraph + LangChain | Latest |
-| Backend | FastAPI + Uvicorn | 0.100+ |
-| LLM | OpenAI GPT-4o-mini | API |
-| Frontend | Next.js / Streamlit | 14+ / 1.30+ |
-| Database | SQLite (dev) / PostgreSQL (prod) | — |
-| DevOps | Docker + GitHub Actions | — |
-| Testing | pytest + pytest-asyncio | 8+ |
-
-## 📊 AI Usage Logging
-
-Template đã tích hợp sẵn auto-logging hooks cho 6 AI tools:
-
-| Tool | Cơ chế | Config |
-|------|--------|--------|
-| Claude Code | `.claude/settings.json` hooks | Tự động |
-| Cursor | `.cursor/hooks.json` | Tự động |
-| OpenAI Codex CLI | `.codex/hooks.json` | Tự động |
-| Gemini CLI | `.gemini/settings.json` | Tự động |
-| GitHub Copilot | `.github/hooks/hooks.json` | Tự động |
-| Antigravity IDE | Pre-push scan transcript | Tự động trên `git push` |
-
-Tất cả prompts và tool calls được log vào `.ai-log/session.jsonl` và tự động submit lên grading server mỗi khi `git push`.
-
-**ChatGPT / web tools khác** — log thủ công:
 ```bash
+docker compose build
+docker compose up -d
+curl http://localhost:8000/api/v1/compile/status
+```
+
+Docker image dùng port **8000** và đã gồm TeX Live. Chi tiết deploy: `docs/pdf-preview-deploy.md`.
+
+---
+
+## Environment Variables
+
+Copy từ [`.env.example`](./.env.example). **Không commit file `.env`.**
+
+### Bắt buộc (tối thiểu để chạy agent)
+
+| Biến | Mô tả | Ví dụ |
+|------|--------|-------|
+| `LLM_PROVIDER` | Provider mặc định: `openrouter`, `openai`, `anthropic`, `zai` | `openrouter` |
+| `OPENROUTER_API_KEY` | Key OpenRouter (nếu dùng OpenRouter) | `sk-or-...` |
+| `OPENAI_API_KEY` | Key OpenAI (nếu dùng OpenAI) | `sk-...` |
+| `ZAI_API_KEY` | Key Z.AI GLM (nếu dùng Z.AI) | `...` |
+| `ANTHROPIC_API_KEY` | Key Anthropic (nếu dùng Claude) | `sk-ant-...` |
+| `DATABASE_URL` | SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
+| `AUTH_SECRET_KEY` | JWT secret — generate: `openssl rand -hex 32` | `a1b2c3...` |
+| `AI_LOG_API_KEY` | Key BTC cho AI usage logging | *(từ link mời BTC)* |
+
+> Cần **ít nhất một** LLM API key tương ứng với `LLM_PROVIDER`. Có thể đổi provider/model trực tiếp trong editor chat dock.
+
+### Database (PostgreSQL / Prisma)
+
+| Biến | Mô tả |
+|------|--------|
+| `DATABASE_URL` | URL cho Prisma CLI (có thể là `prisma+postgres://` Accelerate) |
+| `DIRECT_DATABASE_URL` | URL TCP trực tiếp `postgresql://...` cho FastAPI/SQLAlchemy |
+
+### App & CORS
+
+| Biến | Mặc định | Mô tả |
+|------|----------|--------|
+| `APP_ENV` | `development` | `development` \| `production` \| `test` |
+| `APP_PORT` | `8001` | Port backend (khớp lệnh uvicorn) |
+| `APP_HOST` | `127.0.0.1` | Host bind |
+| `CORS_ORIGINS` | `http://localhost:8080,...` | Origins frontend được phép |
+| `FRONTEND_BASE_URL` | `http://localhost:8080` | URL frontend (email/OAuth redirect) |
+| `BACKEND_BASE_URL` | `http://127.0.0.1:8001` | URL backend công khai |
+
+### Auth & OAuth (tùy chọn)
+
+| Biến | Mô tả |
+|------|--------|
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | VD: `http://127.0.0.1:8001/api/v1/auth/google/callback` |
+| `SMTP_*` | Gửi email xác minh đăng ký (dev: code in ra log) |
+
+### Observability (tùy chọn)
+
+| Biến | Mô tả |
+|------|--------|
+| `LANGCHAIN_API_KEY` | LangSmith tracing (deliverable AI Logs) |
+| `LANGCHAIN_PROJECT` | Tên project trên LangSmith |
+| `LANGCHAIN_TRACING_V2` | `true` để bật trace |
+| `INNGEST_DEV` | `1` để chạy Inngest dev server local |
+| `AI_LOG_SERVER` | Endpoint submit AI logs (pre-configured BTC) |
+
+### Frontend build
+
+| Biến | Mô tả |
+|------|--------|
+| `VITE_DEV_API_PROXY` | Target proxy dev (VD: `http://127.0.0.1:8001`) |
+| `VITE_API_URL` | API URL khi build production |
+
+Danh sách đầy đủ và comment: [`.env.example`](./.env.example).
+
+---
+
+## Sample Queries
+
+Các ví dụ dưới đây dùng bản thảo mẫu ngắn. Trong UI, mở `/editor`, paste LaTeX vào `main.tex`, rồi gửi prompt tương ứng trong chat Ario.
+
+**LaTeX mẫu** (`SAMPLE_LATEX` trong `frontend/src/lib/project-store.ts`):
+
+```latex
+\documentclass{article}
+\begin{document}
+\begin{abstract}
+Machine learning models achieve strong results but often lack interpretability.
+\end{abstract}
+\section{Introduction}
+Prior work cites \cite{smith2020}.
+\end{document}
+```
+
+### Trong Editor (UI)
+
+| # | Task | Sample query (gửi trong chat) | Kỳ vọng |
+|---|------|------------------------------|---------|
+| 1 | `chat` | Giải thích ngắn gọn abstract của bài này bằng tiếng Việt | Trả lời tiếng Việt, không diff |
+| 2 | `style` | Chỉnh sửa abstract cho văn phong học thuật hơn | Diff đỏ/xanh + Accept/Reject |
+| 3 | `structure` | Phân tích cấu trúc IMRaD của bài này | Gợi ý section thiếu/thừa |
+| 4 | `template` | Thêm các section IMRaD còn thiếu | Gợi ý skeleton IMRaD |
+| 5 | `citation` | Kiểm tra trích dẫn trong bài | Báo cáo verify từng cite key |
+| 6 | compile | Nhấn **Compile** trên toolbar | PDF preview bên phải |
+
+Bạn cũng có thể **bôi đen** một đoạn trong editor → **Quick Edit** (`Ctrl+K`) với prompt như: *"Viết lại đoạn này trang trọng hơn"*.
+
+### Qua API (`curl`)
+
+Thay `8001` nếu backend chạy port khác. Body dùng `latex_content` để Ario có ngữ cảnh manuscript.
+
+**TC1 — Chat**
+
+```bash
+curl -s -X POST http://127.0.0.1:8001/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"Giải thích ngắn gọn abstract của bài này bằng tiếng Việt\",\"task\":\"chat\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\\\end{abstract}\\\\end{document}\"}"
+```
+
+**TC2 — Style**
+
+```bash
+curl -s -X POST http://127.0.0.1:8001/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"Chỉnh sửa abstract cho văn phong học thuật hơn\",\"task\":\"style\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\\\end{abstract}\\\\end{document}\"}"
+```
+
+**TC3 — Structure**
+
+```bash
+curl -s -X POST http://127.0.0.1:8001/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"Phân tích cấu trúc IMRaD của bài này\",\"task\":\"structure\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}...\\\\end{abstract}\\\\section{Introduction}...\\\\end{document}\"}"
+```
+
+**TC4 — Template (SSE stream — luồng chính của editor)**
+
+```bash
+curl -N -X POST http://127.0.0.1:8001/api/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d "{\"message\":\"Thêm các section IMRaD còn thiếu\",\"task\":\"template\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Test\\\\end{abstract}\\\\end{document}\"}"
+```
+
+**TC5 — Compile PDF**
+
+```bash
+curl -s -X POST http://127.0.0.1:8001/api/v1/compile \
+  -H "Content-Type: application/json" \
+  -d "{\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}Hello Arionear.\\\\end{document}\",\"main_file\":\"main.tex\"}"
+```
+
+**TC6 — Citation verify**
+
+```bash
+# Tạo session trước
+curl -s -X POST http://127.0.0.1:8001/api/v1/sessions \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"eval\",\"latex_content\":\"\\\\cite{smith2020}\",\"metadata\":{}}"
+
+# Verify (thay SESSION_ID)
+curl -s -X POST http://127.0.0.1:8001/api/v1/citations/verify \
+  -H "Content-Type: application/json" \
+  -d "{\"session_id\":\"SESSION_ID\",\"latex_content\":\"\\\\cite{smith2020}\",\"bib_content\":\"@article{smith2020, title={Deep Learning}, year={2020}}\"}"
+```
+
+Kết quả eval thực tế (6 test cases): [`eval/results/_live_outputs.json`](./eval/results/_live_outputs.json).
+
+### API tham khảo
+
+| Method | Path | Mô tả |
+|--------|------|--------|
+| GET | `/health` | Health + DB status |
+| GET | `/api/v1/status` | Agent name, provider, storage |
+| GET | `/api/v1/providers` | LLM providers khả dụng |
+| POST | `/api/v1/sessions` | Tạo paper session |
+| POST | `/api/v1/chat` | Chat sync (LangGraph) |
+| POST | `/api/v1/chat/stream` | Chat SSE (editor chính) |
+| POST | `/api/v1/citations/verify` | Xác minh trích dẫn |
+| POST | `/api/v1/compile` | Compile LaTeX → PDF |
+| POST | `/api/v1/auth/login` | Đăng nhập JWT |
+| GET/POST | `/api/v1/papers` | CRUD papers (cần auth) |
+
+---
+
+## Testing
+
+```bash
+# Backend unit/integration tests
+pytest tests/ -v
+
+# Lint
+ruff check src tests
+```
+
+---
+
+## Documentation
+
+| Tài liệu | Nội dung |
+|----------|----------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc 4 tầng, agents, guardrail |
+| [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
+| [ROADMAP.md](./ROADMAP.md) | Lộ trình phase |
+| [eval/results/report.md](./eval/results/report.md) | Báo cáo đánh giá |
+| [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book) | Hướng dẫn Arionear 10 chương |
+
+---
+
+## AI Usage Logging
+
+Hooks tự động log prompt khi dùng Cursor, Claude Code, Codex, Gemini CLI, Copilot. Log lưu tại `.ai-log/session.jsonl` và submit khi `git push`.
+
+```bash
+# Log thủ công (ChatGPT / web)
 bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you asked"
 ```
 
-> ⚠️ Chạy `bash scripts/setup_hooks.sh` một lần sau khi clone để cài pre-push hook.
+---
 
-## 📄 PDF Preview — Deploy production
+## Team
 
-Backend compile LaTeX qua `POST /api/v1/compile`. Docker image đã gồm **TeX Live** (không cần MiKTeX trên server).
+| Thành viên | Vai trò |
+|------------|---------|
+| **Nguyễn Thành Tài** | Dev chính — full-stack, kiến trúc, CI |
+| **Đặng Hải Lộc** | Mentor (Arionear) |
 
-### Checklist deploy
+---
 
-1. **Backend (Docker)** — build & chạy:
-   ```bash
-   docker compose build
-   docker compose up -d
-   curl http://localhost:8000/api/v1/compile/status
-   ```
-
-2. **Env production** (`.env` hoặc platform secrets):
-   ```env
-   APP_ENV=production
-   CORS_ORIGINS=https://app.your-domain.com
-   OPENROUTER_API_KEY=...
-   ```
-
-3. **Frontend** — build với API URL production:
-   ```bash
-   cd frontend
-   VITE_API_URL=https://api.your-domain.com/api/v1 npm run build
-   ```
-   Deploy thư mục `frontend/dist` lên Vercel / Netlify / Cloudflare Pages.
-
-4. **Reverse proxy** — tăng timeout cho `/api/v1/compile` (≥ 120s, body ≥ 10MB):
-   ```nginx
-   location /api/v1/compile {
-       proxy_read_timeout 300s;
-       client_max_body_size 20m;
-   }
-   ```
-
-5. **Verify go-live**
-   - [ ] `GET /api/v1/compile/status` → `"available": true`
-   - [ ] Compile bài LaTeX thật từ editor trên domain
-   - [ ] HTTPS cả frontend lẫn API
-
-### Kiến trúc
-
-```
-Browser → Frontend (CDN) → API (Docker + TeX Live) → PDF base64 → PDF.js
-```
-
-Chi tiết kỹ thuật: `docs/pdf-preview-deploy.md`
-
-## 📖 Đọc Technical Guidebook
-
-**Online (khuyến nghị):** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-
-Đăng nhập bằng GitHub (cùng account đã được BTC mời vào org `Arionear-Build-Cohort-2`)
-→ chọn tab **Technical Book** ở sidebar trái → đọc 10 chương + topic sections,
-có table of contents bên phải, hỗ trợ light/dark/cyberpunk theme.
-
-**Offline:** mọi chương đều ở thư mục `docs/guide/` trong template này — mở bằng
-bất kỳ markdown viewer/editor nào (VS Code, Obsidian, GitHub UI, …).
-
-## 🔗 Liên kết
-
-- 📖 **Technical Guidebook:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-- 🏫 **Arionear Program:** VinUni Arionear Build Phase
-- 👨‍🏫 
-## 📄 License
+## License
 
 MIT — Sử dụng tự do cho mục đích giáo dục.
