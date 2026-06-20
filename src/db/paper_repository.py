@@ -120,7 +120,7 @@ def _ensure_ai_session(db: Session, paper: Paper, task: TaskType = TaskType.CHAT
 
 
 class DatabaseSessionStore:
-    """PostgreSQL/SQLite-backed store mapping PaperSession API → papers + related tables."""
+    """PostgreSQL-backed store mapping PaperSession API → papers + related tables."""
 
     def create(
         self,

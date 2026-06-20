@@ -70,9 +70,9 @@ class Settings(BaseSettings):
     openrouter_default_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
 
-    # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).
-    # Python/SQLAlchemy needs a direct postgresql:// URL via DIRECT_DATABASE_URL.
-    database_url: str = "sqlite:///./data/app.db"
+    # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
+    # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).
+    database_url: str = ""
     direct_database_url: str = ""
 
     def sqlalchemy_database_url(self) -> str:
@@ -84,7 +84,7 @@ class Settings(BaseSettings):
         url = self.database_url.strip()
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://") :]
-        if url.startswith(("postgresql://", "sqlite://")):
+        if url.startswith("postgresql://"):
             return url
         return ""
 
@@ -116,6 +116,11 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_oauth_redirect_uri: str = ""
+
+    # God admin — sole superuser; provisioned on startup from env credentials
+    admin_god_email: str = ""
+    admin_god_password: str = ""
+    admin_god_name: str = "Platform God Admin"
 
 
 @lru_cache

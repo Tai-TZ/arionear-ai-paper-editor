@@ -29,7 +29,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 | Backend | FastAPI, Python 3.11+, LangGraph |
 | LLM | OpenAI · Anthropic · OpenRouter (chọn trong editor hoặc `.env`) |
 | Session store | localStorage (frontend) + in-memory API (backend) |
-| Database *(planned)* | SQLite dev → PostgreSQL prod |
+| Database | Prisma + PostgreSQL |
 | DevOps | Docker, GitHub Actions (`.github/workflows/ci.yml`), AI Usage Logging hooks (`.cursor/hooks.json`) |
 
 ---
@@ -75,7 +75,7 @@ flowchart TB
         API[FastAPI REST + SSE ✅]
         LG[LangGraph Orchestrator ✅]
         LLM[LLM Service<br/>OpenAI / Anthropic / OpenRouter]
-        DB[(PostgreSQL / SQLite<br/>planned)]
+        DB[(PostgreSQL<br/>Prisma)]
         EXT[External APIs<br/>arXiv · CrossRef · Semantic Scholar ✅<br/>OpenAlex planned]
     end
 

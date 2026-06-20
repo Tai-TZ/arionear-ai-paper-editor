@@ -9,7 +9,7 @@ import bcrypt
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from src.config import get_settings
+from src.config import Settings, get_settings
 from src.db.models import PasswordResetToken, SignupVerification, User, UserRole
 from src.services.email_service import send_signup_verification_email
 from src.services.profile_service import apply_google_avatar_if_empty
@@ -66,14 +66,78 @@ def decode_access_token(token: str) -> dict | None:
         return None
 
 
+def _god_admin_creds() -> tuple[str, str, str]:
+    """Read god-admin env on each call so .env edits apply without process restart."""
+    settings = Settings()
+    email = normalize_email(settings.admin_god_email)
+    password = settings.admin_god_password.strip()
+    name = settings.admin_god_name.strip() or "Platform God Admin"
+    return email, password, name
+
+
+def god_admin_email() -> str:
+    return _god_admin_creds()[0]
+
+
+def god_admin_configured() -> bool:
+    email, password, _ = _god_admin_creds()
+    return bool(email and password)
+
+
+def is_god_admin(user: User) -> bool:
+    if not god_admin_configured():
+        return False
+    if god_admin_email() != normalize_email(user.email):
+        return False
+    settings = user.profile_settings or {}
+    return bool(settings.get("is_god_admin"))
+
+
+def ensure_god_admin(db: Session) -> User | None:
+    """Create or sync the env-provisioned god admin account."""
+    email, password, name = _god_admin_creds()
+    if not email or not password:
+        return None
+
+    now = datetime.now(UTC)
+    user = db.query(User).filter(User.email == email).first()
+    profile = dict(user.profile_settings or {}) if user else {}
+    profile["is_god_admin"] = True
+
+    if user:
+        user.full_name = name
+        user.password_hash = hash_password(password)
+        user.role = UserRole.ADMIN
+        user.is_active = True
+        user.profile_settings = profile
+        user.last_active_at = now
+    else:
+        user = User(
+            email=email,
+            full_name=name,
+            password_hash=hash_password(password),
+            role=UserRole.ADMIN,
+            is_active=True,
+            profile_settings=profile,
+            last_active_at=now,
+        )
+        db.add(user)
+
+    db.flush()
+    return user
+
+
 def user_to_dict(user: User) -> dict:
     provider = "google" if user.google_sub else "email"
+    role = user.role.value if hasattr(user.role, "value") else str(user.role)
     return {
         "id": str(user.id),
         "name": user.full_name,
         "email": user.email,
         "affiliation": user.institution,
         "provider": provider,
+        "role": role,
+        "is_god_admin": is_god_admin(user),
     }
 
 
@@ -117,6 +181,8 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     normalized = normalize_email(email)
     if not normalized or not password:
         return None
+    if god_admin_configured() and normalized == god_admin_email():
+        ensure_god_admin(db)
     user = db.query(User).filter(User.email == normalized, User.is_active.is_(True)).first()
     if not user or not verify_password(password, user.password_hash):
         return None

@@ -149,7 +149,7 @@ class User(Base):
     institution: Mapped[str | None] = mapped_column(String(255))
     native_language: Mapped[str | None] = mapped_column(String(64))
     research_field: Mapped[str | None] = mapped_column(String(128))
-    profile_settings: Mapped[dict] = mapped_column(JSONB().with_variant(JSON(), "sqlite"), default=dict)
+    profile_settings: Mapped[dict] = mapped_column(JsonType, default=dict)
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role", native_enum=False),
         default=UserRole.RESEARCHER,

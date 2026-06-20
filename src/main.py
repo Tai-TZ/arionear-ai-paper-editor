@@ -5,15 +5,27 @@ import inngest.fast_api
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.admin_routes import router as admin_router
 from src.api.auth_routes import router as auth_router
 from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.config import get_settings
-from src.db.engine import db_is_ready, init_db, is_db_enabled
+from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
+from src.services.auth_service import ensure_god_admin
 from src.services.sessions import refresh_session_store
+
+
+def _provision_god_admin() -> None:
+    try:
+        with get_db() as db:
+            user = ensure_god_admin(db)
+            if user:
+                print(f"God admin ready: {user.email}")
+    except Exception as exc:
+        print(f"God admin provisioning skipped: {exc}")
 
 
 @asynccontextmanager
@@ -25,6 +37,8 @@ async def lifespan(app: FastAPI):
     if is_db_enabled():
         try:
             await asyncio.wait_for(asyncio.to_thread(init_db), timeout=20.0)
+            if db_is_ready():
+                await asyncio.to_thread(_provision_god_admin)
             refresh_session_store()
             print("Database connected")
         except TimeoutError:
@@ -66,6 +80,7 @@ app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(papers_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
 if settings.inngest_serve_enabled():
     inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)

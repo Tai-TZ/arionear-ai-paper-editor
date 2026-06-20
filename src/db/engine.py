@@ -28,39 +28,46 @@ def _get_engine() -> Engine:
         db_url = settings.sqlalchemy_database_url()
         if not db_url:
             raise ValueError(
-                "DATABASE_URL is a Prisma Accelerate URL (prisma+postgres://). "
-                "Add DIRECT_DATABASE_URL=postgresql://... to .env "
-                "(copy 'Direct connection' from Prisma Console)."
+                "PostgreSQL is required. Set DIRECT_DATABASE_URL=postgresql://... in .env "
+                "(copy 'Direct connection' from Prisma Console). "
+                "If DATABASE_URL is prisma+postgres:// Accelerate only, DIRECT_DATABASE_URL is mandatory."
             )
         connect_args: dict = {}
+        if db_url.startswith("postgresql"):
+            connect_args = {
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=15000 -c lock_timeout=5000",
+            }
+        elif db_url.startswith("sqlite"):
+            connect_args = {"check_same_thread": False}
         engine_kwargs: dict = {
             "pool_pre_ping": True,
             "connect_args": connect_args,
         }
-        if db_url.startswith("sqlite"):
-            connect_args["check_same_thread"] = False
-        elif db_url.startswith("postgresql"):
-            connect_args["connect_timeout"] = 10
-            connect_args["options"] = "-c statement_timeout=15000 -c lock_timeout=5000"
-            if settings.app_env == "development":
-                engine_kwargs["poolclass"] = NullPool
-            else:
-                engine_kwargs["pool_timeout"] = 10
+        if settings.app_env == "development":
+            engine_kwargs["poolclass"] = NullPool
+        else:
+            engine_kwargs["pool_timeout"] = 10
         _engine = create_engine(db_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
 
 
 def init_db() -> bool:
-    """Create tables (SQLite dev) or verify PostgreSQL connection."""
+    """Verify DB connection; PostgreSQL migrations or SQLite schema for tests."""
     global _db_ready
     if not is_db_enabled():
         _db_ready = False
         return False
 
     engine = _get_engine()
-    if engine.dialect.name == "sqlite":
+    dialect = engine.dialect.name
+
+    if dialect == "sqlite":
         Base.metadata.create_all(bind=engine)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            conn.commit()
     else:
         with engine.connect() as conn:
             conn.execute(text("SET statement_timeout = 15000"))
@@ -87,6 +94,7 @@ def init_db() -> bool:
                     print(f"Warning: profile_settings migration skipped: {exc}")
             else:
                 conn.commit()
+
     _db_ready = True
     return True
 

@@ -10,12 +10,12 @@ import {
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
 import { loginUser } from "@/lib/auth-store";
-import { redirectIfAuthenticated } from "@/lib/require-auth";
+import { defaultAppPath, redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/signin")({
   beforeLoad: () => {
-    redirectIfAuthenticated("/projects");
+    redirectIfAuthenticated();
   },
   head: () => ({
     meta: [
@@ -49,7 +49,7 @@ function SignInPage() {
     }
 
     authToast.signInSuccess(result.user.name);
-    navigate({ to: "/projects" });
+    navigate({ to: defaultAppPath(result.user) });
   };
 
   return (

@@ -9,6 +9,8 @@ export type AuthUser = {
   email: string;
   affiliation?: string;
   provider?: "email" | "google";
+  role?: "RESEARCHER" | "ADMIN";
+  is_god_admin?: boolean;
 };
 
 export function getGoogleOAuthStartPath(returnTo = "/projects", remember = false): string {

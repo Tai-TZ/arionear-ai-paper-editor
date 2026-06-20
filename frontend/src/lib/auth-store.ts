@@ -85,6 +85,7 @@ export function signOut() {
   invalidateFetchPrefix("providers");
   invalidateFetchPrefix("compile:");
   invalidateFetchPrefix("session:");
+  invalidateFetchPrefix("admin:");
   clearProfileCache();
   clearAllBrowserStorage();
 }
