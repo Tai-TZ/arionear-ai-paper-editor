@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLocale } from "@/components/locale-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { commonCopy } from "@/lib/common-i18n";
 
 export function AuthShell({
   eyebrow,
@@ -40,10 +44,19 @@ export function AuthShell({
           <Link to="/" className="font-serif-display text-2xl font-black tracking-tighter">
             Arionear
           </Link>
-          <Link to="/" className="font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4">
-            Back
-          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageToggle compact className="masthead-language-toggle shrink-0" />
+            <ThemeToggle compact className="masthead-theme-toggle" />
+            <Link to="/" className="font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4">
+              Back
+            </Link>
+          </div>
         </header>
+
+        <div className="hidden lg:flex justify-end items-center gap-2 px-6 pt-4">
+          <LanguageToggle compact className="masthead-language-toggle shrink-0" />
+          <ThemeToggle compact className="masthead-theme-toggle" />
+        </div>
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
           <div className="w-full max-w-md">
@@ -161,18 +174,16 @@ export function AuthDisabledAccount({
   email?: string;
   onUseAnotherAccount: () => void;
 }) {
+  const { locale } = useLocale();
+  const t = useMemo(() => commonCopy(locale).auth.disabledAccount, [locale]);
+
   return (
     <div className="border border-foreground/30 bg-foreground/[0.03] px-5 py-6">
       <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)]">
-        Tài khoản bị vô hiệu hóa
+        {t.eyebrow}
       </p>
-      <h2 className="mt-2 font-serif-display text-2xl font-bold leading-tight">
-        Không thể đăng nhập
-      </h2>
-      <p className="mt-3 font-serif-body text-sm text-foreground/75 leading-relaxed">
-        Tài khoản này đã bị quản trị viên tạm khóa. Nếu bạn cho rằng đây là nhầm lẫn, hãy liên hệ
-        admin của nền tảng.
-      </p>
+      <h2 className="mt-2 font-serif-display text-2xl font-bold leading-tight">{t.title}</h2>
+      <p className="mt-3 font-serif-body text-sm text-foreground/75 leading-relaxed">{t.body}</p>
       {email ? (
         <p className="mt-4 font-mono-data text-xs text-foreground/60 break-all">{email}</p>
       ) : null}
@@ -181,7 +192,7 @@ export function AuthDisabledAccount({
         onClick={onUseAnotherAccount}
         className="mt-6 w-full inline-flex items-center justify-center border border-foreground bg-background text-foreground px-4 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[48px]"
       >
-        Đăng nhập tài khoản khác
+        {t.useAnother}
       </button>
     </div>
   );
@@ -204,6 +215,9 @@ export function AuthSubmitButton({
   loading?: boolean;
   disabled?: boolean;
 }) {
+  const { locale } = useLocale();
+  const pleaseWait = useMemo(() => commonCopy(locale).auth.pleaseWait, [locale]);
+
   return (
     <button
       type="submit"
@@ -213,7 +227,7 @@ export function AuthSubmitButton({
       {loading ? (
         <>
           <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
-          Please wait…
+          {pleaseWait}
         </>
       ) : (
         children

@@ -3,16 +3,25 @@ from __future__ import annotations
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from src.db.engine import db_is_ready, get_db
+from src.db.engine import db_error_detail, db_is_ready, get_db, is_db_enabled
 from src.db.models import User
 from src.services.auth_service import decode_access_token, get_user_by_id, is_god_admin
 
 
 def _require_db() -> None:
     if not db_is_ready():
+        if not is_db_enabled():
+            detail = "Authentication requires a database connection. Set DIRECT_DATABASE_URL."
+        else:
+            err = db_error_detail()
+            detail = (
+                f"Authentication requires a database connection. Database init failed: {err}"
+                if err
+                else "Authentication requires a database connection. Database is not ready."
+            )
         raise HTTPException(
             status_code=503,
-            detail="Authentication requires a database connection. Set DIRECT_DATABASE_URL.",
+            detail=detail,
         )
 
 
