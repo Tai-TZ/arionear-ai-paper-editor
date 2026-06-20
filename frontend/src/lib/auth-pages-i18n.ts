@@ -1,0 +1,183 @@
+import type { UiLanguage } from "@/lib/researcher-profile";
+
+type AuthPagesCopy = {
+  signin: {
+    eyebrow: string;
+    title: string;
+    lede: string;
+    emailLabel: string;
+    passwordLabel: string;
+    remember: string;
+    forgot: string;
+    submit: string;
+    dividerGoogle: string;
+    newHere: string;
+    createAccount: string;
+  };
+  forgotPassword: {
+    eyebrow: string;
+    title: string;
+    lede: string;
+    noticePosted: string;
+    checkInbox: string;
+    devMode: string;
+    openResetLink: string;
+    useDifferentEmail: string;
+    accountEmail: string;
+    sendReset: string;
+    backToSignIn: string;
+    createAccount: string;
+  };
+  resetPassword: {
+    eyebrow: string;
+    title: string;
+    lede: string;
+    newPassword: string;
+    newPasswordPlaceholder: string;
+    confirmPassword: string;
+    confirmPlaceholder: string;
+    mismatch: string;
+    updatePassword: string;
+    backToSignIn: string;
+  };
+  signup: {
+    eyebrowForm: string;
+    titleForm: string;
+    ledeForm: string;
+    eyebrowVerify: string;
+    titleVerify: string;
+    ledeVerifyDev: (email: string) => string;
+    ledeVerify: (email: string) => string;
+    verificationCode: string;
+    devNoEmailSent: string;
+    yourCodeIs: string;
+    verifyAndCreate: string;
+    backToForm: string;
+    dividerGoogle: string;
+    alreadyHave: string;
+    signIn: string;
+  };
+};
+
+const EN: AuthPagesCopy = {
+  signin: {
+    eyebrow: "The Reading Room",
+    title: "Sign in to continue.",
+    lede: "Pick up where you left the margins — your drafts, marks and reviewer replies are waiting.",
+    emailLabel: "Email address",
+    passwordLabel: "Password",
+    remember: "Remember me",
+    forgot: "Forgot?",
+    submit: "Sign in",
+    dividerGoogle: "or continue with Google",
+    newHere: "New to Arionear?",
+    createAccount: "Create an account",
+  },
+  forgotPassword: {
+    eyebrow: "Errata & Corrections",
+    title: "Forgot your password?",
+    lede: "Send us the email on file. We'll mail back a one-time link to set a new one — no questions, no fanfare.",
+    noticePosted: "Notice posted",
+    checkInbox: "Check your inbox.",
+    devMode: "Dev mode:",
+    openResetLink: "Open reset link",
+    useDifferentEmail: "Use a different email",
+    accountEmail: "Account email",
+    sendReset: "Send reset link",
+    backToSignIn: "Back to sign in",
+    createAccount: "Create account",
+  },
+  resetPassword: {
+    eyebrow: "New Credentials",
+    title: "Set a new password.",
+    lede: "Choose a strong password you have not used on Arionear before. This link works once and expires in 30 minutes.",
+    newPassword: "New password",
+    newPasswordPlaceholder: "At least 8 characters, 1 letter & 1 number",
+    confirmPassword: "Confirm password",
+    confirmPlaceholder: "Repeat password",
+    mismatch: "Passwords do not match.",
+    updatePassword: "Update password",
+    backToSignIn: "Back to sign in",
+  },
+  signup: {
+    eyebrowForm: "New Submission",
+    titleForm: "Create your account.",
+    ledeForm: "Register once. Carry your manuscripts, marks and reviewer correspondence across every revision.",
+    eyebrowVerify: "Proof of address",
+    titleVerify: "Verify your email.",
+    ledeVerifyDev: (email) => `Development mode — no email is sent to ${email}. Enter the code shown below.`,
+    ledeVerify: (email) => `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`,
+    verificationCode: "Verification code",
+    devNoEmailSent: "Development — no email sent",
+    yourCodeIs: "Your verification code is",
+    verifyAndCreate: "Verify & create account",
+    backToForm: "Back to form",
+    dividerGoogle: "or continue with Google",
+    alreadyHave: "Already have an account?",
+    signIn: "Sign in",
+  },
+};
+
+const VI: AuthPagesCopy = {
+  signin: {
+    eyebrow: "Phòng đọc",
+    title: "Đăng nhập để tiếp tục.",
+    lede: "Tiếp tục nơi bạn đã dừng — bản thảo, ghi chú và phản hồi phản biện đang chờ bạn.",
+    emailLabel: "Email",
+    passwordLabel: "Mật khẩu",
+    remember: "Ghi nhớ đăng nhập",
+    forgot: "Quên mật khẩu?",
+    submit: "Đăng nhập",
+    dividerGoogle: "hoặc tiếp tục với Google",
+    newHere: "Mới dùng Arionear?",
+    createAccount: "Tạo tài khoản",
+  },
+  forgotPassword: {
+    eyebrow: "Đính chính",
+    title: "Quên mật khẩu?",
+    lede: "Nhập email đã đăng ký. Chúng tôi sẽ gửi một liên kết dùng một lần để đặt lại mật khẩu — nhanh gọn, không rườm rà.",
+    noticePosted: "Thông báo đã gửi",
+    checkInbox: "Kiểm tra hộp thư.",
+    devMode: "Dev mode:",
+    openResetLink: "Mở liên kết đặt lại",
+    useDifferentEmail: "Dùng email khác",
+    accountEmail: "Email tài khoản",
+    sendReset: "Gửi link đặt lại",
+    backToSignIn: "Quay lại đăng nhập",
+    createAccount: "Tạo tài khoản",
+  },
+  resetPassword: {
+    eyebrow: "Thông tin mới",
+    title: "Đặt mật khẩu mới.",
+    lede: "Chọn mật khẩu mạnh mà bạn chưa từng dùng trên Arionear. Liên kết chỉ dùng một lần và hết hạn sau 30 phút.",
+    newPassword: "Mật khẩu mới",
+    newPasswordPlaceholder: "Tối thiểu 8 ký tự, 1 chữ cái & 1 số",
+    confirmPassword: "Xác nhận mật khẩu",
+    confirmPlaceholder: "Nhập lại mật khẩu",
+    mismatch: "Mật khẩu không khớp.",
+    updatePassword: "Cập nhật mật khẩu",
+    backToSignIn: "Quay lại đăng nhập",
+  },
+  signup: {
+    eyebrowForm: "Bản thảo mới",
+    titleForm: "Tạo tài khoản.",
+    ledeForm: "Đăng ký một lần. Mang theo bản thảo, ghi chú và trao đổi phản biện qua mọi vòng sửa.",
+    eyebrowVerify: "Xác minh địa chỉ",
+    titleVerify: "Xác minh email.",
+    ledeVerifyDev: (email) => `Chế độ dev — không gửi email tới ${email}. Nhập mã hiển thị bên dưới.`,
+    ledeVerify: (email) => `Chúng tôi đã gửi mã 6 chữ số tới ${email}. Nhập mã để hoàn tất tạo tài khoản.`,
+    verificationCode: "Mã xác minh",
+    devNoEmailSent: "Development — không gửi email",
+    yourCodeIs: "Mã xác minh của bạn là",
+    verifyAndCreate: "Xác minh & tạo tài khoản",
+    backToForm: "Quay lại form",
+    dividerGoogle: "hoặc tiếp tục với Google",
+    alreadyHave: "Đã có tài khoản?",
+    signIn: "Đăng nhập",
+  },
+};
+
+export function authPagesCopy(lang: UiLanguage): AuthPagesCopy {
+  return lang === "vi" ? VI : EN;
+}
+

@@ -1,65 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, User } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLocale } from "@/components/locale-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { commonCopy } from "@/lib/common-i18n";
 import { getSession, type AuthUser } from "@/lib/auth-store";
 import { editorEntryPath } from "@/lib/require-auth";
-
-const today = new Date().toLocaleDateString("en-US", {
-  weekday: "long",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
-type FooterLink = {
-  label: string;
-  to: string;
-};
-
-type FooterSection = {
-  heading: string;
-  links: FooterLink[];
-};
-
-const footerSections: FooterSection[] = [
-  {
-    heading: "Desk",
-    links: [
-      { label: "Features", to: "/features" },
-      { label: "Workflow", to: "/workflow" },
-      { label: "Integrity", to: "/integrity" },
-    ],
-  },
-  {
-    heading: "Authors",
-    links: [
-      { label: "Open Editor", to: "/projects" },
-      { label: "LaTeX Guide", to: "/latex-guide" },
-    ],
-  },
-  {
-    heading: "Bureau",
-    links: [
-      { label: "About", to: "/about" },
-      { label: "Contact", to: "/contact" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms", to: "/terms" },
-      { label: "Privacy", to: "/privacy" },
-      { label: "Ethics", to: "/ethics" },
-      { label: "Data Use", to: "/data-use" },
-    ],
-  },
-];
-
-const navLinks = [
-  { label: "Features", to: "/features" },
-  { label: "Workflow", to: "/workflow" },
-  { label: "Integrity", to: "/integrity" },
-] as const;
 
 function navLinkClass(active: boolean) {
   return active
@@ -68,20 +15,17 @@ function navLinkClass(active: boolean) {
 }
 
 export function MarketingTicker() {
-  const items = [
-    "Closer to publication",
-    "AI academic writing & editing assistant",
-    "LaTeX upload · edit · compile · preview",
-    "Expression support — never invent data or results",
-    "For researchers who are not native English speakers",
-  ];
+  const { locale } = useLocale();
+  const t = useMemo(() => commonCopy(locale), [locale]);
+  const items = t.ticker;
+
   return (
     <div className="bg-foreground text-background border-y border-foreground overflow-hidden">
       <div className="flex whitespace-nowrap animate-[ticker_40s_linear_infinite] py-2 font-mono-data uppercase text-xs tracking-widest">
-        {[...items, ...items, ...items].map((t, i) => (
+        {[...items, ...items, ...items].map((item, i) => (
           <span key={i} className="px-6 flex items-center gap-6">
             <span className="inline-block w-1.5 h-1.5 bg-[color:var(--editorial-red)]" />
-            {t}
+            {item}
           </span>
         ))}
       </div>
@@ -92,8 +36,21 @@ export function MarketingTicker() {
 
 export function MarketingMasthead() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { locale } = useLocale();
+  const t = useMemo(() => commonCopy(locale), [locale]);
   const [user, setUser] = useState<AuthUser | null>(() =>
     typeof window === "undefined" ? null : getSession(),
+  );
+
+  const today = useMemo(
+    () =>
+      new Date().toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    [locale],
   );
 
   useEffect(() => {
@@ -101,16 +58,23 @@ export function MarketingMasthead() {
   }, [pathname]);
 
   const editorPath = user ? "/projects" : editorEntryPath();
+  const navLinks = [
+    { label: t.nav.features, to: "/features" },
+    { label: t.nav.workflow, to: "/workflow" },
+    { label: t.nav.integrity, to: "/integrity" },
+  ] as const;
 
   return (
     <header className="border-b-4 border-foreground bg-background sticky top-0 z-40">
       <div className="max-w-screen-xl mx-auto px-4">
         <div className="flex items-center justify-between border-b border-foreground/30 py-2 text-[11px] font-mono-data uppercase tracking-widest">
-          <span>Vol. I · No. 01</span>
-          <span className="hidden sm:inline">{today} · International Edition</span>
+          <span>{t.masthead.vol}</span>
+          <span className="hidden sm:inline">
+            {today} · {t.masthead.internationalEdition}
+          </span>
           {user ? (
             <span className="inline-flex items-center gap-1.5">
-              <span>Signed in ·</span>
+              <span>{t.masthead.signedIn}</span>
               <Link
                 to="/projects"
                 title={user.email}
@@ -121,7 +85,7 @@ export function MarketingMasthead() {
               <User className="h-3 w-3 shrink-0" strokeWidth={1.5} aria-hidden />
             </span>
           ) : (
-            <span>Guest · Sign in to save</span>
+            <span>{t.masthead.guestSignIn}</span>
           )}
         </div>
         <div className="flex items-center justify-between py-5 gap-4">
@@ -136,11 +100,13 @@ export function MarketingMasthead() {
             ))}
           </nav>
           <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageToggle compact className="masthead-language-toggle shrink-0" />
+            <ThemeToggle compact className="masthead-theme-toggle shrink-0" />
             <Link
               to={editorPath}
               className="inline-flex items-center gap-2 border border-foreground bg-foreground text-background px-4 py-2 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
             >
-              Open Editor <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+              {t.masthead.openEditor} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
           </div>
         </div>
@@ -150,6 +116,44 @@ export function MarketingMasthead() {
 }
 
 export function MarketingColophon() {
+  const { locale } = useLocale();
+  const t = useMemo(() => commonCopy(locale), [locale]);
+  const f = t.footer;
+
+  const footerSections = [
+    {
+      heading: f.sections.desk,
+      links: [
+        { label: f.links.features, to: "/features" },
+        { label: f.links.workflow, to: "/workflow" },
+        { label: f.links.integrity, to: "/integrity" },
+      ],
+    },
+    {
+      heading: f.sections.authors,
+      links: [
+        { label: f.links.openEditor, to: "/projects" },
+        { label: f.links.latexGuide, to: "/latex-guide" },
+      ],
+    },
+    {
+      heading: f.sections.bureau,
+      links: [
+        { label: f.links.about, to: "/about" },
+        { label: f.links.contact, to: "/contact" },
+      ],
+    },
+    {
+      heading: f.sections.legal,
+      links: [
+        { label: f.links.terms, to: "/terms" },
+        { label: f.links.privacy, to: "/privacy" },
+        { label: f.links.ethics, to: "/ethics" },
+        { label: f.links.dataUse, to: "/data-use" },
+      ],
+    },
+  ];
+
   return (
     <footer className="bg-background border-t border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-6 gap-8">
@@ -157,9 +161,9 @@ export function MarketingColophon() {
           <Link to="/" className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80">
             Arionear
           </Link>
-          <p className="mt-2 font-body italic text-sm">AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.</p>
+          <p className="mt-2 font-body italic text-sm">{f.tagline}</p>
           <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-neutral-600">
-            Edition Vol. I · Printed for the web · {new Date().getFullYear()}
+            {f.edition} {new Date().getFullYear()}
           </p>
         </div>
         {footerSections.map((section) => (
@@ -184,8 +188,10 @@ export function MarketingColophon() {
       </div>
       <div className="border-t border-foreground">
         <div className="max-w-screen-xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono-data text-[10px] uppercase tracking-widest">
-          <span>© {new Date().getFullYear()} Arionear Editorial Co.</span>
-          <span>All the science that&apos;s fit to publish.</span>
+          <span>
+            © {new Date().getFullYear()} {f.copyright}
+          </span>
+          <span>{f.motto}</span>
         </div>
       </div>
     </footer>

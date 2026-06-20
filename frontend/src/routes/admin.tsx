@@ -17,6 +17,7 @@ import { getSession, refreshSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import type { AdminNavTab } from "@/components/admin/admin-sidebar";
+import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -290,6 +291,7 @@ function AdminPage() {
                 Save defaults
               </button>
             ) : null}
+            <LanguageToggle compact className="admin-language-toggle" />
             <ThemeToggle compact className="admin-theme-toggle" />
           </div>
         </header>

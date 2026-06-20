@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Mail, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AuthAlert, AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
+import { useLocale } from "@/components/locale-provider";
 import { requestPasswordReset } from "@/lib/auth-store";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/forgot-password")({
@@ -16,6 +18,8 @@ export const Route = createFileRoute("/forgot-password")({
 });
 
 function ForgotPasswordPage() {
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).forgotPassword, [locale]);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,24 +49,24 @@ function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Errata & Corrections"
-      title="Forgot your password?"
-      lede="Send us the email on file. We'll mail back a one-time link to set a new one — no questions, no fanfare."
+      eyebrow={t.eyebrow}
+      title={t.title}
+      lede={t.lede}
     >
       {error && <AuthAlert message={error} />}
 
       {submitted ? (
         <div className="border border-foreground bg-background p-6">
           <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-3">
-            Notice posted
+            {t.noticePosted}
           </p>
-          <h2 className="font-serif-display text-2xl font-bold mb-2">Check your inbox.</h2>
+          <h2 className="font-serif-display text-2xl font-bold mb-2">{t.checkInbox}</h2>
           <p className="font-serif-body text-sm text-foreground/70">{notice}</p>
           {devResetUrl && (
             <p className="mt-4 font-serif-body text-xs text-foreground/60 border-t border-foreground/20 pt-4">
-              Dev mode:{" "}
+              {t.devMode}{" "}
               <a href={devResetUrl} className="underline break-all hover:text-[color:var(--editorial-red)]">
-                Open reset link
+                {t.openResetLink}
               </a>
             </p>
           )}
@@ -75,14 +79,14 @@ function ForgotPasswordPage() {
             }}
             className="mt-5 font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
           >
-            Use a different email
+            {t.useDifferentEmail}
           </button>
         </div>
       ) : (
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           <AuthField
             id="email"
-            label="Account email"
+            label={t.accountEmail}
             icon={<Mail className="h-4 w-4" strokeWidth={1.5} />}
             type="email"
             autoComplete="email"
@@ -93,7 +97,7 @@ function ForgotPasswordPage() {
           />
 
           <AuthSubmitButton loading={loading}>
-            Send reset link <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            {t.sendReset} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </AuthSubmitButton>
         </form>
       )}
@@ -103,10 +107,10 @@ function ForgotPasswordPage() {
           to="/signin"
           className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
         >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> Back to sign in
+          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> {t.backToSignIn}
         </Link>
         <Link to="/signup" className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]">
-          Create account
+          {t.createAccount}
         </Link>
       </div>
     </AuthShell>

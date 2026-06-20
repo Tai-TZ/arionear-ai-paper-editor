@@ -6,9 +6,19 @@ import {
   Quote,
   ShieldCheck,
   ArrowRight,
+  Upload,
 } from "lucide-react";
 import { MarketingLayout } from "./marketing-layout";
 import { featuresContent } from "@/lib/marketing-content";
+import { editorEntryPath } from "@/lib/require-auth";
+
+const featureLearnMore: Record<string, string> = {
+  "01": "/workflow",
+  "02": "/workflow",
+  "03": "/integrity",
+  "04": "/integrity",
+  "05": "/integrity",
+};
 
 const features = [
   {
@@ -148,6 +158,20 @@ function FeaturesHubDiagram() {
               </div>
               <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
               <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  to={editorEntryPath()}
+                  className="inline-flex items-center gap-1 border border-foreground px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors"
+                >
+                  Try it
+                </Link>
+                <Link
+                  to={featureLearnMore[n] ?? "/workflow"}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-neutral-600 hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
+                >
+                  Learn more
+                </Link>
+              </div>
             </article>
           ))}
         </div>
@@ -169,6 +193,20 @@ export function FeaturesPage() {
               {featuresContent.title}
             </h1>
             <p className="mt-6 font-body text-lg leading-relaxed text-neutral-700">{featuresContent.lede}</p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <Link
+                to={editorEntryPath()}
+                className="inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
+              >
+                <Upload className="h-4 w-4" strokeWidth={1.5} /> Try it
+              </Link>
+              <Link
+                to="/workflow"
+                className="inline-flex items-center justify-center gap-2 border border-foreground bg-transparent px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[44px]"
+              >
+                Learn more <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+              </Link>
+            </div>
           </div>
 
           <div className="mt-12">

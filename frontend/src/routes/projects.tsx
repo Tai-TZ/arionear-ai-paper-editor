@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   LayoutGrid,
@@ -43,6 +43,13 @@ import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { type ResearcherProfile } from "@/lib/researcher-profile";
+import { useLocale } from "@/components/locale-provider";
+import { projectsCopy } from "@/lib/projects-i18n";
+import {
+  EditableProjectName,
+  type EditableProjectNameHandle,
+} from "@/components/editable-project-name";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects")({
   ssr: false,
@@ -63,6 +70,8 @@ export const Route = createFileRoute("/projects")({
 
 function ProjectsPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
+  const t = useMemo(() => projectsCopy(locale), [locale]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<StoredProject[]>([]);
@@ -126,28 +135,28 @@ function ProjectsPage() {
   };
 
   const handleCreateSample = async () => {
-    setCreatingLabel("Creating sample project…");
+    setCreatingLabel(t.creatingSample);
     setNewMenuOpen(false);
     try {
       const project = await createPaper("Biomedical NER (Sample)", SAMPLE_LATEX);
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to create project.");
+      setLoadError(error instanceof Error ? error.message : t.errorCreate);
     } finally {
       setCreatingLabel(null);
     }
   };
 
   const handleCreateBlank = async () => {
-    setCreatingLabel("Creating blank project…");
+    setCreatingLabel(t.creatingBlank);
     setNewMenuOpen(false);
     try {
       const project = await createPaper("New Project", BLANK_LATEX);
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to create project.");
+      setLoadError(error instanceof Error ? error.message : t.errorCreate);
     } finally {
       setCreatingLabel(null);
     }
@@ -160,7 +169,7 @@ function ProjectsPage() {
     const texFile = files.find((f) => /\.(tex|latex)$/i.test(f.name));
     if (!texFile) return;
 
-    setCreatingLabel("Uploading project…");
+    setCreatingLabel(t.uploading);
     setImportMenuOpen(false);
     try {
       const text = await texFile.text();
@@ -176,7 +185,7 @@ function ProjectsPage() {
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to upload project.");
+      setLoadError(error instanceof Error ? error.message : t.errorUpload);
     } finally {
       setCreatingLabel(null);
       e.target.value = "";
@@ -186,7 +195,7 @@ function ProjectsPage() {
   const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCreatingLabel("Importing Overleaf ZIP…");
+    setCreatingLabel(t.importingZip);
     setImportMenuOpen(false);
     try {
       const imported = await importOverleafZip(file);
@@ -204,7 +213,7 @@ function ProjectsPage() {
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "ZIP import failed.");
+      setLoadError(error instanceof Error ? error.message : t.errorImport);
     } finally {
       setCreatingLabel(null);
       e.target.value = "";
@@ -212,8 +221,13 @@ function ProjectsPage() {
   };
 
   const handleRename = async (id: string, name: string) => {
-    const updated = await updatePaper(id, { name });
-    setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    try {
+      const updated = await updatePaper(id, { name });
+      setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.errorRename);
+      throw error;
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -222,7 +236,7 @@ function ProjectsPage() {
       await deletePaper(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to delete project.");
+      setLoadError(error instanceof Error ? error.message : t.errorDelete);
     } finally {
       setDeletingIds((prev) => {
         const next = new Set(prev);
@@ -269,7 +283,7 @@ function ProjectsPage() {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="projects-workspace-header workspace-main-header flex shrink-0 items-center justify-between border-b border-border/50">
           <div className="projects-header-title">
-            <h1>Your Projects</h1>
+            <h1>{t.headerTitle}</h1>
           </div>
 
           <div className="projects-header-toolbar">
@@ -278,17 +292,17 @@ function ProjectsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search"
-                aria-label="Search projects"
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchAria}
               />
             </div>
 
-            <div className="projects-view-toggle" role="group" aria-label="Project view">
+            <div className="projects-view-toggle" role="group" aria-label={t.viewAria}>
               <button
                 type="button"
                 onClick={() => setView("list")}
                 className={`projects-view-btn ${view === "list" ? "is-active" : ""}`}
-                aria-label="List view"
+                aria-label={t.listView}
                 aria-pressed={view === "list"}
               >
                 <List className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -297,7 +311,7 @@ function ProjectsPage() {
                 type="button"
                 onClick={() => setView("grid")}
                 className={`projects-view-btn ${view === "grid" ? "is-active" : ""}`}
-                aria-label="Grid view"
+                aria-label={t.gridView}
                 aria-pressed={view === "grid"}
               >
                 <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -319,7 +333,7 @@ function ProjectsPage() {
                   disabled={!!creatingLabel}
                   className="projects-header-btn"
                 >
-                  Import
+                  {t.importBtn}
                   <ChevronDown className="h-3.5 w-3.5 opacity-70" strokeWidth={1.5} />
                 </button>
                 {importMenuOpen && (
@@ -329,14 +343,14 @@ function ProjectsPage() {
                       className="projects-menu-item"
                     >
                       <FolderOpen className="h-3.5 w-3.5" />
-                      Overleaf ZIP
+                      {t.importZip}
                     </button>
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="projects-menu-item"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Upload .tex + figures
+                      {t.importTexFigures}
                     </button>
                   </div>
                 )}
@@ -354,18 +368,18 @@ function ProjectsPage() {
                 className="projects-header-btn projects-header-btn-primary"
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-                New
+                {t.newBtn}
                 <ChevronDown className="h-3.5 w-3.5 opacity-80" strokeWidth={1.5} />
               </button>
               {newMenuOpen && (
                 <div className="projects-menu absolute right-0 top-full z-20 mt-1 min-w-[11rem]">
                   <button onClick={handleCreateBlank} className="projects-menu-item">
                     <FileText className="h-3.5 w-3.5" />
-                    Blank project
+                    {t.blankProject}
                   </button>
                   <button onClick={handleCreateSample} className="projects-menu-item">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Sample project
+                    {t.sampleProject}
                   </button>
                 </div>
               )}
@@ -377,9 +391,9 @@ function ProjectsPage() {
           <div className="projects-desk-inner">
             {!loading && filtered.length > 0 && (
               <div className="projects-desk-meta">
-                <p className="projects-desk-eyebrow">Manuscript desk</p>
+                <p className="projects-desk-eyebrow">{t.manuscriptDesk}</p>
                 <p className="projects-desk-count">
-                  {filtered.length} {filtered.length === 1 ? "project" : "projects"}
+                  {filtered.length} {filtered.length === 1 ? t.projectCountOne : t.projectCountMany}
                 </p>
               </div>
             )}
@@ -392,11 +406,12 @@ function ProjectsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin" />
-              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">Loading your projects…</p>
+              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{t.loading}</p>
             </div>
           ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}
+              t={t}
               onUpload={() => fileInputRef.current?.click()}
               onSample={handleCreateSample}
               onBlank={handleCreateBlank}
@@ -405,9 +420,9 @@ function ProjectsPage() {
           ) : view === "list" ? (
             <div className="projects-table-editorial">
               <div className="projects-table-head-editorial">
-                <span className="projects-col-name">Name</span>
-                <span className="projects-col-created hidden md:block">Created</span>
-                <span className="projects-col-updated hidden md:block">Last update</span>
+                <span className="projects-col-name">{t.colName}</span>
+                <span className="projects-col-created hidden md:block">{t.colCreated}</span>
+                <span className="projects-col-updated hidden md:block">{t.colUpdated}</span>
                 <span className="projects-col-actions" aria-hidden="true" />
               </div>
               {filtered.map((project) => (
@@ -436,10 +451,10 @@ function ProjectsPage() {
                   </div>
                   <p className="mt-3 truncate font-serif-body text-sm font-semibold">{project.name}</p>
                   <p className="projects-row-date mt-1">
-                    Created {formatProjectDateTime(project.createdAt)}
+                    {t.created} {formatProjectDateTime(project.createdAt)}
                   </p>
                   <p className="projects-row-date mt-0.5">
-                    Updated {formatProjectDateTime(project.updatedAt)}
+                    {t.updated} {formatProjectDateTime(project.updatedAt)}
                   </p>
                 </button>
               ))}
@@ -454,12 +469,14 @@ function ProjectsPage() {
 
 function EmptyProjects({
   hasSearch,
+  t,
   onUpload,
   onSample,
   onBlank,
   disabled = false,
 }: {
   hasSearch: boolean;
+  t: ReturnType<typeof projectsCopy>;
   onUpload: () => void;
   onSample: () => void;
   onBlank: () => void;
@@ -468,16 +485,16 @@ function EmptyProjects({
   if (hasSearch) {
     return (
       <div className="projects-empty-editorial">
-        <h2>No matches</h2>
-        <p className="projects-desk-count">Try a different search term.</p>
+        <h2>{t.emptyNoMatches}</h2>
+        <p className="projects-desk-count">{t.emptyTryDifferent}</p>
       </div>
     );
   }
 
   return (
     <div className="projects-empty-editorial">
-      <h2>Start a LaTeX project</h2>
-      <p>Upload your manuscript or explore Arionear with a ready-made sample.</p>
+      <h2>{t.emptyStartTitle}</h2>
+      <p>{t.emptyStartBody}</p>
 
       <div className="projects-empty-actions">
         <button
@@ -491,13 +508,13 @@ function EmptyProjects({
             <Upload className="h-5 w-5" strokeWidth={1.5} />
           </div>
           <h3>
-            Upload LaTeX
-            {!SHOW_PROJECTS_UPLOAD && <span className="projects-coming-soon">Coming soon</span>}
+            {t.emptyUpload}
+            {!SHOW_PROJECTS_UPLOAD && <span className="projects-coming-soon">{t.emptyComingSoon}</span>}
           </h3>
           <p>
             {SHOW_PROJECTS_UPLOAD
-              ? "Import a `.tex` file and figure assets together."
-              : "Import a `.tex` file and figure assets together — available in a future release."}
+              ? t.emptyUploadHint
+              : t.emptyUploadHintSoon}
           </p>
         </button>
 
@@ -505,14 +522,14 @@ function EmptyProjects({
           <div className="icon-box">
             <Sparkles className="h-5 w-5" strokeWidth={1.5} />
           </div>
-          <h3>Sample project</h3>
-          <p>Biomedical NER template with sections and preview ready to explore.</p>
+          <h3>{t.sampleProject}</h3>
+          <p>{t.emptySampleHint}</p>
         </button>
       </div>
 
       <button type="button" onClick={onBlank} disabled={disabled} className="projects-empty-blank">
         <FileText className="h-4 w-4" strokeWidth={1.5} />
-        Blank project
+        {t.blankProject}
       </button>
     </div>
   );
@@ -531,19 +548,20 @@ function ProjectRow({
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
-  const openSearch = { projectId: project.id };
+  const nameRef = useRef<EditableProjectNameHandle>(null);
+  const [renaming, setRenaming] = useState(false);
 
   return (
     <div
-      className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}`}
+      className={`projects-table-row-editorial${deleting ? " is-deleting" : ""}${renaming ? " is-renaming" : ""}`}
       onClick={(e) => {
-        if (deleting) return;
+        if (deleting || renaming) return;
         const target = e.target as HTMLElement;
         if (target.closest(".projects-col-actions")) return;
         onOpen();
       }}
       onKeyDown={(e) => {
-        if (deleting) return;
+        if (deleting || renaming) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onOpen();
@@ -559,17 +577,16 @@ function ProjectRow({
         ) : (
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         )}
-        <Link
-          to="/editor"
-          search={openSearch}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!deleting) markEditorEntryTransition();
-          }}
-          className="projects-row-open min-w-0 flex-1 text-left"
-        >
-          <span className="projects-row-name block truncate">{project.name}</span>
-        </Link>
+        <EditableProjectName
+          ref={nameRef}
+          name={project.name}
+          disabled={deleting}
+          variant="list"
+          showFolderIcon={false}
+          showEditButton={false}
+          onRename={onRename}
+          onEditingChange={setRenaming}
+        />
       </div>
       <span
         className="projects-row-date projects-col-created hidden md:block"
@@ -584,11 +601,26 @@ function ProjectRow({
         {formatTimeAgo(project.updatedAt)}
       </span>
       <div className="projects-col-actions flex justify-end gap-1">
-        <RenameProjectButton name={project.name} disabled={deleting} onRename={onRename} />
         <button
           type="button"
           disabled={deleting}
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            nameRef.current?.startEditing();
+          }}
+          className="projects-row-menu"
+          aria-label="Rename project"
+          title="Rename project (double-click name)"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           className="projects-row-menu text-destructive hover:bg-destructive/10 hover:text-destructive"
           aria-label="Delete project"
           title="Delete project"
@@ -597,69 +629,5 @@ function ProjectRow({
         </button>
       </div>
     </div>
-  );
-}
-
-function RenameProjectButton({
-  name,
-  disabled,
-  onRename,
-}: {
-  name: string;
-  disabled?: boolean;
-  onRename: (name: string) => void | Promise<void>;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(name);
-
-  useEffect(() => {
-    if (!editing) setDraft(name);
-  }, [name, editing]);
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        value={draft}
-        disabled={disabled}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={async () => {
-          const trimmed = draft.trim();
-          setEditing(false);
-          if (trimmed && trimmed !== name) await onRename(trimmed);
-        }}
-        onKeyDown={async (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const trimmed = draft.trim();
-            setEditing(false);
-            if (trimmed && trimmed !== name) await onRename(trimmed);
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            setDraft(name);
-            setEditing(false);
-          }
-        }}
-        className="h-8 min-w-[8rem] max-w-[12rem] rounded-md border border-border bg-background px-2 text-sm outline-none ring-primary/30 focus:ring-2"
-        aria-label="Rename project"
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={(e) => {
-        e.stopPropagation();
-        setEditing(true);
-      }}
-      className="projects-row-menu"
-      aria-label="Rename project"
-      title="Rename project"
-    >
-      <Pencil className="h-4 w-4" />
-    </button>
   );
 }
