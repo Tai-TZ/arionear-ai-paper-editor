@@ -177,18 +177,24 @@ def register_user(
     return user, None
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User | None:
+AUTH_INVALID_CREDENTIALS = "invalid_credentials"
+AUTH_ACCOUNT_DISABLED = "account_disabled"
+
+
+def authenticate_user(db: Session, email: str, password: str) -> tuple[User | None, str | None]:
     normalized = normalize_email(email)
     if not normalized or not password:
-        return None
+        return None, AUTH_INVALID_CREDENTIALS
     if god_admin_configured() and normalized == god_admin_email():
         ensure_god_admin(db)
-    user = db.query(User).filter(User.email == normalized, User.is_active.is_(True)).first()
+    user = db.query(User).filter(User.email == normalized).first()
     if not user or not verify_password(password, user.password_hash):
-        return None
+        return None, AUTH_INVALID_CREDENTIALS
+    if not user.is_active:
+        return None, AUTH_ACCOUNT_DISABLED
     user.last_active_at = datetime.now(UTC)
     db.flush()
-    return user
+    return user, None
 
 
 def _hash_reset_token(token: str) -> str:
@@ -425,7 +431,7 @@ def find_or_create_google_user(
     by_email = db.query(User).filter(User.email == normalized).first()
     if by_email:
         if not by_email.is_active:
-            return None, "This account is inactive. Contact support."
+            return None, AUTH_ACCOUNT_DISABLED
         if by_email.google_sub and by_email.google_sub != sub:
             return None, "This email is linked to a different Google account."
         by_email.google_sub = sub

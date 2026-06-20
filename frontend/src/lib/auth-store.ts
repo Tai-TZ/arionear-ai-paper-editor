@@ -8,6 +8,7 @@ import {
   getGoogleOAuthStartPath,
   type AuthUser,
 } from "./auth-api";
+import type { AuthErrorCode } from "./auth-api-errors";
 import { clearProfileCache } from "./researcher-profile";
 import { fetchDedupe, invalidateFetchKey, invalidateFetchPrefix } from "./api/fetch-dedupe";
 import { normalizeEmail, validateEmail, validateName, validatePassword } from "./auth-validation";
@@ -171,7 +172,7 @@ export async function loginUser(
   email: string,
   password: string,
   remember = false,
-): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
+): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string; code?: AuthErrorCode }> {
   const emailError = validateEmail(email);
   if (emailError) return { ok: false, error: emailError };
   if (!password) return { ok: false, error: "Please enter your password." };

@@ -1,5 +1,5 @@
 import { resolveApiBase } from "./api/base-url";
-import { mapAuthHttpError } from "./auth-api-errors";
+import { mapAuthHttpError, parseAuthErrorResponse, type AuthErrorCode } from "./auth-api-errors";
 
 const API_BASE = resolveApiBase();
 
@@ -21,7 +21,7 @@ export function getGoogleOAuthStartPath(returnTo = "/projects", remember = false
 
 export type AuthResult =
   | { ok: true; user: AuthUser; accessToken: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: AuthErrorCode };
 
 async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000): Promise<T> {
   const controller = new AbortController();
@@ -107,17 +107,38 @@ export async function apiLogin(
   password: string,
   remember = false,
 ): Promise<AuthResult> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 30_000);
   try {
-    const data = await authFetch<{
-      access_token: string;
-      user: AuthUser;
-    }>("/auth/login", {
+    const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, remember }),
     });
+    if (!res.ok) {
+      let detail: unknown = res.statusText;
+      try {
+        const body = await res.json();
+        detail = body.detail ?? detail;
+      } catch {
+        /* ignore */
+      }
+      const parsed = parseAuthErrorResponse(res.status, detail);
+      return { ok: false, error: parsed.message, code: parsed.code };
+    }
+    const data = (await res.json()) as {
+      access_token: string;
+      user: AuthUser;
+    };
     return { ok: true, user: data.user, accessToken: data.access_token };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Sign in failed." };
+    if (e instanceof DOMException && e.name === "AbortError") {
+      return { ok: false, error: "Request timed out. The server may be busy — try again in a moment." };
+    }
+    return { ok: false, error: "Cannot reach the server. Check that the backend is running." };
+  } finally {
+    window.clearTimeout(timer);
   }
 }
 

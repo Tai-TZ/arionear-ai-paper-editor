@@ -167,6 +167,39 @@ async def test_me_rejects_invalid_token(client, auth_db):
 
 
 @pytest.mark.asyncio
+async def test_login_rejects_disabled_account(client, auth_db):
+    from src.db.engine import get_db
+    from src.db.models import User, UserRole
+    from src.services.auth_service import hash_password
+
+    with get_db() as db:
+        db.add(
+            User(
+                email="disabled@uni.edu",
+                full_name="Disabled User",
+                password_hash=hash_password("SecurePass1"),
+                role=UserRole.RESEARCHER,
+                is_active=False,
+            )
+        )
+
+    res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "disabled@uni.edu", "password": "SecurePass1"},
+    )
+    assert res.status_code == 403
+    body = res.json()["detail"]
+    assert body["code"] == "account_disabled"
+
+    wrong_pw = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "disabled@uni.edu", "password": "WrongPass1"},
+    )
+    assert wrong_pw.status_code == 401
+    assert wrong_pw.json()["detail"] == "Invalid email or password."
+
+
+@pytest.mark.asyncio
 async def test_login_generic_error_no_user_leak(client, auth_db):
     res = await client.post(
         "/api/v1/auth/login",

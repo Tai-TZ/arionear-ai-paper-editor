@@ -18,6 +18,7 @@ from src.models.auth_schemas import (
     VerifySignupRequest,
 )
 from src.services.auth_service import (
+    AUTH_ACCOUNT_DISABLED,
     authenticate_user,
     create_access_token,
     decode_access_token,
@@ -50,6 +51,7 @@ SIGNUP_CODE_SENT_MESSAGE = (
     "Enter it below to finish creating your account."
 )
 INVALID_CREDENTIALS = "Invalid email or password."
+ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
 
 
@@ -118,9 +120,14 @@ def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
 @router.post("/login", response_model=AuthTokenResponse)
 def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
     try:
-        user = authenticate_user(db, body.email, body.password)
+        user, auth_error = authenticate_user(db, body.email, body.password)
     except OperationalError as exc:
         _raise_db_busy(exc)
+    if auth_error == AUTH_ACCOUNT_DISABLED:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": AUTH_ACCOUNT_DISABLED, "message": ACCOUNT_DISABLED_MESSAGE},
+        )
     if not user:
         raise HTTPException(status_code=401, detail=INVALID_CREDENTIALS)
 
@@ -250,6 +257,14 @@ async def google_callback(
         avatar_url=picture or None,
     )
     if auth_error or not user:
+        if auth_error == AUTH_ACCOUNT_DISABLED:
+            return RedirectResponse(
+                url=frontend_oauth_error_url(
+                    ACCOUNT_DISABLED_MESSAGE,
+                    code=AUTH_ACCOUNT_DISABLED,
+                ),
+                status_code=302,
+            )
         return RedirectResponse(
             url=frontend_oauth_error_url(auth_error or "Could not sign in with Google."),
             status_code=302,

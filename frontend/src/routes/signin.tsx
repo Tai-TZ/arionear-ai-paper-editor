@@ -3,6 +3,7 @@ import { ArrowRight, Mail, Lock } from "lucide-react";
 import { useState } from "react";
 import {
   AuthAlert,
+  AuthDisabledAccount,
   AuthDivider,
   AuthField,
   AuthShell,
@@ -32,7 +33,15 @@ function SignInPage() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
+  const [disabledEmail, setDisabledEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const resetDisabledState = () => {
+    setDisabledEmail(null);
+    setError("");
+    setEmail("");
+    setPassword("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +52,10 @@ function SignInPage() {
     setLoading(false);
 
     if (!result.ok) {
+      if (result.code === "account_disabled") {
+        setDisabledEmail(email.trim());
+        return;
+      }
       authToast.signInError(result.error);
       setError(result.error);
       return;
@@ -51,6 +64,18 @@ function SignInPage() {
     authToast.signInSuccess(result.user.name);
     navigate({ to: defaultAppPath(result.user) });
   };
+
+  if (disabledEmail !== null) {
+    return (
+      <AuthShell
+        eyebrow="The Reading Room"
+        title="Sign in to continue."
+        lede="Pick up where you left the margins — your drafts, marks and reviewer replies are waiting."
+      >
+        <AuthDisabledAccount email={disabledEmail} onUseAnotherAccount={resetDisabledState} />
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
