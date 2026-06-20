@@ -21,6 +21,7 @@ from src.services.guardrails.output_sanitize import (
     sanitize_style_output,
 )
 from src.services.llm import get_llm
+from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     analyze_structure,
     extract_bib_content,
@@ -291,7 +292,7 @@ async def edit_node(state: AgentState) -> dict:
         }
 
     system = build_system_prompt("edit")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.1)
+    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.1))
 
     user_content = render_user_prompt(
         "edit",
@@ -406,7 +407,7 @@ async def style_node(state: AgentState) -> dict:
     settings = get_settings()
     section_label = prepared.get("section", "")
     system = build_system_prompt("style")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=0.2)
+    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.2))
 
     suggestion = ""
     flags: list[dict] = []
@@ -597,7 +598,7 @@ async def structure_node(state: AgentState) -> dict:
 
     if sections:
         system = build_system_prompt("structure")
-        llm = get_llm(provider=_provider(state), model=_model(state), temperature=0.2)
+        llm = get_llm(provider=_provider(state), model=_model(state), temperature=resolve_llm_temperature(0.2))
         section_summary = format_sections_summary(sections)
         user_content = render_user_prompt(
             "structure",

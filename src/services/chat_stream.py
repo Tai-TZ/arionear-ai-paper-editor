@@ -23,11 +23,13 @@ from src.services.chat_telemetry import ChatRunTracker
 from src.services.intent_router import classify_intent
 from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
+from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
 )
 from src.services.prompts import build_system_prompt, render_user_prompt
+from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 from src.services.template_latex import generate_template
 
@@ -223,27 +225,54 @@ async def _stream_llm_tokens(llm, messages: list) -> AsyncIterator[str]:
                             yield text
 
 
-async def _stream_chat_tokens(llm, messages: list) -> AsyncIterator[tuple[str, str]]:
+async def _stream_chat_tokens_from_chunk(
+    chunk: AIMessageChunk,
+) -> AsyncIterator[tuple[str, str]]:
+    if not isinstance(chunk, AIMessageChunk):
+        return
+    reasoning = chunk.additional_kwargs.get("reasoning_content")
+    if isinstance(reasoning, str) and reasoning:
+        yield "reasoning", reasoning
+    content = chunk.content
+    if isinstance(content, str) and content:
+        yield "token", content
+    elif isinstance(content, list):
+        for part in content:
+            if isinstance(part, str) and part:
+                yield "token", part
+            elif isinstance(part, dict) and part.get("type") == "text":
+                text = part.get("text", "")
+                if text:
+                    yield "token", text
+
+
+async def _stream_chat_tokens(
+    llm, messages: list
+) -> AsyncIterator[tuple[str, str]]:
     """Yield ('reasoning'|'token', delta) for chat streams (Z.AI thinking mode)."""
     async for chunk in llm.astream(messages):
-        if not isinstance(chunk, AIMessageChunk):
-            continue
+        async for item in _stream_chat_tokens_from_chunk(chunk):
+            yield item
 
-        reasoning = chunk.additional_kwargs.get("reasoning_content")
-        if isinstance(reasoning, str) and reasoning:
-            yield "reasoning", reasoning
 
-        content = chunk.content
-        if isinstance(content, str) and content:
-            yield "token", content
-        elif isinstance(content, list):
-            for part in content:
-                if isinstance(part, str) and part:
-                    yield "token", part
-                elif isinstance(part, dict) and part.get("type") == "text":
-                    text = part.get("text", "")
-                    if text:
-                        yield "token", text
+def _usage_from_chunk(chunk: AIMessageChunk) -> int | None:
+    usage = getattr(chunk, "usage_metadata", None) or {}
+    if isinstance(usage, dict):
+        total = usage.get("total_tokens")
+        if total:
+            return int(total)
+        input_tok = usage.get("input_tokens")
+        output_tok = usage.get("output_tokens")
+        if input_tok is not None and output_tok is not None:
+            return int(input_tok) + int(output_tok)
+    response_meta = getattr(chunk, "response_metadata", None) or {}
+    if isinstance(response_meta, dict):
+        token_usage = response_meta.get("token_usage") or response_meta.get("usage")
+        if isinstance(token_usage, dict):
+            total = token_usage.get("total_tokens")
+            if total:
+                return int(total)
+    return None
 
 
 def _build_chat_context(query: str, selection: str, latex: str) -> str:
@@ -282,6 +311,15 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             )
             session_store.update(request.session_id, latex_content=request.latex_content)
 
+        try:
+            enforce_llm_quota_for_paper(request.session_id)
+        except QuotaExceededError as exc:
+            message = str(exc)
+            await tracker.fail(message)
+            yield _sse("error", {"message": message})
+            return
+
+        chat_temperature = resolve_llm_temperature()
         latex, sections, cite_keys = _parse_manuscript(
             request.latex_content,
             request.session_id or "",
@@ -367,7 +405,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "integrity_strictness": strictness,
         }
 
-        get_llm(provider=provider, model=model)
+        get_llm(provider=provider, model=model, temperature=chat_temperature)
 
         done_payload: dict[str, Any] = {
             "task": task,
@@ -390,6 +428,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 provider=provider,
                 model=model,
                 thinking=False if provider == "zai" else None,
+                temperature=chat_temperature,
             )
             state_evt, act_evt = _emit_state(
                 "llm",
@@ -403,23 +442,28 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             trace = await tracker.stage("llm_stream_start", task=task)
             yield _sse("trace", trace)
             first_token = True
-            async for kind, delta in _stream_chat_tokens(
-                chat_llm,
-                [
-                    SystemMessage(content=chat_system),
-                    HumanMessage(content=_build_chat_context(request.message, request.selection, latex)),
-                ],
-            ):
-                if first_token and kind == "token":
-                    trace = await tracker.stage("llm_first_token", task=task)
-                    yield _sse("trace", trace)
-                    first_token = False
-                if kind == "reasoning":
-                    yield _sse("reasoning", {"delta": delta})
-                else:
-                    full_response.append(delta)
-                    yield _sse("token", {"delta": delta})
+            provider_tokens: int | None = None
+            messages = [
+                SystemMessage(content=chat_system),
+                HumanMessage(content=_build_chat_context(request.message, request.selection, latex)),
+            ]
+            async for chunk in chat_llm.astream(messages):
+                if isinstance(chunk, AIMessageChunk):
+                    reported = _usage_from_chunk(chunk)
+                    if reported:
+                        provider_tokens = reported
+                async for kind, delta in _stream_chat_tokens_from_chunk(chunk):
+                    if first_token and kind == "token":
+                        trace = await tracker.stage("llm_first_token", task=task)
+                        yield _sse("trace", trace)
+                        first_token = False
+                    if kind == "reasoning":
+                        yield _sse("reasoning", {"delta": delta})
+                    else:
+                        full_response.append(delta)
+                        yield _sse("token", {"delta": delta})
             done_payload["response"] = "".join(full_response).strip()
+            done_payload["_provider_tokens"] = provider_tokens
             state_evt, act_evt = _emit_state(
                 "llm",
                 "Hoàn tất trả lời",
@@ -669,12 +713,33 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         done_payload["run_id"] = tracker.run_id
         done_payload["total_ms"] = trace.get("total_ms")
         yield _sse("done", done_payload)
+
+        if request.session_id:
+            from src.services.usage_tracking import record_ai_usage
+
+            input_text = "\n".join(
+                part for part in (request.message, request.selection, request.latex_content[:4000]) if part
+            )
+            output_text = done_payload.get("response") or ""
+            provider_tokens = done_payload.pop("_provider_tokens", None)
+            record_ai_usage(
+                paper_id=request.session_id,
+                task_type=task,
+                user_input=input_text,
+                ai_output=output_text,
+                tokens_used=provider_tokens,
+            )
+
         await tracker.complete(
             success=True,
             has_suggestion=bool(done_payload.get("suggestion")),
             response_chars=len(done_payload.get("response") or ""),
         )
 
+    except QuotaExceededError as e:
+        message = str(e)
+        await tracker.fail(message)
+        yield _sse("error", {"message": message})
     except ValueError as e:
         message = friendly_llm_error(e)
         await tracker.fail(message)

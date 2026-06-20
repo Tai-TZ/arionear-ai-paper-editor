@@ -8,7 +8,7 @@ from src.services.sessions import refresh_session_store
 
 @pytest.fixture(autouse=True)
 def sqlite_test_db(monkeypatch):
-    """Use isolated SQLite for DB integration tests."""
+    """Isolated in-memory DB for unit tests only — runtime uses PostgreSQL."""
     db_path = os.path.join(os.path.dirname(__file__), "_test_app.db")
     if os.path.exists(db_path):
         os.remove(db_path)

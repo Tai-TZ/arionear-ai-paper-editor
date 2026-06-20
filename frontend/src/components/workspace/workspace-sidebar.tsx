@@ -1,14 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { FolderOpen, LogOut, UserCircle } from "lucide-react";
+import { FolderOpen, LogOut, Shield, UserCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName, type ResearcherProfile } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";
+import { isAdminUser } from "@/lib/require-auth";
 
-export type WorkspaceNav = "projects" | "profile";
+export type WorkspaceNav = "projects" | "profile" | "admin";
 
 type WorkspaceSidebarLabels = {
   projects: string;
   profile: string;
+  admin?: string;
   signOut: string;
 };
 
@@ -25,6 +27,7 @@ type WorkspaceSidebarProps = {
 const DEFAULT_LABELS: WorkspaceSidebarLabels = {
   projects: "Your Projects",
   profile: "Researcher Profile",
+  admin: "Admin Console",
   signOut: "Sign out",
 };
 
@@ -127,6 +130,20 @@ export function WorkspaceSidebar({
             {labels.profile}
           </Link>
         )}
+
+        {isAdminUser() ? (
+          active === "admin" ? (
+            <div className="workspace-nav-item is-active workspace-nav-item-admin">
+              <Shield className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {labels.admin ?? "Admin Console"}
+            </div>
+          ) : (
+            <Link to="/admin" className="workspace-nav-item workspace-nav-item-admin" onClick={onNavigate}>
+              <Shield className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {labels.admin ?? "Admin Console"}
+            </Link>
+          )
+        ) : null}
       </nav>
 
       <div className="mt-auto border-t border-foreground p-3">

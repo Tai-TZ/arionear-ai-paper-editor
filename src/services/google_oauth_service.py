@@ -114,5 +114,8 @@ def frontend_oauth_callback_url(**params: str) -> str:
     return f"{base}?{urlencode(params)}"
 
 
-def frontend_oauth_error_url(message: str) -> str:
-    return frontend_oauth_callback_url(error=message)
+def frontend_oauth_error_url(message: str, *, code: str | None = None) -> str:
+    params: dict[str, str] = {"error": message}
+    if code:
+        params["error_code"] = code
+    return frontend_oauth_callback_url(**params)

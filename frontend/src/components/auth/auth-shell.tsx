@@ -154,6 +154,39 @@ export function AuthDivider({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function AuthDisabledAccount({
+  email,
+  onUseAnotherAccount,
+}: {
+  email?: string;
+  onUseAnotherAccount: () => void;
+}) {
+  return (
+    <div className="border border-foreground/30 bg-foreground/[0.03] px-5 py-6">
+      <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)]">
+        Tài khoản bị vô hiệu hóa
+      </p>
+      <h2 className="mt-2 font-serif-display text-2xl font-bold leading-tight">
+        Không thể đăng nhập
+      </h2>
+      <p className="mt-3 font-serif-body text-sm text-foreground/75 leading-relaxed">
+        Tài khoản này đã bị quản trị viên tạm khóa. Nếu bạn cho rằng đây là nhầm lẫn, hãy liên hệ
+        admin của nền tảng.
+      </p>
+      {email ? (
+        <p className="mt-4 font-mono-data text-xs text-foreground/60 break-all">{email}</p>
+      ) : null}
+      <button
+        type="button"
+        onClick={onUseAnotherAccount}
+        className="mt-6 w-full inline-flex items-center justify-center border border-foreground bg-background text-foreground px-4 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[48px]"
+      >
+        Đăng nhập tài khoản khác
+      </button>
+    </div>
+  );
+}
+
 export function AuthAlert({ message }: { message: string }) {
   return (
     <div className="mb-5 border border-[color:var(--editorial-red)]/40 bg-[color:var(--editorial-red)]/5 px-4 py-3">

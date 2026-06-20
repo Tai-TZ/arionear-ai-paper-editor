@@ -16,7 +16,7 @@ Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện b�
 | Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite |
 | Backend | FastAPI, Python 3.11+, LangGraph |
 | LLM | OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
-| Database | Prisma + PostgreSQL (prod) / SQLite (quick dev) |
+| Database | Prisma + PostgreSQL |
 | PDF | pdflatex + PDF.js + SyncTeX |
 
 ---
@@ -61,13 +61,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-**Database (chọn một):**
+**Database (Prisma Postgres):**
 
 ```bash
-# Option A — SQLite nhanh (không cần Postgres)
-# Trong .env: DATABASE_URL=sqlite:///./data/app.db
-
-# Option B — PostgreSQL + Prisma (khuyến nghị cho auth/papers)
+# Trong .env: DIRECT_DATABASE_URL=postgresql://... (bắt buộc cho backend)
+# DATABASE_URL=prisma+postgres://... (cho npm run db:migrate)
 npm install
 npm run db:generate
 npm run db:migrate
@@ -158,7 +156,8 @@ Copy từ [`.env.example`](./.env.example). **Không commit file `.env`.**
 | `OPENAI_API_KEY` | Key OpenAI (nếu dùng OpenAI) | `sk-...` |
 | `ZAI_API_KEY` | Key Z.AI GLM (nếu dùng Z.AI) | `...` |
 | `ANTHROPIC_API_KEY` | Key Anthropic (nếu dùng Claude) | `sk-ant-...` |
-| `DATABASE_URL` | SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
+| `DATABASE_URL` | Prisma Accelerate URL (Prisma CLI) | `prisma+postgres://...` |
+| `DIRECT_DATABASE_URL` | PostgreSQL TCP cho FastAPI/SQLAlchemy (**bắt buộc**) | `postgresql://...` |
 | `AUTH_SECRET_KEY` | JWT secret — generate: `openssl rand -hex 32` | `a1b2c3...` |
 | `AI_LOG_API_KEY` | Key BTC cho AI usage logging | *(từ link mời BTC)* |
 
