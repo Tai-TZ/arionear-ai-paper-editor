@@ -102,7 +102,9 @@ def update_paper(
     if latex is not None:
         paper.raw_latex = latex
     if metadata is not None:
-        paper.metadata_ = metadata
+        merged = dict(paper.metadata_ or {})
+        merged.update(metadata)
+        paper.metadata_ = merged
     if assets is not None:
         current = dict(paper.metadata_ or {})
         current["assets"] = _merge_assets(current.get("assets") or [], assets)

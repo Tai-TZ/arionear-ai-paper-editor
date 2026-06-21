@@ -20,6 +20,7 @@ export default defineConfig({
         "/api/v1": {
           target: DEV_API_PROXY,
           changeOrigin: true,
+          ws: true,
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq, req) => {
               if (req.url?.includes("/chat/stream")) {
