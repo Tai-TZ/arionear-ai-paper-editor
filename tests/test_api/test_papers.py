@@ -127,3 +127,41 @@ async def test_delete_paper_with_suggestions(client, papers_db):
 async def test_papers_requires_auth(client, papers_db):
     res = await client.get("/api/v1/papers")
     assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_share_token_survives_metadata_patch(client, papers_db):
+    token = await _register(client, "share-meta@uni.edu", "Share Meta User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create = await client.post(
+        "/api/v1/papers",
+        headers=headers,
+        json={"name": "Shared Paper", "latex": "\\documentclass{article}"},
+    )
+    assert create.status_code == 201
+    paper_id = create.json()["id"]
+
+    share = await client.post(f"/api/v1/papers/{paper_id}/share", headers=headers)
+    assert share.status_code == 200
+    share_token = share.json()["token"]
+    assert share_token
+
+    patched = await client.patch(
+        f"/api/v1/papers/{paper_id}",
+        headers=headers,
+        json={
+            "latex": "\\documentclass{article}\\begin{document}Hello\\end{document}",
+            "metadata": {"mainFile": "main.tex", "compiler": "pdflatex", "files": []},
+        },
+    )
+    assert patched.status_code == 200
+
+    status = await client.get(f"/api/v1/papers/{paper_id}/share", headers=headers)
+    assert status.status_code == 200
+    assert status.json()["enabled"] is True
+    assert status.json()["token"] == share_token
+
+    public = await client.get(f"/api/v1/share/{share_token}")
+    assert public.status_code == 200
+    assert public.json()["name"] == "Shared Paper"

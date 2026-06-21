@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
-from src.db.engine import db_is_ready, get_db
+from src.db.engine import db_error_detail, db_is_ready, get_db, is_db_enabled
 from src.models.auth_schemas import (
     AuthTokenResponse,
     AuthUserResponse,
@@ -18,6 +18,7 @@ from src.models.auth_schemas import (
     VerifySignupRequest,
 )
 from src.services.auth_service import (
+    AUTH_ACCOUNT_DISABLED,
     authenticate_user,
     create_access_token,
     decode_access_token,
@@ -50,6 +51,7 @@ SIGNUP_CODE_SENT_MESSAGE = (
     "Enter it below to finish creating your account."
 )
 INVALID_CREDENTIALS = "Invalid email or password."
+ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
 
 
@@ -59,9 +61,18 @@ def _raise_db_busy(exc: OperationalError) -> None:
 
 def _require_db():
     if not db_is_ready():
+        if not is_db_enabled():
+            detail = "Authentication requires a database connection. Set DIRECT_DATABASE_URL."
+        else:
+            err = db_error_detail()
+            detail = (
+                f"Authentication requires a database connection. Database init failed: {err}"
+                if err
+                else "Authentication requires a database connection. Database is not ready."
+            )
         raise HTTPException(
             status_code=503,
-            detail="Authentication requires a database connection. Set DIRECT_DATABASE_URL.",
+            detail=detail,
         )
 
 
@@ -118,9 +129,14 @@ def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
 @router.post("/login", response_model=AuthTokenResponse)
 def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
     try:
-        user = authenticate_user(db, body.email, body.password)
+        user, auth_error = authenticate_user(db, body.email, body.password)
     except OperationalError as exc:
         _raise_db_busy(exc)
+    if auth_error == AUTH_ACCOUNT_DISABLED:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": AUTH_ACCOUNT_DISABLED, "message": ACCOUNT_DISABLED_MESSAGE},
+        )
     if not user:
         raise HTTPException(status_code=401, detail=INVALID_CREDENTIALS)
 
@@ -143,7 +159,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_get_db_s
 
     settings = get_settings()
     response = MessageResponse(message=FORGOT_PASSWORD_MESSAGE)
-    if settings.app_env == "development" and dev_url:
+    if settings.app_env in ("development", "test") and dev_url:
         response.dev_reset_url = dev_url
         print(f"[auth] Dev reset link: {dev_url}")
     return response
@@ -250,6 +266,14 @@ async def google_callback(
         avatar_url=picture or None,
     )
     if auth_error or not user:
+        if auth_error == AUTH_ACCOUNT_DISABLED:
+            return RedirectResponse(
+                url=frontend_oauth_error_url(
+                    ACCOUNT_DISABLED_MESSAGE,
+                    code=AUTH_ACCOUNT_DISABLED,
+                ),
+                status_code=302,
+            )
         return RedirectResponse(
             url=frontend_oauth_error_url(auth_error or "Could not sign in with Google."),
             status_code=302,

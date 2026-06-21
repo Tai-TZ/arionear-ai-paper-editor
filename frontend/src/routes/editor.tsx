@@ -22,6 +22,7 @@ import {
   Redo2,
   Wrench,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
@@ -54,9 +55,11 @@ import {
   type ChatAiStatePayload,
   type ChatAiStep,
   type LLMProvider,
+  type LogicAuditReport,
   type ProviderInfo,
   type RevisionRecord,
 } from "@/lib/api/academic";
+import { parseChatSlashCommand } from "@/lib/chat-commands";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { citationErrorMessage } from "@/lib/api/api-errors";
@@ -91,6 +94,9 @@ import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
+import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
+import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
+import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
 type EditorSearch = {
   projectId?: string;
@@ -162,7 +168,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
-type ToolsTab = "info" | "versions" | "citations";
+type ToolsTab = "info" | "versions" | "citations" | "logic";
 
 type ProjectStats = {
   words: number;
@@ -350,6 +356,8 @@ function EditorPage() {
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState<PaperShareStatus | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [liveActivity, setLiveActivity] = useState<string | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -368,6 +376,7 @@ function EditorPage() {
   const [revisionHistory, setRevisionHistory] = useState<RevisionRecord[]>([]);
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
+  const [logicAuditReport, setLogicAuditReport] = useState<LogicAuditReport | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
@@ -460,6 +469,13 @@ function EditorPage() {
         setAssets(project.assets ?? []);
         setBootState("ready");
         void loadSessionAudit(projectId);
+        void fetchPaperShareStatus(projectId)
+          .then((status) => {
+            if (!cancelled) setShareStatus(status);
+          })
+          .catch(() => {
+            if (!cancelled) setShareStatus(null);
+          });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -474,6 +490,13 @@ function EditorPage() {
       cancelled = true;
     };
   }, [projectId, navigate, resetHistory, loadSessionAudit]);
+
+  useYjsShareSync({
+    token: shareStatus?.token ?? null,
+    enabled: Boolean(shareStatus?.enabled && shareStatus.token),
+    latex,
+    onRemoteLatex: setLatex,
+  });
 
   const persistActiveFile = useCallback(
     (content: string, files: ProjectFile[], currentActive: string) =>
@@ -913,11 +936,17 @@ function EditorPage() {
   }, []);
 
   const handleSend = async () => {
-    const text = chatInput.trim();
-    if (!text || chatLoading || !projectId) return;
+    const raw = chatInput.trim();
+    if (!raw || chatLoading || !projectId) return;
+    const parsed = parseChatSlashCommand(raw);
+    const text = parsed.message;
     const activeSelection = chatSelectionContext?.text ?? selection;
     const sentSelection = chatSelectionContext;
-    const task = chatComposerMode === "quick-edit" ? ("edit" as const) : undefined;
+    const task =
+      chatComposerMode === "quick-edit"
+        ? ("edit" as const)
+        : parsed.task ?? undefined;
+    const userDisplay = parsed.command ? `/${parsed.command} · ${text}` : raw;
     openChatPanel();
     chatAbortRef.current?.abort();
     const abort = new AbortController();
@@ -925,7 +954,7 @@ function EditorPage() {
 
     setMessages((prev) => [
       ...prev,
-      { role: "user", content: text },
+      { role: "user", content: userDisplay },
       {
         role: "assistant",
         content: "",
@@ -1064,6 +1093,10 @@ function EditorPage() {
             if (result.citation_results?.length) {
               setCitationResults(result.citation_results);
               setCitationSummary(result.response || result.analysis || "");
+            }
+            if (result.logic_audit_report?.sections?.length) {
+              setLogicAuditReport(result.logic_audit_report);
+              setToolsOpen(true);
             }
             if (result.revision_id) {
               void refreshRevisions();
@@ -1427,6 +1460,8 @@ function EditorPage() {
               chatOpen={chatOpen}
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
+              onShare={() => setShareOpen(true)}
+              shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
               activeEditId={activeEditId}
               onSelectEdit={setActiveEditId}
@@ -1447,6 +1482,7 @@ function EditorPage() {
                 revisions={revisionHistory}
                 citationResults={citationResults}
                 citationSummary={citationSummary}
+                logicAuditReport={logicAuditReport}
                 onCitationsUpdated={(results, summary) => {
                   setCitationResults(results);
                   setCitationSummary(summary);
@@ -1552,6 +1588,14 @@ function EditorPage() {
       )}
 
       <StatusBar lineCount={latex.split("\n").length} className="hidden md:flex" />
+      {projectId ? (
+        <ShareLinkDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          paperId={projectId}
+          onStatusChange={setShareStatus}
+        />
+      ) : null}
         </div>
       )}
     </div>
@@ -2210,6 +2254,8 @@ function CenterPanel({
   onOpenChat,
   toolsOpen,
   onToggleTools,
+  onShare,
+  shareEnabled = false,
   chatEndRef,
   chatLoading,
   liveActivity,
@@ -2266,6 +2312,8 @@ function CenterPanel({
   onOpenChat: () => void;
   toolsOpen: boolean;
   onToggleTools: () => void;
+  onShare?: () => void;
+  shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   liveActivity?: string | null;
@@ -2330,17 +2378,33 @@ function CenterPanel({
             </button>
           </div>
         </div>
-        <button
-          onClick={onToggleTools}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition ${
-            toolsOpen
-              ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
-              : "bg-primary text-primary-foreground hover:bg-primary/90"
-          }`}
-        >
-          <Wrench className="h-3 w-3" />
-          Tools
-        </button>
+        <div className="flex items-center gap-2">
+          {onShare ? (
+            <button
+              type="button"
+              onClick={onShare}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+                shareEnabled
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              }`}
+            >
+              <Share2 className="h-3 w-3" />
+              Share
+            </button>
+          ) : null}
+          <button
+            onClick={onToggleTools}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+              toolsOpen
+                ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+          >
+            <Wrench className="h-3 w-3" />
+            Tools
+          </button>
+        </div>
       </div>
 
       <div className="editor-workspace flex min-h-0 flex-1 flex-col overflow-hidden w-full">
@@ -2493,6 +2557,7 @@ function ToolsPanel({
   revisions,
   citationResults: citationResultsProp,
   citationSummary: citationSummaryProp,
+  logicAuditReport: logicAuditReportProp,
   onCitationsUpdated,
   onClose,
 }: {
@@ -2503,6 +2568,7 @@ function ToolsPanel({
   revisions: RevisionRecord[];
   citationResults: Record<string, unknown>[];
   citationSummary: string;
+  logicAuditReport: LogicAuditReport | null;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
 }) {
@@ -2516,6 +2582,12 @@ function ToolsPanel({
     setCitationResults(citationResultsProp);
     setCitationSummary(citationSummaryProp);
   }, [citationResultsProp, citationSummaryProp]);
+
+  useEffect(() => {
+    if (logicAuditReportProp?.sections?.length) {
+      setTab("logic");
+    }
+  }, [logicAuditReportProp]);
 
   const sortedRevisions = useMemo(
     () =>
@@ -2560,6 +2632,7 @@ function ToolsPanel({
           {(
             [
               { id: "info" as const, label: "Project Info" },
+              { id: "logic" as const, label: "Logic Audit" },
               { id: "citations" as const, label: "Citations" },
               { id: "versions" as const, label: "Versions" },
             ] as const
@@ -2640,6 +2713,66 @@ function ToolsPanel({
                 </div>
               ))}
             </div>
+          </div>
+        ) : tab === "logic" ? (
+          <div className="tools-section">
+            <h2 className="tools-section-title">Logic Audit</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Multi-agent comment-only report (adapted from AutoResearchClaw debate). Không tự sửa
+              bản thảo — chỉ góp ý logic và mâu thuẫn.
+            </p>
+            {!logicAuditReportProp?.sections?.length ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Chưa có báo cáo. Hỏi Ario: &quot;Kiểm tra logic bài báo&quot; hoặc &quot;Logic
+                audit&quot;.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {logicAuditReportProp.summary && (
+                  <p className="text-sm text-foreground">{logicAuditReportProp.summary}</p>
+                )}
+                {logicAuditReportProp.sections.map((section) => (
+                  <div key={section.section} className="rounded-md border border-border/60 p-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {section.section}
+                    </h3>
+                    {(section.conflicts ?? []).length === 0 &&
+                    !(section.weak_claims ?? []).length ? (
+                      <p className="mt-2 text-xs text-muted-foreground">Không có vấn đề rõ ràng.</p>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {(section.conflicts ?? []).map((c) => (
+                          <li key={c.id} className="text-xs">
+                            <span className="font-medium text-[color:var(--editorial-red)]">
+                              [{c.severity?.toUpperCase()}]
+                            </span>{" "}
+                            {c.comment}
+                            {c.claim_text ? (
+                              <span className="mt-0.5 block text-muted-foreground">
+                                Claim: {c.claim_text.slice(0, 160)}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                        {(section.weak_claims ?? []).map((w, i) => (
+                          <li key={`weak-${i}`} className="text-xs text-muted-foreground">
+                            [WEAK] {w}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+                {(logicAuditReportProp.cross_section_conflicts ?? []).map((cross, i) => (
+                  <div
+                    key={`cross-${i}`}
+                    className="rounded-md border border-dashed border-border/60 p-3 text-xs"
+                  >
+                    <span className="font-medium">Cross-section:</span> {cross.description}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : tab === "citations" ? (
           <div className="tools-section">

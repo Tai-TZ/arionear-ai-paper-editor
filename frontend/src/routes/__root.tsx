@@ -1,100 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { type ReactNode } from "react";
 
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import appCss from "../styles.css?url";
+import { AppNotFound } from "../components/app-not-found";
 import { Toaster } from "../components/ui/sonner";
+import { LocaleProvider } from "../components/locale-provider";
 import { ThemeProvider } from "../components/theme-provider";
-import { ThemeRail } from "../components/theme-rail";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-
-function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
-  console.error(error);
-  const router = useRouter();
-  useEffect(() => {
-    try {
-      reportLovableError(error instanceof Error ? error : new Error(String(error)), {
-        boundary: "tanstack_root_error_component",
-      });
-    } catch {
-      // Ignore secondary failures while already in an error boundary.
-    }
-  }, [error]);
-
-  const detail =
-    error instanceof Error
-      ? `${error.name}: ${error.message}`.trim()
-      : typeof error === "string"
-        ? error
-        : error
-          ? JSON.stringify(error)
-          : "";
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
-        {detail ? (
-          <pre className="mt-4 max-h-40 overflow-auto rounded-md border border-border bg-card p-3 text-left text-[11px] leading-snug text-muted-foreground">
-            {detail}
-          </pre>
-        ) : null}
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { AppErrorFallback } from "../components/app-error-fallback";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -137,8 +51,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
+  notFoundComponent: AppNotFound,
+  errorComponent: AppErrorFallback,
 });
 
 function RootShell({ children }: { children: ReactNode }) {
@@ -148,7 +62,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('arionear-theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('arionear-theme');if(t==='dark')document.documentElement.classList.add('dark');var l=localStorage.getItem('arionear-locale');if(l==='vi')document.documentElement.lang='vi'}catch(e){}})();`,
           }}
         />
       </head>
@@ -165,12 +79,13 @@ function RootComponent() {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <ThemeRail />
-        <Toaster position="top-right" />
-      </QueryClientProvider>
+      <LocaleProvider>
+        <QueryClientProvider client={queryClient}>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <Toaster position="top-right" />
+        </QueryClientProvider>
+      </LocaleProvider>
     </ThemeProvider>
   );
 }

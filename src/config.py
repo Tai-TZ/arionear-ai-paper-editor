@@ -1,15 +1,18 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai", "anthropic", "openrouter", "zai"]
+LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "nvidia"]
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Load repo-root .env regardless of current working directory.
+        # `config.py` lives in `src/`, so repo root is one level up.
+        env_file=str(Path(__file__).resolve().parents[1] / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -32,6 +35,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     zai_api_key: str = ""
+    nvidia_api_key: str = ""
 
     # Provider base URLs
     openai_base_url: str = "https://api.openai.com/v1"
@@ -69,10 +73,11 @@ class Settings(BaseSettings):
     anthropic_default_model: str = "claude-sonnet-4-20250514"
     openrouter_default_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
+    nvidia_default_model: str = "minimaxai/minimax-m3"
 
-    # Database — Prisma CLI uses DATABASE_URL (may be prisma+postgres:// Accelerate).
-    # Python/SQLAlchemy needs a direct postgresql:// URL via DIRECT_DATABASE_URL.
-    database_url: str = "sqlite:///./data/app.db"
+    # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
+    # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).
+    database_url: str = ""
     direct_database_url: str = ""
 
     def sqlalchemy_database_url(self) -> str:
@@ -84,7 +89,7 @@ class Settings(BaseSettings):
         url = self.database_url.strip()
         if url.startswith("postgres://"):
             url = "postgresql://" + url[len("postgres://") :]
-        if url.startswith(("postgresql://", "sqlite://")):
+        if url.startswith("postgresql://"):
             return url
         return ""
 
@@ -116,6 +121,11 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_oauth_redirect_uri: str = ""
+
+    # God admin — sole superuser; provisioned on startup from env credentials
+    admin_god_email: str = ""
+    admin_god_password: str = ""
+    admin_god_name: str = "Platform God Admin"
 
 
 @lru_cache

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState, forwardRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   ArrowUp,
   AudioLines,
   ChevronDown,
   ChevronUp,
   Copy,
+  Maximize2,
   PanelRightClose,
   Plus,
   Sparkles,
@@ -15,6 +18,7 @@ import {
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
+import { CHAT_SLASH_HINTS } from "@/lib/chat-commands";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 
 export type ChatMessage = {
@@ -31,8 +35,10 @@ export function hasChatHistory(messages: ChatMessage[]): boolean {
 }
 
 const CHAT_DOCK_COLLAPSED_H = 92;
-const CHAT_MIN_H = 220;
-const CHAT_DEFAULT_RATIO = 0.38;
+const CHAT_MIN_H = 320;
+const CHAT_DEFAULT_RATIO = 0.62;
+const CHAT_MAX_RATIO = 0.86;
+const CHAT_HEIGHT_STORAGE_KEY = "ario-chat-panel-height";
 
 type ChatDockProps = {
   open: boolean;
@@ -88,20 +94,39 @@ export function ChatDock({
   const dockRef = useRef<HTMLElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const [panelH, setPanelH] = useState(300);
+  const lastPanelHRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
   const conversationStarted = hasChatHistory(messages);
 
   const clampHeight = useCallback((h: number) => {
     const max = dockRef.current?.parentElement
-      ? Math.round(dockRef.current.parentElement.clientHeight * 0.55)
+      ? Math.round(dockRef.current.parentElement.clientHeight * 0.86)
       : 480;
     return Math.min(Math.max(h, CHAT_MIN_H), Math.max(max, CHAT_MIN_H));
   }, []);
+
+  const getMaxHeight = useCallback(() => {
+    const parentH = dockRef.current?.parentElement?.clientHeight ?? 0;
+    if (!parentH) return clampHeight(560);
+    return clampHeight(Math.round(parentH * CHAT_MAX_RATIO));
+  }, [clampHeight]);
 
   useEffect(() => {
     if (!open || initializedRef.current || !dockRef.current?.parentElement) return;
     initializedRef.current = true;
     const parentH = dockRef.current.parentElement.clientHeight;
+    try {
+      const saved = localStorage.getItem(CHAT_HEIGHT_STORAGE_KEY);
+      if (saved) {
+        const parsed = Number.parseInt(saved, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          setPanelH(clampHeight(parsed));
+          return;
+        }
+      }
+    } catch {
+      /* ignore storage errors */
+    }
     setPanelH(clampHeight(Math.round(parentH * CHAT_DEFAULT_RATIO)));
   }, [open, clampHeight]);
 
@@ -121,29 +146,52 @@ export function ChatDock({
     return () => cancelAnimationFrame(frame);
   }, [open, messages, chatLoading, liveActivity, chatEndRef]);
 
-  const startResize = (e: React.MouseEvent) => {
+  const persistPanelHeight = useCallback((height: number) => {
+    try {
+      localStorage.setItem(CHAT_HEIGHT_STORAGE_KEY, String(height));
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
+
+  const startResize = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
     const startY = e.clientY;
     const startH = panelH;
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       setPanelH(clampHeight(startH + (startY - ev.clientY)));
     };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+    const onUp = (ev: PointerEvent) => {
+      handle.releasePointerCapture(ev.pointerId);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      setPanelH((current) => {
+        const clamped = clampHeight(current);
+        persistPanelHeight(clamped);
+        return clamped;
+      });
     };
 
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
   };
 
   const canUseLlm = Boolean(
-    providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
+    providers &&
+      providers.length > 0 &&
+      llmProvider &&
+      llmModel &&
+      onProviderChange &&
+      onModelChange,
   );
 
   const handleSend = () => {
@@ -161,7 +209,7 @@ export function ChatDock({
       ? "Mô tả cách sửa đoạn đã chọn…"
       : selectionContext
         ? "Hỏi về vùng đã chọn…"
-        : "Hỏi Ario bất cứ điều gì…";
+        : "Hỏi Ario… (thử /logic, /style, /citation)";
 
   return (
     <aside
@@ -170,6 +218,17 @@ export function ChatDock({
       data-open={open}
       style={open ? { height: panelH + CHAT_DOCK_COLLAPSED_H } : undefined}
     >
+      {open && (
+        <button
+          type="button"
+          className="chat-dock-resize-handle chat-dock-resize-handle--top"
+          onPointerDown={startResize}
+          aria-label="Kéo để đổi chiều cao chat"
+        >
+          <span className="chat-dock-resize-bar" />
+        </button>
+      )}
+
       {open && (
         <div className="chat-dock-panel flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="chat-dock-toolbar shrink-0">
@@ -189,6 +248,26 @@ export function ChatDock({
             <button
               type="button"
               className="chat-dock-icon-btn"
+              aria-label="Mở rộng chat"
+              onClick={() => {
+                const maxH = getMaxHeight();
+                if (Math.abs(panelH - maxH) <= 8 && lastPanelHRef.current) {
+                  const restored = clampHeight(lastPanelHRef.current);
+                  setPanelH(restored);
+                  persistPanelHeight(restored);
+                  lastPanelHRef.current = null;
+                  return;
+                }
+                lastPanelHRef.current = panelH;
+                setPanelH(maxH);
+                persistPanelHeight(maxH);
+              }}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className="chat-dock-icon-btn"
               aria-label="Đóng chat"
               onClick={onClose}
             >
@@ -202,15 +281,6 @@ export function ChatDock({
             chatLoading={chatLoading}
             liveActivity={liveActivity}
           />
-
-          <button
-            type="button"
-            className="chat-dock-resize-handle"
-            onMouseDown={startResize}
-            aria-label="Kéo để đổi chiều cao chat"
-          >
-            <span className="chat-dock-resize-bar" />
-          </button>
         </div>
       )}
 
@@ -402,7 +472,7 @@ export function ChatMessages({
     <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3">
       {visibleMessages.length === 0 && !chatLoading && (
         <p className="chat-dock-empty-hint">
-          Chọn provider và model phía dưới, sau đó gửi câu hỏi hoặc yêu cầu chỉnh sửa LaTeX.
+          Chọn provider và model phía dưới. Gõ lệnh nhanh: {CHAT_SLASH_HINTS.join(", ")}.
         </p>
       )}
 
@@ -468,7 +538,11 @@ export function ChatMessages({
                     )}
                   </p>
                 )}
-                {m.content && <p className="chat-assistant-text">{m.content}</p>}
+                {m.content && (
+                  <div className="chat-assistant-text">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                  </div>
+                )}
                 {m.isStreaming && m.content && (
                   <span className="chat-stream-cursor" aria-hidden />
                 )}

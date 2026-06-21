@@ -35,8 +35,8 @@ const EN: ProfileCopy = {
   loadError: "Could not load your profile.",
   saveError: "Could not save profile.",
   completeness: "Profile completeness",
-  navProjects: "Your Projects",
-  navProfile: "Researcher Profile",
+  navProjects: "Projects",
+  navProfile: "Profile",
   signOut: "Sign out",
   sections: {
     identity: "Identity & affiliation",
@@ -94,8 +94,8 @@ const VI: ProfileCopy = {
   loadError: "Không tải được hồ sơ.",
   saveError: "Không lưu được hồ sơ.",
   completeness: "Mức hoàn thiện hồ sơ",
-  navProjects: "Dự án của bạn",
-  navProfile: "Hồ sơ Nhà nghiên cứu",
+  navProjects: "Dự án",
+  navProfile: "Hồ sơ",
   signOut: "Đăng xuất",
   sections: {
     identity: "Thông tin & đơn vị",

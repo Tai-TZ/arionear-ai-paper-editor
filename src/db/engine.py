@@ -14,11 +14,15 @@ from src.db.models import Base
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 _db_ready: bool = False
+_db_error: str | None = None
 
 
 def is_db_enabled() -> bool:
     url = get_settings().sqlalchemy_database_url()
     return bool(url) and not url.startswith("memory://")
+
+def db_error_detail() -> str | None:
+    return _db_error
 
 
 def _get_engine() -> Engine:
@@ -28,65 +32,79 @@ def _get_engine() -> Engine:
         db_url = settings.sqlalchemy_database_url()
         if not db_url:
             raise ValueError(
-                "DATABASE_URL is a Prisma Accelerate URL (prisma+postgres://). "
-                "Add DIRECT_DATABASE_URL=postgresql://... to .env "
-                "(copy 'Direct connection' from Prisma Console)."
+                "PostgreSQL is required. Set DIRECT_DATABASE_URL=postgresql://... in .env "
+                "(copy 'Direct connection' from Prisma Console). "
+                "If DATABASE_URL is prisma+postgres:// Accelerate only, DIRECT_DATABASE_URL is mandatory."
             )
         connect_args: dict = {}
+        if db_url.startswith("postgresql"):
+            connect_args = {
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=15000 -c lock_timeout=5000",
+            }
+        elif db_url.startswith("sqlite"):
+            connect_args = {"check_same_thread": False}
         engine_kwargs: dict = {
             "pool_pre_ping": True,
             "connect_args": connect_args,
         }
-        if db_url.startswith("sqlite"):
-            connect_args["check_same_thread"] = False
-        elif db_url.startswith("postgresql"):
-            connect_args["connect_timeout"] = 10
-            connect_args["options"] = "-c statement_timeout=15000 -c lock_timeout=5000"
-            if settings.app_env == "development":
-                engine_kwargs["poolclass"] = NullPool
-            else:
-                engine_kwargs["pool_timeout"] = 10
+        if settings.app_env == "development":
+            engine_kwargs["poolclass"] = NullPool
+        else:
+            engine_kwargs["pool_timeout"] = 10
         _engine = create_engine(db_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
 
 
 def init_db() -> bool:
-    """Create tables (SQLite dev) or verify PostgreSQL connection."""
-    global _db_ready
+    """Verify DB connection; PostgreSQL migrations or SQLite schema for tests."""
+    global _db_ready, _db_error
+    _db_error = None
     if not is_db_enabled():
         _db_ready = False
         return False
 
-    engine = _get_engine()
-    if engine.dialect.name == "sqlite":
-        Base.metadata.create_all(bind=engine)
-    else:
-        with engine.connect() as conn:
-            conn.execute(text("SET statement_timeout = 15000"))
-            conn.execute(text("SELECT 1"))
-            has_profile_col = conn.execute(
-                text(
-                    "SELECT 1 FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'users' "
-                    "AND column_name = 'profile_settings' LIMIT 1"
-                )
-            ).scalar()
-            if not has_profile_col:
-                try:
-                    conn.execute(text("SET lock_timeout = '8s'"))
-                    conn.execute(
-                        text(
-                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                            "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
-                        )
-                    )
-                    conn.commit()
-                except Exception as exc:
-                    conn.rollback()
-                    print(f"Warning: profile_settings migration skipped: {exc}")
-            else:
+    try:
+        engine = _get_engine()
+        dialect = engine.dialect.name
+
+        if dialect == "sqlite":
+            Base.metadata.create_all(bind=engine)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
                 conn.commit()
+        else:
+            with engine.connect() as conn:
+                conn.execute(text("SET statement_timeout = 15000"))
+                conn.execute(text("SELECT 1"))
+                has_profile_col = conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'users' "
+                        "AND column_name = 'profile_settings' LIMIT 1"
+                    )
+                ).scalar()
+                if not has_profile_col:
+                    try:
+                        conn.execute(text("SET lock_timeout = '8s'"))
+                        conn.execute(
+                            text(
+                                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                                "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                            )
+                        )
+                        conn.commit()
+                    except Exception as exc:
+                        conn.rollback()
+                        print(f"Warning: profile_settings migration skipped: {exc}")
+                else:
+                    conn.commit()
+    except Exception as exc:
+        _db_ready = False
+        _db_error = str(exc)
+        return False
+
     _db_ready = True
     return True
 
@@ -113,9 +131,10 @@ def get_db() -> Generator[Session, None, None]:
 
 def reset_db_state() -> None:
     """Test helper — reset singleton engine."""
-    global _engine, _SessionLocal, _db_ready
+    global _engine, _SessionLocal, _db_ready, _db_error
     if _engine is not None:
         _engine.dispose()
     _engine = None
     _SessionLocal = None
     _db_ready = False
+    _db_error = None

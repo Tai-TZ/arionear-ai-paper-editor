@@ -27,8 +27,10 @@ import { Route as EthicsRouteImport } from './routes/ethics'
 import { Route as EditorRouteImport } from './routes/editor'
 import { Route as DataUseRouteImport } from './routes/data-use'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const WorkflowRoute = WorkflowRouteImport.update({
@@ -121,6 +123,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -129,6 +136,11 @@ const AboutRoute = AboutRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
@@ -140,6 +152,7 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
   '/editor': typeof EditorRoute
@@ -158,11 +171,13 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/share/$token': typeof ShareTokenRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
   '/editor': typeof EditorRoute
@@ -181,12 +196,14 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/share/$token': typeof ShareTokenRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
   '/editor': typeof EditorRoute
@@ -205,6 +222,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/share/$token': typeof ShareTokenRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/data-use'
     | '/editor'
@@ -230,11 +249,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/share/$token'
     | '/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/data-use'
     | '/editor'
@@ -253,11 +274,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/share/$token'
     | '/auth/google/callback'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/data-use'
     | '/editor'
@@ -276,12 +299,14 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/share/$token'
     | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DataUseRoute: typeof DataUseRoute
   EditorRoute: typeof EditorRoute
@@ -300,6 +325,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   WorkflowRoute: typeof WorkflowRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
 }
 
@@ -431,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -443,6 +476,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/google/callback': {
@@ -458,6 +498,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DataUseRoute: DataUseRoute,
   EditorRoute: EditorRoute,
@@ -476,6 +517,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   WorkflowRoute: WorkflowRoute,
+  ShareTokenRoute: ShareTokenRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

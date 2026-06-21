@@ -14,11 +14,11 @@ from src.services.prompts import (
     render_user_prompt,
 )
 
-Action = Literal["edit", "style", "structure", "citation", "template", "chat"]
+Action = Literal["edit", "style", "structure", "logic", "citation", "template", "chat"]
 Scope = Literal["document", "selection"]
 
 _VALID_ACTIONS: frozenset[str] = frozenset(
-    {"edit", "style", "structure", "citation", "template", "chat"}
+    {"edit", "style", "structure", "logic", "citation", "template", "chat"}
 )
 _VALID_SCOPES: frozenset[str] = frozenset({"document", "selection"})
 
@@ -33,6 +33,11 @@ _RENAME_EDIT_RE = re.compile(
 )
 _STRUCTURE_RE = re.compile(
     r"cấu\s*trúc|structure|outline|dàn\s*bài|dan\s*bai|imrad|khung\s*bài|review\s*structure",
+    re.IGNORECASE,
+)
+_LOGIC_RE = re.compile(
+    r"kiểm\s*tra\s*logic|logic\s*check|consistency|mâu\s*thuẫn|contradiction|"
+    r"logic\s*audit|nhất\s*quán|weak\s*claim|lỗ\s*hổng\s*lập\s*luận",
     re.IGNORECASE,
 )
 _CITATION_RE = re.compile(
@@ -106,6 +111,9 @@ def _fallback_intent(query: str, has_latex: bool, has_selection: bool) -> Intent
     if _TEMPLATE_RE.search(q):
         return IntentResult(action="template")
 
+    if _LOGIC_RE.search(q):
+        return IntentResult(action="logic")
+
     if _STRUCTURE_RE.search(q):
         return IntentResult(action="structure")
 
@@ -124,7 +132,7 @@ def _should_use_fast_intent(query: str, has_latex: bool) -> bool:
     q = query.strip().lower()
     if q.endswith("?"):
         return True
-    if _STYLE_RE.search(q) or _STRUCTURE_RE.search(q) or _CITATION_RE.search(q) or _TEMPLATE_RE.search(q):
+    if _STYLE_RE.search(q) or _STRUCTURE_RE.search(q) or _LOGIC_RE.search(q) or _CITATION_RE.search(q) or _TEMPLATE_RE.search(q):
         return True
     return bool(
         re.search(

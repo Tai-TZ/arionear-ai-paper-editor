@@ -1,21 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AuthAlert,
+  AuthDisabledAccount,
   AuthDivider,
   AuthField,
   AuthShell,
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
+import { useLocale } from "@/components/locale-provider";
 import { loginUser } from "@/lib/auth-store";
-import { redirectIfAuthenticated } from "@/lib/require-auth";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
+import { defaultAppPath, redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 
 export const Route = createFileRoute("/signin")({
   beforeLoad: () => {
-    redirectIfAuthenticated("/projects");
+    redirectIfAuthenticated();
   },
   head: () => ({
     meta: [
@@ -28,11 +31,21 @@ export const Route = createFileRoute("/signin")({
 
 function SignInPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).signin, [locale]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
+  const [disabledEmail, setDisabledEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const resetDisabledState = () => {
+    setDisabledEmail(null);
+    setError("");
+    setEmail("");
+    setPassword("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,27 +56,43 @@ function SignInPage() {
     setLoading(false);
 
     if (!result.ok) {
+      if (result.code === "account_disabled") {
+        setDisabledEmail(email.trim());
+        return;
+      }
       authToast.signInError(result.error);
       setError(result.error);
       return;
     }
 
     authToast.signInSuccess(result.user.name);
-    navigate({ to: "/projects" });
+    navigate({ to: defaultAppPath(result.user) });
   };
+
+  if (disabledEmail !== null) {
+    return (
+      <AuthShell
+        eyebrow={t.eyebrow}
+        title={t.title}
+        lede={t.lede}
+      >
+        <AuthDisabledAccount email={disabledEmail} onUseAnotherAccount={resetDisabledState} />
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
-      eyebrow="The Reading Room"
-      title="Sign in to continue."
-      lede="Pick up where you left the margins — your drafts, marks and reviewer replies are waiting."
+      eyebrow={t.eyebrow}
+      title={t.title}
+      lede={t.lede}
     >
       {error && <AuthAlert message={error} />}
 
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <AuthField
           id="email"
-          label="Email address"
+          label={t.emailLabel}
           icon={<Mail className="h-4 w-4" strokeWidth={1.5} />}
           type="email"
           autoComplete="email"
@@ -74,7 +103,7 @@ function SignInPage() {
         />
         <AuthField
           id="password"
-          label="Password"
+          label={t.passwordLabel}
           icon={<Lock className="h-4 w-4" strokeWidth={1.5} />}
           type="password"
           autoComplete="current-password"
@@ -93,32 +122,32 @@ function SignInPage() {
               onChange={(e) => setRemember(e.target.checked)}
               className="h-4 w-4 border border-foreground accent-foreground"
             />
-            <span>Remember me</span>
+            <span>{t.remember}</span>
           </label>
           <Link
             to="/forgot-password"
             className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
           >
-            Forgot?
+            {t.forgot}
           </Link>
         </div>
 
         <AuthSubmitButton loading={loading}>
-          Sign in <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+          {t.submit} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </AuthSubmitButton>
       </form>
 
-      <AuthDivider>or continue with Google</AuthDivider>
+      <AuthDivider>{t.dividerGoogle}</AuthDivider>
 
       <AuthSsoButtons onError={setError} remember={remember} />
 
       <p className="mt-8 text-center text-sm font-serif-body">
-        New to Arionear?{" "}
+        {t.newHere}{" "}
         <Link
           to="/signup"
           className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
         >
-          Create an account
+          {t.createAccount}
         </Link>
       </p>
     </AuthShell>

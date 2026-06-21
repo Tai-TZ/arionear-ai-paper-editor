@@ -9,6 +9,7 @@ import {
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
+import { useLocale } from "@/components/locale-provider";
 import {
   InputOTP,
   InputOTPGroup,
@@ -16,6 +17,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { sendSignupVerificationCode, verifySignupCode } from "@/lib/auth-store";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
 import { passwordStrength, validatePassword } from "@/lib/auth-validation";
@@ -37,6 +39,8 @@ type SignupStep = "form" | "verify";
 
 function SignUpPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).signup, [locale]);
   const [step, setStep] = useState<SignupStep>("form");
   const [name, setName] = useState("");
   const [affiliation, setAffiliation] = useState("");
@@ -119,16 +123,16 @@ function SignUpPage() {
   const shellProps =
     step === "verify"
       ? {
-          eyebrow: "Proof of address",
-          title: "Verify your email.",
+          eyebrow: t.eyebrowVerify,
+          title: t.titleVerify,
           lede: devVerificationCode
-            ? `Development mode — no email is sent to ${email}. Enter the code shown below.`
-            : `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`,
+            ? t.ledeVerifyDev(email)
+            : t.ledeVerify(email),
         }
       : {
-          eyebrow: "New Submission",
-          title: "Create your account.",
-          lede: "Register once. Carry your manuscripts, marks and reviewer correspondence across every revision.",
+          eyebrow: t.eyebrowForm,
+          title: t.titleForm,
+          lede: t.ledeForm,
         };
 
   return (
@@ -145,7 +149,7 @@ function SignUpPage() {
 
           <div>
             <p className="block font-sans-ui uppercase text-[11px] tracking-widest mb-3">
-              Verification code
+              {t.verificationCode}
             </p>
             <InputOTP
               maxLength={6}
@@ -188,10 +192,10 @@ function SignUpPage() {
           {devVerificationCode && (
             <div className="border border-[color:var(--editorial-red)]/40 bg-[color:var(--editorial-red)]/5 px-4 py-4">
               <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-2">
-                Development — no email sent
+                {t.devNoEmailSent}
               </p>
               <p className="font-serif-body text-sm text-foreground/80">
-                Your verification code is{" "}
+                {t.yourCodeIs}{" "}
                 <span className="font-mono-data text-lg tracking-[0.3em] font-semibold">
                   {devVerificationCode}
                 </span>
@@ -200,7 +204,7 @@ function SignUpPage() {
           )}
 
           <AuthSubmitButton loading={loading} disabled={verificationCode.length !== 6}>
-            Verify & create account <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            {t.verifyAndCreate} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </AuthSubmitButton>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 font-sans-ui uppercase text-[11px] tracking-widest">
@@ -214,7 +218,7 @@ function SignUpPage() {
               }}
               className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
             >
-              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> Back to form
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> {t.backToForm}
             </button>
             <button
               type="button"
@@ -314,19 +318,19 @@ function SignUpPage() {
             </AuthSubmitButton>
           </form>
 
-          <AuthDivider>or continue with Google</AuthDivider>
+          <AuthDivider>{t.dividerGoogle}</AuthDivider>
 
           <AuthSsoButtons onError={setError} />
         </>
       )}
 
       <p className="mt-8 text-center text-sm font-serif-body">
-        Already have an account?{" "}
+        {t.alreadyHave}{" "}
         <Link
           to="/signin"
           className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
         >
-          Sign in
+          {t.signIn}
         </Link>
       </p>
     </AuthShell>

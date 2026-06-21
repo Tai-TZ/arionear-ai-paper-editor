@@ -1,13 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingPage } from "@/components/marketing/marketing-page";
-import { integrityContent } from "@/lib/marketing-content";
 
 export const Route = createFileRoute("/integrity")({
   head: () => ({
-    meta: [
-      { title: "Integrity — Arionear" },
-      { name: "description", content: integrityContent.lede },
-    ],
+    meta: [{ title: "Integrity — Arionear" }],
   }),
-  component: () => <MarketingPage content={integrityContent} />,
+  component: () => <MarketingPage slug="integrity" />,
 });

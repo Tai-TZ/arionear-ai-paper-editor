@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   WorkspaceSidebar,
   type WorkspaceNav,
@@ -88,6 +90,10 @@ export function WorkspaceLayout({
           <Link to="/" className="workspace-mobile-brand">
             Arionear
           </Link>
+          <div className="workspace-mobile-controls flex items-center gap-2">
+            <LanguageToggle compact className="masthead-language-toggle shrink-0" />
+            <ThemeToggle compact className="masthead-theme-toggle shrink-0" />
+          </div>
         </div>
 
         {children}

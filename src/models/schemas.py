@@ -64,6 +64,7 @@ class ChatResponse(BaseModel):
     edits: list[ProposedEditSchema] = Field(default_factory=list)
     citation_results: list[dict] = Field(default_factory=list)
     structure_suggestions: list[dict] = Field(default_factory=list)
+    logic_audit_report: dict = Field(default_factory=dict)
 
 
 class SessionCreate(BaseModel):
@@ -235,5 +236,19 @@ class PaperResponse(BaseModel):
     latex: str
     metadata: dict
     created_at: datetime
+    updated_at: datetime
+
+
+class PaperShareStatusResponse(BaseModel):
+    enabled: bool
+    token: str | None = None
+    created_at: str | None = None
+
+
+class PaperSharePublicResponse(BaseModel):
+    id: str
+    name: str
+    latex: str
+    metadata: dict
     updated_at: datetime
 

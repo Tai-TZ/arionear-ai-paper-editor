@@ -36,6 +36,8 @@ class AuthUserResponse(BaseModel):
     email: str
     affiliation: str | None = None
     provider: str = "email"
+    role: str = "RESEARCHER"
+    is_god_admin: bool = False
 
 
 class AuthTokenResponse(BaseModel):

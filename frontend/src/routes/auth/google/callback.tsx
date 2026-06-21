@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { AuthDisabledAccount, AuthShell } from "@/components/auth/auth-shell";
 import { authToast } from "@/lib/auth-toast";
 import { completeOAuthSession, isAuthenticated } from "@/lib/auth-store";
 
@@ -9,6 +9,7 @@ type GoogleCallbackSearch = {
   access_token?: string;
   return_to?: string;
   error?: string;
+  error_code?: string;
 };
 
 export const Route = createFileRoute("/auth/google/callback")({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/auth/google/callback")({
     access_token: typeof search.access_token === "string" ? search.access_token : undefined,
     return_to: typeof search.return_to === "string" ? search.return_to : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
+    error_code: typeof search.error_code === "string" ? search.error_code : undefined,
   }),
   beforeLoad: ({ search }) => {
     if (isAuthenticated() && !search.error && !search.access_token) {
@@ -37,10 +39,15 @@ function safeReturnTo(value: string | undefined) {
 
 function GoogleCallbackPage() {
   const navigate = useNavigate();
-  const { access_token, return_to, error } = Route.useSearch();
+  const { access_token, return_to, error, error_code } = Route.useSearch();
   const [message, setMessage] = useState("Completing Google sign-in…");
+  const [showDisabled, setShowDisabled] = useState(error_code === "account_disabled");
 
   useEffect(() => {
+    if (showDisabled) {
+      return;
+    }
+
     let cancelled = false;
 
     async function finish() {
@@ -76,7 +83,19 @@ function GoogleCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [access_token, error, navigate, return_to]);
+  }, [access_token, error, navigate, return_to, showDisabled]);
+
+  if (showDisabled) {
+    return (
+      <AuthShell
+        eyebrow="Single Sign-On"
+        title="One moment."
+        lede="We are verifying your Google account and opening your editorial desk."
+      >
+        <AuthDisabledAccount onUseAnotherAccount={() => navigate({ to: "/signin", replace: true })} />
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
@@ -86,7 +105,7 @@ function GoogleCallbackPage() {
     >
       <div className="flex flex-col items-center gap-4 py-8 text-center">
         {!error && access_token ? (
-          <Loader2 className="h-8 w-8 animate-spin text-[color:var(--editorial-red)]" aria-hidden="true" />
+          <AppLoadingScreen variant="inline" className="min-h-0 py-0" />
         ) : null}
         <p className="font-serif-body text-sm text-foreground/80 max-w-sm">{message}</p>
         {error || !access_token ? (

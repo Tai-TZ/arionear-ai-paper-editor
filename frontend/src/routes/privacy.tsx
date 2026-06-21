@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingPage } from "@/components/marketing/marketing-page";
-import { privacyContent } from "@/lib/marketing-content";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
-    meta: [{ title: "Privacy — Arionear" }, { name: "description", content: privacyContent.lede }],
+    meta: [{ title: "Privacy — Arionear" }],
   }),
-  component: () => <MarketingPage content={privacyContent} />,
+  component: () => <MarketingPage slug="privacy" />,
 });

@@ -296,15 +296,6 @@ DATABASE_URL=postgresql://arionear:arionear@localhost:5432/arionear
 
 Sau đó chạy `npm run db:migrate` như bước 3.
 
-### SQLite (dev nhanh, không cần Prisma migrate)
-
-`.env`:
-```env
-DATABASE_URL=sqlite:///./data/app.db
-```
-
-Backend tự `create_all` bảng khi khởi động. **Không dùng** cho production.
-
 ---
 
 ## Mapping ERD → Code hiện tại

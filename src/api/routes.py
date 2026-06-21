@@ -72,6 +72,7 @@ def _build_chat_response(result: dict) -> ChatResponse:
         edits=result.get("edits", []),
         citation_results=result.get("citation_results", []),
         structure_suggestions=result.get("structure_suggestions", []),
+        logic_audit_report=result.get("logic_audit_report", {}),
     )
 
 

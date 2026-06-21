@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { fetchResearcherProfile, updateResearcherProfile } from "@/lib/api/profile-api";
 import {
@@ -24,6 +25,8 @@ import {
   type ResearcherProfile,
 } from "@/lib/researcher-profile";
 import { profileCopy } from "@/lib/profile-i18n";
+import { useLocale } from "@/components/locale-provider";
+import { getStoredLocale } from "@/lib/locale-store";
 import { buildProfilePatch, validateProfileBeforeSave } from "@/lib/profile-patch";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,8 +60,8 @@ function ProfilePage() {
   const [form, setForm] = useState<ResearcherProfile | null>(null);
   const [baseline, setBaseline] = useState<ResearcherProfile | null>(null);
 
-  const uiLang = form?.ui_language ?? "en";
-  const t = useMemo(() => profileCopy(uiLang), [uiLang]);
+  const { locale, setLocale } = useLocale();
+  const t = useMemo(() => profileCopy(locale), [locale]);
   const isDirty = useMemo(() => {
     if (!form || !baseline) return false;
     if (form.name.trim() !== baseline.name.trim()) return true;
@@ -77,7 +80,7 @@ function ProfilePage() {
         setLoadError(null);
       })
       .catch(() => {
-        if (!cancelled) setLoadError(t.loadError);
+        if (!cancelled) setLoadError(profileCopy(getStoredLocale()).loadError);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -85,7 +88,8 @@ function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [t.loadError]);
+    // Fetch once on mount — do not depend on locale strings (would refetch on every toggle).
+  }, []);
 
   const patch = useCallback(
     <K extends keyof ResearcherProfile>(key: K, value: ResearcherProfile[K]) => {
@@ -109,6 +113,7 @@ function ProfilePage() {
       const updated = await updateResearcherProfile(payload);
       setForm({ ...updated });
       setBaseline({ ...updated });
+      setLocale(updated.ui_language);
       toast.success(t.saved);
     } catch (e) {
       toast.error(t.saveError, {
@@ -127,15 +132,6 @@ function ProfilePage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  const navLabels = useMemo(
-    () => ({
-      projects: t.navProjects,
-      profile: t.navProfile,
-      signOut: t.signOut,
-    }),
-    [t],
-  );
-
   const handleSignOut = () => {
     signOut();
     authToast.signOutSuccess();
@@ -147,7 +143,6 @@ function ProfilePage() {
       active="profile"
       user={sessionUser}
       profile={form}
-      labels={navLabels}
       onSignOut={handleSignOut}
     >
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -170,7 +165,7 @@ function ProfilePage() {
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span className="profile-save-label md:hidden">
-                {saving ? t.saving : uiLang === "vi" ? "Lưu" : "Save"}
+                {saving ? t.saving : t.save}
               </span>
               <span className="profile-save-label hidden md:inline">{saving ? t.saving : t.save}</span>
             </button>
@@ -178,9 +173,7 @@ function ProfilePage() {
         </header>
 
         {loading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <AppLoadingScreen variant="inline" className="flex-1" />
         ) : loadError || !form ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
             <AlertCircle className="h-10 w-10 text-destructive" />
@@ -384,7 +377,11 @@ function ProfilePage() {
                   <select
                     className="profile-input"
                     value={form.ui_language}
-                    onChange={(e) => patch("ui_language", e.target.value as ResearcherProfile["ui_language"])}
+                    onChange={(e) => {
+                      const lang = e.target.value as ResearcherProfile["ui_language"];
+                      patch("ui_language", lang);
+                      setLocale(lang);
+                    }}
                   >
                     <option value="en">English</option>
                     <option value="vi">Tiếng Việt</option>
