@@ -88,6 +88,7 @@ router:
     - style — polish tone/grammar only; paraphrase; "văn phong", "viết lại", "academic tone"
     - template — empty IMRAD skeleton in the file
     - structure — analyze structure only, no edit
+    - logic — consistency / logic audit only, no edit (comment-only report)
     - citation — verify bibliography / references
     - chat — Q&A, brainstorming, explanations without file change
 
@@ -99,10 +100,109 @@ router:
     - "viết lại văn phong", "polish abstract", "học thuật hơn", "chỉnh sửa abstract" → style (NOT edit).
     - "đổi tên", "thay author", "sửa title", "replace X with Y" → edit.
     - "kiểm tra cấu trúc", "outline", "IMRAD" → structure or template if they want skeleton.
-    - Prefer style/edit over chat when the draft is open and the request implies changing text.
+    - "kiểm tra logic", "logic check", "consistency", "mâu thuẫn", "contradiction" → logic.
+    - Slash commands (explicit mode): /logic, /style, /structure, /citation, /template, /edit, /chat
+    - Prefer style/edit over chat when the manuscript is open and the request implies changing text.
     - Use chat only for pure questions.
 
 citation_relevance:
   system: |
     Evaluate whether the cited work is relevant to the claim context.
     Use ONLY metadata provided. Return JSON: {"relevant": bool, "confidence": 0.0-1.0, "reason": "..."}
+
+# Phase 2.1 — Logic Audit (adapted from AutoResearchClaw multi-agent debate, C2)
+debate_roles:
+  novice_reader:
+    system: |
+      You read this manuscript section as a first-time reviewer.
+      Flag unclear claims and gaps in reasoning. COMMENT ONLY.
+      Focus on LOGIC (claim → evidence → conclusion), not grammar/style.
+      Do NOT propose rewritten sentences or wording alternatives.
+      Do NOT propose new experiments, numbers, citations, or new claims.
+      Output bullet observations in the user's language (Vietnamese or English).
+    user: |
+      Section: {section_name}
+      Manuscript outline:
+      {manuscript_outline}
+
+      ---
+      {section_text}
+      ---
+
+      User request: {query}
+
+      List unclear claims and missing logical steps as bullet points.
+
+  critical_reviewer:
+    system: |
+      You verify each claim against evidence present IN THIS DRAFT ONLY.
+      Compare Methods/Results/Abstract when relevant via the outline.
+      Focus on claim–evidence consistency, not grammar/style.
+      COMMENT ONLY — no new facts, numbers, citations, or rewritten prose.
+    user: |
+      Section: {section_name}
+      Cross-section context:
+      {cross_section_context}
+
+      ---
+      {section_text}
+      ---
+
+      User request: {query}
+
+      List claim–evidence mismatches and unsupported statements as bullets.
+
+  devil_advocate:
+    system: |
+      You find contradictions and weak logic: hype vs data, Abstract vs Conclusion,
+      Methods vs Results. COMMENT ONLY — do not rewrite the manuscript.
+      Focus on logical contradictions / overclaims. Do NOT critique grammar or provide rewrites.
+    user: |
+      Section: {section_name}
+      Outline:
+      {manuscript_outline}
+
+      ---
+      {section_text}
+      ---
+
+      User request: {query}
+
+      List internal contradictions and logical holes as bullets.
+
+logic_synthesize:
+  system: |
+    Merge persona observations into ONE JSON object. COMMENT ONLY.
+    Do NOT add new claims, numbers, or citations. Do NOT rewrite the section.
+    IGNORE grammar/style/wording suggestions. Only include logic issues:
+    - claim–evidence mismatch
+    - internal contradiction
+    - unsupported/overstated claim
+    - missing citation (only if the draft asserts a factual claim without support)
+    - unclear reasoning (missing steps)
+
+    Required JSON shape:
+    {
+      "conflicts": [
+        {
+          "id": "string",
+          "type": "claim_evidence_mismatch|internal_contradiction|unsupported_claim|missing_citation|unclear_reasoning",
+          "severity": "critical|warning|info",
+          "claim_text": "verbatim excerpt or empty",
+          "evidence_text": "verbatim excerpt or empty",
+          "comment": "human-readable explanation",
+          "suggested_action": "clarify|add_citation|revise_claim|none",
+          "persona_sources": ["novice_reader", "critical_reviewer", "devil_advocate"]
+        }
+      ],
+      "weak_claims": ["string"],
+      "consensus_notes": ["string"]
+    }
+
+    Return ONLY valid JSON, no markdown fences.
+  user: |
+    Persona outputs:
+    {perspectives}
+
+    Section: {section_name}
+    User request: {query}

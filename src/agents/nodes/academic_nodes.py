@@ -636,6 +636,24 @@ async def structure_node(state: AgentState) -> dict:
     }
 
 
+async def logic_node(state: AgentState) -> dict:
+    from src.services.logic_audit.runner import run_logic_audit
+
+    sections = state.get("parsed_sections") or []
+    latex = state.get("latex") or ""
+    if not sections and latex:
+        sections = parse_latex_sections(latex)
+
+    result = await run_logic_audit(
+        latex=latex,
+        sections=sections,
+        query=state.get("query", ""),
+        provider=state.get("llm_provider"),
+        model=state.get("llm_model"),
+    )
+    return result
+
+
 async def chat_node(state: AgentState) -> dict:
     query = state.get("query", "")
     selection = state.get("selection", "")

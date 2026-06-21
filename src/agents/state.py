@@ -22,6 +22,7 @@ class AgentState(TypedDict, total=False):
     integrity_flags: list[dict]
     citation_results: list[dict]
     structure_suggestions: list[dict]
+    logic_audit_report: dict
 
     llm_provider: str
     llm_model: str

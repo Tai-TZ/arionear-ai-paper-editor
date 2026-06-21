@@ -34,6 +34,7 @@ PROVIDER_LABELS = {
     "anthropic": "Anthropic",
     "openrouter": "OpenRouter",
     "zai": "Z.AI",
+    "nvidia": "NVIDIA NIM",
 }
 
 
@@ -224,6 +225,12 @@ def get_global_llm_config() -> LlmGlobalConfigResponse:
             label=PROVIDER_LABELS["zai"],
             configured=bool(settings.zai_api_key.strip()),
             default_model=settings.zai_default_model,
+        ),
+        LlmProviderStatus(
+            id="nvidia",
+            label=PROVIDER_LABELS["nvidia"],
+            configured=bool(settings.nvidia_api_key.strip()),
+            default_model=settings.nvidia_default_model,
         ),
     ]
     return LlmGlobalConfigResponse(

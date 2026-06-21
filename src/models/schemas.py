@@ -64,6 +64,7 @@ class ChatResponse(BaseModel):
     edits: list[ProposedEditSchema] = Field(default_factory=list)
     citation_results: list[dict] = Field(default_factory=list)
     structure_suggestions: list[dict] = Field(default_factory=list)
+    logic_audit_report: dict = Field(default_factory=dict)
 
 
 class SessionCreate(BaseModel):

@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai", "anthropic", "openrouter", "zai"]
+LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "nvidia"]
 
 
 class Settings(BaseSettings):
@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     zai_api_key: str = ""
+    nvidia_api_key: str = ""
 
     # Provider base URLs
     openai_base_url: str = "https://api.openai.com/v1"
@@ -72,6 +73,7 @@ class Settings(BaseSettings):
     anthropic_default_model: str = "claude-sonnet-4-20250514"
     openrouter_default_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
+    nvidia_default_model: str = "minimaxai/minimax-m3"
 
     # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
     # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).

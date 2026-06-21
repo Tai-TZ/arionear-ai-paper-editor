@@ -59,7 +59,9 @@ frontend/public/core/
 *.pyc
 *.pyo
 
-# AI logs — tracked structure, ignored content
+# Vendor clones (reference only — not part of Arionear runtime)
+_vendor/
+
 .ai-log/*.jsonl
 .ai-log/archive/
 .ai-log/.hook_state.json
