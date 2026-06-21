@@ -22,6 +22,7 @@ import {
   Redo2,
   Wrench,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
@@ -93,6 +94,9 @@ import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
+import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
+import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
+import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
 type EditorSearch = {
   projectId?: string;
@@ -352,6 +356,8 @@ function EditorPage() {
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState<PaperShareStatus | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [liveActivity, setLiveActivity] = useState<string | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -463,6 +469,13 @@ function EditorPage() {
         setAssets(project.assets ?? []);
         setBootState("ready");
         void loadSessionAudit(projectId);
+        void fetchPaperShareStatus(projectId)
+          .then((status) => {
+            if (!cancelled) setShareStatus(status);
+          })
+          .catch(() => {
+            if (!cancelled) setShareStatus(null);
+          });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -477,6 +490,13 @@ function EditorPage() {
       cancelled = true;
     };
   }, [projectId, navigate, resetHistory, loadSessionAudit]);
+
+  useYjsShareSync({
+    token: shareStatus?.token ?? null,
+    enabled: Boolean(shareStatus?.enabled && shareStatus.token),
+    latex,
+    onRemoteLatex: setLatex,
+  });
 
   const persistActiveFile = useCallback(
     (content: string, files: ProjectFile[], currentActive: string) =>
@@ -1440,6 +1460,8 @@ function EditorPage() {
               chatOpen={chatOpen}
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
+              onShare={() => setShareOpen(true)}
+              shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
               activeEditId={activeEditId}
               onSelectEdit={setActiveEditId}
@@ -1566,6 +1588,14 @@ function EditorPage() {
       )}
 
       <StatusBar lineCount={latex.split("\n").length} className="hidden md:flex" />
+      {projectId ? (
+        <ShareLinkDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          paperId={projectId}
+          onStatusChange={setShareStatus}
+        />
+      ) : null}
         </div>
       )}
     </div>
@@ -2224,6 +2254,8 @@ function CenterPanel({
   onOpenChat,
   toolsOpen,
   onToggleTools,
+  onShare,
+  shareEnabled = false,
   chatEndRef,
   chatLoading,
   liveActivity,
@@ -2280,6 +2312,8 @@ function CenterPanel({
   onOpenChat: () => void;
   toolsOpen: boolean;
   onToggleTools: () => void;
+  onShare?: () => void;
+  shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   liveActivity?: string | null;
@@ -2344,17 +2378,33 @@ function CenterPanel({
             </button>
           </div>
         </div>
-        <button
-          onClick={onToggleTools}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition ${
-            toolsOpen
-              ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
-              : "bg-primary text-primary-foreground hover:bg-primary/90"
-          }`}
-        >
-          <Wrench className="h-3 w-3" />
-          Tools
-        </button>
+        <div className="flex items-center gap-2">
+          {onShare ? (
+            <button
+              type="button"
+              onClick={onShare}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+                shareEnabled
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              }`}
+            >
+              <Share2 className="h-3 w-3" />
+              Share
+            </button>
+          ) : null}
+          <button
+            onClick={onToggleTools}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+              toolsOpen
+                ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+          >
+            <Wrench className="h-3 w-3" />
+            Tools
+          </button>
+        </div>
       </div>
 
       <div className="editor-workspace flex min-h-0 flex-1 flex-col overflow-hidden w-full">

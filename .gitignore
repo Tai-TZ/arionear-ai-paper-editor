@@ -45,6 +45,9 @@ coverage.xml
 # Docker
 docker-compose.override.yml
 
+# CodeGraph (local index per machine)
+.codegraph/
+
 # Node (frontend)
 node_modules/
 .next/

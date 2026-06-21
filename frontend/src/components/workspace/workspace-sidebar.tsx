@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { FolderOpen, LogOut, Shield, UserCircle } from "lucide-react";
+import { FolderOpen, Shield, UserCircle } from "lucide-react";
+import { useMemo } from "react";
+import { useLocale } from "@/components/locale-provider";
+import { WorkspaceSidebarFooter } from "@/components/workspace/workspace-sidebar-footer";
+import { commonCopy } from "@/lib/common-i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName, type ResearcherProfile } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";
@@ -22,13 +26,6 @@ type WorkspaceSidebarProps = {
   onSignOut: () => void;
   onNavigate?: () => void;
   className?: string;
-};
-
-const DEFAULT_LABELS: WorkspaceSidebarLabels = {
-  projects: "Your Projects",
-  profile: "Researcher Profile",
-  admin: "Admin Console",
-  signOut: "Sign out",
 };
 
 function ProfileCard({
@@ -83,11 +80,15 @@ export function WorkspaceSidebar({
   active,
   user,
   profile,
-  labels = DEFAULT_LABELS,
+  labels,
   onSignOut,
   onNavigate,
   className,
 }: WorkspaceSidebarProps) {
+  const { locale } = useLocale();
+  const i18nLabels = useMemo(() => commonCopy(locale).workspace, [locale]);
+  const mergedLabels = { ...i18nLabels, ...labels };
+
   return (
     <aside
       className={`workspace-sidebar flex h-full w-56 shrink-0 flex-col lg:w-64${className ? ` ${className}` : ""}`}
@@ -102,56 +103,56 @@ export function WorkspaceSidebar({
         {user ? (
           <ProfileCard user={user} profile={profile} active={active} onNavigate={onNavigate} />
         ) : (
-          <div className="workspace-profile-card text-xs text-muted-foreground">Loading account…</div>
+          <div className="workspace-profile-card text-xs text-muted-foreground">{mergedLabels.loadingAccount}</div>
         )}
       </div>
 
       <nav className="space-y-1 px-3">
         {active === "projects" ? (
-          <div className="workspace-nav-item is-active">
-            <FolderOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
-            {labels.projects}
+          <div className="workspace-nav-item is-active" title={mergedLabels.projects}>
+            <FolderOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="workspace-nav-label">{mergedLabels.projects}</span>
           </div>
         ) : (
-          <Link to="/projects" className="workspace-nav-item" onClick={onNavigate}>
-            <FolderOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
-            {labels.projects}
+          <Link to="/projects" className="workspace-nav-item" onClick={onNavigate} title={mergedLabels.projects}>
+            <FolderOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="workspace-nav-label">{mergedLabels.projects}</span>
           </Link>
         )}
 
         {active === "profile" ? (
-          <div className="workspace-nav-item is-active">
-            <UserCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
-            {labels.profile}
+          <div className="workspace-nav-item is-active" title={mergedLabels.profile}>
+            <UserCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="workspace-nav-label">{mergedLabels.profile}</span>
           </div>
         ) : (
-          <Link to="/profile" className="workspace-nav-item" onClick={onNavigate}>
-            <UserCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
-            {labels.profile}
+          <Link to="/profile" className="workspace-nav-item" onClick={onNavigate} title={mergedLabels.profile}>
+            <UserCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="workspace-nav-label">{mergedLabels.profile}</span>
           </Link>
         )}
 
         {isAdminUser() ? (
           active === "admin" ? (
-            <div className="workspace-nav-item is-active workspace-nav-item-admin">
-              <Shield className="h-3.5 w-3.5" strokeWidth={1.5} />
-              {labels.admin ?? "Admin Console"}
+            <div className="workspace-nav-item is-active workspace-nav-item-admin" title={mergedLabels.admin ?? "Admin"}>
+              <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+              <span className="workspace-nav-label">{mergedLabels.admin ?? "Admin"}</span>
             </div>
           ) : (
-            <Link to="/admin" className="workspace-nav-item workspace-nav-item-admin" onClick={onNavigate}>
-              <Shield className="h-3.5 w-3.5" strokeWidth={1.5} />
-              {labels.admin ?? "Admin Console"}
+            <Link
+              to="/admin"
+              className="workspace-nav-item workspace-nav-item-admin"
+              onClick={onNavigate}
+              title={mergedLabels.admin ?? "Admin"}
+            >
+              <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+              <span className="workspace-nav-label">{mergedLabels.admin ?? "Admin"}</span>
             </Link>
           )
         ) : null}
       </nav>
 
-      <div className="mt-auto border-t border-foreground p-3">
-        <button type="button" onClick={onSignOut} className="workspace-signout">
-          <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
-          {labels.signOut}
-        </button>
-      </div>
+      <WorkspaceSidebarFooter signOutLabel={mergedLabels.signOut} onSignOut={onSignOut} />
     </aside>
   );
 }

@@ -27,6 +27,7 @@ type LatexCodeEditorProps = {
     payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
   ) => void;
   fullHeight?: boolean;
+  readOnly?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
   inlineSuggestion?: InlineSuggestionInput | null;
@@ -41,6 +42,7 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       onSelectionContextChange,
       onQuickEditRequest,
       fullHeight = false,
+      readOnly: readOnlyProp = false,
       highlightLine = null,
       synctexHighlight = null,
       inlineSuggestion = null,
@@ -56,7 +58,7 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
   );
   const displayLatex = suggestionView?.displayLatex ?? latex;
   const lines = displayLatex.split(/\r?\n/);
-  const readOnly = Boolean(suggestionView);
+  const readOnly = Boolean(suggestionView) || readOnlyProp;
   const gutterRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

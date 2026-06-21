@@ -7,7 +7,9 @@ import {
   AuthShell,
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
+import { useLocale } from "@/components/locale-provider";
 import { isAuthenticated, resetPassword } from "@/lib/auth-store";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { authToast } from "@/lib/auth-toast";
 import { passwordStrength, validatePassword } from "@/lib/auth-validation";
 
@@ -38,6 +40,8 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).resetPassword, [locale]);
   const { token } = Route.useSearch();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -54,7 +58,7 @@ function ResetPasswordPage() {
     setSuccess("");
 
     if (password !== confirm) {
-      const message = "Passwords do not match.";
+      const message = t.mismatch;
       authToast.resetPasswordError(message);
       setError(message);
       return;
@@ -77,9 +81,9 @@ function ResetPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="New Credentials"
-      title="Set a new password."
-      lede="Choose a strong password you have not used on Arionear before. This link works once and expires in 30 minutes."
+      eyebrow={t.eyebrow}
+      title={t.title}
+      lede={t.lede}
     >
       {error && <AuthAlert message={error} />}
       {success && (
@@ -92,13 +96,13 @@ function ResetPasswordPage() {
         <div>
           <AuthField
             id="password"
-            label="New password"
+            label={t.newPassword}
             icon={<Lock className="h-4 w-4" strokeWidth={1.5} />}
             autoComplete="new-password"
             required
             value={password}
             onChange={setPassword}
-            placeholder="At least 8 characters, 1 letter & 1 number"
+            placeholder={t.newPasswordPlaceholder}
             showToggle
             error={passwordHint ?? undefined}
           />
@@ -125,19 +129,19 @@ function ResetPasswordPage() {
 
         <AuthField
           id="confirm"
-          label="Confirm password"
+          label={t.confirmPassword}
           icon={<Lock className="h-4 w-4" strokeWidth={1.5} />}
           autoComplete="new-password"
           required
           value={confirm}
           onChange={setConfirm}
-          placeholder="Repeat password"
+          placeholder={t.confirmPlaceholder}
           showToggle
-          error={confirm && password !== confirm ? "Passwords do not match." : undefined}
+          error={confirm && password !== confirm ? t.mismatch : undefined}
         />
 
         <AuthSubmitButton loading={loading} disabled={Boolean(success)}>
-          Update password <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+          {t.updatePassword} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </AuthSubmitButton>
       </form>
 
@@ -146,7 +150,7 @@ function ResetPasswordPage() {
           to="/signin"
           className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
         >
-          Back to sign in
+          {t.backToSignIn}
         </Link>
       </p>
     </AuthShell>

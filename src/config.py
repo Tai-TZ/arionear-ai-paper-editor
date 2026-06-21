@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -9,7 +10,9 @@ LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "nvidia"]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Load repo-root .env regardless of current working directory.
+        # `config.py` lives in `src/`, so repo root is one level up.
+        env_file=str(Path(__file__).resolve().parents[1] / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )

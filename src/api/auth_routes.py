@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
-from src.db.engine import db_is_ready, get_db
+from src.db.engine import db_error_detail, db_is_ready, get_db, is_db_enabled
 from src.models.auth_schemas import (
     AuthTokenResponse,
     AuthUserResponse,
@@ -61,9 +61,18 @@ def _raise_db_busy(exc: OperationalError) -> None:
 
 def _require_db():
     if not db_is_ready():
+        if not is_db_enabled():
+            detail = "Authentication requires a database connection. Set DIRECT_DATABASE_URL."
+        else:
+            err = db_error_detail()
+            detail = (
+                f"Authentication requires a database connection. Database init failed: {err}"
+                if err
+                else "Authentication requires a database connection. Database is not ready."
+            )
         raise HTTPException(
             status_code=503,
-            detail="Authentication requires a database connection. Set DIRECT_DATABASE_URL.",
+            detail=detail,
         )
 
 

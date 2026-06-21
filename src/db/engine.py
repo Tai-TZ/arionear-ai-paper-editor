@@ -14,11 +14,15 @@ from src.db.models import Base
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 _db_ready: bool = False
+_db_error: str | None = None
 
 
 def is_db_enabled() -> bool:
     url = get_settings().sqlalchemy_database_url()
     return bool(url) and not url.startswith("memory://")
+
+def db_error_detail() -> str | None:
+    return _db_error
 
 
 def _get_engine() -> Engine:
@@ -55,45 +59,51 @@ def _get_engine() -> Engine:
 
 def init_db() -> bool:
     """Verify DB connection; PostgreSQL migrations or SQLite schema for tests."""
-    global _db_ready
+    global _db_ready, _db_error
+    _db_error = None
     if not is_db_enabled():
         _db_ready = False
         return False
 
-    engine = _get_engine()
-    dialect = engine.dialect.name
+    try:
+        engine = _get_engine()
+        dialect = engine.dialect.name
 
-    if dialect == "sqlite":
-        Base.metadata.create_all(bind=engine)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-            conn.commit()
-    else:
-        with engine.connect() as conn:
-            conn.execute(text("SET statement_timeout = 15000"))
-            conn.execute(text("SELECT 1"))
-            has_profile_col = conn.execute(
-                text(
-                    "SELECT 1 FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'users' "
-                    "AND column_name = 'profile_settings' LIMIT 1"
-                )
-            ).scalar()
-            if not has_profile_col:
-                try:
-                    conn.execute(text("SET lock_timeout = '8s'"))
-                    conn.execute(
-                        text(
-                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                            "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
-                        )
-                    )
-                    conn.commit()
-                except Exception as exc:
-                    conn.rollback()
-                    print(f"Warning: profile_settings migration skipped: {exc}")
-            else:
+        if dialect == "sqlite":
+            Base.metadata.create_all(bind=engine)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
                 conn.commit()
+        else:
+            with engine.connect() as conn:
+                conn.execute(text("SET statement_timeout = 15000"))
+                conn.execute(text("SELECT 1"))
+                has_profile_col = conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'users' "
+                        "AND column_name = 'profile_settings' LIMIT 1"
+                    )
+                ).scalar()
+                if not has_profile_col:
+                    try:
+                        conn.execute(text("SET lock_timeout = '8s'"))
+                        conn.execute(
+                            text(
+                                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                                "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
+                            )
+                        )
+                        conn.commit()
+                    except Exception as exc:
+                        conn.rollback()
+                        print(f"Warning: profile_settings migration skipped: {exc}")
+                else:
+                    conn.commit()
+    except Exception as exc:
+        _db_ready = False
+        _db_error = str(exc)
+        return False
 
     _db_ready = True
     return True
@@ -121,9 +131,10 @@ def get_db() -> Generator[Session, None, None]:
 
 def reset_db_state() -> None:
     """Test helper — reset singleton engine."""
-    global _engine, _SessionLocal, _db_ready
+    global _engine, _SessionLocal, _db_ready, _db_error
     if _engine is not None:
         _engine.dispose()
     _engine = None
     _SessionLocal = None
     _db_ready = False
+    _db_error = None
