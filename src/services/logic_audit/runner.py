@@ -11,7 +11,7 @@ from src.services.logic_audit.debate import (
     synthesize_perspectives,
 )
 from src.services.logic_audit.schemas import LogicAuditReport
-from src.services.prompts import format_sections_summary, get_prompt, render_user_prompt
+from src.services.prompts import format_sections_summary, get_prompt
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:

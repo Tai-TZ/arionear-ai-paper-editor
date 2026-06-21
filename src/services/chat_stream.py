@@ -25,7 +25,6 @@ from src.services.intent_router import classify_intent
 from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
 from src.services.llm_policy import resolve_llm_temperature
-from src.services.slash_commands import parse_slash_command
 from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
@@ -33,6 +32,7 @@ from src.services.parser.latex import (
 from src.services.prompts import build_system_prompt, render_user_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
+from src.services.slash_commands import parse_slash_command
 from src.services.template_latex import generate_template
 
 AGENT_NAME = "Ario"

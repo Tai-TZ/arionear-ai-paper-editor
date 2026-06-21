@@ -1,11 +1,11 @@
 from src.services.intent_router import _fallback_intent
+from src.services.logic_audit.debate import load_debate_roles
 from src.services.logic_audit.runner import _extract_json_object, format_report_text
 from src.services.logic_audit.schemas import (
     LogicAuditReport,
     LogicConflictItem,
     LogicSectionReport,
 )
-from src.services.logic_audit.debate import load_debate_roles
 
 
 def test_fallback_intent_logic_vietnamese():
