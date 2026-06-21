@@ -276,7 +276,7 @@ def request_signup_verification(
     if not sent:
         return None, send_error or "Could not send verification email."
 
-    dev_code = code if settings.app_env == "development" else None
+    dev_code = code if settings.app_env in ("development", "test") else None
     return dev_code, None
 
 
