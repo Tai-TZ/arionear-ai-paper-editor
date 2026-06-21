@@ -54,9 +54,11 @@ import {
   type ChatAiStatePayload,
   type ChatAiStep,
   type LLMProvider,
+  type LogicAuditReport,
   type ProviderInfo,
   type RevisionRecord,
 } from "@/lib/api/academic";
+import { parseChatSlashCommand } from "@/lib/chat-commands";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { citationErrorMessage } from "@/lib/api/api-errors";
@@ -162,7 +164,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
-type ToolsTab = "info" | "versions" | "citations";
+type ToolsTab = "info" | "versions" | "citations" | "logic";
 
 type ProjectStats = {
   words: number;
@@ -368,6 +370,7 @@ function EditorPage() {
   const [revisionHistory, setRevisionHistory] = useState<RevisionRecord[]>([]);
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
+  const [logicAuditReport, setLogicAuditReport] = useState<LogicAuditReport | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
@@ -913,11 +916,17 @@ function EditorPage() {
   }, []);
 
   const handleSend = async () => {
-    const text = chatInput.trim();
-    if (!text || chatLoading || !projectId) return;
+    const raw = chatInput.trim();
+    if (!raw || chatLoading || !projectId) return;
+    const parsed = parseChatSlashCommand(raw);
+    const text = parsed.message;
     const activeSelection = chatSelectionContext?.text ?? selection;
     const sentSelection = chatSelectionContext;
-    const task = chatComposerMode === "quick-edit" ? ("edit" as const) : undefined;
+    const task =
+      chatComposerMode === "quick-edit"
+        ? ("edit" as const)
+        : parsed.task ?? undefined;
+    const userDisplay = parsed.command ? `/${parsed.command} · ${text}` : raw;
     openChatPanel();
     chatAbortRef.current?.abort();
     const abort = new AbortController();
@@ -925,7 +934,7 @@ function EditorPage() {
 
     setMessages((prev) => [
       ...prev,
-      { role: "user", content: text },
+      { role: "user", content: userDisplay },
       {
         role: "assistant",
         content: "",
@@ -1064,6 +1073,10 @@ function EditorPage() {
             if (result.citation_results?.length) {
               setCitationResults(result.citation_results);
               setCitationSummary(result.response || result.analysis || "");
+            }
+            if (result.logic_audit_report?.sections?.length) {
+              setLogicAuditReport(result.logic_audit_report);
+              setToolsOpen(true);
             }
             if (result.revision_id) {
               void refreshRevisions();
@@ -1447,6 +1460,7 @@ function EditorPage() {
                 revisions={revisionHistory}
                 citationResults={citationResults}
                 citationSummary={citationSummary}
+                logicAuditReport={logicAuditReport}
                 onCitationsUpdated={(results, summary) => {
                   setCitationResults(results);
                   setCitationSummary(summary);
@@ -2493,6 +2507,7 @@ function ToolsPanel({
   revisions,
   citationResults: citationResultsProp,
   citationSummary: citationSummaryProp,
+  logicAuditReport: logicAuditReportProp,
   onCitationsUpdated,
   onClose,
 }: {
@@ -2503,6 +2518,7 @@ function ToolsPanel({
   revisions: RevisionRecord[];
   citationResults: Record<string, unknown>[];
   citationSummary: string;
+  logicAuditReport: LogicAuditReport | null;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
 }) {
@@ -2516,6 +2532,12 @@ function ToolsPanel({
     setCitationResults(citationResultsProp);
     setCitationSummary(citationSummaryProp);
   }, [citationResultsProp, citationSummaryProp]);
+
+  useEffect(() => {
+    if (logicAuditReportProp?.sections?.length) {
+      setTab("logic");
+    }
+  }, [logicAuditReportProp]);
 
   const sortedRevisions = useMemo(
     () =>
@@ -2560,6 +2582,7 @@ function ToolsPanel({
           {(
             [
               { id: "info" as const, label: "Project Info" },
+              { id: "logic" as const, label: "Logic Audit" },
               { id: "citations" as const, label: "Citations" },
               { id: "versions" as const, label: "Versions" },
             ] as const
@@ -2640,6 +2663,66 @@ function ToolsPanel({
                 </div>
               ))}
             </div>
+          </div>
+        ) : tab === "logic" ? (
+          <div className="tools-section">
+            <h2 className="tools-section-title">Logic Audit</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Multi-agent comment-only report (adapted from AutoResearchClaw debate). Không tự sửa
+              bản thảo — chỉ góp ý logic và mâu thuẫn.
+            </p>
+            {!logicAuditReportProp?.sections?.length ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Chưa có báo cáo. Hỏi Ario: &quot;Kiểm tra logic bài báo&quot; hoặc &quot;Logic
+                audit&quot;.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {logicAuditReportProp.summary && (
+                  <p className="text-sm text-foreground">{logicAuditReportProp.summary}</p>
+                )}
+                {logicAuditReportProp.sections.map((section) => (
+                  <div key={section.section} className="rounded-md border border-border/60 p-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {section.section}
+                    </h3>
+                    {(section.conflicts ?? []).length === 0 &&
+                    !(section.weak_claims ?? []).length ? (
+                      <p className="mt-2 text-xs text-muted-foreground">Không có vấn đề rõ ràng.</p>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {(section.conflicts ?? []).map((c) => (
+                          <li key={c.id} className="text-xs">
+                            <span className="font-medium text-[color:var(--editorial-red)]">
+                              [{c.severity?.toUpperCase()}]
+                            </span>{" "}
+                            {c.comment}
+                            {c.claim_text ? (
+                              <span className="mt-0.5 block text-muted-foreground">
+                                Claim: {c.claim_text.slice(0, 160)}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                        {(section.weak_claims ?? []).map((w, i) => (
+                          <li key={`weak-${i}`} className="text-xs text-muted-foreground">
+                            [WEAK] {w}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+                {(logicAuditReportProp.cross_section_conflicts ?? []).map((cross, i) => (
+                  <div
+                    key={`cross-${i}`}
+                    className="rounded-md border border-dashed border-border/60 p-3 text-xs"
+                  >
+                    <span className="font-medium">Cross-section:</span> {cross.description}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : tab === "citations" ? (
           <div className="tools-section">

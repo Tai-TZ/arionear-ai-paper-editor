@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from src.agents.nodes.academic_nodes import (
     citation_node,
     edit_node,
+    logic_node,
     prepare_edit_target,
     prepare_style_target,
     structure_node,
@@ -24,6 +25,7 @@ from src.services.intent_router import classify_intent
 from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
 from src.services.llm_policy import resolve_llm_temperature
+from src.services.slash_commands import parse_slash_command
 from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
@@ -41,6 +43,7 @@ _TASK_LABELS: dict[str, str] = {
     "style": "Biên tập văn phong",
     "edit": "Chỉnh sửa LaTeX",
     "structure": "Phân tích cấu trúc",
+    "logic": "Kiểm tra logic",
     "citation": "Kiểm tra trích dẫn",
     "template": "Dựng khung IMRAD",
     "chat": "Trả lời câu hỏi",
@@ -164,6 +167,7 @@ def _merge_agent_into_done(done_payload: dict[str, Any], result: dict[str, Any])
         "edits",
         "citation_results",
         "structure_suggestions",
+        "logic_audit_report",
     ):
         if key in result:
             done_payload[key] = result[key]
@@ -199,6 +203,9 @@ def _activity_for_task(
         names = ", ".join(s["name"] for s in sections[:4])
         suffix = f" (+{len(sections) - 4} nữa)" if len(sections) > 4 else ""
         return f"Phân tích cấu trúc — {len(sections)} phần: {names}{suffix}"
+    if task == "logic":
+        n = len(sections)
+        return f"Logic audit — {n} phần" if n else "Logic audit — toàn bản thảo"
     if task == "style":
         if selection.strip():
             return f"Biên tập đoạn đã chọn ({len(selection.split())} từ)"
@@ -357,11 +364,14 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         yield state_evt
         yield act_evt
 
+        slash_task, effective_message = parse_slash_command(request.message)
+        explicit_task = request.task or slash_task
+
         intent = await classify_intent(
-            request.message,
+            effective_message,
             has_latex=has_latex,
             has_selection=has_selection,
-            explicit_task=request.task,
+            explicit_task=explicit_task,
             provider=provider,
             model=model,
         )
@@ -392,7 +402,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             apply_mode = "selection"
 
         state: AgentState = {
-            "query": request.message,
+            "query": effective_message,
             "task": task,  # type: ignore[arg-type]
             "session_id": request.session_id or "",
             "latex": latex,
@@ -419,6 +429,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "integrity_flags": [],
             "citation_results": [],
             "structure_suggestions": [],
+            "logic_audit_report": {},
         }
 
         if task == "chat":
@@ -652,6 +663,57 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield act_evt
             _merge_agent_into_done(done_payload, structure_result)
             respond = structure_result.get("response", "")
+            for piece in _chunk_text(respond):
+                yield _sse("token", {"delta": piece})
+            done_payload["response"] = respond
+
+        elif task == "logic":
+            trace = await tracker.stage("agent_start", task=task)
+            yield _sse("trace", trace)
+            names = ", ".join(s["name"] for s in sections[:4]) if sections else "document"
+            state_evt, act_evt = _emit_state(
+                "scope",
+                "Logic audit — multi-agent",
+                status="active",
+                detail=names,
+                task=task,
+            )
+            yield state_evt
+            yield act_evt
+
+            def _logic_tick(elapsed: float) -> tuple[str, str]:
+                return _emit_state(
+                    "llm",
+                    "Đang phân tích logic",
+                    status="active",
+                    detail=f"3 personas · {elapsed:.0f}s",
+                    task=task,
+                    elapsed_sec=elapsed,
+                )
+
+            logic_result = None
+            async for event in _monitor_long_task(logic_node(state), _logic_tick):
+                if isinstance(event, str):
+                    yield event
+                else:
+                    logic_result = event
+
+            logic_result = logic_result or {}
+            conflict_count = sum(
+                len(sec.get("conflicts") or [])
+                for sec in (logic_result.get("logic_audit_report") or {}).get("sections") or []
+            )
+            state_evt, act_evt = _emit_state(
+                "scope",
+                "Hoàn tất logic audit",
+                status="done",
+                detail=f"{conflict_count} vấn đề (comment-only)",
+                task=task,
+            )
+            yield state_evt
+            yield act_evt
+            _merge_agent_into_done(done_payload, logic_result)
+            respond = logic_result.get("response", "")
             for piece in _chunk_text(respond):
                 yield _sse("token", {"delta": piece})
             done_payload["response"] = respond

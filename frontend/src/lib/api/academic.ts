@@ -4,7 +4,7 @@ import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "nvidia";
 
 export type IntegrityFlag = {
   code: string;
@@ -88,6 +88,33 @@ export type ChatResult = {
   }[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];
+  logic_audit_report?: LogicAuditReport;
+};
+
+export type LogicAuditReport = {
+  summary?: string;
+  integrity_mode?: string;
+  sections?: {
+    section: string;
+    conflicts?: {
+      id: string;
+      type: string;
+      severity: string;
+      claim_text?: string;
+      evidence_text?: string;
+      comment: string;
+      suggested_action?: string;
+      persona_sources?: string[];
+    }[];
+    weak_claims?: string[];
+    consensus_notes?: string[];
+  }[];
+  cross_section_conflicts?: {
+    type: string;
+    description: string;
+    spans?: { section: string; text: string }[];
+  }[];
+  meta?: Record<string, unknown>;
 };
 
 export type RevisionRecord = {

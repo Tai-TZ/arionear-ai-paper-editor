@@ -5,6 +5,7 @@ from src.agents.nodes.academic_nodes import (
     citation_node,
     edit_node,
     integrity_node,
+    logic_node,
     parse_node,
     respond_node,
     route_node,
@@ -23,7 +24,7 @@ def route_by_task(state: AgentState) -> str:
         "edit": "edit",
         "citation": "citation",
         "structure": "structure",
-        "logic": "structure",
+        "logic": "logic",
         "template": "chat",
         "chat": "chat",
     }
@@ -40,6 +41,7 @@ def build_graph():
     graph.add_node("integrity", integrity_node)
     graph.add_node("citation", citation_node)
     graph.add_node("structure", structure_node)
+    graph.add_node("logic", logic_node)
     graph.add_node("chat", chat_node)
     graph.add_node("respond", respond_node)
 
@@ -52,6 +54,7 @@ def build_graph():
     graph.add_edge("integrity", "respond")
     graph.add_edge("citation", "respond")
     graph.add_edge("structure", "respond")
+    graph.add_edge("logic", "respond")
     graph.add_edge("chat", "respond")
     graph.add_edge("respond", END)
 

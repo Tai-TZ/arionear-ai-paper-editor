@@ -2182,10 +2182,26 @@
   cursor: ns-resize;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0 0.375rem;
+  padding: 0.375rem 0;
   border: none;
   background: transparent;
   touch-action: none;
+}
+
+.editor-shell .chat-dock-resize-handle--top {
+  border-bottom: 1px solid oklch(0.9 0.01 90 / 70%);
+  background: color-mix(in oklch, var(--card) 96%, transparent);
+}
+
+.editor-shell .chat-dock-resize-handle--top:hover,
+.editor-shell .chat-dock-resize-handle--top:active {
+  background: oklch(0.95 0.008 90);
+}
+
+.editor-shell .chat-dock-resize-handle--top:hover .chat-dock-resize-bar,
+.editor-shell .chat-dock-resize-handle--top:active .chat-dock-resize-bar {
+  background: oklch(0.55 0.04 255 / 70%);
+  width: 3rem;
 }
 
 .editor-shell .chat-dock-resize-bar {
@@ -2194,6 +2210,7 @@
   width: 2.25rem;
   border-radius: 999px;
   background: oklch(0.72 0.02 90 / 55%);
+  transition: width 0.15s ease, background 0.15s ease;
 }
 
 .editor-shell .chat-dock-composer {
@@ -2884,11 +2901,59 @@
 }
 
 .editor-shell .chat-assistant-text {
-  margin: 0;
   font-size: 0.8125rem;
   line-height: 1.55;
   color: var(--chat-text);
   white-space: pre-wrap;
+}
+
+/* Markdown rendering inside assistant bubble */
+.editor-shell .chat-assistant-text > :first-child {
+  margin-top: 0;
+}
+
+.editor-shell .chat-assistant-text p {
+  margin: 0 0 0.5rem;
+}
+
+.editor-shell .chat-assistant-text p:last-child {
+  margin-bottom: 0;
+}
+
+.editor-shell .chat-assistant-text strong {
+  font-weight: 700;
+}
+
+.editor-shell .chat-assistant-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 0.78em;
+  padding: 0.08rem 0.35rem;
+  border-radius: 0.375rem;
+  background: oklch(0.94 0.01 90);
+  border: 1px solid oklch(0.88 0.012 90 / 70%);
+}
+
+.editor-shell .chat-assistant-text pre {
+  margin: 0.5rem 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  overflow: auto;
+  background: oklch(0.14 0.02 255 / 92%);
+  color: oklch(0.98 0 0);
+}
+
+.editor-shell .chat-assistant-text pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.82em;
+}
+
+.editor-shell .chat-assistant-text ul,
+.editor-shell .chat-assistant-text ol {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.25rem;
 }
 
 .editor-shell .chat-thinking-row {

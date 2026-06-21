@@ -19,6 +19,7 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
         "anthropic": settings.anthropic_default_model,
         "openrouter": settings.openrouter_default_model,
         "zai": settings.zai_default_model,
+        "nvidia": settings.nvidia_default_model,
     }
     return defaults.get(provider, settings.model_name)
 
@@ -29,6 +30,7 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
         "zai": settings.zai_api_key,
+        "nvidia": settings.nvidia_api_key,
     }
     key = keys.get(provider, "")
     if not key:
@@ -101,6 +103,22 @@ def get_llm(
             extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
         )
 
+    if provider == "nvidia":
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as exc:
+            raise ValueError(
+                "NVIDIA provider requires langchain-nvidia-ai-endpoints. "
+                "Install with: pip install langchain-nvidia-ai-endpoints"
+            ) from exc
+        return ChatNVIDIA(
+            model=model_name,
+            api_key=_resolve_api_key(settings, "nvidia"),
+            temperature=temp,
+            top_p=0.95,
+            max_completion_tokens=8192,
+        )
+
     raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
@@ -139,6 +157,10 @@ ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
     ("glm-4.7-flash", "GLM-4.7 Flash · free"),
     ("glm-4.7-flashx", "GLM-4.7 FlashX"),
     ("glm-4.7", "GLM-4.7 · quality"),
+]
+
+NVIDIA_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("minimaxai/minimax-m3", "MiniMax M3 · reasoning"),
 ]
 
 
@@ -204,6 +226,17 @@ def list_providers() -> list[dict]:
                 "name": "Z.AI (GLM)",
                 "default_model": default,
                 "models": _model_options(ZAI_MODEL_CATALOG, default),
+            }
+        )
+
+    if settings.nvidia_api_key:
+        default = settings.nvidia_default_model
+        providers.append(
+            {
+                "id": "nvidia",
+                "name": "NVIDIA NIM (MiniMax)",
+                "default_model": default,
+                "models": _model_options(NVIDIA_MODEL_CATALOG, default),
             }
         )
 
