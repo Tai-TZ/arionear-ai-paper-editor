@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLocale } from "@/components/locale-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { commonCopy } from "@/lib/common-i18n";
 
 export function AuthShell({
@@ -17,6 +18,9 @@ export function AuthShell({
   lede: string;
   children: React.ReactNode;
 }) {
+  const { locale } = useLocale();
+  const shell = useMemo(() => authPagesCopy(locale).shell, [locale]);
+
   return (
     <div className="auth-page min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       <aside className="auth-aside hidden lg:flex flex-col justify-between border-r-4 border-foreground p-12 bg-foreground text-background">
@@ -25,17 +29,17 @@ export function AuthShell({
         </Link>
         <div>
           <p className="font-sans-ui uppercase text-[11px] tracking-widest opacity-70 mb-4">
-            The Editor's Desk
+            {shell.bannerEyebrow}
           </p>
           <p className="font-serif-display text-4xl xl:text-5xl leading-[1.05] font-bold">
-            “Good writing is rewriting. We just make the second pass faster.”
+            {shell.bannerQuote}
           </p>
           <p className="mt-6 font-serif-body text-base opacity-80 max-w-md">
-            Arionear reads like a copy-editor and questions like a reviewer — never inventing data, always citing the source.
+            {shell.bannerLede}
           </p>
         </div>
         <div className="font-mono-data text-[11px] uppercase tracking-widest opacity-60">
-          Vol. I · No. 01 · International Edition
+          {shell.bannerFooter}
         </div>
       </aside>
 
@@ -48,7 +52,7 @@ export function AuthShell({
             <LanguageToggle compact className="masthead-language-toggle shrink-0" />
             <ThemeToggle compact className="masthead-theme-toggle" />
             <Link to="/" className="font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4">
-              Back
+              {shell.mobileBack}
             </Link>
           </div>
         </header>
@@ -74,8 +78,8 @@ export function AuthShell({
         </div>
 
         <footer className="border-t border-foreground/20 px-6 py-4 font-mono-data text-[11px] uppercase tracking-widest text-foreground/60 flex justify-between">
-          <span>© Arionear Press</span>
-          <span>Closer to publication</span>
+          <span>{shell.footerCopyright}</span>
+          <span>{shell.footerTagline}</span>
         </footer>
       </main>
     </div>

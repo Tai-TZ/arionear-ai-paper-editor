@@ -237,3 +237,17 @@ class PaperResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+class PaperShareStatusResponse(BaseModel):
+    enabled: bool
+    token: str | None = None
+    created_at: str | None = None
+
+
+class PaperSharePublicResponse(BaseModel):
+    id: str
+    name: str
+    latex: str
+    metadata: dict
+    updated_at: datetime
+

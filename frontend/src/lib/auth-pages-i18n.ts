@@ -1,6 +1,15 @@
 import type { UiLanguage } from "@/lib/researcher-profile";
 
 type AuthPagesCopy = {
+  shell: {
+    bannerEyebrow: string;
+    bannerQuote: string;
+    bannerLede: string;
+    bannerFooter: string;
+    mobileBack: string;
+    footerCopyright: string;
+    footerTagline: string;
+  };
   signin: {
     eyebrow: string;
     title: string;
@@ -60,6 +69,16 @@ type AuthPagesCopy = {
 };
 
 const EN: AuthPagesCopy = {
+  shell: {
+    bannerEyebrow: "The Editor's Desk",
+    bannerQuote: "“Good writing is rewriting. We just make the second pass faster.”",
+    bannerLede:
+      "Arionear reads like a copy-editor and questions like a reviewer — never inventing data, always citing the source.",
+    bannerFooter: "Vol. I · No. 01 · International Edition",
+    mobileBack: "Back",
+    footerCopyright: "© Arionear Press",
+    footerTagline: "Closer to publication",
+  },
   signin: {
     eyebrow: "The Reading Room",
     title: "Sign in to continue.",
@@ -119,6 +138,16 @@ const EN: AuthPagesCopy = {
 };
 
 const VI: AuthPagesCopy = {
+  shell: {
+    bannerEyebrow: "Bàn biên tập",
+    bannerQuote: "“Viết hay là viết lại. Chúng tôi giúp vòng hai nhanh hơn.”",
+    bannerLede:
+      "Arionear đọc như biên tập viên và hỏi như phản biện — không bịa dữ liệu, luôn trích nguồn rõ ràng.",
+    bannerFooter: "Tập I · Số 01 · Ấn bản quốc tế",
+    mobileBack: "Quay lại",
+    footerCopyright: "© Arionear Press",
+    footerTagline: "Gần hơn với công bố",
+  },
   signin: {
     eyebrow: "Phòng đọc",
     title: "Đăng nhập để tiếp tục.",
