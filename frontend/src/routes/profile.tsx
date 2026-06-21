@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { fetchResearcherProfile, updateResearcherProfile } from "@/lib/api/profile-api";
 import {
@@ -172,9 +173,7 @@ function ProfilePage() {
         </header>
 
         {loading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <AppLoadingScreen variant="inline" className="flex-1" />
         ) : loadError || !form ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
             <AlertCircle className="h-10 w-10 text-destructive" />

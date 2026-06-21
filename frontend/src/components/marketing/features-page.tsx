@@ -8,9 +8,18 @@ import {
   ArrowRight,
   Upload,
 } from "lucide-react";
-import { MarketingLayout } from "./marketing-layout";
-import { featuresContent } from "@/lib/marketing-content";
+import { useMemo } from "react";
+
+import { useLocale } from "@/components/locale-provider";
+import {
+  featuresPageCopy,
+  marketingPageContent,
+  marketingPageUi,
+} from "@/lib/marketing-pages-i18n";
 import { editorEntryPath } from "@/lib/require-auth";
+import { MarketingLayout } from "./marketing-layout";
+
+const featureIcons = [BookOpen, FileText, GitCompare, Quote, ShieldCheck];
 
 const featureLearnMore: Record<string, string> = {
   "01": "/workflow",
@@ -20,45 +29,13 @@ const featureLearnMore: Record<string, string> = {
   "05": "/integrity",
 };
 
-const features = [
-  {
-    icon: BookOpen,
-    n: "01",
-    title: "Academic Voice",
-    body: "Improve academic English while preserving meaning.",
-    angle: 0,
-  },
-  {
-    icon: FileText,
-    n: "02",
-    title: "Structure Guide",
-    body: "IMRAD sections — abstract through discussion.",
-    angle: 72,
-  },
-  {
-    icon: GitCompare,
-    n: "03",
-    title: "Logic & Consistency",
-    body: "Cross-section argument coherence checks.",
-    angle: 144,
-  },
-  {
-    icon: Quote,
-    n: "04",
-    title: "Citation Format",
-    body: "APA, IEEE, Vancouver, BibTeX support.",
-    angle: 216,
-  },
-  {
-    icon: ShieldCheck,
-    n: "05",
-    title: "Integrity Guard",
-    body: "No fabricated data, results, or citations.",
-    angle: 288,
-  },
-];
-
-function FeaturesHubDiagram() {
+function FeaturesHubDiagram({
+  copy,
+  ui,
+}: {
+  copy: ReturnType<typeof featuresPageCopy>;
+  ui: ReturnType<typeof marketingPageUi>;
+}) {
   const cx = 200;
   const cy = 200;
   const radius = 130;
@@ -66,20 +43,17 @@ function FeaturesHubDiagram() {
   return (
     <div className="border border-foreground bg-background p-4 sm:p-8">
       <div className="flex flex-col lg:flex-row gap-8 items-center">
-        {/* radial diagram */}
         <div className="w-full lg:w-1/2 flex justify-center">
           <svg
             viewBox="0 0 400 400"
             className="w-full max-w-[400px] h-auto"
             role="img"
-            aria-label="Feature hub diagram showing five editorial capabilities around a central LaTeX manuscript"
+            aria-label={copy.hubAria}
           >
-            {/* outer ring */}
             <circle cx={cx} cy={cy} r={radius + 40} fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="text-foreground/25" />
             <circle cx={cx} cy={cy} r={radius} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-foreground/40" />
 
-            {/* spokes + nodes */}
-            {features.map((f) => {
+            {copy.features.map((f) => {
               const rad = ((f.angle - 90) * Math.PI) / 180;
               const nx = cx + radius * Math.cos(rad);
               const ny = cy + radius * Math.sin(rad);
@@ -109,7 +83,6 @@ function FeaturesHubDiagram() {
               );
             })}
 
-            {/* center hub */}
             <rect x={cx - 55} y={cy - 40} width={110} height={80} fill="var(--foreground)" className="text-foreground" />
             <text
               x={cx}
@@ -118,7 +91,7 @@ function FeaturesHubDiagram() {
               fill="var(--newsprint, #F9F7F2)"
               style={{ fontFamily: "ui-monospace, monospace", fontSize: "9px", letterSpacing: "0.12em" }}
             >
-              MANUSCRIPT
+              {copy.hubCenterManuscript}
             </text>
             <text
               x={cx}
@@ -127,7 +100,7 @@ function FeaturesHubDiagram() {
               fill="var(--newsprint, #F9F7F2)"
               style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 900 }}
             >
-              LaTeX
+              {copy.hubCenterLatex}
             </text>
             <text
               x={cx}
@@ -136,44 +109,46 @@ function FeaturesHubDiagram() {
               fill="var(--newsprint, #F9F7F2)"
               style={{ fontFamily: "Georgia, serif", fontSize: "9px", fontStyle: "italic" }}
             >
-              .tex source
+              {copy.hubCenterSource}
             </text>
           </svg>
         </div>
 
-        {/* feature cards */}
         <div className="w-full lg:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {features.map(({ icon: Icon, n, title, body }) => (
-            <article
-              key={n}
-              className="border border-foreground p-5 hover:bg-neutral-100/80 transition-colors group"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
-                  <Icon className="h-5 w-5" strokeWidth={1.5} />
+          {copy.features.map(({ n, title, body }, index) => {
+            const Icon = featureIcons[index] ?? BookOpen;
+            return (
+              <article
+                key={n}
+                className="border border-foreground p-5 hover:bg-neutral-100/80 transition-colors group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
+                    <Icon className="h-5 w-5" strokeWidth={1.5} />
+                  </div>
+                  <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)]">
+                    {copy.noLabel} {n}
+                  </span>
                 </div>
-                <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)]">
-                  No. {n}
-                </span>
-              </div>
-              <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-              <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link
-                  to={editorEntryPath()}
-                  className="inline-flex items-center gap-1 border border-foreground px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors"
-                >
-                  Try it
-                </Link>
-                <Link
-                  to={featureLearnMore[n] ?? "/workflow"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-neutral-600 hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
-                >
-                  Learn more
-                </Link>
-              </div>
-            </article>
-          ))}
+                <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
+                <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    to={editorEntryPath()}
+                    className="inline-flex items-center gap-1 border border-foreground px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    {ui.tryIt}
+                  </Link>
+                  <Link
+                    to={featureLearnMore[n] ?? "/workflow"}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-neutral-600 hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
+                  >
+                    {ui.learnMore}
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -181,42 +156,45 @@ function FeaturesHubDiagram() {
 }
 
 export function FeaturesPage() {
+  const { locale } = useLocale();
+  const content = useMemo(() => marketingPageContent(locale, "features"), [locale]);
+  const ui = useMemo(() => marketingPageUi(locale), [locale]);
+  const copy = useMemo(() => featuresPageCopy(locale), [locale]);
+
   return (
     <MarketingLayout>
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
           <div className="max-w-3xl">
-            <p className="font-mono-data uppercase text-xs tracking-widest text-neutral-600">
-              {featuresContent.eyebrow}
-            </p>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-neutral-600">{content.eyebrow}</p>
             <h1 className="mt-3 font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
-              {featuresContent.title}
+              {content.title}
             </h1>
-            <p className="mt-6 font-body text-lg leading-relaxed text-neutral-700">{featuresContent.lede}</p>
+            <p className="mt-6 font-body text-lg leading-relaxed text-neutral-700">{content.lede}</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 to={editorEntryPath()}
                 className="inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
               >
-                <Upload className="h-4 w-4" strokeWidth={1.5} /> Try it
+                <Upload className="h-4 w-4" strokeWidth={1.5} /> {ui.tryIt}
               </Link>
               <Link
                 to="/workflow"
                 className="inline-flex items-center justify-center gap-2 border border-foreground bg-transparent px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[44px]"
               >
-                Learn more <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+                {ui.learnMore} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
               </Link>
             </div>
           </div>
 
           <div className="mt-12">
             <div className="flex items-center justify-between border-b border-foreground pb-3 mb-6">
-              <span className="font-mono-data uppercase text-xs tracking-widest">Fig. 1.1 · Editorial Hub</span>
+              <span className="font-mono-data uppercase text-xs tracking-widest">{copy.figCaption}</span>
               <span className="font-mono-data uppercase text-[10px] tracking-widest text-neutral-500 hidden sm:inline">
-                Five capabilities · One manuscript
+                {copy.figNote}
               </span>
             </div>
-            <FeaturesHubDiagram />
+            <FeaturesHubDiagram copy={copy} ui={ui} />
           </div>
 
           <div className="mt-12 pt-8 border-t border-foreground/30 flex flex-wrap gap-6">
@@ -224,13 +202,13 @@ export function FeaturesPage() {
               to="/"
               className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
             >
-              ← Back to home
+              {ui.backToHome}
             </Link>
             <Link
               to="/workflow"
               className="inline-flex items-center gap-2 font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)]"
             >
-              See workflow <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+              {ui.seeWorkflow} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import {
   Search,
   LayoutGrid,
@@ -258,12 +259,9 @@ function ProjectsPage() {
         navigate({ to: "/signin" });
       }}
     >
-      {creatingLabel && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-medium text-foreground">{creatingLabel}</p>
-        </div>
-      )}
+      {creatingLabel ? (
+        <AppLoadingScreen label={creatingLabel} variant="overlay" />
+      ) : null}
       <input
         ref={fileInputRef}
         type="file"
@@ -404,10 +402,7 @@ function ProjectsPage() {
             </div>
           )}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{t.loading}</p>
-            </div>
+            <AppLoadingScreen label={t.loading} variant="inline" className="py-12" />
           ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}
