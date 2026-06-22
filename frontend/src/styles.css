@@ -4598,6 +4598,180 @@
   }
 }
 
+/* Shared app loading — route pending, page fetch, overlays */
+.app-loading-screen:not(.app-loading-screen--inline) {
+  background: var(--background);
+}
+
+.app-loading-screen--inline {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: flex;
+  min-height: 14rem;
+  padding: 3rem 1rem;
+  background: transparent;
+  animation: none;
+}
+
+.app-loading-screen--overlay {
+  z-index: 50;
+  background: color-mix(in oklch, var(--background) 82%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+/* 404 — editorial missing page */
+.app-not-found-masthead {
+  background: var(--background);
+}
+
+.app-not-found-aside {
+  min-height: 100%;
+}
+
+/* About page — interactive editorial board figure */
+.about-board-live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+
+.about-board-live-dot.is-live {
+  background: var(--editorial-red);
+  animation: about-board-pulse 1.4s ease-in-out infinite;
+}
+
+.about-board-editor .about-board-head,
+.about-board-editor .about-board-chair,
+.about-board-editor .about-board-body {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.25s ease, fill 0.25s ease;
+}
+
+.about-board-editor.is-active .about-board-head {
+  transform: translateY(-2px);
+  stroke: var(--editorial-red);
+}
+
+.about-board-editor.is-active .about-board-body {
+  fill: color-mix(in oklch, var(--newsprint, #f9f7f2) 70%, var(--editorial-red) 30%);
+}
+
+.about-board-focus-ring {
+  animation: about-board-ring 1.8s ease-in-out infinite;
+}
+
+.about-board-lamp.is-lit path {
+  animation: about-board-lamp-glow 1.2s ease-in-out infinite;
+}
+
+.about-board-lamp.is-lit line {
+  animation: about-board-lamp-cord 1.2s ease-in-out infinite;
+}
+
+.about-board-manuscript.is-active {
+  animation: about-board-manuscript-pulse 1.6s ease-in-out infinite;
+}
+
+.about-board-paper-line {
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: about-board-paper-write 2.4s ease-in-out infinite;
+}
+
+.about-board-paper-line--2 {
+  animation-delay: 0.35s;
+}
+
+.about-board-paper-line--3 {
+  animation-delay: 0.7s;
+}
+
+.about-masthead-row:hover,
+.about-masthead-row.is-active {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+
+.about-masthead-row.is-active .about-masthead-index,
+.about-masthead-row:hover .about-masthead-index {
+  color: var(--editorial-red);
+}
+
+@keyframes about-board-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes about-board-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes about-board-lamp-glow {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes about-board-lamp-cord {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes about-board-manuscript-pulse {
+  0%,
+  100% {
+    stroke: var(--foreground);
+  }
+  50% {
+    stroke: var(--editorial-red);
+  }
+}
+
+@keyframes about-board-paper-write {
+  0% {
+    stroke-dashoffset: 34;
+    opacity: 0.2;
+  }
+  40%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-board-live-dot.is-live,
+  .about-board-focus-ring,
+  .about-board-lamp.is-lit path,
+  .about-board-lamp.is-lit line,
+  .about-board-manuscript.is-active,
+  .about-board-paper-line {
+    animation: none !important;
+  }
+}
+
 /* ─── Admin console (ops-style shell — ~40% Arionear editorial DNA) ─────────── */
 
 .admin-shell,

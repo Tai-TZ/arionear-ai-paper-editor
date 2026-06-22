@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { LatexCodeEditor } from "@/components/latex-code-editor";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
@@ -175,11 +176,7 @@ function ShareViewerPage() {
   const outlineLatex = mainLatexSource;
 
   if (bootState === "loading") {
-    return (
-      <div className="flex h-[100dvh] items-center justify-center bg-background text-muted-foreground">
-        Loading shared manuscript…
-      </div>
-    );
+    return <AppLoadingScreen label="Loading shared manuscript…" variant="fullscreen" />;
   }
 
   if (bootState === "error") {

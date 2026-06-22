@@ -159,7 +159,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_get_db_s
 
     settings = get_settings()
     response = MessageResponse(message=FORGOT_PASSWORD_MESSAGE)
-    if settings.app_env == "development" and dev_url:
+    if settings.app_env in ("development", "test") and dev_url:
         response.dev_reset_url = dev_url
         print(f"[auth] Dev reset link: {dev_url}")
     return response

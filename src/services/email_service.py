@@ -9,6 +9,10 @@ from src.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _dev_email_fallback_allowed() -> bool:
+    return get_settings().app_env in ("development", "test")
+
+
 def smtp_configured() -> bool:
     settings = get_settings()
     return bool(settings.smtp_host.strip() and settings.smtp_from.strip())
@@ -24,11 +28,12 @@ def send_signup_verification_email(*, to_email: str, code: str) -> tuple[bool, s
         "If you did not request this, you can ignore this email."
     )
 
+    if _dev_email_fallback_allowed():
+        logger.info("[auth] Dev signup code for %s: %s", to_email, code)
+        print(f"[auth] Dev signup verification code for {to_email}: {code}")
+        return True, None
+
     if not smtp_configured():
-        if settings.app_env == "development":
-            logger.info("[auth] Dev signup code for %s: %s", to_email, code)
-            print(f"[auth] Dev signup verification code for {to_email}: {code}")
-            return True, None
         return False, "Email delivery is not configured."
 
     msg = EmailMessage()
