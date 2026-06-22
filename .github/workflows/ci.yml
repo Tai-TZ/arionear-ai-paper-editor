@@ -21,7 +21,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: self-hosted
+    runs-on: ${{ vars.USE_UBUNTU_RUNNER == 'true' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "cohort2"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: self-hosted
+    runs-on: ${{ vars.USE_UBUNTU_RUNNER == 'true' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "cohort2"]') }}
     needs: lint
     steps:
       - name: Checkout
