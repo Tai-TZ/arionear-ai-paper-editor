@@ -12,7 +12,8 @@ type ProjectsCopy = {
   importBtn: string;
   importZip: string;
   importTexFigures: string;
-  newBtn: string;
+  importFolder: string;
+  uploadLatex: string;
   blankProject: string;
   sampleProject: string;
   manuscriptDesk: string;
@@ -41,9 +42,10 @@ type ProjectsCopy = {
   creatingBlank: string;
   uploading: string;
   importingZip: string;
-  errorLoad: string;
+  importingZipDetail: string;
   errorCreate: string;
   errorUpload: string;
+  errorNoTex: string;
   errorImport: string;
   errorRename: string;
   errorDelete: string;
@@ -61,6 +63,8 @@ const EN: ProjectsCopy = {
   importBtn: "Import",
   importZip: "Overleaf ZIP",
   importTexFigures: "Upload .tex + figures",
+  importFolder: "Upload project folder",
+  uploadLatex: "Upload LaTeX",
   newBtn: "New",
   blankProject: "Blank project",
   sampleProject: "Sample project",
@@ -90,9 +94,11 @@ const EN: ProjectsCopy = {
   creatingBlank: "Creating blank project…",
   uploading: "Uploading project…",
   importingZip: "Importing Overleaf ZIP…",
+  importingZipDetail: "Extracting files and uploading to your account…",
   errorLoad: "Failed to load projects.",
   errorCreate: "Failed to create project.",
   errorUpload: "Failed to upload project.",
+  errorNoTex: "Select at least one .tex file.",
   errorImport: "ZIP import failed.",
   errorRename: "Failed to rename project.",
   errorDelete: "Failed to delete project.",
@@ -110,6 +116,8 @@ const VI: ProjectsCopy = {
   importBtn: "Nhập",
   importZip: "Overleaf ZIP",
   importTexFigures: "Tải .tex + hình",
+  importFolder: "Tải thư mục dự án",
+  uploadLatex: "Tải LaTeX",
   newBtn: "Tạo mới",
   blankProject: "Dự án trống",
   sampleProject: "Dự án mẫu",
@@ -139,9 +147,11 @@ const VI: ProjectsCopy = {
   creatingBlank: "Đang tạo dự án trống…",
   uploading: "Đang tải dự án…",
   importingZip: "Đang nhập Overleaf ZIP…",
+  importingZipDetail: "Đang giải nén và tải lên tài khoản của bạn…",
   errorLoad: "Không tải được danh sách dự án.",
   errorCreate: "Không tạo được dự án.",
   errorUpload: "Tải dự án thất bại.",
+  errorNoTex: "Hãy chọn ít nhất một file .tex.",
   errorImport: "Nhập ZIP thất bại.",
   errorRename: "Đổi tên dự án thất bại.",
   errorDelete: "Xóa dự án thất bại.",

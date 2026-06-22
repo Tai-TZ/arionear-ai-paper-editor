@@ -5,10 +5,17 @@ from typing import TYPE_CHECKING
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
-from src.config import LLMProvider, Settings, get_settings
+from src.config import LLMProvider, Settings, get_settings, normalize_llm_provider
 
 if TYPE_CHECKING:
     pass
+
+# TokenRouter — MiniMax M3 (OpenAI-compatible API).
+TOKENROUTER_MINIMAX_M3_MODEL = "MiniMax-M3"
+TOKENROUTER_MINIMAX_M3_TEMPERATURE = 1.0
+
+# Backward-compatible aliases (logic audit / chat_stream imports).
+MINIMAX_M3_TEMPERATURE = TOKENROUTER_MINIMAX_M3_TEMPERATURE
 
 
 def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None) -> str:
@@ -19,7 +26,7 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
         "anthropic": settings.anthropic_default_model,
         "openrouter": settings.openrouter_default_model,
         "zai": settings.zai_default_model,
-        "nvidia": settings.nvidia_default_model,
+        "tokenrouter": settings.tokenrouter_default_model,
     }
     return defaults.get(provider, settings.model_name)
 
@@ -30,7 +37,7 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
         "zai": settings.zai_api_key,
-        "nvidia": settings.nvidia_api_key,
+        "tokenrouter": settings.tokenrouter_api_key,
     }
     key = keys.get(provider, "")
     if not key:
@@ -41,6 +48,52 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
     return key
 
 
+def resolve_tokenrouter_model(_model: str | None = None) -> str:
+    """TokenRouter provider always uses MiniMax-M3."""
+    return TOKENROUTER_MINIMAX_M3_MODEL
+
+
+def is_minimax_m3_provider(provider: str | None) -> bool:
+    normalized = normalize_llm_provider(provider)
+    return normalized == "tokenrouter"
+
+
+def extract_llm_text(response: object) -> str:
+    """Merge visible content and reasoning_content (MiniMax M3 / thinking models)."""
+    content = str(getattr(response, "content", None) or "").strip()
+    if content:
+        return content
+    extra = getattr(response, "additional_kwargs", None) or {}
+    if isinstance(extra, dict):
+        reasoning = extra.get("reasoning_content")
+        if isinstance(reasoning, str) and reasoning.strip():
+            return reasoning.strip()
+    return ""
+
+
+def extract_llm_stream_deltas(chunk: object) -> tuple[str, str]:
+    """Return (content_delta, reasoning_delta) from a streaming chunk."""
+    content_delta = ""
+    reasoning_delta = ""
+    raw_content = getattr(chunk, "content", None)
+    if isinstance(raw_content, str):
+        content_delta = raw_content
+    elif isinstance(raw_content, list):
+        for part in raw_content:
+            if isinstance(part, str):
+                content_delta += part
+            elif isinstance(part, dict):
+                text = part.get("text")
+                if isinstance(text, str):
+                    content_delta += text
+    extra = getattr(chunk, "additional_kwargs", None) or {}
+    if isinstance(extra, dict):
+        reasoning = extra.get("reasoning_content")
+        if isinstance(reasoning, str):
+            reasoning_delta = reasoning
+    return content_delta, reasoning_delta
+
+
 def get_llm(
     provider: LLMProvider | None = None,
     model: str | None = None,
@@ -49,9 +102,17 @@ def get_llm(
 ) -> BaseChatModel:
     """Return a chat model for OpenAI, Anthropic, OpenRouter, or Z.AI (GLM)."""
     settings = get_settings()
-    provider = provider or settings.llm_provider
-    model_name = _resolve_model(settings, provider, model)
-    temp = temperature if temperature is not None else settings.llm_temperature
+    provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
+    if provider == "tokenrouter":
+        model_name = resolve_tokenrouter_model(model)
+        temp = (
+            temperature
+            if temperature is not None
+            else TOKENROUTER_MINIMAX_M3_TEMPERATURE
+        )
+    else:
+        model_name = _resolve_model(settings, provider, model)
+        temp = temperature if temperature is not None else settings.llm_temperature
 
     if provider == "openai":
         return ChatOpenAI(
@@ -103,20 +164,13 @@ def get_llm(
             extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
         )
 
-    if provider == "nvidia":
-        try:
-            from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        except ImportError as exc:
-            raise ValueError(
-                "NVIDIA provider requires langchain-nvidia-ai-endpoints. "
-                "Install with: pip install langchain-nvidia-ai-endpoints"
-            ) from exc
-        return ChatNVIDIA(
+    if provider == "tokenrouter":
+        return ChatOpenAI(
             model=model_name,
-            api_key=_resolve_api_key(settings, "nvidia"),
+            api_key=_resolve_api_key(settings, "tokenrouter"),
+            base_url=settings.tokenrouter_base_url,
             temperature=temp,
-            top_p=0.95,
-            max_completion_tokens=8192,
+            max_tokens=8192,
         )
 
     raise ValueError(f"Unsupported LLM provider: {provider}")
@@ -159,8 +213,8 @@ ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
     ("glm-4.7", "GLM-4.7 · quality"),
 ]
 
-NVIDIA_MODEL_CATALOG: list[tuple[str, str]] = [
-    ("minimaxai/minimax-m3", "MiniMax M3 · reasoning"),
+TOKENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("MiniMax-M3", "MiniMax M3 · reasoning"),
 ]
 
 
@@ -229,14 +283,14 @@ def list_providers() -> list[dict]:
             }
         )
 
-    if settings.nvidia_api_key:
-        default = settings.nvidia_default_model
+    if settings.tokenrouter_api_key:
+        default = resolve_tokenrouter_model(settings.tokenrouter_default_model)
         providers.append(
             {
-                "id": "nvidia",
-                "name": "NVIDIA NIM (MiniMax)",
+                "id": "tokenrouter",
+                "name": "TokenRouter (MiniMax M3)",
                 "default_model": default,
-                "models": _model_options(NVIDIA_MODEL_CATALOG, default),
+                "models": _model_options(TOKENROUTER_MODEL_CATALOG, default),
             }
         )
 

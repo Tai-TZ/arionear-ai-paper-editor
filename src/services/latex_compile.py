@@ -265,6 +265,58 @@ def _strip_droppable_packages(latex: str) -> str:
     )
 
 
+_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf", ".eps")
+
+
+def _figure_available(fig_path: str, work_dir: Path) -> bool:
+    """True when a figure file exists for an \\includegraphics path (with or without extension)."""
+    normalized = fig_path.replace("\\", "/").strip()
+    if not normalized:
+        return False
+
+    rel = Path(normalized)
+    candidates: list[Path] = [work_dir / rel]
+    if not rel.suffix:
+        for ext in _IMAGE_EXTENSIONS:
+            candidates.append(work_dir / f"{normalized}{ext}")
+
+    name = rel.name
+    stem = Path(name).stem if "." in name else name
+    for ext in ("", *_IMAGE_EXTENSIONS):
+        candidates.append(work_dir / f"{name}{ext}")
+        candidates.append(work_dir / f"{stem}{ext}")
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if candidate.is_file() and candidate.stat().st_size > 0:
+            return True
+
+    stem_guess = rel.stem if rel.suffix else normalized.split("/")[-1]
+    for ext in _IMAGE_EXTENSIONS:
+        if any(work_dir.rglob(f"*{stem_guess}{ext}")):
+            return True
+    return False
+
+
+def _mirror_figure_assets_to_root(work_dir: Path) -> None:
+    """Copy figures to compile root so basename-only \\includegraphics{} resolves."""
+    for path in work_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in _IMAGE_EXTENSIONS:
+            continue
+        root_copy = work_dir / path.name
+        if root_copy.resolve() != path.resolve() and not root_copy.exists():
+            shutil.copy2(path, root_copy)
+
+
 def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> str:
     prepared = latex.replace(
         "[font=Medium, justification=raggedright]{caption}",
@@ -274,7 +326,7 @@ def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> 
 
     figure_paths = re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", prepared)
     missing_figures = [
-        path for path in figure_paths if path.replace("\\", "/").split("/")[-1] not in asset_names
+        path for path in figure_paths if not _figure_available(path, work_dir)
     ]
     if missing_figures and "\\usepackage{graphicx}" in prepared:
         prepared = prepared.replace(
@@ -519,6 +571,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
             dest = work_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(_decode_asset_payload(asset.content_base64))
+
+        _mirror_figure_assets_to_root(work_dir)
 
         patched_latex, fallback_warnings = _force_apply_known_fallbacks(request.latex)
         if fallback_warnings:

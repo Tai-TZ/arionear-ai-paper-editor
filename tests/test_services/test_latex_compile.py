@@ -32,6 +32,28 @@ def test_safe_asset_path_rejects_traversal():
     assert lc._safe_asset_path("figures/a.png") is not None
 
 
+def test_figure_available_matches_extensionless_includegraphics(tmp_path):
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    (figures / "architecture.png").write_bytes(b"\x89PNG\r\n")
+
+    assert lc._figure_available("figures/architecture", tmp_path) is True
+    assert lc._figure_available("architecture", tmp_path) is True
+
+
+def test_prepare_latex_source_keeps_graphicx_when_figure_exists(tmp_path):
+    (tmp_path / "diagram.pdf").write_bytes(b"%PDF-1.4")
+    latex = r"\usepackage{graphicx}\includegraphics{diagram}"
+    prepared = lc._prepare_latex_source(latex, tmp_path, set())
+    assert "[demo]{graphicx}" not in prepared
+
+
+def test_prepare_latex_source_uses_demo_when_figure_missing(tmp_path):
+    latex = r"\usepackage{graphicx}\includegraphics{missing-figure}"
+    prepared = lc._prepare_latex_source(latex, tmp_path, set())
+    assert "[demo]{graphicx}" in prepared
+
+
 def test_force_apply_known_fallbacks():
     src = r"\documentclass{RevDigMatEduInt}"
     patched, warnings = lc._force_apply_known_fallbacks(src)

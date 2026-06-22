@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppLoadingScreen } from "@/components/app-loading-screen";
 import {
   Search,
   LayoutGrid,
@@ -25,9 +24,9 @@ import {
 } from "@/components/workspace/workspace-layout";
 import {
   createPaper,
+  createPaperFromImport,
   deletePaper,
   fetchPapers,
-  addPaperAssets,
   updatePaper,
 } from "@/lib/api/papers-api";
 import {
@@ -35,11 +34,10 @@ import {
   SAMPLE_LATEX,
   formatTimeAgo,
   formatProjectDateTime,
-  inferProjectName,
-  isImageAssetFile,
-  readFileAsDataUrl,
+  isTexFile,
   type StoredProject,
 } from "@/lib/project-store";
+import { importLatexFileList, type LatexImportResult } from "@/lib/latex-import";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
@@ -74,10 +72,12 @@ function ProjectsPage() {
   const { locale } = useLocale();
   const t = useMemo(() => projectsCopy(locale), [locale]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingLabel, setCreatingLabel] = useState<string | null>(null);
+  const [creatingDetail, setCreatingDetail] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -135,6 +135,18 @@ function ProjectsPage() {
     });
   };
 
+  const handleImportedProject = async (imported: LatexImportResult) => {
+    const project = await createPaperFromImport(imported);
+    setProjects((prev) => [project, ...prev]);
+    const imageCount = (project.assets ?? []).filter((a) =>
+      /\.(png|jpe?g|gif|webp|svg|pdf|eps)$/i.test(a.name),
+    ).length;
+    toast.success(
+      `Đã import ${imported.files.length} file .tex, ${imageCount} ảnh (${(project.assets ?? []).length} assets).`,
+    );
+    openEditor(project.id);
+  };
+
   const handleCreateSample = async () => {
     setCreatingLabel(t.creatingSample);
     setNewMenuOpen(false);
@@ -165,59 +177,46 @@ function ProjectsPage() {
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
     if (!files.length) return;
 
-    const texFile = files.find((f) => /\.(tex|latex)$/i.test(f.name));
-    if (!texFile) return;
+    if (!files.some((f) => isTexFile(f.name))) {
+      setLoadError(t.errorNoTex);
+      return;
+    }
 
     setCreatingLabel(t.uploading);
     setImportMenuOpen(false);
+    setNewMenuOpen(false);
     try {
-      const text = await texFile.text();
-      const name = inferProjectName(text, texFile.name.replace(/\.(tex|latex)$/i, ""));
-      let project = await createPaper(name, text);
-
-      const imageFiles = files.filter((f) => isImageAssetFile(f.name));
-      if (imageFiles.length) {
-        const uploaded = await Promise.all(imageFiles.map(readFileAsDataUrl));
-        project = await addPaperAssets(project.id, uploaded);
-      }
-
-      setProjects((prev) => [project, ...prev]);
-      openEditor(project.id);
+      const imported = await importLatexFileList(files);
+      await handleImportedProject(imported);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : t.errorUpload);
     } finally {
       setCreatingLabel(null);
-      e.target.value = "";
     }
   };
 
   const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     setCreatingLabel(t.importingZip);
+    setCreatingDetail(t.importingZipDetail);
     setImportMenuOpen(false);
+    setNewMenuOpen(false);
+    setLoadError(null);
     try {
       const imported = await importOverleafZip(file);
-      const mainContent =
-        imported.files.find((f) => f.path === imported.mainFile)?.content ?? "";
-      let project = await createPaper(imported.name, mainContent, {
-        files: imported.files,
-        mainFile: imported.mainFile,
-        compiler: imported.compiler,
-        assets: imported.assets,
-      });
-      if (imported.assets.length) {
-        project = await addPaperAssets(project.id, imported.assets);
-      }
-      setProjects((prev) => [project, ...prev]);
-      openEditor(project.id);
+      await handleImportedProject(imported);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t.errorImport);
+      const message = error instanceof Error ? error.message : t.errorImport;
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setCreatingLabel(null);
-      e.target.value = "";
+      setCreatingDetail(null);
     }
   };
 
@@ -259,15 +258,29 @@ function ProjectsPage() {
         navigate({ to: "/signin" });
       }}
     >
-      {creatingLabel ? (
-        <AppLoadingScreen label={creatingLabel} variant="overlay" />
-      ) : null}
+      {creatingLabel && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">{creatingLabel}</p>
+          {creatingDetail ? (
+            <p className="max-w-sm px-6 text-center text-xs text-muted-foreground">{creatingDetail}</p>
+          ) : null}
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps"
+        accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
         multiple
         className="hidden"
+        onChange={handleUpload}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
         onChange={handleUpload}
       />
       <input
@@ -344,6 +357,13 @@ function ProjectsPage() {
                       {t.importZip}
                     </button>
                     <button
+                      onClick={() => folderInputRef.current?.click()}
+                      className="projects-menu-item"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      {t.importFolder}
+                    </button>
+                    <button
                       onClick={() => fileInputRef.current?.click()}
                       className="projects-menu-item"
                     >
@@ -379,6 +399,15 @@ function ProjectsPage() {
                     <Sparkles className="h-3.5 w-3.5" />
                     {t.sampleProject}
                   </button>
+                  {SHOW_PROJECTS_UPLOAD && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="projects-menu-item"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {t.uploadLatex}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -402,7 +431,10 @@ function ProjectsPage() {
             </div>
           )}
           {loading ? (
-            <AppLoadingScreen label={t.loading} variant="inline" className="py-12" />
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{t.loading}</p>
+            </div>
           ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}

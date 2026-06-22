@@ -34,7 +34,7 @@ PROVIDER_LABELS = {
     "anthropic": "Anthropic",
     "openrouter": "OpenRouter",
     "zai": "Z.AI",
-    "nvidia": "NVIDIA NIM",
+    "tokenrouter": "TokenRouter (MiniMax M3)",
 }
 
 
@@ -227,10 +227,10 @@ def get_global_llm_config() -> LlmGlobalConfigResponse:
             default_model=settings.zai_default_model,
         ),
         LlmProviderStatus(
-            id="nvidia",
-            label=PROVIDER_LABELS["nvidia"],
-            configured=bool(settings.nvidia_api_key.strip()),
-            default_model=settings.nvidia_default_model,
+            id="tokenrouter",
+            label=PROVIDER_LABELS["tokenrouter"],
+            configured=bool(settings.tokenrouter_api_key.strip()),
+            default_model=settings.tokenrouter_default_model,
         ),
     ]
     return LlmGlobalConfigResponse(

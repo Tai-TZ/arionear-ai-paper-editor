@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, forwardRef } from "react";
+import { useCallback, useEffect, useRef, useState, forwardRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -18,15 +18,20 @@ import {
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
-import { CHAT_SLASH_HINTS } from "@/lib/chat-commands";
+import { CHAT_SLASH_HINTS, filterSlashCommands, getSlashCommandQuery, slashCommandInsert, type SlashCommandDef } from "@/lib/chat-commands";
+import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
+import { filterDisplaySteps } from "@/lib/api/academic";
+import { AiLoadingState } from "@/components/ai-loading-state";
 
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   activities?: string[];
   aiSteps?: ChatAiStep[];
-  reasoning?: string;
+  /** Latest SSE step label while streaming */
+  streamLabel?: string;
+  streamElapsedSec?: number | null;
   isStreaming?: boolean;
 };
 
@@ -51,8 +56,6 @@ type ChatDockProps = {
   onStop?: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
-  liveActivity?: string | null;
-  streamAiSteps?: ChatAiStep[];
   providers?: ProviderInfo[];
   llmProvider?: LLMProvider;
   llmModel?: string;
@@ -62,6 +65,7 @@ type ChatDockProps = {
   composerMode?: "normal" | "quick-edit";
   selectionContext?: EditorSelectionContext | null;
   onClearSelectionContext?: () => void;
+  streamProgress?: ChatStreamProgressSnapshot;
 };
 
 export function ChatOverlay(props: ChatDockProps) {
@@ -79,8 +83,6 @@ export function ChatDock({
   onStop,
   chatEndRef,
   chatLoading,
-  liveActivity,
-  streamAiSteps = [],
   providers,
   llmProvider,
   llmModel,
@@ -90,7 +92,13 @@ export function ChatDock({
   composerMode = "normal",
   selectionContext = null,
   onClearSelectionContext,
+  streamProgress: streamProgressProp,
 }: ChatDockProps) {
+  const subscribedProgress = useChatStreamProgress();
+  const streamProgress = streamProgressProp ?? subscribedProgress;
+  const { activity: liveActivity, steps: streamAiSteps, activities: streamActivities, waitElapsedSec } =
+    streamProgress;
+  const displaySteps = useMemo(() => filterDisplaySteps(streamAiSteps), [streamAiSteps]);
   const dockRef = useRef<HTMLElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const [panelH, setPanelH] = useState(300);
@@ -144,7 +152,7 @@ export function ChatDock({
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [open, messages, chatLoading, liveActivity, chatEndRef]);
+  }, [open, messages, chatLoading, liveActivity, displaySteps, chatEndRef]);
 
   const persistPanelHeight = useCallback((height: number) => {
     try {
@@ -209,7 +217,7 @@ export function ChatDock({
       ? "Mô tả cách sửa đoạn đã chọn…"
       : selectionContext
         ? "Hỏi về vùng đã chọn…"
-        : "Hỏi Ario… (thử /logic, /style, /citation)";
+        : "Hỏi Ario… hoặc gõ / để chọn lệnh";
 
   return (
     <aside
@@ -279,7 +287,7 @@ export function ChatDock({
             messages={messages}
             chatEndRef={chatEndRef}
             chatLoading={chatLoading}
-            liveActivity={liveActivity}
+            streamProgress={streamProgress}
           />
         </div>
       )}
@@ -293,7 +301,13 @@ export function ChatDock({
         )}
 
         {chatLoading && !open && (
-          <ChatProgressStrip activity={liveActivity} steps={streamAiSteps} />
+          <AiLoadingState
+            compact
+            steps={displaySteps}
+            activities={streamActivities}
+            activity={liveActivity}
+            waitElapsedSec={waitElapsedSec}
+          />
         )}
 
         {composerMode === "quick-edit" && (
@@ -371,99 +385,45 @@ function copyText(text: string) {
 function assistantHasBody(message: ChatMessage): boolean {
   return Boolean(
     message.content?.trim() ||
-      message.reasoning?.trim() ||
+      message.streamLabel?.trim() ||
       (message.activities?.length ?? 0) > 0 ||
-      (message.aiSteps?.length ?? 0) > 0,
+      filterDisplaySteps(message.aiSteps ?? []).length > 0,
   );
 }
 
-function ChatProgressStrip({
-  activity,
-  steps,
-}: {
+export function ChatProgressStrip(props: {
   activity?: string | null;
   steps: ChatAiStep[];
+  activities?: string[];
+  waitElapsedSec?: number | null;
 }) {
-  const active = steps.find((s) => s.status === "active");
-  const label = active?.label ?? activity ?? "Đang xử lý…";
-  const detail = active?.detail ?? "";
-
-  return (
-    <div className="chat-progress-strip" role="status" aria-live="polite" aria-atomic="true">
-      <div className="chat-progress-strip-head">
-        <span className="chat-progress-strip-dot" aria-hidden />
-        <span className="chat-progress-strip-label">{label}</span>
-        {detail ? <span className="chat-progress-strip-detail">{detail}</span> : null}
-      </div>
-      {steps.length > 0 && (
-        <ol className="chat-progress-mini-steps">
-          {steps.map((step) => (
-            <li
-              key={step.id}
-              className={`chat-progress-mini-step chat-progress-mini-step--${step.status}`}
-              title={step.detail ? `${step.label} — ${step.detail}` : step.label}
-            >
-              <span className="chat-progress-mini-icon" aria-hidden>
-                {step.status === "done" ? "✓" : step.status === "active" ? "●" : "○"}
-              </span>
-              <span className="chat-progress-mini-label">{step.label}</span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  );
+  return <AiLoadingState compact {...props} />;
 }
 
-function ChatThinkingIndicator({ label }: { label: string }) {
-  return (
-    <div className="chat-thinking-row">
-      <span className="chat-thinking-dot" aria-hidden />
-      <span className="chat-thinking-label">{label}</span>
-    </div>
-  );
-}
-
-function ChatAiStatePanel({ steps }: { steps: ChatAiStep[] }) {
-  if (!steps.length) return null;
-
-  return (
-    <div className="chat-ai-state" role="status" aria-live="polite" aria-atomic="false">
-      <p className="chat-ai-state-title">Tiến trình xử lý</p>
-      <ol className="chat-ai-steps">
-        {steps.map((step) => (
-          <li
-            key={step.id}
-            className={`chat-ai-step chat-ai-step--${step.status}`}
-            data-status={step.status}
-          >
-            <span className="chat-ai-step-icon" aria-hidden>
-              {step.status === "done" ? "✓" : step.status === "active" ? "●" : "○"}
-            </span>
-            <span className="chat-ai-step-body">
-              <span className="chat-ai-step-label">{step.label}</span>
-              {step.detail ? (
-                <span className="chat-ai-step-detail">{step.detail}</span>
-              ) : null}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
+function ChatAiStatePanel(props: {
+  steps: ChatAiStep[];
+  activities?: string[];
+  activity?: string | null;
+  waitElapsedSec?: number | null;
+}) {
+  return <AiLoadingState {...props} />;
 }
 
 export function ChatMessages({
   messages,
   chatEndRef,
   chatLoading,
-  liveActivity,
+  streamProgress: streamProgressProp,
 }: {
   messages: ChatMessage[];
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
-  liveActivity?: string | null;
+  streamProgress?: ChatStreamProgressSnapshot;
 }) {
+  const hookProgress = useChatStreamProgress();
+  const progress = streamProgressProp ?? hookProgress;
+  const liveActivity = progress.activity;
+  const waitElapsedSec = progress.waitElapsedSec;
   const visibleMessages = messages.filter(
     (m) => m.role === "user" || assistantHasBody(m) || m.isStreaming,
   );
@@ -496,61 +456,39 @@ export function ChatMessages({
         }
 
         const isLast = i === visibleMessages.length - 1;
-        const waitingForFirstChunk = m.isStreaming && !assistantHasBody(m);
-        const hasAiSteps = (m.aiSteps?.length ?? 0) > 0;
-        const thinkingLabel =
-          (isLast && liveActivity) ||
-          m.aiSteps?.find((s) => s.status === "active")?.label ||
-          m.activities?.[m.activities.length - 1] ||
-          "Đang xử lý…";
+        const isStreamingAssistant = Boolean(isLast && m.isStreaming);
+        const liveSteps = m.aiSteps ?? [];
+        const liveActivities = m.activities ?? [];
+        const hasAiSteps = filterDisplaySteps(liveSteps).length > 0;
+        const hasActivities = liveActivities.length > 0;
+        const hasLiveProgress = Boolean(
+          isStreamingAssistant &&
+            (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
+        );
+        const showLoadingState = Boolean(
+          isStreamingAssistant && (hasLiveProgress || chatLoading) && !m.content,
+        );
 
         return (
           <div key={i} className="chat-message-row chat-assistant-row">
             <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
-            {waitingForFirstChunk ? (
-              <ChatThinkingIndicator label={thinkingLabel} />
-            ) : (
-              <div className="chat-assistant-content min-w-0 flex-1">
-                {hasAiSteps && (
-                  <ChatAiStatePanel steps={m.aiSteps!} />
-                )}
-                {!hasAiSteps && (m.activities?.length ?? 0) > 0 && (
-                  <ul className="chat-activity-feed mb-2 space-y-0.5">
-                    {m.activities!.map((line, j) => (
-                      <li
-                        key={j}
-                        className={`font-mono text-[10px] leading-snug text-[var(--chat-muted)] ${
-                          m.isStreaming && j === m.activities!.length - 1
-                            ? "chat-activity-live"
-                            : ""
-                        }`}
-                      >
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {m.reasoning && (
-                  <p className="chat-reasoning-block mb-2 text-[11px] italic leading-snug text-[var(--chat-muted)]">
-                    {m.reasoning}
-                    {m.isStreaming && !m.content && (
-                      <span className="chat-stream-cursor" aria-hidden />
-                    )}
-                  </p>
-                )}
-                {m.content && (
-                  <div className="chat-assistant-text">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                  </div>
-                )}
-                {m.isStreaming && m.content && (
-                  <span className="chat-stream-cursor" aria-hidden />
-                )}
-                {m.isStreaming && assistantHasBody(m) && !m.content && !m.reasoning && (
-                  <ChatThinkingIndicator label={thinkingLabel} />
-                )}
-              </div>
-            )}
+            <div className="chat-assistant-content min-w-0 flex-1">
+              {showLoadingState && (
+                <ChatAiStatePanel
+                  steps={liveSteps}
+                  activities={liveActivities}
+                  activity={m.streamLabel ?? liveActivity}
+                />
+              )}
+              {m.content && (
+                <div className="chat-assistant-text">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                </div>
+              )}
+              {m.isStreaming && m.content && (
+                <span className="chat-stream-cursor" aria-hidden />
+              )}
+            </div>
           </div>
         );
       })}
@@ -582,6 +520,43 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
   },
   ref,
 ) {
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const internalRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const setRefs = useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
+
+  const slashQuery = useMemo(() => getSlashCommandQuery(chatInput), [chatInput]);
+  const filteredCommands = useMemo(
+    () => (slashQuery !== null ? filterSlashCommands(slashQuery) : []),
+    [slashQuery],
+  );
+  const showSlashMenu =
+    !disabled && slashQuery !== null && filteredCommands.length > 0;
+
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [slashQuery, filteredCommands.length]);
+
+  const applySlashCommand = useCallback(
+    (cmd: SlashCommandDef) => {
+      onChatInputChange(slashCommandInsert(cmd.command));
+      requestAnimationFrame(() => {
+        const el = internalRef.current;
+        el?.focus();
+        const len = el?.value.length ?? 0;
+        el?.setSelectionRange(len, len);
+      });
+    },
+    [onChatInputChange],
+  );
+
   const canSend = chatInput.trim().length > 0 && !disabled;
 
   const handlePrimaryAction = () => {
@@ -593,38 +568,96 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
   };
 
   return (
-    <div className="chat-input-shell">
-      <textarea
-        ref={ref}
-        value={chatInput}
-        onChange={(e) => onChatInputChange(e.target.value)}
-        onFocus={() => onActivate?.()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (!loading) onSend();
-          }
-        }}
-        placeholder={placeholder}
-        rows={1}
-        className="chat-input-field"
-      />
-      <div className="chat-input-actions">
-        <button type="button" className="chat-input-icon-btn" aria-label="Add context">
-          <Plus className="h-4 w-4" />
-        </button>
-        <button type="button" className="chat-input-icon-btn" aria-label="Voice input">
-          <AudioLines className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handlePrimaryAction}
-          disabled={!loading && !canSend}
-          className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
-          aria-label={loading ? "Dừng xử lý" : "Send message"}
+    <div className="chat-input-wrap">
+      {showSlashMenu && (
+        <div
+          className="chat-slash-menu soft-scrollbar"
+          role="listbox"
+          aria-label="Lệnh chat"
         >
-          {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-4 w-4" />}
-        </button>
+          {filteredCommands.map((cmd, index) => (
+            <button
+              key={cmd.command}
+              type="button"
+              role="option"
+              aria-selected={index === highlightIndex}
+              className={`chat-slash-menu-item${index === highlightIndex ? " chat-slash-menu-item--active" : ""}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                applySlashCommand(cmd);
+              }}
+              onMouseEnter={() => setHighlightIndex(index)}
+            >
+              <img src={arioAvatar} alt="" className="chat-slash-menu-icon" />
+              <span className="chat-slash-menu-body">
+                <span className="chat-slash-menu-cmd">/{cmd.command}</span>
+                <span className="chat-slash-menu-desc">{cmd.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="chat-input-shell">
+        <textarea
+          ref={setRefs}
+          value={chatInput}
+          onChange={(e) => onChatInputChange(e.target.value)}
+          onFocus={() => onActivate?.()}
+          onKeyDown={(e) => {
+            if (showSlashMenu) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightIndex((i) => Math.min(i + 1, filteredCommands.length - 1));
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightIndex((i) => Math.max(i - 1, 0));
+                return;
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                applySlashCommand(filteredCommands[highlightIndex] ?? filteredCommands[0]);
+                return;
+              }
+              if (e.key === "Tab") {
+                e.preventDefault();
+                applySlashCommand(filteredCommands[highlightIndex] ?? filteredCommands[0]);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                onChatInputChange("");
+                return;
+              }
+            }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (!loading) onSend();
+            }
+          }}
+          placeholder={placeholder}
+          rows={1}
+          className="chat-input-field"
+        />
+        <div className="chat-input-actions">
+          <button type="button" className="chat-input-icon-btn" aria-label="Add context">
+            <Plus className="h-4 w-4" />
+          </button>
+          <button type="button" className="chat-input-icon-btn" aria-label="Voice input">
+            <AudioLines className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handlePrimaryAction}
+            disabled={!loading && !canSend}
+            className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
+            aria-label={loading ? "Dừng xử lý" : "Send message"}
+          >
+            {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
     </div>
   );
