@@ -212,6 +212,7 @@ async def chat_stream(request: ChatRequest, http_request: Request):
                 "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
+                "Content-Encoding": "identity",
             },
         )
     except ValueError as e:

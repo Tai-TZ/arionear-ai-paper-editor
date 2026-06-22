@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.config import LLMProvider
+from src.config import LLMProvider, normalize_llm_provider
 
 ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
 
@@ -20,7 +20,16 @@ class ChatRequest(BaseModel):
     llm_model: str | None = None
     integrity_strictness: Literal["relaxed", "standard", "strict"] | None = None
 
-    @field_validator("llm_provider", "llm_model", "session_id", mode="before")
+    @field_validator("llm_provider", mode="before")
+    @classmethod
+    def _normalize_llm_provider(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        if isinstance(value, str):
+            return normalize_llm_provider(value)
+        return value
+
+    @field_validator("llm_model", "session_id", mode="before")
     @classmethod
     def _empty_optional_to_none(cls, value: object) -> object | None:
         if value == "":

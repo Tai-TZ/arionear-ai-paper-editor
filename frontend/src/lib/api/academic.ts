@@ -4,7 +4,12 @@ import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "nvidia";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "tokenrouter";
+
+export function normalizeLlmProvider(provider: string): LLMProvider {
+  if (provider === "nvidia") return "tokenrouter";
+  return provider as LLMProvider;
+}
 
 export type IntegrityFlag = {
   code: string;
@@ -43,15 +48,64 @@ export type ChatAiStatePayload = {
   elapsed_sec?: number;
 };
 
+const PROGRESS_NOISE_STEP_IDS = new Set(["logic-heartbeat"]);
+
+export function isProgressNoiseStep(stepId: string): boolean {
+  return PROGRESS_NOISE_STEP_IDS.has(stepId);
+}
+
+/** Steps worth showing in the chat progress UI (hide heartbeat + per-persona noise). */
+export function isDisplayProgressStep(stepId: string): boolean {
+  if (isProgressNoiseStep(stepId)) return false;
+  if (stepId.includes("persona-")) return false;
+  return true;
+}
+
+export function filterDisplaySteps(steps: ChatAiStep[]): ChatAiStep[] {
+  return steps.filter((step) => isDisplayProgressStep(step.id));
+}
+
+export function isProgressNoiseActivity(text: string): boolean {
+  return text.startsWith("Đang chờ model LLM");
+}
+
+const FEED_SKIP_STEP_IDS = new Set(["parse", "intent", "llm", "scope"]);
+
+/** Only append to the visible feed when a milestone completes (or logic audit starts). */
+export function isImportantFeedEvent(state: ChatAiStatePayload): boolean {
+  if (isProgressNoiseStep(state.step_id) || !isDisplayProgressStep(state.step_id)) {
+    return false;
+  }
+  if (FEED_SKIP_STEP_IDS.has(state.step_id)) return false;
+  if (state.step_id.endsWith("-synthesize") && state.status !== "done") return false;
+  if (state.status === "done") return true;
+  if (state.step_id === "logic-start") return true;
+  return false;
+}
+
+export function formatFeedLine(state: ChatAiStatePayload): string {
+  const prefix = state.status === "done" ? "✓ " : "● ";
+  return state.detail ? `${prefix}${state.label} — ${state.detail}` : `${prefix}${state.label}`;
+}
+
+export function appendImportantFeedLine(
+  activities: string[],
+  state: ChatAiStatePayload,
+): string[] {
+  if (!isImportantFeedEvent(state)) return activities;
+  const line = formatFeedLine(state);
+  if (activities[activities.length - 1] === line) return activities;
+  return [...activities, line];
+}
+
 export function applyAiState(
   steps: ChatAiStep[],
   payload: ChatAiStatePayload,
 ): ChatAiStep[] {
-  const next = steps.map((step) =>
-    step.status === "active" && step.id !== payload.step_id
-      ? { ...step, status: "done" as const }
-      : step,
-  );
+  if (isProgressNoiseStep(payload.step_id)) {
+    return steps;
+  }
+  const next = [...steps];
   const step: ChatAiStep = {
     id: payload.step_id,
     label: payload.label,
@@ -235,82 +289,60 @@ export async function syncSession(
 export type StreamChatCallbacks = {
   onActivity: (text: string) => void;
   onState?: (state: ChatAiStatePayload) => void;
-  onReasoning: (delta: string) => void;
+  onReasoning?: (delta: string) => void;
   onToken: (delta: string) => void;
   onDone: (result: ChatResult) => void;
   onError: (message: string) => void;
 };
 
+function normalizeSseText(text: string): string {
+  return text.replace(/\r\n/g, "\n");
+}
+
+function inferSseEventType(event: string, payload: Record<string, unknown>): string {
+  if (event !== "message") return event;
+  if (typeof payload.step_id === "string") return "state";
+  if (typeof payload.text === "string") return "activity";
+  if (typeof payload.stage === "string") return "trace";
+  if (typeof payload.delta === "string") return "token";
+  if (typeof payload.message === "string") return "error";
+  if ("response" in payload || "logic_audit_report" in payload) return "done";
+  return event;
+}
+
 function parseSseBlock(block: string): { event: string; data: string } | null {
+  const normalized = normalizeSseText(block.trim());
+  if (!normalized || normalized.startsWith(":")) return null;
   let event = "message";
   let data = "";
-  for (const line of block.split("\n")) {
+  for (const line of normalized.split("\n")) {
     if (line.startsWith("event:")) event = line.slice(6).trim();
-    if (line.startsWith("data:")) data += line.slice(5).trim();
+    else if (line.startsWith("data:")) data += line.slice(5).trim();
   }
   if (!data) return null;
   return { event, data };
 }
 
-export async function streamChat(
-  message: string,
-  opts: {
-    sessionId: string;
-    latexContent: string;
-    selection?: string;
-    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
-    integrity_strictness?: "relaxed" | "standard" | "strict";
-  } & LlmOptions,
-  callbacks: StreamChatCallbacks,
-  signal?: AbortSignal,
-): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}/chat/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-        "Cache-Control": "no-cache",
-      },
-      body: JSON.stringify(buildChatRequestBody(message, opts)),
-      signal,
-    });
-  } catch {
-    callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
-    return;
-  }
-
-  if (!res.ok || !res.body) {
-    let detail: unknown = res.statusText;
-    try {
-      const body = await res.json();
-      detail = body.detail ?? detail;
-    } catch {
-      /* ignore */
-    }
-    callbacks.onError(mapApiHttpError(res.status, detail));
-    return;
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+function createSseDispatcher(callbacks: StreamChatCallbacks): {
+  dispatchBlock: (block: string) => void;
+  isFinished: () => boolean;
+} {
   let finished = false;
 
-  const onAbort = () => {
-    void reader.cancel().catch(() => {});
-  };
-  signal?.addEventListener("abort", onAbort, { once: true });
-
-  const dispatch = (block: string) => {
+  const dispatchBlock = (block: string) => {
     const parsed = parseSseBlock(block);
     if (!parsed) return;
     try {
       const payload = JSON.parse(parsed.data) as Record<string, unknown>;
-      switch (parsed.event) {
+      const eventType = inferSseEventType(parsed.event, payload);
+      switch (eventType) {
         case "activity":
-          if (typeof payload.text === "string") callbacks.onActivity(payload.text);
+          if (
+            typeof payload.text === "string" &&
+            !isProgressNoiseActivity(payload.text)
+          ) {
+            callbacks.onActivity(payload.text);
+          }
           break;
         case "trace": {
           const stage = typeof payload.stage === "string" ? payload.stage : "";
@@ -339,7 +371,7 @@ export async function streamChat(
           break;
         }
         case "reasoning":
-          if (typeof payload.delta === "string") callbacks.onReasoning(payload.delta);
+          if (typeof payload.delta === "string") callbacks.onReasoning?.(payload.delta);
           break;
         case "token":
           if (typeof payload.delta === "string") callbacks.onToken(payload.delta);
@@ -364,6 +396,135 @@ export async function streamChat(
     }
   };
 
+  return {
+    dispatchBlock,
+    isFinished: () => finished,
+  };
+}
+
+function ingestSseText(
+  buffer: string,
+  incoming: string,
+  dispatchBlock: (block: string) => void,
+): string {
+  let next = normalizeSseText(buffer + incoming);
+  const parts = next.split("\n\n");
+  next = parts.pop() ?? "";
+  for (const part of parts) {
+    if (part.trim()) dispatchBlock(part);
+  }
+  return next;
+}
+
+/** XHR onprogress receives chunks as they arrive; fetch().body often buffers via dev proxy. */
+function streamChatWithXhr(
+  url: string,
+  body: string,
+  callbacks: StreamChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    const { dispatchBlock, isFinished } = createSseDispatcher(callbacks);
+    let buffer = "";
+    let responseSeen = 0;
+    let failed = false;
+
+    const finish = () => {
+      buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
+      if (!failed && !isFinished() && !signal?.aborted) {
+        callbacks.onError(
+          streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
+        );
+      }
+      resolve();
+    };
+
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Accept", "text/event-stream");
+    xhr.setRequestHeader("Cache-Control", "no-cache");
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.HEADERS_RECEIVED) return;
+      if (xhr.status >= 200 && xhr.status < 300) return;
+      failed = true;
+      let detail: unknown = xhr.statusText;
+      try {
+        detail = JSON.parse(xhr.responseText)?.detail ?? detail;
+      } catch {
+        /* ignore */
+      }
+      callbacks.onError(mapApiHttpError(xhr.status, detail));
+      xhr.abort();
+    };
+
+    xhr.onprogress = () => {
+      const chunk = xhr.responseText.slice(responseSeen);
+      responseSeen = xhr.responseText.length;
+      if (!chunk) return;
+      buffer = ingestSseText(buffer, chunk, dispatchBlock);
+    };
+
+    xhr.onload = finish;
+    xhr.onerror = () => {
+      if (!failed && !signal?.aborted) {
+        callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
+      }
+      resolve();
+    };
+    xhr.onabort = () => resolve();
+
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(body);
+  });
+}
+
+async function streamChatWithFetch(
+  url: string,
+  body: string,
+  callbacks: StreamChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+      body,
+      signal,
+    });
+  } catch {
+    callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
+    return;
+  }
+
+  if (!res.ok || !res.body) {
+    let detail: unknown = res.statusText;
+    try {
+      const parsed = await res.json();
+      detail = parsed.detail ?? detail;
+    } catch {
+      /* ignore */
+    }
+    callbacks.onError(mapApiHttpError(res.status, detail));
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const { dispatchBlock, isFinished } = createSseDispatcher(callbacks);
+  let buffer = "";
+
+  const onAbort = () => {
+    void reader.cancel().catch(() => {});
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+
   while (true) {
     let chunk: ReadableStreamReadResult<Uint8Array>;
     try {
@@ -375,22 +536,40 @@ export async function streamChat(
     }
     const { done, value } = chunk;
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-    for (const part of parts) {
-      if (part.trim()) dispatch(part);
-    }
+    buffer = ingestSseText(buffer, decoder.decode(value, { stream: true }), dispatchBlock);
   }
-  if (buffer.trim()) dispatch(buffer);
+  if (buffer.trim()) dispatchBlock(buffer);
 
-  if (!finished) {
+  if (!isFinished()) {
     if (signal?.aborted) return;
     callbacks.onError(
       streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
     );
   }
   signal?.removeEventListener("abort", onAbort);
+}
+
+export async function streamChat(
+  message: string,
+  opts: {
+    sessionId: string;
+    latexContent: string;
+    selection?: string;
+    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
+    integrity_strictness?: "relaxed" | "standard" | "strict";
+  } & LlmOptions,
+  callbacks: StreamChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  const url = `${API_BASE}/chat/stream`;
+  const body = JSON.stringify(buildChatRequestBody(message, opts));
+
+  if (typeof XMLHttpRequest !== "undefined") {
+    await streamChatWithXhr(url, body, callbacks, signal);
+    return;
+  }
+
+  await streamChatWithFetch(url, body, callbacks, signal);
 }
 
 export async function sendChat(

@@ -3,8 +3,10 @@ import { resolveApiBase } from "@/lib/api/base-url";
 import { mapApiHttpError } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
+import type { LatexImportResult } from "@/lib/latex-import";
 
 const API_BASE = resolveApiBase();
+const ASSET_UPLOAD_BATCH = 8;
 
 type PaperSummaryResponse = {
   id: string;
@@ -71,7 +73,9 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error("Cannot reach the server. Check that the backend is running.");
+    throw new Error(
+      "Không kết nối được server. Kiểm tra backend đang chạy (uvicorn port 8000) rồi thử lại.",
+    );
   }
 
   if (res.status === 204) {
@@ -113,10 +117,17 @@ export async function fetchPaper(id: string): Promise<StoredProject> {
   return toStoredProject(data);
 }
 
+export type CreatePaperMetadata = {
+  files?: ProjectFile[];
+  mainFile?: string;
+  compiler?: LatexCompiler;
+  assets?: ProjectAsset[];
+};
+
 export async function createPaper(
   name: string,
   latex: string,
-  metadata: Record<string, unknown> = {},
+  metadata: CreatePaperMetadata = {},
 ): Promise<StoredProject> {
   invalidateFetchPrefix("papers:");
   const data = await papersFetch<PaperResponse>("/papers", {
@@ -142,14 +153,12 @@ export async function updatePaper(
   } else if (
     patch.files !== undefined ||
     patch.mainFile !== undefined ||
-    patch.compiler !== undefined ||
-    patch.assets !== undefined
+    patch.compiler !== undefined
   ) {
     body.metadata = {
       ...(patch.files !== undefined ? { files: patch.files } : {}),
       ...(patch.mainFile !== undefined ? { mainFile: patch.mainFile } : {}),
       ...(patch.compiler !== undefined ? { compiler: patch.compiler } : {}),
-      ...(patch.assets !== undefined ? { assets: patch.assets } : {}),
     };
   }
 
@@ -171,4 +180,25 @@ export async function addPaperAssets(
   newAssets: ProjectAsset[],
 ): Promise<StoredProject> {
   return updatePaper(id, { assets: newAssets });
+}
+
+export async function createPaperFromImport(imported: LatexImportResult): Promise<StoredProject> {
+  const mainContent =
+    imported.files.find((f) => f.path === imported.mainFile)?.content ??
+    imported.files[0]?.content ??
+    "";
+
+  let project = await createPaper(imported.name, mainContent, {
+    files: imported.files,
+    mainFile: imported.mainFile,
+    compiler: imported.compiler,
+  });
+
+  const assets = imported.assets ?? [];
+  for (let i = 0; i < assets.length; i += ASSET_UPLOAD_BATCH) {
+    project = await addPaperAssets(project.id, assets.slice(i, i + ASSET_UPLOAD_BATCH));
+  }
+
+  invalidateFetchPrefix(`papers:${project.id}`);
+  return project;
 }

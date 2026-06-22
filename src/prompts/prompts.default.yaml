@@ -199,7 +199,7 @@ logic_synthesize:
       "consensus_notes": ["string"]
     }
 
-    Return ONLY valid JSON, no markdown fences.
+    Return ONLY valid JSON in the main response body — no markdown fences, no reasoning tags.
   user: |
     Persona outputs:
     {perspectives}

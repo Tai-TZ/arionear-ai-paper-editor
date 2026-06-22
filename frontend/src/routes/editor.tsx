@@ -43,11 +43,17 @@ import {
   updatePaper,
 } from "@/lib/api/papers-api";
 import {
+  appendImportantFeedLine,
   applyAiState,
   compileLatex,
   fetchCitationRegistry,
   fetchProviders,
   fetchRevisions,
+  filterDisplaySteps,
+  isImportantFeedEvent,
+  isProgressNoiseActivity,
+  isProgressNoiseStep,
+  normalizeLlmProvider,
   revisionAction,
   streamChat,
   syncSession,
@@ -60,7 +66,22 @@ import {
   type RevisionRecord,
 } from "@/lib/api/academic";
 import { parseChatSlashCommand } from "@/lib/chat-commands";
+import {
+  finishChatStreamProgress,
+  getChatStreamProgressSnapshot,
+  pushChatStreamActivity,
+  pushChatStreamState,
+  resetChatStreamProgress,
+  type ChatStreamProgressSnapshot,
+} from "@/lib/chat-stream-progress";
 import { importOverleafZip } from "@/lib/overleaf-import";
+import {
+  importLatexFileList,
+  mergeProjectAssets,
+  mergeProjectFiles,
+  type LatexImportResult,
+} from "@/lib/latex-import";
+import { toast } from "sonner";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { citationErrorMessage } from "@/lib/api/api-errors";
 import {
@@ -94,6 +115,7 @@ import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
+import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
@@ -115,10 +137,10 @@ export const Route = createFileRoute("/editor")({
   },
   head: () => ({
     meta: [
-      { title: "Editor — Arionear" },
+      { title: "Arionear - AI LaTeX Editor" },
       {
         name: "description",
-        content: "Upload LaTeX manuscripts and refine them with an AI academic writing assistant.",
+        content: "Upload LaTeX manuscripts and refine them with an AI LaTeX editor.",
       },
     ],
   }),
@@ -359,7 +381,9 @@ function EditorPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<PaperShareStatus | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
-  const [liveActivity, setLiveActivity] = useState<string | null>(null);
+  const [chatStreamProgress, setChatStreamProgress] = useState<ChatStreamProgressSnapshot>(
+    getChatStreamProgressSnapshot(),
+  );
   const chatAbortRef = useRef<AbortController | null>(null);
   const [selection, setSelection] = useState("");
   const [selectionPick, setSelectionPick] = useState<{
@@ -381,6 +405,7 @@ function EditorPage() {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -404,7 +429,7 @@ function EditorPage() {
         setAutoSave(profile.auto_save);
         setSynctexHighlightMs(profile.synctex_highlight_ms);
         setIntegrityStrictness(profile.integrity_strictness);
-        setLlmProvider(profile.default_llm_provider);
+        setLlmProvider(normalizeLlmProvider(profile.default_llm_provider));
         if (profile.default_llm_model) setLlmModel(profile.default_llm_model);
       })
       .catch(() => {
@@ -415,7 +440,7 @@ function EditorPage() {
         setAutoSave(cached.auto_save);
         setSynctexHighlightMs(cached.synctex_highlight_ms);
         setIntegrityStrictness(cached.integrity_strictness);
-        setLlmProvider(cached.default_llm_provider);
+        setLlmProvider(normalizeLlmProvider(cached.default_llm_provider));
         if (cached.default_llm_model) setLlmModel(cached.default_llm_model);
       });
     return () => {
@@ -643,12 +668,14 @@ function EditorPage() {
       .then((data) => {
         setProviders(data.providers);
         const profile = profilePrefsRef.current;
-        const profileProvider = profile?.default_llm_provider;
+        const profileProvider = profile?.default_llm_provider
+          ? normalizeLlmProvider(profile.default_llm_provider)
+          : undefined;
         const preferred =
           profileProvider && data.providers.some((p) => p.id === profileProvider)
             ? profileProvider
-            : data.default_provider;
-        setLlmProvider(preferred as LLMProvider);
+            : normalizeLlmProvider(data.default_provider);
+        setLlmProvider(preferred);
         const providerInfo = data.providers.find((p) => p.id === preferred);
         const preferredModel = profile?.default_llm_model;
         if (preferredModel && providerInfo?.models.some((m) => m.id === preferredModel)) {
@@ -678,72 +705,100 @@ function EditorPage() {
     }
   }, [messages, chatLoading]);
 
+  const applyImportedFiles = useCallback(
+    async (imported: LatexImportResult, replaceProject = false) => {
+      if (!projectId) return;
+
+      const filesWithActive = persistActiveFile(latex, projectFiles, activeFile);
+      const isLikelyBlank =
+        projectFiles.length <= 1 &&
+        (mainFile === "main.tex" || mainFile === activeFile) &&
+        (latex.trim().length < 400 || /\\title\{Untitled\}/.test(latex));
+
+      const mergedFiles = replaceProject
+        ? imported.files
+        : mergeProjectFiles(filesWithActive, imported.files);
+      const mergedAssets = replaceProject
+        ? imported.assets
+        : mergeProjectAssets(assets, imported.assets);
+      const nextMain =
+        replaceProject || isLikelyBlank ? imported.mainFile : mainFile;
+      const openPath = imported.mainFile;
+      const openContent =
+        mergedFiles.find((f) => f.path === openPath)?.content ??
+        mergedFiles.find((f) => f.path === nextMain)?.content ??
+        "";
+      const mainContent =
+        mergedFiles.find((f) => f.path === nextMain)?.content ?? openContent;
+      const nextName = replaceProject ? imported.name : projectName;
+      const nextCompiler =
+        replaceProject || imported.compiler !== "auto" ? imported.compiler : compiler;
+
+      setProjectFiles(mergedFiles);
+      setMainFile(nextMain);
+      setActiveFile(openPath);
+      setCompiler(nextCompiler);
+      resetHistory(openContent);
+      setSavedLatex(openContent);
+      if (replaceProject) setProjectName(imported.name);
+
+      let updated = await updatePaper(projectId, {
+        name: nextName,
+        latex: mainContent,
+        files: mergedFiles,
+        mainFile: nextMain,
+        compiler: nextCompiler,
+      });
+
+      const assetsToUpload = replaceProject ? mergedAssets : imported.assets;
+      const batchSize = 8;
+      for (let i = 0; i < assetsToUpload.length; i += batchSize) {
+        updated = await addPaperAssets(projectId, assetsToUpload.slice(i, i + batchSize));
+      }
+
+      setAssets(updated.assets ?? mergedAssets);
+      void syncSession(projectId, nextName, mainContent);
+    },
+    [
+      projectId,
+      latex,
+      projectFiles,
+      activeFile,
+      mainFile,
+      assets,
+      projectName,
+      compiler,
+      persistActiveFile,
+      resetHistory,
+    ],
+  );
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-
-    const texFiles = files.filter((f) => isTexFile(f.name));
-    const assetFiles = files.filter((f) => isProjectAssetFile(f.name));
-
-    if (texFiles.length) {
-      const imported = await Promise.all(
-        texFiles.map(async (f) => ({
-          path: normalizeAssetName(f.name),
-          content: await f.text(),
-        })),
-      );
-      const merged = [...projectFiles];
-      for (const file of imported) {
-        const idx = merged.findIndex((f) => f.path === file.path);
-        if (idx >= 0) merged[idx] = file;
-        else merged.push(file);
-      }
-      setProjectFiles(merged);
-      const open = imported[0];
-      if (open) {
-        setActiveFile(open.path);
-        recordNow(open.content);
-      }
-    }
-
-    if (assetFiles.length && projectId) {
-      const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-      const updated = await addPaperAssets(projectId, uploaded);
-      if (updated.assets) setAssets(updated.assets);
-    }
-
     e.target.value = "";
+    if (!files.length || !projectId) return;
+
+    try {
+      const imported = await importLatexFileList(files);
+      await applyImportedFiles(imported, false);
+      toast.success(`Imported ${imported.files.length} LaTeX file(s).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed.");
+    }
   };
 
   const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file || !projectId) return;
+
     try {
       const imported = await importOverleafZip(file);
-      setProjectFiles(imported.files);
-      setMainFile(imported.mainFile);
-      setActiveFile(imported.mainFile);
-      setCompiler(imported.compiler);
-      recordNow(imported.files.find((f) => f.path === imported.mainFile)?.content ?? "");
-      if (imported.assets.length) {
-        const updated = await addPaperAssets(projectId, imported.assets);
-        if (updated.assets) setAssets(updated.assets);
-      }
-      const mainContent =
-        imported.files.find((f) => f.path === imported.mainFile)?.content ?? "";
-      await updatePaper(projectId, {
-        name: imported.name,
-        latex: mainContent,
-        files: imported.files,
-        mainFile: imported.mainFile,
-        compiler: imported.compiler,
-        assets: imported.assets.length ? imported.assets : assets,
-      });
-      setProjectName(imported.name);
+      await applyImportedFiles(imported, true);
+      toast.success(`Imported project “${imported.name}”.`);
     } catch (error) {
-      setCompileError(error instanceof Error ? error.message : "ZIP import failed.");
+      toast.error(error instanceof Error ? error.message : "ZIP import failed.");
     }
-    e.target.value = "";
   };
 
   const jumpToSynctex = useCallback(
@@ -842,11 +897,6 @@ function EditorPage() {
     e.target.value = "";
   };
 
-  const streamAiSteps = useMemo((): ChatAiStep[] => {
-    const streaming = [...messages].reverse().find((m) => m.role === "assistant" && m.isStreaming);
-    return streaming?.aiSteps ?? [];
-  }, [messages]);
-
   const openChatPanel = useCallback(() => {
     setChatOpen(true);
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
@@ -920,7 +970,7 @@ function EditorPage() {
     if (!chatAbortRef.current) return;
     chatAbortRef.current.abort();
     setChatLoading(false);
-    setLiveActivity(null);
+    resetChatStreamProgress();
     setMessages((prev) => {
       const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
       if (idx === -1) return prev;
@@ -933,6 +983,10 @@ function EditorPage() {
       };
       return next;
     });
+  }, []);
+
+  const syncChatStreamProgress = useCallback(() => {
+    setChatStreamProgress({ ...getChatStreamProgressSnapshot() });
   }, []);
 
   const handleSend = async () => {
@@ -952,22 +1006,26 @@ function EditorPage() {
     const abort = new AbortController();
     chatAbortRef.current = abort;
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: userDisplay },
-      {
-        role: "assistant",
-        content: "",
-        activities: [],
-        aiSteps: [],
-        reasoning: "",
-        isStreaming: true,
-      },
-    ]);
+    flushSync(() => {
+      resetChatStreamProgress();
+      syncChatStreamProgress();
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: userDisplay },
+        {
+          role: "assistant",
+          content: "",
+          activities: [],
+          aiSteps: [],
+          streamLabel: "Đang xử lý",
+          streamElapsedSec: null,
+          isStreaming: true,
+        },
+      ]);
+    });
     setChatInput("");
     setChatComposerMode("normal");
     setChatLoading(true);
-    setLiveActivity(null);
     setPendingSuggestion(null);
     setPendingEdits(null);
     setActiveEditId(null);
@@ -975,15 +1033,14 @@ function EditorPage() {
     const patchAssistant = (updater: (msg: ChatMessage) => ChatMessage) => {
       setMessages((prev) => {
         const next = [...prev];
-        const idx = next.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+        let idx = next.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+        if (idx === -1) {
+          idx = next.findLastIndex((m) => m.role === "assistant");
+        }
         if (idx === -1) return prev;
         next[idx] = updater(next[idx] as ChatMessage);
         return next;
       });
-    };
-
-    const pushStream = (fn: () => void) => {
-      flushSync(fn);
     };
 
     try {
@@ -1000,46 +1057,58 @@ function EditorPage() {
         },
         {
           onActivity: (activityText) => {
-            pushStream(() => {
-              setLiveActivity(activityText);
-              patchAssistant((msg) => {
-                const activities = [...(msg.activities ?? [])];
-                if (activities[activities.length - 1] !== activityText) {
-                  activities.push(activityText);
-                }
-                return { ...msg, activities };
-              });
-            });
+            if (isProgressNoiseActivity(activityText)) return;
+            pushChatStreamActivity(activityText);
           },
           onState: (state: ChatAiStatePayload) => {
-            const activityText = state.detail
-              ? `${state.label} — ${state.detail}`
-              : state.label;
-            pushStream(() => {
-              setLiveActivity(activityText);
+            pushChatStreamState(state);
+            if (isProgressNoiseStep(state.step_id)) return;
+
+            const important = isImportantFeedEvent(state);
+            const applyUpdate = () => {
+              patchAssistant((msg) => {
+                const aiSteps = applyAiState(msg.aiSteps ?? [], state);
+                const active = filterDisplaySteps(aiSteps).find((s) => s.status === "active");
+                const activities = important
+                  ? appendImportantFeedLine(msg.activities ?? [], state)
+                  : (msg.activities ?? []);
+                return {
+                  ...msg,
+                  activities,
+                  aiSteps,
+                  streamLabel: active?.label ?? state.label,
+                };
+              });
+              syncChatStreamProgress();
+            };
+
+            if (important) {
+              flushSync(applyUpdate);
+            } else {
+              applyUpdate();
+            }
+          },
+          onToken: (delta) => {
+            flushSync(() => {
               patchAssistant((msg) => ({
                 ...msg,
-                aiSteps: applyAiState(msg.aiSteps ?? [], state),
+                content: msg.content + delta,
               }));
             });
           },
-          onReasoning: (delta) => {
-            patchAssistant((msg) => ({
-              ...msg,
-              reasoning: (msg.reasoning ?? "") + delta,
-            }));
-          },
-          onToken: (delta) => {
-            patchAssistant((msg) => ({
-              ...msg,
-              content: msg.content + delta,
-            }));
-          },
           onDone: (result) => {
+            const progress = getChatStreamProgressSnapshot();
+            const finalSteps = filterDisplaySteps(
+              progress.steps.length ? progress.steps : [],
+            );
             patchAssistant((msg) => ({
               ...msg,
               content: result.response || msg.content,
               isStreaming: false,
+              aiSteps: filterDisplaySteps(msg.aiSteps ?? []).length
+                ? filterDisplaySteps(msg.aiSteps ?? [])
+                : finalSteps,
+              activities: msg.activities?.length ? msg.activities : progress.activities,
             }));
             const edits = (result.edits ?? []).filter(
               (e) => e?.replacement_text && e?.original_text,
@@ -1113,8 +1182,9 @@ function EditorPage() {
         abort.signal,
       );
     } finally {
+      finishChatStreamProgress();
+      syncChatStreamProgress();
       setChatLoading(false);
-      setLiveActivity(null);
       chatAbortRef.current = null;
       setMessages((prev) => {
         const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
@@ -1300,8 +1370,7 @@ function EditorPage() {
     onStop: handleStopChat,
     chatEndRef,
     chatLoading,
-    liveActivity,
-    streamAiSteps,
+    streamProgress: chatStreamProgress,
     providers,
     llmProvider,
     llmModel,
@@ -1413,6 +1482,14 @@ function EditorPage() {
         onChange={handleUpload}
       />
       <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+        onChange={handleUpload}
+      />
+      <input
         ref={assetInputRef}
         type="file"
         accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
@@ -1437,6 +1514,7 @@ function EditorPage() {
           onTabChange={setSidebarTab}
           onSelectFile={switchActiveFile}
           onUpload={() => fileInputRef.current?.click()}
+          onUploadFolder={() => folderInputRef.current?.click()}
           onUploadZip={() => zipInputRef.current?.click()}
           onUploadAsset={() => assetInputRef.current?.click()}
           isDirty={isDirty}
@@ -1528,9 +1606,11 @@ function EditorPage() {
             onOutlineJump={jumpToOutlineLine}
             files={projectFiles}
             activeFile={activeFile}
+            mainFile={mainFile}
             assets={assets}
             onSelectFile={switchActiveFile}
             onUpload={() => fileInputRef.current?.click()}
+            onUploadFolder={() => folderInputRef.current?.click()}
             onUploadZip={() => zipInputRef.current?.click()}
             isDirty={isDirty}
           />
@@ -1749,9 +1829,11 @@ function MobileFilesPanel({
   onOutlineJump,
   files,
   activeFile,
+  mainFile,
   assets,
   onSelectFile,
   onUpload,
+  onUploadFolder,
   onUploadZip,
   isDirty = false,
 }: {
@@ -1762,88 +1844,39 @@ function MobileFilesPanel({
   onOutlineJump?: (line: number) => void;
   files: ProjectFile[];
   activeFile: string;
+  mainFile: string;
   assets: ProjectAsset[];
   onSelectFile: (path: string) => void;
   onUpload: () => void;
+  onUploadFolder: () => void;
   onUploadZip: () => void;
   isDirty?: boolean;
 }) {
   return (
-    <div className="soft-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-sidebar">
-      <div className="border-b border-border/40 p-4">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sidebar">
+      <div className="shrink-0 border-b border-border/40 p-4">
         <EditableProjectName name={projectName} onRename={onRenameProject} />
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Files</span>
-        <div className="flex gap-1">
-          <IconBtn sm>
-            <Search className="h-3.5 w-3.5" />
-          </IconBtn>
-          {SHOW_EDITOR_IMPORT && (
-            <IconBtn sm onClick={onUpload}>
-              <Plus className="h-3.5 w-3.5" />
-            </IconBtn>
-          )}
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-1 pb-2">
+        <SidebarFileOutlineSplit
+          files={files}
+          assets={assets}
+          activeFile={activeFile}
+          mainFile={mainFile}
+          isDirty={isDirty}
+          onSelectFile={onSelectFile}
+          onUpload={onUpload}
+          onUploadFolder={onUploadFolder}
+          onUploadZip={onUploadZip}
+          outlineLatex={outlineLatex}
+          highlightLine={highlightLine}
+          onOutlineJump={onOutlineJump}
+          compact
+        />
       </div>
 
-      <div className="px-3">
-        {files.map((file) => (
-          <button
-            key={file.path}
-            type="button"
-            onClick={() => onSelectFile(file.path)}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition ${
-              file.path === activeFile ? "bg-sidebar-accent font-medium" : "hover:bg-sidebar-accent/50"
-            }`}
-          >
-            <FileText className="h-4 w-4 shrink-0 text-primary" />
-            <span className="flex-1 truncate">{file.path}</span>
-            {file.path === activeFile && isDirty && <span className="file-dirty-mark">*</span>}
-          </button>
-        ))}
-        {assets.map((asset) => (
-          <div key={asset.name} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4 shrink-0" />
-            <span className="truncate">{asset.name}</span>
-          </div>
-        ))}
-      </div>
-
-      {SHOW_EDITOR_IMPORT && (
-        <div className="mt-4 space-y-2 px-4">
-          <button
-            type="button"
-            onClick={onUploadZip}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-sm text-primary transition hover:border-primary"
-          >
-            <Upload className="h-4 w-4" />
-            Import Overleaf ZIP
-          </button>
-          <button
-            type="button"
-            onClick={onUpload}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm text-muted-foreground transition hover:border-primary hover:text-foreground"
-          >
-            <Upload className="h-4 w-4" />
-            Upload .tex file
-          </button>
-        </div>
-      )}
-
-      <div className="mt-6 border-t border-border/40 px-4 py-4">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>
-        <div className="mt-3">
-          <LatexOutlineNav
-            latex={outlineLatex}
-            activeLine={highlightLine}
-            onJumpToLine={onOutlineJump}
-          />
-        </div>
-      </div>
-
-      <div className="mt-auto border-t border-border/40 p-4">
+      <div className="shrink-0 border-t border-border/40 p-4">
         <div className="flex items-start gap-2 rounded-xl bg-secondary/60 p-3">
           <ShieldCheck className="h-4 w-4 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
           <p className="text-xs leading-snug text-muted-foreground">
@@ -1864,7 +1897,7 @@ function MobileChatSheet({
   onStop,
   chatEndRef,
   chatLoading,
-  liveActivity,
+  streamProgress,
   providers,
   llmProvider,
   llmModel,
@@ -1883,7 +1916,7 @@ function MobileChatSheet({
   onStop?: () => void;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
-  liveActivity?: string | null;
+  streamProgress?: ChatStreamProgressSnapshot;
   providers?: ProviderInfo[];
   llmProvider?: LLMProvider;
   llmModel?: string;
@@ -1938,7 +1971,7 @@ function MobileChatSheet({
           messages={messages}
           chatEndRef={chatEndRef}
           chatLoading={chatLoading}
-          liveActivity={liveActivity}
+          streamProgress={streamProgress}
         />
 
         <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
@@ -2019,6 +2052,7 @@ function LeftSidebar({
   onTabChange,
   onSelectFile,
   onUpload,
+  onUploadFolder,
   onUploadZip,
   onUploadAsset,
   isDirty = false,
@@ -2036,12 +2070,13 @@ function LeftSidebar({
   onTabChange: (t: "files" | "chats") => void;
   onSelectFile: (path: string) => void;
   onUpload: () => void;
+  onUploadFolder: () => void;
   onUploadZip: () => void;
   onUploadAsset: () => void;
   isDirty?: boolean;
 }) {
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
+    <aside className="flex min-h-0 w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
       <div className="border-b border-border p-3">
         <EditableProjectName name={projectName} onRename={onRenameProject} />
       </div>
@@ -2063,92 +2098,22 @@ function LeftSidebar({
       </div>
 
       {tab === "files" ? (
-        <>
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Files</span>
-            <div className="flex gap-1">
-              <IconBtn sm>
-                <Search className="h-3.5 w-3.5" />
-              </IconBtn>
-              {SHOW_EDITOR_IMPORT && (
-                <IconBtn sm onClick={onUpload}>
-                  <Plus className="h-3.5 w-3.5" />
-                </IconBtn>
-              )}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-2">
-            {files.map((file) => (
-              <button
-                key={file.path}
-                type="button"
-                onClick={() => onSelectFile(file.path)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${
-                  file.path === activeFile
-                    ? "bg-sidebar-accent font-medium"
-                    : "text-foreground/80 hover:bg-sidebar-accent/50"
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate flex-1">{file.path}</span>
-                {file.path === mainFile && (
-                  <span className="rounded bg-primary/10 px-1 text-[9px] text-primary">main</span>
-                )}
-                {file.path === activeFile && isDirty && <span className="file-dirty-mark">*</span>}
-              </button>
-            ))}
-            {assets.map((asset) => (
-              <button
-                key={asset.name}
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-foreground/70 transition hover:bg-sidebar-accent/50"
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="truncate">{asset.name}</span>
-              </button>
-            ))}
-          </div>
-
-          {SHOW_EDITOR_IMPORT && (
-            <div className="space-y-2 border-t border-border p-3">
-              <button
-                type="button"
-                onClick={onUploadZip}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-xs text-primary transition hover:border-primary"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Import Overleaf ZIP
-              </button>
-              <button
-                type="button"
-                onClick={onUpload}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary/50 px-3 py-2.5 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Upload .tex (+ assets)
-              </button>
-              <button
-                onClick={onUploadAsset}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Upload figure files
-              </button>
-            </div>
-          )}
-
-          <div className="border-t border-border p-3">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Outline</span>
-            <div className="mt-2">
-              <LatexOutlineNav
-                latex={outlineLatex}
-                activeLine={highlightLine}
-                onJumpToLine={onOutlineJump}
-                compact
-              />
-            </div>
-          </div>
-        </>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <SidebarFileOutlineSplit
+            files={files}
+            assets={assets}
+            activeFile={activeFile}
+            mainFile={mainFile}
+            isDirty={isDirty}
+            onSelectFile={onSelectFile}
+            onUpload={onUpload}
+            onUploadFolder={onUploadFolder}
+            onUploadZip={onUploadZip}
+            outlineLatex={outlineLatex}
+            highlightLine={highlightLine}
+            onOutlineJump={onOutlineJump}
+          />
+        </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-3">
           {["Edit Introduction", "Citation format APA", "Improve abstract"].map((label, i) => (
@@ -2258,8 +2223,7 @@ function CenterPanel({
   shareEnabled = false,
   chatEndRef,
   chatLoading,
-  liveActivity,
-  streamAiSteps = [],
+  streamProgress,
   providers,
   llmProvider,
   llmModel,
@@ -2316,8 +2280,7 @@ function CenterPanel({
   shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
-  liveActivity?: string | null;
-  streamAiSteps?: ChatAiStep[];
+  streamProgress?: ChatStreamProgressSnapshot;
   isDirty?: boolean;
   providers?: ProviderInfo[];
   llmProvider?: LLMProvider;
@@ -2532,8 +2495,7 @@ function CenterPanel({
           onStop={onStop}
           chatEndRef={chatEndRef}
           chatLoading={chatLoading}
-          liveActivity={liveActivity}
-          streamAiSteps={streamAiSteps}
+          streamProgress={streamProgress}
           providers={providers}
           llmProvider={llmProvider}
           llmModel={llmModel}

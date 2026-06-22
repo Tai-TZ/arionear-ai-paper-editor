@@ -11,18 +11,17 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from src.agents.nodes.academic_nodes import (
     citation_node,
     edit_node,
-    logic_node,
     prepare_edit_target,
     prepare_style_target,
     structure_node,
     style_node,
 )
 from src.agents.state import AgentState
-from src.config import get_settings
+from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
 from src.services.chat_telemetry import ChatRunTracker
 from src.services.intent_router import classify_intent
-from src.services.llm import get_llm
+from src.services.llm import MINIMAX_M3_TEMPERATURE, get_llm, resolve_tokenrouter_model
 from src.services.llm_errors import friendly_llm_error
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.slash_commands import parse_slash_command
@@ -53,12 +52,22 @@ T = TypeVar("T")
 
 
 _KEEPALIVE_SSE = ": keepalive\n\n"
+# Many proxies buffer until ~4KB; initial padding forces early flush to the browser.
+_SSE_FLUSH_PAD = ": " + (" " * 2048) + "\n\n"
 
 
-async def flush_sse_stream(source: AsyncIterator[str]) -> AsyncIterator[str]:
+async def flush_sse_stream(source: AsyncIterator[str]) -> AsyncIterator[bytes]:
     """Yield each SSE chunk immediately (avoid proxy / ASGI buffering)."""
+    first = True
     async for chunk in source:
-        yield chunk
+        if first:
+            yield _SSE_FLUSH_PAD.encode("utf-8")
+            first = False
+        payload = chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+        yield payload
+        # Vite / nginx often buffer sub-4KB bodies; pad small events so fetch/XHR flush.
+        if isinstance(chunk, str) and len(payload) < 2048:
+            yield _SSE_FLUSH_PAD.encode("utf-8")
         await asyncio.sleep(0)
 
 
@@ -299,8 +308,10 @@ def _build_chat_context(query: str, selection: str, latex: str) -> str:
 
 async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
     settings = get_settings()
-    provider = request.llm_provider or settings.llm_provider
+    provider = normalize_llm_provider(request.llm_provider or settings.llm_provider) or settings.llm_provider
     model = request.llm_model or None
+    if provider == "tokenrouter":
+        model = resolve_tokenrouter_model(model)
     tracker = ChatRunTracker(
         session_id=request.session_id,
         provider=provider,
@@ -326,7 +337,11 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield _sse("error", {"message": message})
             return
 
-        chat_temperature = resolve_llm_temperature()
+        chat_temperature = (
+            MINIMAX_M3_TEMPERATURE
+            if provider == "tokenrouter"
+            else resolve_llm_temperature()
+        )
         latex, sections, cite_keys = _parse_manuscript(
             request.latex_content,
             request.session_id or "",
@@ -672,7 +687,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield _sse("trace", trace)
             names = ", ".join(s["name"] for s in sections[:4]) if sections else "document"
             state_evt, act_evt = _emit_state(
-                "scope",
+                "logic-start",
                 "Logic audit — multi-agent",
                 status="active",
                 detail=names,
@@ -681,22 +696,68 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield state_evt
             yield act_evt
 
-            def _logic_tick(elapsed: float) -> tuple[str, str]:
-                return _emit_state(
-                    "llm",
-                    "Đang phân tích logic",
-                    status="active",
-                    detail=f"3 personas · {elapsed:.0f}s",
-                    task=task,
-                    elapsed_sec=elapsed,
+            progress_queue: asyncio.Queue[tuple[str, ...]] = asyncio.Queue()
+
+            def _logic_progress(
+                step_id: str, label: str, detail: str, status: str
+            ) -> None:
+                progress_queue.put_nowait(("state", step_id, label, detail, status))
+
+            def _logic_reasoning(delta: str) -> None:
+                if delta:
+                    progress_queue.put_nowait(("reasoning", delta))
+
+            async def _run_logic_audit() -> dict[str, Any]:
+                from src.services.logic_audit.runner import run_logic_audit
+
+                return await run_logic_audit(
+                    latex=latex,
+                    sections=sections,
+                    query=effective_message,
+                    provider=provider,
+                    model=model,
+                    on_progress=_logic_progress,
+                    on_reasoning=_logic_reasoning,
                 )
 
-            logic_result = None
-            async for event in _monitor_long_task(logic_node(state), _logic_tick):
-                if isinstance(event, str):
-                    yield event
-                else:
-                    logic_result = event
+            audit_task = asyncio.create_task(_run_logic_audit())
+            logic_started = time.perf_counter()
+            logic_result: dict[str, Any] | None = None
+            while logic_result is None:
+                if audit_task.done() and progress_queue.empty():
+                    logic_result = await audit_task
+                    break
+                try:
+                    item = await asyncio.wait_for(progress_queue.get(), timeout=2.0)
+                    kind = item[0]
+                    if kind == "reasoning":
+                        yield _sse("reasoning", {"delta": item[1]})
+                        continue
+                    _, step_id, label, detail, status = item
+                    state_evt, act_evt = _emit_state(
+                        step_id,
+                        label,
+                        status=status,
+                        detail=detail,
+                        task=task,
+                    )
+                    yield state_evt
+                    yield act_evt
+                except TimeoutError:
+                    if audit_task.done():
+                        logic_result = audit_task.result()
+                        break
+                    elapsed = round(time.perf_counter() - logic_started, 0)
+                    state_evt, _ = _emit_state(
+                        "logic-heartbeat",
+                        "Đang chờ model LLM",
+                        status="active",
+                        detail=f"{elapsed:.0f}s",
+                        task=task,
+                        elapsed_sec=elapsed,
+                    )
+                    yield state_evt
+                    yield _KEEPALIVE_SSE
 
             logic_result = logic_result or {}
             conflict_count = sum(

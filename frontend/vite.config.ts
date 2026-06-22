@@ -21,6 +21,8 @@ export default defineConfig({
           target: DEV_API_PROXY,
           changeOrigin: true,
           ws: true,
+          timeout: 0,
+          proxyTimeout: 0,
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq, req) => {
               if (req.url?.includes("/chat/stream")) {
