@@ -1,6 +1,10 @@
 from src.services.intent_router import _fallback_intent
-from src.services.logic_audit.debate import load_debate_roles
-from src.services.logic_audit.runner import _extract_json_object, format_report_text
+from src.services.logic_audit.debate import _strip_thinking_markup, load_debate_roles
+from src.services.logic_audit.runner import (
+    _extract_json_object,
+    _fallback_from_perspectives,
+    format_report_text,
+)
 from src.services.logic_audit.schemas import (
     LogicAuditReport,
     LogicConflictItem,
@@ -58,3 +62,18 @@ def test_format_report_text_with_conflict():
     text = format_report_text(report)
     assert "Introduction" in text
     assert "Claim lacks support" in text
+
+
+def test_strip_thinking_markup():
+    raw = "<think>internal chain</think>\n- Claim A lacks evidence"
+    assert _strip_thinking_markup(raw) == "- Claim A lacks evidence"
+
+
+def test_fallback_from_perspectives_creates_issues():
+    perspectives = {
+        "novice_reader": "- The accuracy claim is not compared to baselines in this section.",
+        "critical_reviewer": "- Methods section does not justify the preprocessing pipeline.",
+    }
+    payload = _fallback_from_perspectives(perspectives, "Abstract")
+    assert len(payload["conflicts"]) == 2
+    assert payload["conflicts"][0]["comment"].startswith("-") is False

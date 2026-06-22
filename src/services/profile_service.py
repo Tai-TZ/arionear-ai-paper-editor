@@ -125,9 +125,11 @@ def user_to_profile(user: User) -> ResearcherProfileResponse:
         ),  # type: ignore[arg-type]
         writing_locale=_coerce_enum(settings.get("writing_locale"), "en-US", {"en-US", "en-GB"}),  # type: ignore[arg-type]
         default_llm_provider=_coerce_enum(
-            settings.get("default_llm_provider"),
+            "tokenrouter"
+            if settings.get("default_llm_provider") == "nvidia"
+            else settings.get("default_llm_provider"),
             "zai",
-            {"openrouter", "openai", "anthropic", "zai", "nvidia"},
+            {"openrouter", "openai", "anthropic", "zai", "tokenrouter"},
         ),  # type: ignore[arg-type]
         default_llm_model=settings.get("default_llm_model") or None,
         rewrite_intensity=_coerce_enum(
