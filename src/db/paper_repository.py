@@ -281,3 +281,13 @@ class DatabaseSessionStore:
                     )
                 )
             paper.updated_at = _utcnow()
+
+    def set_logic_audit_report(self, session_id: str, report: dict) -> None:
+        with get_db() as db:
+            paper = _load_paper(db, _parse_uuid(session_id))
+            if not paper:
+                return
+            meta = dict(paper.metadata_ or {})
+            meta["logic_audit_report"] = report
+            paper.metadata_ = meta
+            paper.updated_at = _utcnow()

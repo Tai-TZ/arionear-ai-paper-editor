@@ -298,6 +298,7 @@ export type StreamChatCallbacks = {
   onActivity: (text: string) => void;
   onState?: (state: ChatAiStatePayload) => void;
   onReasoning?: (delta: string) => void;
+  onLogicSection?: (section: NonNullable<LogicAuditReport["sections"]>[number]) => void;
   onToken: (delta: string) => void;
   onDone: (result: ChatResult) => void;
   onError: (message: string) => void;
@@ -381,6 +382,15 @@ function createSseDispatcher(callbacks: StreamChatCallbacks): {
         case "reasoning":
           if (typeof payload.delta === "string") callbacks.onReasoning?.(payload.delta);
           break;
+        case "logic_section": {
+          const section = payload.section;
+          if (section && typeof section === "object") {
+            callbacks.onLogicSection?.(
+              section as NonNullable<LogicAuditReport["sections"]>[number],
+            );
+          }
+          break;
+        }
         case "token":
           if (typeof payload.delta === "string") callbacks.onToken(payload.delta);
           break;

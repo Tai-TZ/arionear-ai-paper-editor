@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 LogicProgressFn = Callable[[str, str, str, str], None]
 LogicReasoningFn = Callable[[str], None]
+LogicSectionFn = Callable[[dict], None]
 
 PERSONA_LABELS: dict[str, str] = {
     "novice_reader": "Độc giả mới",

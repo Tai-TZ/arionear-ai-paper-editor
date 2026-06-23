@@ -61,3 +61,18 @@ def test_revision_and_citation_registry():
     assert session.citation_registry[0]["key"] == "smith2024"
     assert len(session.revision_history) == 1
     assert session.revision_history[0].action == "accepted"
+
+
+def test_set_logic_audit_report_persists_in_metadata():
+    session_id = str(uuid.uuid4())
+    session_store.create(session_id=session_id)
+    report = {
+        "summary": "test",
+        "sections": [{"section": "Introduction", "conflicts": [], "weak_claims": []}],
+        "cross_section_conflicts": [],
+    }
+    session_store.set_logic_audit_report(session_id, report)
+
+    session = session_store.get(session_id)
+    assert session is not None
+    assert session.metadata["logic_audit_report"]["sections"][0]["section"] == "Introduction"

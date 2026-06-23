@@ -131,6 +131,13 @@ class InMemorySessionStore:
             session.citation_registry = registry
             session.updated_at = _utcnow()
 
+    def set_logic_audit_report(self, session_id: str, report: dict) -> None:
+        session = self.get(session_id)
+        if not session:
+            return
+        session.metadata = {**(session.metadata or {}), "logic_audit_report": report}
+        session.updated_at = _utcnow()
+
 
 def _build_store():
     if is_db_enabled() and db_is_ready():

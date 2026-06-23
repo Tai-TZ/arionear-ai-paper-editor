@@ -10,6 +10,7 @@ from src.services.llm import TOKENROUTER_MINIMAX_M3_MODEL, is_minimax_m3_provide
 from src.services.logic_audit.debate import (
     LogicProgressFn,
     LogicReasoningFn,
+    LogicSectionFn,
     _strip_thinking_markup,
     load_combined_logic_role,
     load_debate_roles,
@@ -209,6 +210,7 @@ async def run_logic_audit(
     max_sections: int = 4,
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
+    on_section_complete: LogicSectionFn | None = None,
 ) -> dict[str, Any]:
     """Multi-agent logic audit — comment-only, no draft mutation."""
     flags = logic_audit_runtime_flags(mode, provider, scope=scope)
@@ -325,6 +327,8 @@ async def run_logic_audit(
                 f"Hoàn tất · {issue_n} vấn đề",
                 "done",
             )
+        if on_section_complete and normalized:
+            on_section_complete(normalized)
         return normalized
 
     if on_progress:

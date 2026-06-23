@@ -119,6 +119,7 @@ import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
+import { mergeLogicSectionReport } from "@/lib/logic-audit";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
 import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
@@ -504,6 +505,9 @@ function EditorPage() {
         resetHistory(project.latex);
         setSavedLatex(project.latex);
         setAssets(project.assets ?? []);
+        if (project.logicAuditReport?.sections?.length) {
+          setLogicAuditReport(project.logicAuditReport);
+        }
         setBootState("ready");
         void loadSessionAudit(projectId);
         void fetchPaperShareStatus(projectId)
@@ -1050,6 +1054,7 @@ function EditorPage() {
     setChatComposerMode("normal");
     if (task === "logic") {
       setToolsOpen(true);
+      setLogicAuditReport({ sections: [], cross_section_conflicts: [] });
     }
     setChatLoading(true);
     setPendingSuggestion(null);
@@ -1134,6 +1139,12 @@ function EditorPage() {
                 ...msg,
                 content: msg.content + delta,
               }));
+            });
+          },
+          onLogicSection: (section) => {
+            flushSync(() => {
+              setLogicAuditReport((prev) => mergeLogicSectionReport(prev, section));
+              setToolsOpen(true);
             });
           },
           onDone: (result) => {

@@ -1,4 +1,5 @@
 import type { LatexOutlineItem } from "@/lib/latex-outline";
+import type { LogicAuditReport } from "@/lib/api/academic";
 
 export type LogicAuditMode = "quick" | "deep";
 export type LogicAuditScope = "selected" | "full";
@@ -42,4 +43,19 @@ export function logicAuditModeHint(mode: LogicAuditMode, scope: LogicAuditScope 
     return "Soi sâu 1 phần bằng MiniMax M3 — ~3–5 phút. Không phụ thuộc provider chat.";
   }
   return "Quét nhanh 2–3 phần bằng OpenRouter — ~2–3 phút. Không phụ thuộc provider chat.";
+}
+
+export function mergeLogicSectionReport(
+  report: LogicAuditReport | null,
+  section: NonNullable<LogicAuditReport["sections"]>[number],
+): LogicAuditReport {
+  const base: LogicAuditReport = report ?? {
+    sections: [],
+    cross_section_conflicts: [],
+  };
+  const sections = [...(base.sections ?? [])];
+  const idx = sections.findIndex((item) => item.section === section.section);
+  if (idx >= 0) sections[idx] = section;
+  else sections.push(section);
+  return { ...base, sections };
 }

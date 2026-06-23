@@ -651,6 +651,10 @@ async def logic_node(state: AgentState) -> dict:
         provider=state.get("llm_provider"),
         model=state.get("llm_model"),
     )
+    session_id = state.get("session_id", "")
+    report = result.get("logic_audit_report")
+    if session_id and isinstance(report, dict) and report:
+        session_store.set_logic_audit_report(session_id, report)
     return result
 
 
