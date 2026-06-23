@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Download,
   RefreshCw,
   Search,
   Sparkles,
@@ -11,7 +10,11 @@ import {
   ZoomOut,
 } from "lucide-react";
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from "pdfjs-dist";
-import { fetchCompileStatus, lookupSynctexInverse, type LatexCompiler } from "@/lib/api/academic";
+import {
+  fetchCompileStatus,
+  lookupSynctexInverse,
+  type LatexCompiler,
+} from "@/lib/api/academic";
 import { CompileLogPanel } from "@/components/compile-log-panel";
 import {
   computeFitScale,
@@ -354,17 +357,6 @@ export function PdfPreviewPanel({
     setZoomMode(prev);
   };
 
-  const handleDownload = () => {
-    if (!pdfData) return;
-    const blob = new Blob([pdfData.slice()], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${projectName.replace(/\s+/g, "-").toLowerCase() || "document"}.pdf`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleSearch = async () => {
     if (!pdf || !searchQuery.trim()) return;
     setSearchStatus("Searching…");
@@ -560,12 +552,6 @@ export function PdfPreviewPanel({
               </option>
             ))}
           </select>
-
-          {!readOnly ? (
-            <IconBtn title="Download PDF" onClick={handleDownload} disabled={!pdfData}>
-              <Download className="h-3.5 w-3.5 text-[#555]" />
-            </IconBtn>
-          ) : null}
         </div>
       </header>
 

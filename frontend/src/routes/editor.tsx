@@ -23,6 +23,7 @@ import {
   Wrench,
   Sparkles,
   Share2,
+  FileOutput,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
@@ -117,6 +118,7 @@ import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profi
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
+import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
@@ -379,6 +381,7 @@ function EditorPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<PaperShareStatus | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatStreamProgress, setChatStreamProgress] = useState<ChatStreamProgressSnapshot>(
@@ -1463,6 +1466,8 @@ function EditorPage() {
       <MobileHeader
         projectName={projectName}
         onUpload={() => fileInputRef.current?.click()}
+        onExport={() => setExportOpen(true)}
+        exportEnabled={Boolean(pdfData)}
       />
       <MobileTabBar tab={mobileTab} onChange={setMobileTab} />
 
@@ -1539,6 +1544,8 @@ function EditorPage() {
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
               onShare={() => setShareOpen(true)}
+              onExport={() => setExportOpen(true)}
+              exportEnabled={Boolean(pdfData)}
               shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
               activeEditId={activeEditId}
@@ -1676,6 +1683,16 @@ function EditorPage() {
           onStatusChange={setShareStatus}
         />
       ) : null}
+      <PaperScoreDownloadDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        projectName={projectName}
+        latex={mainLatexSource}
+        pdfData={pdfData}
+        compileError={compileError}
+        citationResults={citationResults}
+        logicAuditReport={logicAuditReport}
+      />
         </div>
       )}
     </div>
@@ -1737,9 +1754,13 @@ function ArionearMasthead({
 function MobileHeader({
   projectName,
   onUpload,
+  onExport,
+  exportEnabled = false,
 }: {
   projectName: string;
   onUpload: () => void;
+  onExport?: () => void;
+  exportEnabled?: boolean;
 }) {
   return (
     <header className="flex md:hidden shrink-0 items-center justify-between border-b border-border/40 bg-card px-3 py-2.5">
@@ -1750,16 +1771,30 @@ function MobileHeader({
         <Settings className="h-4 w-4" />
       </Link>
       <span className="text-sm font-medium truncate px-2">{projectName}</span>
-      {SHOW_EDITOR_IMPORT ? (
-        <button
-          onClick={onUpload}
-          className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
-        >
-          Upload
-        </button>
-      ) : (
-        <div className="w-16 shrink-0" aria-hidden />
-      )}
+      <div className="flex items-center gap-1.5">
+        {onExport ? (
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={!exportEnabled}
+            className="editor-export-btn-icon md:hidden"
+            aria-label="Export"
+            title={exportEnabled ? "Export" : "Compile trước khi Export"}
+          >
+            <FileOutput className="h-4 w-4" />
+          </button>
+        ) : null}
+        {SHOW_EDITOR_IMPORT ? (
+          <button
+            onClick={onUpload}
+            className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
+          >
+            Upload
+          </button>
+        ) : (
+          <div className="w-9 shrink-0" aria-hidden />
+        )}
+      </div>
     </header>
   );
 }
@@ -2220,6 +2255,8 @@ function CenterPanel({
   toolsOpen,
   onToggleTools,
   onShare,
+  onExport,
+  exportEnabled = false,
   shareEnabled = false,
   chatEndRef,
   chatLoading,
@@ -2277,6 +2314,8 @@ function CenterPanel({
   toolsOpen: boolean;
   onToggleTools: () => void;
   onShare?: () => void;
+  onExport?: () => void;
+  exportEnabled?: boolean;
   shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
@@ -2354,6 +2393,18 @@ function CenterPanel({
             >
               <Share2 className="h-3 w-3" />
               Share
+            </button>
+          ) : null}
+          {onExport ? (
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={!exportEnabled}
+              className="editor-export-btn hidden md:inline-flex"
+              title={exportEnabled ? "Export PDF" : "Compile trước khi Export"}
+            >
+              <FileOutput className="h-3.5 w-3.5" />
+              Export
             </button>
           ) : null}
           <button
