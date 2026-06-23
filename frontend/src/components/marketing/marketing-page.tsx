@@ -1,9 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
-import type { MarketingPageContent } from "@/lib/marketing-content";
+import { useMemo } from "react";
+
+import { useLocale } from "@/components/locale-provider";
+import {
+  marketingPageContent,
+  marketingPageUi,
+  type MarketingPageSlug,
+} from "@/lib/marketing-pages-i18n";
 import { MarketingLayout } from "./marketing-layout";
 
-export function MarketingPage({ content }: { content: MarketingPageContent }) {
+export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
+  const { locale } = useLocale();
+  const content = useMemo(() => marketingPageContent(locale, slug), [locale, slug]);
+  const ui = useMemo(() => marketingPageUi(locale), [locale]);
+
   return (
     <MarketingLayout>
       <article className="border-b-4 border-foreground newsprint-texture">
@@ -46,7 +57,7 @@ export function MarketingPage({ content }: { content: MarketingPageContent }) {
               to="/"
               className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
             >
-              ← Back to home
+              {ui.backToHome}
             </Link>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getSession, refreshSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import type { AdminNavTab } from "@/components/admin/admin-sidebar";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -297,9 +298,7 @@ function AdminPage() {
         </header>
 
         {loading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[color:var(--admin-accent)]" />
-          </div>
+          <AppLoadingScreen variant="inline" className="flex-1" />
         ) : loadError ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
             <AlertCircle className="h-10 w-10 text-destructive" />
@@ -638,9 +637,7 @@ function AdminPage() {
                 </div>
 
                 {costLoading ? (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-[color:var(--admin-accent)]" />
-                  </div>
+                  <AppLoadingScreen variant="inline" className="py-8" />
                 ) : costReport ? (
                   <div className="admin-table-wrap">
                     <Table>

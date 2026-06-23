@@ -56,6 +56,20 @@ type CommonCopy = {
       useAnother: string;
     };
   };
+  shell: {
+    loading: string;
+    loadingRoute: string;
+    notFound: {
+      code: string;
+      eyebrow: string;
+      title: string;
+      body: string;
+      asideQuote: string;
+      asideFooter: string;
+      home: string;
+      projects: string;
+    };
+  };
 };
 
 const EN: CommonCopy = {
@@ -115,6 +129,20 @@ const EN: CommonCopy = {
       useAnother: "Sign in with another account",
     },
   },
+  shell: {
+    loading: "Loading…",
+    loadingRoute: "Opening page…",
+    notFound: {
+      code: "404",
+      eyebrow: "Missing manuscript",
+      title: "This page is not in our catalogue.",
+      body: "The address may be mistyped, expired, or the page may have moved. Return to the desk and continue from there.",
+      asideQuote: "“Not every draft finds its folder — but every good paper finds its way.”",
+      asideFooter: "Vol. I · No. 01 · Errata",
+      home: "Back to home",
+      projects: "Open projects",
+    },
+  },
 };
 
 const VI: CommonCopy = {
@@ -172,6 +200,20 @@ const VI: CommonCopy = {
       title: "Không thể đăng nhập",
       body: "Tài khoản này đã bị quản trị viên tạm khóa. Nếu bạn cho rằng đây là nhầm lẫn, hãy liên hệ admin của nền tảng.",
       useAnother: "Đăng nhập tài khoản khác",
+    },
+  },
+  shell: {
+    loading: "Đang tải…",
+    loadingRoute: "Đang mở trang…",
+    notFound: {
+      code: "404",
+      eyebrow: "Không tìm thấy",
+      title: "Trang này không có trong mục lục.",
+      body: "Địa chỉ có thể sai, hết hạn, hoặc trang đã được chuyển đi. Quay lại bàn biên tập và tiếp tục từ đó.",
+      asideQuote: "“Không phải bản thảo nào cũng nằm đúng ngăn — nhưng bài tốt luôn tìm được lối ra.”",
+      asideFooter: "Tập I · Số 01 · Đính chính",
+      home: "Về trang chủ",
+      projects: "Mở dự án",
     },
   },
 };

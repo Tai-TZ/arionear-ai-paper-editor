@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { AuthDisabledAccount, AuthShell } from "@/components/auth/auth-shell";
 import { authToast } from "@/lib/auth-toast";
 import { completeOAuthSession, isAuthenticated } from "@/lib/auth-store";
@@ -105,7 +105,7 @@ function GoogleCallbackPage() {
     >
       <div className="flex flex-col items-center gap-4 py-8 text-center">
         {!error && access_token ? (
-          <Loader2 className="h-8 w-8 animate-spin text-[color:var(--editorial-red)]" aria-hidden="true" />
+          <AppLoadingScreen variant="inline" className="min-h-0 py-0" />
         ) : null}
         <p className="font-serif-body text-sm text-foreground/80 max-w-sm">{message}</p>
         {error || !access_token ? (
