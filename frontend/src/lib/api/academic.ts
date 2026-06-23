@@ -193,6 +193,9 @@ function buildChatRequestBody(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
+    logic_audit_mode?: "quick" | "deep";
+    logic_audit_scope?: "selected" | "full";
+    logic_audit_sections?: string[];
   } & LlmOptions,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -205,6 +208,11 @@ function buildChatRequestBody(
   if (opts.llm_provider) body.llm_provider = opts.llm_provider;
   if (opts.llm_model?.trim()) body.llm_model = opts.llm_model.trim();
   if (opts.integrity_strictness) body.integrity_strictness = opts.integrity_strictness;
+  if (opts.logic_audit_mode) body.logic_audit_mode = opts.logic_audit_mode;
+  if (opts.logic_audit_scope) body.logic_audit_scope = opts.logic_audit_scope;
+  if (opts.logic_audit_sections?.length) {
+    body.logic_audit_sections = opts.logic_audit_sections;
+  }
   return body;
 }
 
@@ -557,6 +565,9 @@ export async function streamChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
+    logic_audit_mode?: "quick" | "deep";
+    logic_audit_scope?: "selected" | "full";
+    logic_audit_sections?: string[];
   } & LlmOptions,
   callbacks: StreamChatCallbacks,
   signal?: AbortSignal,
@@ -580,6 +591,9 @@ export async function sendChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
+    logic_audit_mode?: "quick" | "deep";
+    logic_audit_scope?: "selected" | "full";
+    logic_audit_sections?: string[];
   } & LlmOptions,
 ): Promise<ChatResult> {
   return apiFetch<ChatResult>("/chat", {

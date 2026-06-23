@@ -716,6 +716,10 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                     query=effective_message,
                     provider=provider,
                     model=model,
+                    mode=request.logic_audit_mode or "quick",
+                    scope=request.logic_audit_scope or "selected",
+                    section_filter=request.logic_audit_sections,
+                    chat_provider=provider,
                     on_progress=_logic_progress,
                     on_reasoning=_logic_reasoning,
                 )
@@ -775,8 +779,8 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield act_evt
             _merge_agent_into_done(done_payload, logic_result)
             respond = logic_result.get("response", "")
-            for piece in _chunk_text(respond):
-                yield _sse("token", {"delta": piece})
+            # Structured report is in logic_audit_report — avoid streaming huge markdown
+            # (character-by-character tokens + ReactMarkdown freeze the browser).
             done_payload["response"] = respond
 
         elif task == "citation":

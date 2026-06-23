@@ -546,7 +546,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
 
   const applySlashCommand = useCallback(
     (cmd: SlashCommandDef) => {
-      onChatInputChange(slashCommandInsert(cmd.command));
+      onChatInputChange(slashCommandInsert(cmd));
       requestAnimationFrame(() => {
         const el = internalRef.current;
         el?.focus();
@@ -577,7 +577,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
         >
           {filteredCommands.map((cmd, index) => (
             <button
-              key={cmd.command}
+              key={`${cmd.command}-${cmd.task}`}
               type="button"
               role="option"
               aria-selected={index === highlightIndex}
@@ -592,6 +592,9 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
               <span className="chat-slash-menu-body">
                 <span className="chat-slash-menu-cmd">/{cmd.command}</span>
                 <span className="chat-slash-menu-desc">{cmd.description}</span>
+                {cmd.detail ? (
+                  <span className="chat-slash-menu-detail">{cmd.detail}</span>
+                ) : null}
               </span>
             </button>
           ))}

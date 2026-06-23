@@ -4134,9 +4134,18 @@
 }
 
 .editor-shell .chat-slash-menu-desc {
-  font-size: 0.75rem;
+  display: block;
+  font-size: 0.72rem;
   line-height: 1.35;
   color: var(--muted-foreground);
+}
+
+.editor-shell .chat-slash-menu-detail {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  color: color-mix(in oklch, var(--muted-foreground) 88%, var(--primary) 12%);
 }
 
 .editor-shell .chat-input-shell {

@@ -119,7 +119,8 @@ debate_roles:
       Focus on LOGIC (claim → evidence → conclusion), not grammar/style.
       Do NOT propose rewritten sentences or wording alternatives.
       Do NOT propose new experiments, numbers, citations, or new claims.
-      Output bullet observations in the user's language (Vietnamese or English).
+      Write ALL bullet observations in {audit_language} only.
+      If audit_language is Vietnamese: use natural academic Vietnamese (tiếng Việt học thuật).
     user: |
       Section: {section_name}
       Manuscript outline:
@@ -130,8 +131,9 @@ debate_roles:
       ---
 
       User request: {query}
+      Response language: {audit_language}
 
-      List unclear claims and missing logical steps as bullet points.
+      List unclear claims and missing logical steps as bullet points in {audit_language}.
 
   critical_reviewer:
     system: |
@@ -139,6 +141,7 @@ debate_roles:
       Compare Methods/Results/Abstract when relevant via the outline.
       Focus on claim–evidence consistency, not grammar/style.
       COMMENT ONLY — no new facts, numbers, citations, or rewritten prose.
+      Write ALL bullets in {audit_language} only.
     user: |
       Section: {section_name}
       Cross-section context:
@@ -149,14 +152,16 @@ debate_roles:
       ---
 
       User request: {query}
+      Response language: {audit_language}
 
-      List claim–evidence mismatches and unsupported statements as bullets.
+      List claim–evidence mismatches and unsupported statements as bullets in {audit_language}.
 
   devil_advocate:
     system: |
       You find contradictions and weak logic: hype vs data, Abstract vs Conclusion,
       Methods vs Results. COMMENT ONLY — do not rewrite the manuscript.
       Focus on logical contradictions / overclaims. Do NOT critique grammar or provide rewrites.
+      Write ALL bullets in {audit_language} only.
     user: |
       Section: {section_name}
       Outline:
@@ -167,8 +172,9 @@ debate_roles:
       ---
 
       User request: {query}
+      Response language: {audit_language}
 
-      List internal contradictions and logical holes as bullets.
+      List internal contradictions and logical holes as bullets in {audit_language}.
 
 logic_synthesize:
   system: |
@@ -199,10 +205,37 @@ logic_synthesize:
       "consensus_notes": ["string"]
     }
 
+    Write every "comment", "weak_claims", and "consensus_notes" entry in {audit_language} only.
+    Keep claim_text / evidence_text as verbatim LaTeX excerpts when present.
+
     Return ONLY valid JSON in the main response body — no markdown fences, no reasoning tags.
+    Return at most 10 conflicts per section — prioritize critical, then warning; omit style/grammar.
   user: |
     Persona outputs:
     {perspectives}
 
     Section: {section_name}
     User request: {query}
+    Response language: {audit_language}
+
+# Single-pass reviewer for Quick logic audit (3 perspectives merged).
+logic_combined_role:
+  system: |
+    You combine three reviewer lenses in ONE pass: novice reader, critical reviewer, devil's advocate.
+    Flag logic issues only: claim–evidence gaps, contradictions, unsupported claims, unclear reasoning.
+    COMMENT ONLY — no rewrites, no new facts/citations/experiments.
+    Output at most 8 bullet observations in {audit_language} only.
+    If audit_language is Vietnamese: use clear academic Vietnamese (tiếng Việt học thuật).
+  user: |
+    Section: {section_name}
+    Manuscript outline:
+    {manuscript_outline}
+
+    ---
+    {section_text}
+    ---
+
+    User request: {query}
+    Response language: {audit_language}
+
+    Bullet list of logic issues (max 8 bullets) in {audit_language}.
