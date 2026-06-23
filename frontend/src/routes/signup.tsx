@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Mail, Lock, User, Building2, ArrowLeft } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   AuthAlert,
   AuthDivider,
@@ -37,6 +37,8 @@ export const Route = createFileRoute("/signup")({
 
 type SignupStep = "form" | "verify";
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
 function SignUpPage() {
   const navigate = useNavigate();
   const { locale } = useLocale();
@@ -48,10 +50,18 @@ function SignUpPage() {
   const [password, setPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
-  const [devVerificationCode, setDevVerificationCode] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setResendCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   const strength = useMemo(() => passwordStrength(password), [password]);
   const passwordHint = password ? validatePassword(password) : null;
@@ -79,8 +89,8 @@ function SignUpPage() {
 
     authToast.signUpCodeSent();
     setNotice(result.message);
-    setDevVerificationCode(result.devVerificationCode ?? null);
     setVerificationCode("");
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
     setStep("verify");
   };
 
@@ -116,8 +126,8 @@ function SignUpPage() {
 
     authToast.signUpCodeSent();
     setNotice(result.message);
-    setDevVerificationCode(result.devVerificationCode ?? null);
     setVerificationCode("");
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   const shellProps =
@@ -125,9 +135,7 @@ function SignUpPage() {
       ? {
           eyebrow: t.eyebrowVerify,
           title: t.titleVerify,
-          lede: devVerificationCode
-            ? t.ledeVerifyDev(email)
-            : t.ledeVerify(email),
+          lede: t.ledeVerify(email),
         }
       : {
           eyebrow: t.eyebrowForm,
@@ -189,20 +197,6 @@ function SignUpPage() {
             </InputOTP>
           </div>
 
-          {devVerificationCode && (
-            <div className="border border-[color:var(--editorial-red)]/40 bg-[color:var(--editorial-red)]/5 px-4 py-4">
-              <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-2">
-                {t.devNoEmailSent}
-              </p>
-              <p className="font-serif-body text-sm text-foreground/80">
-                {t.yourCodeIs}{" "}
-                <span className="font-mono-data text-lg tracking-[0.3em] font-semibold">
-                  {devVerificationCode}
-                </span>
-              </p>
-            </div>
-          )}
-
           <AuthSubmitButton loading={loading} disabled={verificationCode.length !== 6}>
             {t.verifyAndCreate} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </AuthSubmitButton>
@@ -214,7 +208,6 @@ function SignUpPage() {
                 setStep("form");
                 setError("");
                 setVerificationCode("");
-                setDevVerificationCode(null);
               }}
               className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
             >
@@ -223,10 +216,10 @@ function SignUpPage() {
             <button
               type="button"
               onClick={handleResendCode}
-              disabled={loading}
+              disabled={loading || resendCooldown > 0}
               className="underline underline-offset-4 hover:text-[color:var(--editorial-red)] disabled:opacity-50"
             >
-              Resend code
+              {resendCooldown > 0 ? t.resendCooldown(resendCooldown) : t.resendCode}
             </button>
           </div>
         </form>

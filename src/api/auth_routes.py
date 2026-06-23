@@ -5,7 +5,6 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from src.config import get_settings
 from src.db.engine import db_error_detail, db_is_ready, get_db, is_db_enabled
 from src.models.auth_schemas import (
     AuthTokenResponse,
@@ -50,6 +49,10 @@ SIGNUP_CODE_SENT_MESSAGE = (
     "We sent a 6-digit verification code to your email. "
     "Enter it below to finish creating your account."
 )
+SIGNUP_CODE_DEV_MESSAGE = (
+    "Development mode: no email was sent. "
+    "Use the verification code shown on this page."
+)
 INVALID_CREDENTIALS = "Invalid email or password."
 ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
@@ -84,24 +87,20 @@ def _get_db_session():
 
 @router.post("/register/send-code", response_model=MessageResponse)
 def register_send_code(body: RegisterRequest, db: Session = Depends(_get_db_session)):
-    dev_code, error = request_signup_verification(
+    result = request_signup_verification(
         db,
         name=body.name,
         email=body.email,
         password=body.password,
         affiliation=body.affiliation,
     )
-    if error:
-        raise HTTPException(status_code=400, detail=error)
+    if result.error:
+        raise HTTPException(status_code=400, detail=result.error)
 
     response = MessageResponse(message=SIGNUP_CODE_SENT_MESSAGE)
-    if dev_code:
-        response.dev_verification_code = dev_code
-        response.message = (
-            "Development mode: no email was sent. "
-            "Use the verification code shown on this page."
-        )
-        print(f"[auth] Dev signup verification code for {body.email}: {dev_code}")
+    if result.dev_code:
+        response.dev_verification_code = result.dev_code
+        response.message = SIGNUP_CODE_DEV_MESSAGE
     return response
 
 
@@ -153,15 +152,13 @@ def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(_get_db_session)):
-    dev_url, error = request_password_reset(db, body.email)
-    if error:
-        raise HTTPException(status_code=400, detail=error)
+    result = request_password_reset(db, body.email)
+    if result.error:
+        raise HTTPException(status_code=400, detail=result.error)
 
-    settings = get_settings()
     response = MessageResponse(message=FORGOT_PASSWORD_MESSAGE)
-    if settings.app_env in ("development", "test") and dev_url:
-        response.dev_reset_url = dev_url
-        print(f"[auth] Dev reset link: {dev_url}")
+    if result.dev_reset_url:
+        response.dev_reset_url = result.dev_reset_url
     return response
 
 
