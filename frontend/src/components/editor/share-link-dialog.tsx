@@ -95,8 +95,8 @@ export function ShareLinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="share-dialog-content max-w-[34rem] gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none">
-        <div className="share-dialog-header border-b border-background/15 bg-foreground px-6 py-5 text-background">
+      <DialogContent className="share-dialog-content max-w-[34rem] gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
+        <div className="share-dialog-header border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
           <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
             Circulation desk
           </p>

@@ -1,16 +1,16 @@
 from src.services.intent_router import _fallback_intent
 from src.services.logic_audit.debate import _strip_thinking_markup, load_debate_roles
-from src.services.logic_audit.schemas import (
-    LogicAuditReport,
-    LogicConflictItem,
-    LogicSectionReport,
-)
 from src.services.logic_audit.runner import (
     _cap_section_payload,
     _extract_json_object,
     _fallback_from_perspectives,
     format_chat_summary,
     format_report_text,
+)
+from src.services.logic_audit.schemas import (
+    LogicAuditReport,
+    LogicConflictItem,
+    LogicSectionReport,
 )
 
 
