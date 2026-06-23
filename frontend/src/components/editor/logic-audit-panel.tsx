@@ -1,30 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Files, Loader2, Play, Sparkles, Zap } from "lucide-react";
+import { Files, Loader2, Microscope, Play, Zap } from "lucide-react";
 
+import { useLocale } from "@/components/locale-provider";
+import { editorCopy, logicAuditModeHint } from "@/lib/editor-i18n";
 import {
   defaultQuickSectionSelection,
   listLogicAuditSectionOptions,
-  logicAuditModeHint,
-  logicAuditModeLabel,
   type LogicAuditMode,
   type LogicAuditScope,
 } from "@/lib/logic-audit";
 import { parseLatexOutline } from "@/lib/latex-outline";
 import type { LogicAuditReport } from "@/lib/api/academic";
 import { cn } from "@/lib/utils";
-
-function severityLabel(severity?: string): string {
-  switch ((severity ?? "").toLowerCase()) {
-    case "critical":
-      return "NGHIÊM TRỌNG";
-    case "warning":
-      return "CẢNH BÁO";
-    case "info":
-      return "GỢI Ý";
-    default:
-      return (severity ?? "INFO").toUpperCase();
-  }
-}
 
 type LogicAuditPanelProps = {
   latex: string;
@@ -34,6 +21,8 @@ type LogicAuditPanelProps = {
 };
 
 export function LogicAuditPanel({ latex, report, loading = false, onRun }: LogicAuditPanelProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale).logicAudit;
   const [mode, setMode] = useState<LogicAuditMode>("quick");
   const [scope, setScope] = useState<LogicAuditScope>("selected");
   const sectionOptions = useMemo(
@@ -51,6 +40,19 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
 
   const auditFull = scope === "full";
 
+  const severityLabel = (severity?: string): string => {
+    switch ((severity ?? "").toLowerCase()) {
+      case "critical":
+        return t.severityCritical;
+      case "warning":
+        return t.severityWarning;
+      case "info":
+        return t.severityInfo;
+      default:
+        return (severity ?? "INFO").toUpperCase();
+    }
+  };
+
   const toggleSection = (name: string) => {
     if (auditFull) return;
     if (mode === "deep") {
@@ -64,20 +66,27 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
 
   const canRun = (auditFull || selected.length > 0) && !loading && sectionOptions.length > 0;
 
+  const runButtonLabel = loading
+    ? t.running
+    : auditFull
+      ? mode === "deep"
+        ? t.runDeepFull
+        : t.runQuickFull
+      : mode === "deep"
+        ? t.runDeep
+        : t.runQuick;
+
   return (
     <div className="logic-audit-panel">
-      <p className="mt-1 text-xs text-muted-foreground">
-        Comment-only — không tự sửa bản thảo. Chế độ audit dùng engine riêng, không phụ thuộc
-        provider trong chat.
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{t.intro}</p>
 
       <div className="logic-audit-mode-toggle mt-4 grid grid-cols-2 gap-2">
         {(
           [
-            { id: "quick" as const, icon: Zap, subtitle: "OpenRouter" },
-            { id: "deep" as const, icon: Sparkles, subtitle: "MiniMax M3" },
+            { id: "quick" as const, icon: Zap, label: t.modeQuick, subtitle: "OpenRouter" },
+            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: "MiniMax M3" },
           ] as const
-        ).map(({ id, icon: Icon, subtitle }) => (
+        ).map(({ id, icon: Icon, label, subtitle }) => (
           <button
             key={id}
             type="button"
@@ -96,7 +105,7 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
           >
             <div className="flex items-center gap-2">
               <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
-              <span className="text-xs font-semibold">{logicAuditModeLabel(id)}</span>
+              <span className="text-xs font-semibold">{label}</span>
             </div>
             <span className="mt-1 block text-[10px] text-muted-foreground">{subtitle}</span>
           </button>
@@ -118,25 +127,25 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-xs font-semibold">
             <Files className="h-3.5 w-3.5 text-primary" />
-            Quét toàn bộ bài
+            {t.scanFull}
           </span>
           <span className="mt-0.5 block text-[10px] leading-snug text-muted-foreground">
             {mode === "quick"
-              ? `Tất cả section trong bản thảo (tối đa 20 phần, hiện có ${sectionOptions.length}).`
-              : `Tất cả section — MiniMax sâu (tối đa 8 phần, hiện có ${sectionOptions.length}).`}
+              ? t.scanFullHintQuick(sectionOptions.length)
+              : t.scanFullHintDeep(sectionOptions.length)}
           </span>
         </span>
       </label>
 
       <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-        {logicAuditModeHint(mode, scope)}
+        {logicAuditModeHint(locale, mode, scope)}
       </p>
 
       {!auditFull ? (
         <div className="mt-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {mode === "deep" ? "Chọn 1 phần" : "Chọn phần quét"}
+              {mode === "deep" ? t.pickOneSection : t.pickSections}
             </span>
             {mode === "quick" ? (
               <div className="flex items-center gap-2">
@@ -145,14 +154,14 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
                   className="text-[10px] text-primary hover:underline"
                   onClick={() => setSelected(sectionOptions)}
                 >
-                  Chọn tất cả
+                  {t.selectAll}
                 </button>
                 <button
                   type="button"
                   className="text-[10px] text-primary hover:underline"
                   onClick={() => setSelected(defaultQuickSectionSelection(sectionOptions))}
                 >
-                  IMRAD mặc định
+                  {t.imradDefault}
                 </button>
               </div>
             ) : null}
@@ -186,8 +195,7 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
         </div>
       ) : (
         <p className="mt-4 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground">
-          Sẽ quét <strong className="text-foreground">{sectionOptions.length}</strong> phần trong
-          file LaTeX.
+          {t.willScanParts(sectionOptions.length)}
         </p>
       )}
 
@@ -198,15 +206,7 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-        {loading
-          ? "Đang audit…"
-          : auditFull
-            ? mode === "deep"
-              ? "Chạy Deep · toàn bộ bài"
-              : "Chạy Quick · toàn bộ bài"
-            : mode === "deep"
-              ? "Chạy Deep audit"
-              : "Chạy Quick audit"}
+        {runButtonLabel}
       </button>
 
       {report?.sections?.length ? (
@@ -226,20 +226,20 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
                 {section.section}
               </h3>
               {(section.conflicts ?? []).length === 0 && !(section.weak_claims ?? []).length ? (
-                <p className="mt-2 text-xs text-muted-foreground">Không có vấn đề rõ ràng.</p>
+                <p className="mt-2 text-xs text-muted-foreground">{t.noIssues}</p>
               ) : (
                 <ul className="mt-2 space-y-2">
                   {(section.conflicts ?? []).map((c) => (
                     <li key={c.id} className="text-xs">
                       <span className="font-medium text-[color:var(--editorial-red)]">
-                            [{severityLabel(c.severity)}]
+                        [{severityLabel(c.severity)}]
                       </span>{" "}
                       {c.comment}
                     </li>
                   ))}
                   {(section.weak_claims ?? []).map((w, i) => (
                     <li key={`weak-${i}`} className="text-xs text-muted-foreground">
-                      [WEAK] {w}
+                      [{t.weak}] {w}
                     </li>
                   ))}
                 </ul>
@@ -251,14 +251,12 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
               key={`cross-${i}`}
               className="rounded-md border border-dashed border-border/60 p-3 text-xs"
             >
-              <span className="font-medium">Cross-section:</span> {cross.description}
+              <span className="font-medium">{t.crossSection}</span> {cross.description}
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Hoặc chat: &quot;/logic&quot; · &quot;/logic full&quot; · &quot;/logic deep&quot;.
-        </p>
+        <p className="mt-4 text-xs text-muted-foreground">{t.chatHint}</p>
       )}
     </div>
   );

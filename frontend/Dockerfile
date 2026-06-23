@@ -1,17 +1,21 @@
 # Arionear frontend — TanStack Start + Nitro (node-server) for Google Cloud Run
 #
-# Build (set backend API URL at build time):
+# Local Docker:
 #   docker build --build-arg VITE_API_URL=https://YOUR-API.run.app/api/v1 -t arionear-web .
 #
-# Run locally:
-#   docker run -p 8080:8080 -e PORT=8080 arionear-web
+# Cloud Build (gcloud does not support --build-arg on builds submit; use cloudbuild.yaml):
+#   gcloud builds submit --config=cloudbuild.yaml \
+#     --substitutions=_VITE_API_URL=https://YOUR-API.run.app/api/v1,_IMAGE=REGION-docker.pkg.dev/PROJECT/arionear/frontend:latest
 
 FROM node:22-slim AS builder
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+
+# Lockfile is often generated on Windows — reinstall deps so Linux native binaries resolve.
+RUN rm -rf node_modules package-lock.json \
+    && npm install --include=dev --legacy-peer-deps
 
 COPY . .
 
@@ -28,8 +32,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Nitro node-server output: dist/server/index.mjs + dist/client static assets
-COPY --from=builder /app/dist ./dist
+# Nitro node-server output: .output/server/index.mjs + static assets
+COPY --from=builder /app/.output ./.output
 
 # Cloud Run injects PORT; Nitro reads process.env.PORT
 EXPOSE 8080
@@ -37,4 +41,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080)).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["node", "dist/server/index.mjs"]
+CMD ["node", ".output/server/index.mjs"]

@@ -26,6 +26,8 @@ import {
   FileOutput,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
+import { useLocale } from "@/components/locale-provider";
+import { editorCopy, formatMastheadDate, revisionActionLabel, translateCitationSummary } from "@/lib/editor-i18n";
 import {
   formatTimeAgo,
   getCompilePayload,
@@ -84,7 +86,6 @@ import {
 } from "@/lib/latex-import";
 import { toast } from "sonner";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
-import { citationErrorMessage } from "@/lib/api/api-errors";
 import {
   arioAvatar,
   ChatOverlay,
@@ -150,13 +151,6 @@ export const Route = createFileRoute("/editor")({
     ],
   }),
   component: EditorPage,
-});
-
-const today = new Date().toLocaleDateString("en-US", {
-  weekday: "short",
-  year: "numeric",
-  month: "short",
-  day: "numeric",
 });
 
 type MobileTab = "files" | "editor" | "preview";
@@ -264,19 +258,6 @@ function toInlineSuggestion(
   return null;
 }
 
-function revisionActionLabel(action: string) {
-  switch (action.toLowerCase()) {
-    case "accepted":
-      return "Accepted";
-    case "rejected":
-      return "Rejected";
-    case "modified":
-      return "Modified";
-    default:
-      return "Pending";
-  }
-}
-
 function stripLatexCommands(source: string) {
   return source
     .replace(/%.*$/gm, "")
@@ -335,6 +316,7 @@ function computeProjectStats(latex: string): ProjectStats {
 
 function EditorPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
   const { projectId } = Route.useSearch();
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
@@ -1787,12 +1769,14 @@ function ArionearMasthead({
   integrityStrictness?: ResearcherProfile["integrity_strictness"];
 }) {
   const user = getSession();
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const integrityLabel =
     integrityStrictness === "strict"
-      ? "Strict"
+      ? t.masthead.integrityStrict
       : integrityStrictness === "relaxed"
-        ? "Relaxed"
-        : "On";
+        ? t.masthead.integrityRelaxed
+        : t.masthead.integrityOn;
 
   return (
     <div
@@ -1804,14 +1788,14 @@ function ArionearMasthead({
         </Link>
         <span className="opacity-40">·</span>
         <Link to="/projects" className="hover:text-[color:var(--editorial-red)] transition-colors">
-          Projects
+          {t.masthead.projects}
         </Link>
         <span className="opacity-40">·</span>
         <Link to="/profile" className="hover:text-[color:var(--editorial-red)] transition-colors">
-          Profile
+          {t.masthead.profile}
         </Link>
         <span className="opacity-40">·</span>
-        <span>LaTeX Workspace</span>
+        <span>{t.masthead.latexWorkspace}</span>
       </div>
       <div className="flex items-center gap-3">
         {user && (
@@ -1822,9 +1806,9 @@ function ArionearMasthead({
             <span className="opacity-40">·</span>
           </>
         )}
-        <span className="hidden sm:inline opacity-70">{today}</span>
+        <span className="hidden sm:inline opacity-70">{formatMastheadDate(locale)}</span>
         <span className="text-[color:var(--editorial-red)]">
-          Integrity Guard · {integrityLabel}
+          {t.masthead.integrityGuard} · {integrityLabel}
         </span>
       </div>
     </div>
@@ -1880,10 +1864,12 @@ function MobileHeader({
 }
 
 function MobileTabBar({ tab, onChange }: { tab: MobileTab; onChange: (t: MobileTab) => void }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const tabs: { id: MobileTab; label: string }[] = [
-    { id: "files", label: "Files" },
-    { id: "editor", label: "Editor" },
-    { id: "preview", label: "Preview" },
+    { id: "files", label: t.mobile.files },
+    { id: "editor", label: t.mobile.editor },
+    { id: "preview", label: t.mobile.preview },
   ];
   return (
     <nav className="flex md:hidden shrink-0 border-b border-border/40 bg-card">
@@ -2190,6 +2176,9 @@ function LeftSidebar({
   onUploadAsset: () => void;
   isDirty?: boolean;
 }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+
   return (
     <aside className="flex min-h-0 w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
       <div className="border-b border-border p-3">
@@ -2197,17 +2186,22 @@ function LeftSidebar({
       </div>
 
       <div className="flex border-b border-border">
-        {(["files", "chats"] as const).map((t) => (
+        {(
+          [
+            { id: "files" as const, label: t.sidebar.files },
+            { id: "chats" as const, label: t.sidebar.chats },
+          ] as const
+        ).map(({ id, label }) => (
           <button
-            key={t}
-            onClick={() => onTabChange(t)}
-            className={`flex-1 py-2 text-xs font-medium capitalize transition ${
-              tab === t
+            key={id}
+            onClick={() => onTabChange(id)}
+            className={`flex-1 py-2 text-xs font-medium transition ${
+              tab === id
                 ? "border-b-2 border-primary text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t}
+            {label}
           </button>
         ))}
       </div>
@@ -2249,7 +2243,7 @@ function LeftSidebar({
         <div className="flex items-start gap-2 rounded-md bg-secondary/60 p-2.5">
           <ShieldCheck className="h-3.5 w-3.5 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
           <p className="text-[10px] leading-snug text-muted-foreground">
-            AI hỗ trợ diễn đạt — không bịa dữ liệu hay kết quả.
+            {t.sidebar.aiDisclaimer}
           </p>
         </div>
       </div>
@@ -2425,6 +2419,9 @@ function CenterPanel({
   chatSelectionContext?: EditorSelectionContext | null;
   onClearChatSelectionContext?: () => void;
 }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+
   return (
     <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
@@ -2472,7 +2469,7 @@ function CenterPanel({
               }`}
             >
               <Share2 className="h-3 w-3" />
-              Share
+              {t.toolbar.share}
             </button>
           ) : null}
           {onExport ? (
@@ -2481,10 +2478,10 @@ function CenterPanel({
               onClick={onExport}
               disabled={!exportEnabled}
               className="editor-export-btn hidden md:inline-flex"
-              title={exportEnabled ? "Export PDF" : "Compile trước khi Export"}
+              title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
             >
               <FileOutput className="h-3.5 w-3.5" />
-              Export
+              {t.toolbar.export}
             </button>
           ) : null}
           <button
@@ -2496,7 +2493,7 @@ function CenterPanel({
             }`}
           >
             <Wrench className="h-3 w-3" />
-            Tools
+            {t.toolbar.tools}
           </button>
         </div>
       </div>
@@ -2671,6 +2668,8 @@ function ToolsPanel({
 }) {
   const [tab, setTab] = useState<ToolsTab>("info");
   const { theme, setTheme } = useTheme();
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const [citationResults, setCitationResults] = useState(citationResultsProp);
   const [citationSummary, setCitationSummary] = useState(citationSummaryProp);
   const [citationLoading, setCitationLoading] = useState(false);
@@ -2697,14 +2696,14 @@ function ToolsPanel({
   const stats = computeProjectStats(latex);
 
   const statCards: { label: string; value: number }[] = [
-    { label: "Words", value: stats.words },
-    { label: "Words in Text", value: stats.wordsInText },
-    { label: "Words in Headers", value: stats.wordsInHeaders },
-    { label: "Words outside text", value: stats.wordsOutsideText },
-    { label: "Number of headers", value: stats.headers },
-    { label: "Number of figures", value: stats.figures },
-    { label: "Number of math inlines", value: stats.mathInlines },
-    { label: "Number of math displayed", value: stats.mathDisplayed },
+    { label: t.tools.stats.words, value: stats.words },
+    { label: t.tools.stats.wordsInText, value: stats.wordsInText },
+    { label: t.tools.stats.wordsInHeaders, value: stats.wordsInHeaders },
+    { label: t.tools.stats.wordsOutsideText, value: stats.wordsOutsideText },
+    { label: t.tools.stats.headers, value: stats.headers },
+    { label: t.tools.stats.figures, value: stats.figures },
+    { label: t.tools.stats.mathInlines, value: stats.mathInlines },
+    { label: t.tools.stats.mathDisplayed, value: stats.mathDisplayed },
   ];
 
   const handleVerifyCitations = async () => {
@@ -2716,7 +2715,7 @@ function ToolsPanel({
       setCitationSummary(result.summary);
       onCitationsUpdated(result.results, result.summary);
     } catch {
-      setCitationSummary(citationErrorMessage());
+      setCitationSummary(t.tools.citationVerifyError);
     } finally {
       setCitationLoading(false);
     }
@@ -2728,10 +2727,10 @@ function ToolsPanel({
         <nav className="tools-tab-nav flex items-center gap-1">
           {(
             [
-              { id: "info" as const, label: "Project Info" },
-              { id: "logic" as const, label: "Logic Audit" },
-              { id: "citations" as const, label: "Citations" },
-              { id: "versions" as const, label: "Versions" },
+              { id: "info" as const, label: t.tools.projectInfo },
+              { id: "logic" as const, label: t.tools.logicAudit },
+              { id: "citations" as const, label: t.tools.citations },
+              { id: "versions" as const, label: t.tools.versions },
             ] as const
           ).map((item) => (
             <button
@@ -2748,60 +2747,54 @@ function ToolsPanel({
           className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           <X className="h-3 w-3" />
-          Close
+          {t.tools.close}
         </button>
       </div>
 
       <div className="soft-scrollbar flex-1 overflow-y-auto p-4 md:p-5">
         {tab === "info" ? (
           <div className="tools-section">
-            <h2 className="tools-section-title">Settings</h2>
+            <h2 className="tools-section-title">{t.tools.settings}</h2>
             <div className="tools-setting-row">
               <div className="tools-setting-copy">
-                <span className="tools-setting-label">Auto-compile PDF</span>
-                <span className="tools-setting-hint">
-                  Compile when you save (Ctrl+S) or accept an agent suggestion
-                </span>
+                <span className="tools-setting-label">{t.tools.autoCompile}</span>
+                <span className="tools-setting-hint">{t.tools.autoCompileHint}</span>
               </div>
               <Switch
                 id="tools-auto-compile"
                 checked={autoCompile}
                 onCheckedChange={onAutoCompileChange}
-                aria-label="Auto-compile PDF"
+                aria-label={t.tools.autoCompile}
               />
             </div>
 
             <div className="tools-setting-row">
               <div className="tools-setting-copy">
-                <span className="tools-setting-label">Researcher profile</span>
-                <span className="tools-setting-hint">
-                  AI defaults, citation style, auto-save, and affiliation
-                </span>
+                <span className="tools-setting-label">{t.tools.researcherProfile}</span>
+                <span className="tools-setting-hint">{t.tools.researcherProfileHint}</span>
               </div>
               <Link
                 to="/profile"
                 className="rounded-md border border-border/60 px-2.5 py-1 text-[11px] font-medium transition hover:bg-secondary"
               >
-                Open
+                {t.tools.open}
               </Link>
             </div>
 
             <div className="tools-setting-row">
               <div className="tools-setting-copy">
-                <span className="tools-setting-label">Dark mode</span>
-                <span className="tools-setting-hint">
-                  Use a darker workspace theme across the app
-                </span>
+                <span className="tools-setting-label">{t.tools.darkMode}</span>
+                <span className="tools-setting-hint">{t.tools.darkModeHint}</span>
               </div>
               <Switch
                 id="tools-dark-mode"
                 checked={theme === "dark"}
                 onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                aria-label="Dark mode"
+                aria-label={t.tools.darkMode}
               />
             </div>
 
-            <h2 className="tools-section-title mt-6">Summary</h2>
+            <h2 className="tools-section-title mt-6">{t.tools.summary}</h2>
             <div className="tools-stat-grid">
               {statCards.map((card) => (
                 <div key={card.label} className="tools-stat-card">
@@ -2813,7 +2806,7 @@ function ToolsPanel({
           </div>
         ) : tab === "logic" ? (
           <div className="tools-section">
-            <h2 className="tools-section-title">Logic Audit</h2>
+            <h2 className="tools-section-title">{t.tools.logicAudit}</h2>
             <LogicAuditPanel
               latex={latex}
               report={logicAuditReportProp}
@@ -2824,18 +2817,20 @@ function ToolsPanel({
         ) : tab === "citations" ? (
           <div className="tools-section">
             <div className="flex items-center justify-between">
-              <h2 className="tools-section-title mb-0">Citation Verification</h2>
+              <h2 className="tools-section-title mb-0">{t.tools.citationVerification}</h2>
               <button
                 type="button"
                 onClick={handleVerifyCitations}
                 disabled={citationLoading}
                 className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {citationLoading ? "Verifying…" : "Verify citations"}
+                {citationLoading ? t.tools.verifying : t.tools.verifyCitations}
               </button>
             </div>
             {citationSummary && (
-              <p className="mt-3 text-sm text-muted-foreground">{citationSummary}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {translateCitationSummary(locale, citationSummary)}
+              </p>
             )}
             <ul className="mt-4 space-y-2">
               {citationResults.map((r, i) => (
@@ -2850,7 +2845,7 @@ function ToolsPanel({
                   >
                     {String(r.status)} — {String(r.key ?? "")}
                   </span>
-                  <p className="mt-1 text-muted-foreground">{String(r.title || "No title in BibTeX")}</p>
+                  <p className="mt-1 text-muted-foreground">{String(r.title || t.tools.noTitleInBib)}</p>
                 </li>
               ))}
             </ul>
@@ -2858,22 +2853,18 @@ function ToolsPanel({
         ) : (
           <div className="tools-section">
             <div className="flex items-center gap-2">
-              <h2 className="tools-section-title mb-0">AI revision history</h2>
+              <h2 className="tools-section-title mb-0">{t.tools.aiRevisionHistory}</h2>
               <button
                 className="flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-                aria-label="Versions help"
+                aria-label={t.tools.versionsHelp}
               >
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Accept/Reject actions from Ario suggestions are recorded here (L4 audit trail).
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t.tools.revisionsHint}</p>
 
             {sortedRevisions.length === 0 ? (
-              <p className="mt-4 text-xs text-muted-foreground">
-                No AI revisions yet. Ask Ario to edit or polish your manuscript.
-              </p>
+              <p className="mt-4 text-xs text-muted-foreground">{t.tools.noRevisions}</p>
             ) : (
               <div className="mt-4 space-y-3">
                 {sortedRevisions.map((rev, index) => {
@@ -2892,13 +2883,13 @@ function ToolsPanel({
                                 : ""
                           }`}
                         >
-                          {revisionActionLabel(rev.action)}
+                          {revisionActionLabel(locale, rev.action)}
                         </span>
                         {rev.section && (
                           <span className="text-xs text-muted-foreground">{rev.section}</span>
                         )}
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {!Number.isNaN(ts) ? formatTimeAgo(ts) : ""}
+                          {!Number.isNaN(ts) ? formatTimeAgo(ts, locale) : ""}
                         </span>
                       </div>
                       <p className="line-clamp-2 text-xs text-muted-foreground">{rev.original}</p>
@@ -2907,7 +2898,7 @@ function ToolsPanel({
                           <span className="text-emerald-600">+{additions}</span>
                           <span className="text-[color:var(--editorial-red)]">-{deletions}</span>
                         </span>
-                        <span className="text-muted-foreground">chars vs original</span>
+                        <span className="text-muted-foreground">{t.tools.charsVsOriginal}</span>
                       </div>
                     </div>
                   );
@@ -2922,6 +2913,9 @@ function ToolsPanel({
 }
 
 function StatusBar({ lineCount, className = "" }: { lineCount: number; className?: string }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+
   return (
     <footer
       className={`flex h-7 shrink-0 items-center justify-between border-t border-border bg-card px-4 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground ${className}`}
@@ -2929,15 +2923,15 @@ function StatusBar({ lineCount, className = "" }: { lineCount: number; className
       <div className="flex items-center gap-4">
         <span className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-chart-2" />
-          Saved
+          {t.statusBar.saved}
         </span>
-        <span>LaTeX</span>
-        <span>UTF-8</span>
+        <span>{t.statusBar.latex}</span>
+        <span>{t.statusBar.utf8}</span>
       </div>
       <div className="flex items-center gap-4">
-        <span>Ln {lineCount}</span>
+        <span>{t.statusBar.line(lineCount)}</span>
         <span className="text-[color:var(--editorial-red)]">Arionear</span>
-        <span className="text-primary">Editor</span>
+        <span className="text-primary">{t.statusBar.editor}</span>
       </div>
     </footer>
   );

@@ -478,10 +478,10 @@ function ProjectsPage() {
                   </div>
                   <p className="mt-3 truncate font-serif-body text-sm font-semibold">{project.name}</p>
                   <p className="projects-row-date mt-1">
-                    {t.created} {formatProjectDateTime(project.createdAt)}
+                    {t.created} {formatProjectDateTime(project.createdAt, locale)}
                   </p>
                   <p className="projects-row-date mt-0.5">
-                    {t.updated} {formatProjectDateTime(project.updatedAt)}
+                    {t.updated} {formatProjectDateTime(project.updatedAt, locale)}
                   </p>
                 </button>
               ))}
@@ -575,6 +575,7 @@ function ProjectRow({
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
 }) {
+  const { locale } = useLocale();
   const nameRef = useRef<EditableProjectNameHandle>(null);
   const [renaming, setRenaming] = useState(false);
 
@@ -617,15 +618,15 @@ function ProjectRow({
       </div>
       <span
         className="projects-row-date projects-col-created hidden md:block"
-        title={formatProjectDateTime(project.createdAt)}
+        title={formatProjectDateTime(project.createdAt, locale)}
       >
-        {formatTimeAgo(project.createdAt)}
+        {formatTimeAgo(project.createdAt, locale)}
       </span>
       <span
         className="projects-row-date projects-col-updated hidden md:block"
-        title={formatProjectDateTime(project.updatedAt)}
+        title={formatProjectDateTime(project.updatedAt, locale)}
       >
-        {formatTimeAgo(project.updatedAt)}
+        {formatTimeAgo(project.updatedAt, locale)}
       </span>
       <div className="projects-col-actions flex justify-end gap-1">
         <button

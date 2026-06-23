@@ -1,12 +1,14 @@
 import { Check, Copy, Eye, Link2, Loader2, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useLocale } from "@/components/locale-provider";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { editorCopy } from "@/lib/editor-i18n";
 import {
   buildShareUrl,
   disablePaperShare,
@@ -28,6 +30,8 @@ export function ShareLinkDialog({
   paperId,
   onStatusChange,
 }: ShareLinkDialogProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale).share;
   const [status, setStatus] = useState<PaperShareStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
@@ -49,10 +53,10 @@ export function ShareLinkDialog({
     fetchPaperShareStatus(paperId)
       .then(applyStatus)
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Could not load share settings.");
+        setError(err instanceof Error ? err.message : t.loadError);
       })
       .finally(() => setLoading(false));
-  }, [open, paperId, applyStatus]);
+  }, [open, paperId, applyStatus, t.loadError]);
 
   const shareUrl = status?.token ? buildShareUrl(status.token) : "";
 
@@ -63,7 +67,7 @@ export function ShareLinkDialog({
       const next = await enablePaperShare(paperId);
       applyStatus(next);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not create share link.");
+      setError(err instanceof Error ? err.message : t.createError);
     } finally {
       setWorking(false);
     }
@@ -76,7 +80,7 @@ export function ShareLinkDialog({
       await disablePaperShare(paperId);
       applyStatus({ enabled: false, token: null, created_at: null });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not disable sharing.");
+      setError(err instanceof Error ? err.message : t.disableError);
     } finally {
       setWorking(false);
     }
@@ -89,7 +93,7 @@ export function ShareLinkDialog({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setError("Could not copy link to clipboard.");
+      setError(t.copyError);
     }
   };
 
@@ -98,13 +102,13 @@ export function ShareLinkDialog({
       <DialogContent className="share-dialog-content max-w-[34rem] gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
         <div className="share-dialog-header border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
           <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
-            Circulation desk
+            {t.circulationDesk}
           </p>
           <DialogTitle className="mt-2 font-serif-display text-2xl font-bold tracking-tight text-background">
-            Share manuscript
+            {t.title}
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-sm text-sm leading-relaxed text-background/75">
-            Send a view-only link. Readers see live LaTeX and PDF — no editing, no tools.
+            {t.description}
           </DialogDescription>
         </div>
 
@@ -127,26 +131,26 @@ export function ShareLinkDialog({
                     <div className="share-dialog-note border border-border/70 bg-muted/20 px-3 py-3">
                       <Eye className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]" aria-hidden />
                       <p className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
-                        View only
+                        {t.viewOnly}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-foreground/75">
-                        Readers cannot edit or run Ario.
+                        {t.viewOnlyHint}
                       </p>
                     </div>
                     <div className="share-dialog-note border border-border/70 bg-muted/20 px-3 py-3">
                       <ShieldCheck className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]" aria-hidden />
                       <p className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Stable link
+                        {t.stableLink}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-foreground/75">
-                        Same URL after compile and save until you disable sharing.
+                        {t.stableLinkHint}
                       </p>
                     </div>
                   </div>
 
                   <div>
                     <label className="mb-2 block font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                      View-only link
+                      {t.viewOnlyLink}
                     </label>
                     <div className="share-dialog-link-box border border-foreground/20 bg-[color:var(--muted)]/40">
                       <div className="flex items-start gap-3 border-b border-foreground/10 px-4 py-3">
@@ -163,12 +167,12 @@ export function ShareLinkDialog({
                         {copied ? (
                           <>
                             <Check className="h-4 w-4" aria-hidden />
-                            Copied to clipboard
+                            {t.copied}
                           </>
                         ) : (
                           <>
                             <Copy className="h-4 w-4" aria-hidden />
-                            Copy link
+                            {t.copyLink}
                           </>
                         )}
                       </button>
@@ -176,16 +180,14 @@ export function ShareLinkDialog({
                   </div>
 
                   <div className="flex items-center justify-between border-t border-border/60 pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      Disable sharing to revoke access immediately.
-                    </p>
+                    <p className="text-xs text-muted-foreground">{t.disableHint}</p>
                     <button
                       type="button"
                       disabled={working}
                       onClick={() => void handleDisable()}
                       className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground underline underline-offset-4 transition hover:text-[color:var(--editorial-red)] disabled:opacity-50"
                     >
-                      Disable sharing
+                      {t.disableSharing}
                     </button>
                   </div>
                 </>
@@ -194,11 +196,11 @@ export function ShareLinkDialog({
                   <ul className="space-y-2 text-sm text-foreground/75">
                     <li className="flex gap-2">
                       <span className="text-[color:var(--editorial-red)]">—</span>
-                      One permanent link per project while sharing is on.
+                      {t.bulletPermanent}
                     </li>
                     <li className="flex gap-2">
                       <span className="text-[color:var(--editorial-red)]">—</span>
-                      Live LaTeX and PDF update for viewers automatically.
+                      {t.bulletLive}
                     </li>
                   </ul>
                   <button
@@ -212,7 +214,7 @@ export function ShareLinkDialog({
                     ) : (
                       <Link2 className="h-4 w-4" aria-hidden />
                     )}
-                    Create view-only link
+                    {t.createLink}
                   </button>
                 </>
               )}

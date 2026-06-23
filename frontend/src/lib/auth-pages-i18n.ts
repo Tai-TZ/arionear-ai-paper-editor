@@ -68,6 +68,21 @@ type AuthPagesCopy = {
     alreadyHave: string;
     signIn: string;
   };
+  googleCallback: {
+    pageTitle: string;
+    eyebrow: string;
+    title: string;
+    lede: string;
+    completing: string;
+    noSession: string;
+    backToSignIn: string;
+    signInFailed: string;
+    signInSuccess: string;
+    welcomeBack: (name: string) => string;
+    couldNotComplete: string;
+    cancelled: string;
+    expired: string;
+  };
 };
 
 const EN: AuthPagesCopy = {
@@ -139,6 +154,21 @@ const EN: AuthPagesCopy = {
     alreadyHave: "Already have an account?",
     signIn: "Sign in",
   },
+  googleCallback: {
+    pageTitle: "Signing in — Arionear",
+    eyebrow: "Single Sign-On",
+    title: "One moment.",
+    lede: "We are verifying your Google account and opening your editorial desk.",
+    completing: "Completing Google sign-in…",
+    noSession: "Google sign-in did not return a session. Please try again.",
+    backToSignIn: "Back to sign in",
+    signInFailed: "Sign in failed",
+    signInSuccess: "Signed in",
+    welcomeBack: (name) => `Welcome back, ${name}.`,
+    couldNotComplete: "Could not complete Google sign-in.",
+    cancelled: "Google sign-in was cancelled.",
+    expired: "Sign-in session expired. Please try again.",
+  },
 };
 
 const VI: AuthPagesCopy = {
@@ -209,6 +239,21 @@ const VI: AuthPagesCopy = {
     dividerGoogle: "hoặc tiếp tục với Google",
     alreadyHave: "Đã có tài khoản?",
     signIn: "Đăng nhập",
+  },
+  googleCallback: {
+    pageTitle: "Đang đăng nhập — Arionear",
+    eyebrow: "Đăng nhập một lần",
+    title: "Chờ một chút.",
+    lede: "Chúng tôi đang xác minh tài khoản Google và mở bàn biên tập của bạn.",
+    completing: "Đang hoàn tất đăng nhập Google…",
+    noSession: "Đăng nhập Google không trả về phiên làm việc. Vui lòng thử lại.",
+    backToSignIn: "Quay lại đăng nhập",
+    signInFailed: "Đăng nhập thất bại",
+    signInSuccess: "Đã đăng nhập",
+    welcomeBack: (name) => `Chào mừng trở lại, ${name}.`,
+    couldNotComplete: "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại.",
+    cancelled: "Đăng nhập Google đã bị hủy.",
+    expired: "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
   },
 };
 

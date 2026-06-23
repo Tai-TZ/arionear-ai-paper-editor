@@ -3,6 +3,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useLocale } from "@/components/locale-provider";
+import { editorCopy } from "@/lib/editor-i18n";
 import { ProjectFileTree } from "@/components/editor/project-file-tree";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import type { ProjectAsset, ProjectFile } from "@/lib/project-store";
@@ -38,6 +40,9 @@ export function SidebarFileOutlineSplit({
   onOutlineJump,
   compact = false,
 }: SidebarFileOutlineSplitProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+
   return (
     <ResizablePanelGroup
       id="sidebar-file-outline"
@@ -75,7 +80,7 @@ export function SidebarFileOutlineSplit({
         className="flex min-h-0 min-w-0 flex-col"
       >
         <div className="sidebar-outline-pane soft-scrollbar">
-          <span className="sidebar-outline-label">Outline</span>
+          <span className="sidebar-outline-label">{t.sidebar.outline}</span>
           <div className="sidebar-outline-nav">
             <LatexOutlineNav
               latex={outlineLatex}

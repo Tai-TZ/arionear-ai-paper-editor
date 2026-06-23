@@ -28,6 +28,8 @@ import {
   type PdfPageRenderResult,
 } from "@/lib/pdf-renderer";
 import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
+import { useLocale } from "@/components/locale-provider";
+import { editorCopy } from "@/lib/editor-i18n";
 
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
 type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
@@ -233,6 +235,8 @@ export function PdfPreviewPanel({
   latexSource = "",
   readOnly = false,
 }: PdfPreviewPanelProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
@@ -436,7 +440,7 @@ export function PdfPreviewPanel({
   }, [flashSynctexHint]);
 
   const compilerOptions: { value: LatexCompiler; label: string }[] = [
-    { value: "auto", label: "Auto" },
+    { value: "auto", label: t.pdf.compilerAuto },
     { value: "pdflatex", label: "pdfLaTeX" },
     { value: "xelatex", label: "XeLaTeX" },
     { value: "lualatex", label: "LuaLaTeX" },
@@ -482,10 +486,10 @@ export function PdfPreviewPanel({
                 className="pdf-preview-compile-btn inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
-                {isCompiling ? "Compiling…" : "Compile"}
+                {isCompiling ? t.pdf.compiling : t.pdf.compile}
               </button>
               <span className="font-mono text-[11px] text-[#666]">
-                {numPages > 0 ? `${currentPage} of ${numPages} pages` : "No PDF yet"}
+                {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
               </span>
               {onCompilerChange && (
                 <select
@@ -512,7 +516,7 @@ export function PdfPreviewPanel({
               onClick={() => setLogOpen((v) => !v)}
               className="rounded px-2 py-1 font-mono text-[10px] text-[#555] transition hover:bg-black/5"
             >
-              Log
+              {t.pdf.log}
             </button>
           )}
           {!readOnly && searchOpen ? (
@@ -545,7 +549,7 @@ export function PdfPreviewPanel({
             }}
             className="rounded px-1 py-1 font-mono text-[11px] text-[#666] outline-none hover:bg-black/5"
           >
-            <option value={100}>Fit</option>
+            <option value={100}>{t.pdf.fit}</option>
             {ZOOM_PRESETS.map((preset) => (
               <option key={preset} value={preset}>
                 {preset}%
@@ -564,11 +568,7 @@ export function PdfPreviewPanel({
             <p className="max-w-sm text-sm text-[#666]">
               {readOnly
                 ? "PDF preview will appear here when the manuscript finishes compiling."
-                : (
-                    <>
-                      Press <strong>Compile</strong> to generate a PDF preview with PDF.js.
-                    </>
-                  )}
+                : t.pdf.emptyHint}
             </p>
             {engineReady === false && !compileError && (
               <p className="mt-3 max-w-md text-xs text-amber-800">

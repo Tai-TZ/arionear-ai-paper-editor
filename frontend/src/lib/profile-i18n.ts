@@ -23,6 +23,10 @@ type ProfileCopy = {
   };
   fields: Record<string, string>;
   hints: Record<string, string>;
+  footer: {
+    signedInAs: (email: string) => string;
+    lastUpdated: string;
+  };
 };
 
 const EN: ProfileCopy = {
@@ -82,6 +86,10 @@ const EN: ProfileCopy = {
     integrity: "Higher levels apply stricter checks on AI suggestions.",
     telemetry: "Helps improve Arionear — no manuscript content is sent.",
   },
+  footer: {
+    signedInAs: (email) => `Signed in as ${email}`,
+    lastUpdated: "Last updated",
+  },
 };
 
 const VI: ProfileCopy = {
@@ -140,6 +148,10 @@ const VI: ProfileCopy = {
     auto_save: "Lưu dự án mỗi vài giây khi bạn chỉnh sửa.",
     integrity: "Mức cao hơn = kiểm tra chặt hơn với gợi ý AI.",
     telemetry: "Giúp cải thiện Arionear — không gửi nội dung bản thảo.",
+  },
+  footer: {
+    signedInAs: (email) => `Đã đăng nhập với ${email}`,
+    lastUpdated: "Cập nhật lần cuối",
   },
 };
 

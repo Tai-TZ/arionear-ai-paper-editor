@@ -26,18 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
-
-# Security: run as non-root user
+# Security: run as non-root user (packages must live under appuser, not /root/.local)
 RUN useradd -m appuser
+COPY --from=builder /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Copy application code (includes frontend/public/latex-stubs for IEEEtran fallback)
 COPY . .
 
 # Create data directory with correct ownership
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+RUN mkdir -p /app/data && chown -R appuser:appuser /app /home/appuser/.local
 
 USER appuser
 

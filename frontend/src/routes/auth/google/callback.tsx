@@ -1,8 +1,10 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { AuthDisabledAccount, AuthShell } from "@/components/auth/auth-shell";
-import { authToast } from "@/lib/auth-toast";
+import { useLocale } from "@/components/locale-provider";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
+import { toast } from "sonner";
 import { completeOAuthSession, isAuthenticated } from "@/lib/auth-store";
 
 type GoogleCallbackSearch = {
@@ -11,6 +13,17 @@ type GoogleCallbackSearch = {
   error?: string;
   error_code?: string;
 };
+
+function localizeOAuthError(
+  message: string,
+  t: ReturnType<typeof authPagesCopy>["googleCallback"],
+): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("could not complete google sign-in")) return t.couldNotComplete;
+  if (lower.includes("cancelled") || lower.includes("canceled")) return t.cancelled;
+  if (lower.includes("expired")) return t.expired;
+  return message;
+}
 
 export const Route = createFileRoute("/auth/google/callback")({
   validateSearch: (search: Record<string, unknown>): GoogleCallbackSearch => ({
@@ -39,8 +52,10 @@ function safeReturnTo(value: string | undefined) {
 
 function GoogleCallbackPage() {
   const navigate = useNavigate();
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).googleCallback, [locale]);
   const { access_token, return_to, error, error_code } = Route.useSearch();
-  const [message, setMessage] = useState("Completing Google sign-in…");
+  const [message, setMessage] = useState(t.completing);
   const [showDisabled, setShowDisabled] = useState(error_code === "account_disabled");
 
   useEffect(() => {
@@ -54,15 +69,15 @@ function GoogleCallbackPage() {
       const destination = safeReturnTo(return_to);
 
       if (error) {
-        setMessage(error);
-        authToast.signInError(error);
+        const localized = localizeOAuthError(error, t);
+        setMessage(localized);
+        toast.error(t.signInFailed, { description: localized });
         return;
       }
 
       if (!access_token) {
-        const msg = "Google sign-in did not return a session. Please try again.";
-        setMessage(msg);
-        authToast.signInError(msg);
+        setMessage(t.noSession);
+        toast.error(t.signInFailed, { description: t.noSession });
         return;
       }
 
@@ -70,12 +85,15 @@ function GoogleCallbackPage() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setMessage(result.error);
-        authToast.signInError(result.error);
+        const localized = localizeOAuthError(result.error, t);
+        setMessage(localized);
+        toast.error(t.signInFailed, { description: localized });
         return;
       }
 
-      authToast.signInSuccess(result.user.name);
+      toast.success(t.signInSuccess, {
+        description: result.user.name ? t.welcomeBack(result.user.name) : undefined,
+      });
       navigate({ to: destination, replace: true });
     }
 
@@ -83,26 +101,18 @@ function GoogleCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [access_token, error, navigate, return_to, showDisabled]);
+  }, [access_token, error, locale, navigate, return_to, showDisabled, t]);
 
   if (showDisabled) {
     return (
-      <AuthShell
-        eyebrow="Single Sign-On"
-        title="One moment."
-        lede="We are verifying your Google account and opening your editorial desk."
-      >
+      <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
         <AuthDisabledAccount onUseAnotherAccount={() => navigate({ to: "/signin", replace: true })} />
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell
-      eyebrow="Single Sign-On"
-      title="One moment."
-      lede="We are verifying your Google account and opening your editorial desk."
-    >
+    <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
       <div className="flex flex-col items-center gap-4 py-8 text-center">
         {!error && access_token ? (
           <AppLoadingScreen variant="inline" className="min-h-0 py-0" />
@@ -113,7 +123,7 @@ function GoogleCallbackPage() {
             to="/signin"
             className="font-sans-ui uppercase text-xs tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
           >
-            Back to sign in
+            {t.backToSignIn}
           </Link>
         ) : null}
       </div>

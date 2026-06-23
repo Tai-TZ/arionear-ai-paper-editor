@@ -16,7 +16,7 @@ export type AuthUser = {
 export function getGoogleOAuthStartPath(returnTo = "/projects", remember = false): string {
   const params = new URLSearchParams({ return_to: returnTo });
   if (remember) params.set("remember", "true");
-  return `/api/v1/auth/google/start?${params.toString()}`;
+  return `${API_BASE}/auth/google/start?${params.toString()}`;
 }
 
 export type AuthResult =

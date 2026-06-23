@@ -1,0 +1,20 @@
+# Cloud Build config for frontend (passes VITE_API_URL into Docker build).
+#
+# Usage (from frontend/):
+#   gcloud builds submit --config=cloudbuild.yaml \
+#     --substitutions=_VITE_API_URL=https://YOUR-API.run.app/api/v1,_IMAGE=asia-east1-docker.pkg.dev/PROJECT/arionear/frontend:latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - VITE_API_URL=${_VITE_API_URL}
+      - -t
+      - ${_IMAGE}
+      - .
+
+images:
+  - ${_IMAGE}
+
+timeout: 1800s

@@ -25,6 +25,7 @@ import {
   type ResearcherProfile,
 } from "@/lib/researcher-profile";
 import { profileCopy } from "@/lib/profile-i18n";
+import { formatDateTime } from "@/lib/date-i18n";
 import { useLocale } from "@/components/locale-provider";
 import { getStoredLocale } from "@/lib/locale-store";
 import { buildProfilePatch, validateProfileBeforeSave } from "@/lib/profile-patch";
@@ -503,11 +504,12 @@ function ProfilePage() {
                 />
                 {sessionUser && (
                   <p className="col-span-full text-xs text-muted-foreground">
-                    Signed in as {sessionUser.email}
+                    {t.footer.signedInAs(sessionUser.email)}
                     {form.updated_at && (
                       <>
                         {" "}
-                        · Last updated {new Date(form.updated_at).toLocaleString()}
+                        · {t.footer.lastUpdated}{" "}
+                        {formatDateTime(form.updated_at, locale)}
                       </>
                     )}
                   </p>

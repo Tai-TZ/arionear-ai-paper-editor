@@ -19,6 +19,8 @@ import {
   type ProjectTreeNode,
 } from "@/lib/project-file-tree";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
+import { useLocale } from "@/components/locale-provider";
+import { editorCopy } from "@/lib/editor-i18n";
 
 type ProjectFileTreeProps = {
   files: ProjectFile[];
@@ -55,6 +57,7 @@ function TreeRow({
   depth,
   activeFile,
   mainFile,
+  mainBadge,
   isDirty,
   expanded,
   onToggleFolder,
@@ -64,6 +67,7 @@ function TreeRow({
   depth: number;
   activeFile: string;
   mainFile: string;
+  mainBadge: string;
   isDirty?: boolean;
   expanded: Set<string>;
   onToggleFolder: (id: string) => void;
@@ -103,7 +107,7 @@ function TreeRow({
         <TreeIcon node={node} />
         <span className="project-file-tree-label">{node.name}</span>
         {node.path === mainFile && node.kind === "tex" ? (
-          <span className="project-file-tree-badge">main</span>
+          <span className="project-file-tree-badge">{mainBadge}</span>
         ) : null}
         {isActive && isDirty ? <span className="file-dirty-mark">*</span> : null}
       </button>
@@ -115,6 +119,7 @@ function TreeRow({
               depth={depth + 1}
               activeFile={activeFile}
               mainFile={mainFile}
+              mainBadge={mainBadge}
               isDirty={isDirty}
               expanded={expanded}
               onToggleFolder={onToggleFolder}
@@ -138,6 +143,8 @@ export function ProjectFileTree({
   onUploadZip,
   compact = false,
 }: ProjectFileTreeProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const tree = useMemo(() => buildProjectFileTree(files, assets), [files, assets]);
   const fileCount = useMemo(() => countTreeFiles(tree), [tree]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -170,7 +177,7 @@ export function ProjectFileTree({
           ) : (
             <ChevronRight className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
           )}
-          <span>File tree</span>
+          <span>{t.sidebar.fileTree}</span>
           <span className="project-file-tree-count">{fileCount}</span>
         </button>
         {SHOW_EDITOR_IMPORT ? (
@@ -210,6 +217,7 @@ export function ProjectFileTree({
                 depth={0}
                 activeFile={activeFile}
                 mainFile={mainFile}
+                mainBadge={t.sidebar.mainBadge}
                 isDirty={isDirty}
                 expanded={expanded}
                 onToggleFolder={toggleFolder}
