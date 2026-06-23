@@ -7,6 +7,11 @@ import uuid
 from typing import Any
 
 from src.services.llm import TOKENROUTER_MINIMAX_M3_MODEL, is_minimax_m3_provider
+from src.services.logic_audit.config import (
+    logic_audit_runtime_flags,
+    resolve_logic_audit_llm,
+    select_logic_targets,
+)
 from src.services.logic_audit.debate import (
     LogicProgressFn,
     LogicReasoningFn,
@@ -18,11 +23,6 @@ from src.services.logic_audit.debate import (
     synthesize_perspectives,
 )
 from src.services.logic_audit.language import clean_section_display_name, resolve_audit_language
-from src.services.logic_audit.config import (
-    logic_audit_runtime_flags,
-    resolve_logic_audit_llm,
-    select_logic_targets,
-)
 from src.services.logic_audit.schemas import LogicAuditReport
 from src.services.prompts import format_sections_summary, get_prompt
 

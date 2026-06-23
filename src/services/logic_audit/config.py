@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.config import LLMProvider, Settings, get_settings, normalize_llm_provider
+from src.config import LLMProvider, get_settings, normalize_llm_provider
 from src.services.llm import TOKENROUTER_MINIMAX_M3_MODEL, is_minimax_m3_provider
 
 LogicAuditMode = str  # "quick" | "deep"
