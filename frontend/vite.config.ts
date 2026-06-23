@@ -47,4 +47,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    // Cloud Run / Docker: standard Node HTTP server (default Lovable preset is cloudflare).
+    preset: "node-server",
+  },
 });
