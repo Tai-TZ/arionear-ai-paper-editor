@@ -383,7 +383,7 @@ const EN_ABOUT: AboutPageCopy = {
 const VI_ABOUT: AboutPageCopy = {
   publishedBy: "Xuất bản bởi",
   teamName: "Arionear",
-  teamSubtitle: "Arionear · Giai đoạn 1 MVP",
+  teamSubtitle: "Arionear · Giai đoạn GO PRODUCT",
   mastheadTitle: "Ban biên tập",
   membersLabel: (count) => `${count} thành viên`,
   figCaption: "Hình 3.1 — Ban biên tập, Arionear.",
