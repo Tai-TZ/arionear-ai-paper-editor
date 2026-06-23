@@ -1,8 +1,10 @@
 from src.services.intent_router import _fallback_intent
 from src.services.logic_audit.debate import _strip_thinking_markup, load_debate_roles
 from src.services.logic_audit.runner import (
+    _cap_section_payload,
     _extract_json_object,
     _fallback_from_perspectives,
+    format_chat_summary,
     format_report_text,
 )
 from src.services.logic_audit.schemas import (
@@ -77,3 +79,41 @@ def test_fallback_from_perspectives_creates_issues():
     payload = _fallback_from_perspectives(perspectives, "Abstract")
     assert len(payload["conflicts"]) == 2
     assert payload["conflicts"][0]["comment"].startswith("-") is False
+
+
+def test_cap_section_payload_limits_issues():
+    payload = {
+        "section": "Intro",
+        "conflicts": [
+            {"id": str(i), "severity": "info", "comment": f"info {i}"} for i in range(20)
+        ],
+        "weak_claims": [f"weak {i}" for i in range(10)],
+        "consensus_notes": [],
+    }
+    capped = _cap_section_payload(payload)
+    assert len(capped["conflicts"]) <= 12
+    assert capped["conflicts"][0]["severity"] == "info"
+    assert len(capped["weak_claims"]) <= 5
+
+
+def test_format_chat_summary_short():
+    report = LogicAuditReport(
+        summary="x",
+        sections=[
+            LogicSectionReport(
+                section="Abstract",
+                conflicts=[
+                    LogicConflictItem(
+                        id="1",
+                        type="unclear_reasoning",
+                        severity="warning",
+                        comment="A",
+                    )
+                ],
+            )
+        ],
+    )
+    text = format_chat_summary(report)
+    assert "Logic Audit" in text
+    assert len(text) < 400
+    assert "comment-only" in text

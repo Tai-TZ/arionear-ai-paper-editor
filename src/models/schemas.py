@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, field_validator
 from src.config import LLMProvider, normalize_llm_provider
 
 ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
+LogicAuditMode = Literal["quick", "deep"]
+LogicAuditScope = Literal["selected", "full"]
 
 
 class ChatRequest(BaseModel):
@@ -19,6 +21,41 @@ class ChatRequest(BaseModel):
     llm_provider: LLMProvider | None = None
     llm_model: str | None = None
     integrity_strictness: Literal["relaxed", "standard", "strict"] | None = None
+    logic_audit_mode: LogicAuditMode | None = None
+    logic_audit_scope: LogicAuditScope | None = None
+    logic_audit_sections: list[str] | None = None
+
+    @field_validator("logic_audit_mode", mode="before")
+    @classmethod
+    def _normalize_logic_audit_mode(cls, value: object) -> object | None:
+        if value == "" or value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"quick", "deep"}:
+                return normalized
+        return value
+
+    @field_validator("logic_audit_scope", mode="before")
+    @classmethod
+    def _normalize_logic_audit_scope(cls, value: object) -> object | None:
+        if value == "" or value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"selected", "full"}:
+                return normalized
+        return value
+
+    @field_validator("logic_audit_sections", mode="before")
+    @classmethod
+    def _normalize_logic_audit_sections(cls, value: object) -> object | None:
+        if value is None:
+            return None
+        if isinstance(value, list):
+            cleaned = [str(item).strip() for item in value if str(item).strip()]
+            return cleaned or None
+        return value
 
     @field_validator("llm_provider", mode="before")
     @classmethod

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 LogicProgressFn = Callable[[str, str, str, str], None]
 LogicReasoningFn = Callable[[str], None]
+LogicSectionFn = Callable[[dict], None]
 
 PERSONA_LABELS: dict[str, str] = {
     "novice_reader": "Độc giả mới",
@@ -347,3 +348,21 @@ def load_debate_roles() -> dict[str, dict[str, str]]:
                 "user": str(spec.get("user", "")),
             }
     return roles
+
+
+def load_combined_logic_role() -> dict[str, dict[str, str]]:
+    from src.services.prompts import load_prompts
+
+    raw = load_prompts().get("logic_combined_role", {})
+    if not isinstance(raw, dict):
+        return {}
+    system = str(raw.get("system", "")).strip()
+    user = str(raw.get("user", "")).strip()
+    if not system or not user:
+        return {}
+    return {
+        "combined_reviewer": {
+            "system": system,
+            "user": user,
+        }
+    }
