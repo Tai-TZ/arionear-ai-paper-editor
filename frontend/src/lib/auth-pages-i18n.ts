@@ -62,6 +62,8 @@ type AuthPagesCopy = {
     yourCodeIs: string;
     verifyAndCreate: string;
     backToForm: string;
+    resendCode: string;
+    resendCooldown: (seconds: number) => string;
     dividerGoogle: string;
     alreadyHave: string;
     signIn: string;
@@ -131,6 +133,8 @@ const EN: AuthPagesCopy = {
     yourCodeIs: "Your verification code is",
     verifyAndCreate: "Verify & create account",
     backToForm: "Back to form",
+    resendCode: "Resend code",
+    resendCooldown: (seconds) => `Resend in ${seconds}s`,
     dividerGoogle: "or continue with Google",
     alreadyHave: "Already have an account?",
     signIn: "Sign in",
@@ -200,6 +204,8 @@ const VI: AuthPagesCopy = {
     yourCodeIs: "Mã xác minh của bạn là",
     verifyAndCreate: "Xác minh & tạo tài khoản",
     backToForm: "Quay lại form",
+    resendCode: "Gửi lại mã",
+    resendCooldown: (seconds) => `Gửi lại sau ${seconds}s`,
     dividerGoogle: "hoặc tiếp tục với Google",
     alreadyHave: "Đã có tài khoản?",
     signIn: "Đăng nhập",

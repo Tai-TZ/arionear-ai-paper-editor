@@ -7,14 +7,22 @@ import uuid
 from typing import Any
 
 from src.services.llm import TOKENROUTER_MINIMAX_M3_MODEL, is_minimax_m3_provider
+from src.services.logic_audit.config import (
+    logic_audit_runtime_flags,
+    resolve_logic_audit_llm,
+    select_logic_targets,
+)
 from src.services.logic_audit.debate import (
     LogicProgressFn,
     LogicReasoningFn,
+    LogicSectionFn,
     _strip_thinking_markup,
+    load_combined_logic_role,
     load_debate_roles,
     multi_perspective_generate,
     synthesize_perspectives,
 )
+from src.services.logic_audit.language import clean_section_display_name, resolve_audit_language
 from src.services.logic_audit.schemas import LogicAuditReport
 from src.services.prompts import format_sections_summary, get_prompt
 
@@ -84,8 +92,14 @@ def _fallback_from_perspectives(perspectives: dict[str, str], section_name: str)
     }
 
 
-def _section_issue_count(section: dict[str, Any]) -> int:
-    return len(section.get("conflicts") or []) + len(section.get("weak_claims") or [])
+def _section_issue_count(section: dict[str, Any] | Any) -> int:
+    if isinstance(section, dict):
+        conflicts = section.get("conflicts") or []
+        weak = section.get("weak_claims") or []
+    else:
+        conflicts = getattr(section, "conflicts", None) or []
+        weak = getattr(section, "weak_claims", None) or []
+    return len(conflicts) + len(weak)
 
 
 def _normalize_section_payload(data: dict[str, Any], section_name: str) -> dict[str, Any]:
@@ -140,7 +154,46 @@ def format_report_text(report: LogicAuditReport) -> str:
     return "\n".join(lines).strip()
 
 
-SECTION_CONCURRENCY = 2
+
+MAX_CONFLICTS_PER_SECTION = 12
+MAX_WEAK_PER_SECTION = 5
+MAX_CROSS_CONFLICTS = 8
+
+_SEVERITY_RANK = {"critical": 0, "warning": 1, "info": 2}
+
+
+def _cap_section_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """Keep the highest-severity items so UI and LLM output stay bounded."""
+    conflicts = list(data.get("conflicts") or [])
+    conflicts.sort(
+        key=lambda item: (
+            _SEVERITY_RANK.get(str(item.get("severity") or "warning"), 9),
+            -len(str(item.get("comment") or "")),
+        )
+    )
+    weak = [str(x) for x in (data.get("weak_claims") or []) if x][:MAX_WEAK_PER_SECTION]
+    return {
+        **data,
+        "conflicts": conflicts[:MAX_CONFLICTS_PER_SECTION],
+        "weak_claims": weak,
+    }
+
+
+def format_chat_summary(report: LogicAuditReport) -> str:
+    """Short chat message — full detail lives in logic_audit_report for the side panel."""
+    section_count = len(report.sections)
+    total = sum(_section_issue_count(s) for s in report.sections)
+    total += len(report.cross_section_conflicts or [])
+    if total == 0:
+        return (
+            "Logic audit hoàn tất — không phát hiện mâu thuẫn logic rõ ràng "
+            "trong phạm vi đã quét. Xem tab **Logic Audit** để biết chi tiết."
+        )
+    return (
+        f"Logic audit hoàn tất — **{total}** vấn đề trong **{section_count}** phần "
+        f"(comment-only, không tự sửa bản thảo).\n\n"
+        "Mở tab **Logic Audit** bên phải để xem danh sách theo từng section."
+    )
 
 
 async def run_logic_audit(
@@ -150,12 +203,26 @@ async def run_logic_audit(
     query: str,
     provider: str | None,
     model: str | None,
+    mode: str = "quick",
+    scope: str = "selected",
+    section_filter: list[str] | None = None,
+    chat_provider: str | None = None,
     max_sections: int = 4,
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
+    on_section_complete: LogicSectionFn | None = None,
 ) -> dict[str, Any]:
     """Multi-agent logic audit — comment-only, no draft mutation."""
-    roles = load_debate_roles()
+    flags = logic_audit_runtime_flags(mode, provider, scope=scope)
+    audit_provider, audit_model = resolve_logic_audit_llm(mode, chat_provider or provider)
+    provider = audit_provider
+    model = model or audit_model
+    is_minimax = is_minimax_m3_provider(provider)
+
+    if flags["use_combined_persona"]:
+        roles = load_combined_logic_role() or load_debate_roles()
+    else:
+        roles = load_debate_roles()
     if not roles:
         return {
             "logic_audit_report": {},
@@ -164,29 +231,41 @@ async def run_logic_audit(
         }
 
     outline = format_sections_summary(sections)
-    is_minimax = is_minimax_m3_provider(provider)
-    scan_limit = max_sections if is_minimax else max_sections
-    section_char_limit = 4500 if is_minimax else 6000
-    persona_sequential = is_minimax
-    targets = [s for s in sections if (s.get("content") or "").strip()][:scan_limit]
+    audit_language = resolve_audit_language(query)
+    persona_sequential = flags["persona_sequential"]
+    section_char_limit = flags["section_char_limit"]
+    section_concurrency = flags["section_concurrency"]
+    run_cross_section = flags["run_cross_section"]
+    targets = select_logic_targets(
+        sections,
+        mode=mode,
+        scope=scope,
+        section_filter=section_filter,
+        max_sections=flags["max_sections"],
+    )
 
     if not targets and latex.strip():
-        targets = [{"name": "Document", "content": latex[:8000]}]
+        cap = section_char_limit if flags["mode"] == "deep" else 6000
+        targets = [{"name": "Document", "content": latex[:cap]}]
 
     synth_system = get_prompt("logic_synthesize", "system")
     synth_user = get_prompt("logic_synthesize", "user")
 
+    mode_label = "Quick" if flags["mode"] == "quick" else "Deep"
+    scope_label = "toàn bộ" if flags.get("scope") == "full" else "đã chọn"
+    persona_count = len(roles)
     if on_progress:
-        mode = "tuần tự" if persona_sequential else "song song"
+        parallel = "tuần tự" if persona_sequential else "song song"
+        engine = "MiniMax M3" if is_minimax else "fast scan"
         on_progress(
             "logic-plan",
-            "Chuẩn bị logic audit",
-            f"{len(targets)} phần · {len(roles)} personas · {mode}",
+            f"Logic audit · {mode_label}",
+            f"{len(targets)} phần ({scope_label}) · {persona_count} persona · {engine} · {parallel}",
             "active",
         )
 
     async def _audit_one_section(index: int, section: dict) -> dict[str, Any] | None:
-        section_name = str(section.get("name") or "Section")
+        section_name = clean_section_display_name(str(section.get("name") or "Section"))
         section_text = str(section.get("content") or "")[:section_char_limit]
         progress_key = f"s{index}-"
         if on_progress:
@@ -202,6 +281,7 @@ async def run_logic_audit(
             "manuscript_outline": outline,
             "cross_section_context": outline,
             "query": query,
+            "audit_language": audit_language,
         }
         perspectives = await multi_perspective_generate(
             roles,
@@ -238,6 +318,7 @@ async def run_logic_audit(
         normalized = _normalize_section_payload(payload, section_name)
         if _section_issue_count(normalized) == 0 and _perspectives_have_substance(perspectives):
             normalized = _fallback_from_perspectives(perspectives, section_name)
+        normalized = _cap_section_payload(normalized)
         issue_n = _section_issue_count(normalized)
         if on_progress:
             on_progress(
@@ -246,18 +327,20 @@ async def run_logic_audit(
                 f"Hoàn tất · {issue_n} vấn đề",
                 "done",
             )
+        if on_section_complete and normalized:
+            on_section_complete(normalized)
         return normalized
 
     if on_progress:
-        mode = "tuần tự" if persona_sequential else "song song"
+        parallel = "tuần tự" if persona_sequential else "song song"
+        engine = "MiniMax M3" if is_minimax else "fast scan"
         on_progress(
             "logic-plan",
-            "Chuẩn bị logic audit",
-            f"{len(targets)} phần · {len(roles)} personas · {mode}",
+            f"Logic audit · {mode_label}",
+            f"{len(targets)} phần ({scope_label}) · {persona_count} persona · {engine} · {parallel}",
             "done",
         )
 
-    section_concurrency = 1 if is_minimax else SECTION_CONCURRENCY
     sem = asyncio.Semaphore(section_concurrency)
 
     async def _bounded(index: int, section: dict) -> dict[str, Any] | None:
@@ -275,7 +358,7 @@ async def run_logic_audit(
         (s for s in sections if "conclusion" in str(s.get("name", "")).lower()),
         None,
     )
-    if abstract and conclusion:
+    if abstract and conclusion and run_cross_section:
         abs_text = str(abstract.get("content") or "")[:1500]
         con_text = str(conclusion.get("content") or "")[:1500]
         if abs_text and con_text:
@@ -285,6 +368,7 @@ async def run_logic_audit(
                 "manuscript_outline": outline,
                 "cross_section_context": outline,
                 "query": query,
+                "audit_language": audit_language,
             }
             if roles:
                 if on_progress:
@@ -346,6 +430,7 @@ async def run_logic_audit(
                                 ],
                             }
                         )
+                    cross_section = cross_section[:MAX_CROSS_CONFLICTS]
                 if on_progress:
                     on_progress(
                         "logic-cross",
@@ -381,9 +466,12 @@ async def run_logic_audit(
             "model": (model if not is_minimax else TOKENROUTER_MINIMAX_M3_MODEL) or "",
             "parallel_sections": section_concurrency,
             "persona_sequential": persona_sequential,
+            "audit_mode": flags["mode"],
+            "audit_scope": flags.get("scope", "selected"),
+            "audit_language": audit_language,
         },
     )
-    response_text = format_report_text(report)
+    response_text = format_chat_summary(report)
     return {
         "logic_audit_report": report.model_dump(),
         "response": response_text,

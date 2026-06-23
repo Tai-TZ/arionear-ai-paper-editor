@@ -707,6 +707,9 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 if delta:
                     progress_queue.put_nowait(("reasoning", delta))
 
+            def _logic_section(section: dict[str, Any]) -> None:
+                progress_queue.put_nowait(("logic_section", section))
+
             async def _run_logic_audit() -> dict[str, Any]:
                 from src.services.logic_audit.runner import run_logic_audit
 
@@ -716,8 +719,13 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                     query=effective_message,
                     provider=provider,
                     model=model,
+                    mode=request.logic_audit_mode or "quick",
+                    scope=request.logic_audit_scope or "selected",
+                    section_filter=request.logic_audit_sections,
+                    chat_provider=provider,
                     on_progress=_logic_progress,
                     on_reasoning=_logic_reasoning,
+                    on_section_complete=_logic_section,
                 )
 
             audit_task = asyncio.create_task(_run_logic_audit())
@@ -732,6 +740,9 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                     kind = item[0]
                     if kind == "reasoning":
                         yield _sse("reasoning", {"delta": item[1]})
+                        continue
+                    if kind == "logic_section":
+                        yield _sse("logic_section", {"section": item[1]})
                         continue
                     _, step_id, label, detail, status = item
                     state_evt, act_evt = _emit_state(
@@ -775,9 +786,13 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield act_evt
             _merge_agent_into_done(done_payload, logic_result)
             respond = logic_result.get("response", "")
-            for piece in _chunk_text(respond):
-                yield _sse("token", {"delta": piece})
+            # Structured report is in logic_audit_report — avoid streaming huge markdown
+            # (character-by-character tokens + ReactMarkdown freeze the browser).
             done_payload["response"] = respond
+            if request.session_id:
+                report = logic_result.get("logic_audit_report")
+                if isinstance(report, dict) and report:
+                    session_store.set_logic_audit_report(request.session_id, report)
 
         elif task == "citation":
             trace = await tracker.stage("agent_start", task=task)

@@ -4,6 +4,7 @@ import { mapApiHttpError } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
 import type { LatexImportResult } from "@/lib/latex-import";
+import type { LogicAuditReport } from "@/lib/api/academic";
 
 const API_BASE = resolveApiBase();
 const ASSET_UPLOAD_BATCH = 8;
@@ -26,6 +27,13 @@ function parseApiDate(value: string): number {
   return new Date(normalized).getTime();
 }
 
+function parseLogicAuditReport(value: unknown): LogicAuditReport | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const sections = (value as LogicAuditReport).sections;
+  if (!Array.isArray(sections)) return undefined;
+  return value as LogicAuditReport;
+}
+
 function toStoredProject(paper: PaperResponse): StoredProject {
   const metadata = paper.metadata ?? {};
   const assets = Array.isArray(metadata.assets) ? (metadata.assets as ProjectAsset[]) : [];
@@ -33,6 +41,7 @@ function toStoredProject(paper: PaperResponse): StoredProject {
   const mainFile = typeof metadata.mainFile === "string" ? metadata.mainFile : undefined;
   const compiler =
     typeof metadata.compiler === "string" ? (metadata.compiler as LatexCompiler) : undefined;
+  const logicAuditReport = parseLogicAuditReport(metadata.logic_audit_report);
   return {
     id: paper.id,
     name: paper.name,
@@ -41,6 +50,7 @@ function toStoredProject(paper: PaperResponse): StoredProject {
     files,
     mainFile,
     compiler,
+    logicAuditReport,
     createdAt: parseApiDate(paper.created_at),
     updatedAt: parseApiDate(paper.updated_at),
   };

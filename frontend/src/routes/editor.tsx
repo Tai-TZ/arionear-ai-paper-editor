@@ -23,6 +23,7 @@ import {
   Wrench,
   Sparkles,
   Share2,
+  FileOutput,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import {
@@ -116,7 +117,11 @@ import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
+import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
+import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
+import { mergeLogicSectionReport } from "@/lib/logic-audit";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
+import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
@@ -379,6 +384,7 @@ function EditorPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<PaperShareStatus | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatStreamProgress, setChatStreamProgress] = useState<ChatStreamProgressSnapshot>(
@@ -409,6 +415,13 @@ function EditorPage() {
   const assetInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const logicAuditLaunchRef = useRef<{
+    mode: LogicAuditMode;
+    scope: LogicAuditScope;
+    sections: string[];
+    userDisplay: string;
+    message: string;
+  } | null>(null);
   const latexEditorRef = useRef<LatexCodeEditorHandle>(null);
   const synctexFlashRef = useRef(0);
   const pendingSynctexRef = useRef<{
@@ -492,6 +505,9 @@ function EditorPage() {
         resetHistory(project.latex);
         setSavedLatex(project.latex);
         setAssets(project.assets ?? []);
+        if (project.logicAuditReport?.sections?.length) {
+          setLogicAuditReport(project.logicAuditReport);
+        }
         setBootState("ready");
         void loadSessionAudit(projectId);
         void fetchPaperShareStatus(projectId)
@@ -990,9 +1006,14 @@ function EditorPage() {
   }, []);
 
   const handleSend = async () => {
-    const raw = chatInput.trim();
+    const launch = logicAuditLaunchRef.current;
+    if (launch) logicAuditLaunchRef.current = null;
+
+    const raw = launch?.message ?? chatInput.trim();
     if (!raw || chatLoading || !projectId) return;
-    const parsed = parseChatSlashCommand(raw);
+    const parsed = launch
+      ? { task: "logic" as const, message: launch.message, command: "logic" as const }
+      : parseChatSlashCommand(raw);
     const text = parsed.message;
     const activeSelection = chatSelectionContext?.text ?? selection;
     const sentSelection = chatSelectionContext;
@@ -1000,7 +1021,13 @@ function EditorPage() {
       chatComposerMode === "quick-edit"
         ? ("edit" as const)
         : parsed.task ?? undefined;
-    const userDisplay = parsed.command ? `/${parsed.command} · ${text}` : raw;
+    const userDisplay =
+      launch?.userDisplay ?? (parsed.command ? `/${parsed.command} · ${text}` : raw);
+    const logicAuditMode =
+      launch?.mode ?? parsed.logicAuditMode ?? (task === "logic" ? "quick" : undefined);
+    const logicAuditScope =
+      launch?.scope ?? parsed.logicAuditScope ?? (task === "logic" ? "selected" : undefined);
+    const logicAuditSections = launch?.sections;
     openChatPanel();
     chatAbortRef.current?.abort();
     const abort = new AbortController();
@@ -1025,6 +1052,10 @@ function EditorPage() {
     });
     setChatInput("");
     setChatComposerMode("normal");
+    if (task === "logic") {
+      setToolsOpen(true);
+      setLogicAuditReport({ sections: [], cross_section_conflicts: [] });
+    }
     setChatLoading(true);
     setPendingSuggestion(null);
     setPendingEdits(null);
@@ -1054,6 +1085,17 @@ function EditorPage() {
           llm_provider: llmProvider,
           llm_model: llmModel || undefined,
           integrity_strictness: integrityStrictness,
+          ...(task === "logic" && logicAuditMode
+            ? { logic_audit_mode: logicAuditMode }
+            : {}),
+          ...(task === "logic" && logicAuditScope
+            ? { logic_audit_scope: logicAuditScope }
+            : {}),
+          ...(task === "logic" &&
+          logicAuditScope !== "full" &&
+          logicAuditSections?.length
+            ? { logic_audit_sections: logicAuditSections }
+            : {}),
         },
         {
           onActivity: (activityText) => {
@@ -1089,6 +1131,9 @@ function EditorPage() {
             }
           },
           onToken: (delta) => {
+            const progress = getChatStreamProgressSnapshot();
+            const isLogicAudit = progress.steps.some((s) => s.id.startsWith("logic-"));
+            if (isLogicAudit) return;
             flushSync(() => {
               patchAssistant((msg) => ({
                 ...msg,
@@ -1096,14 +1141,21 @@ function EditorPage() {
               }));
             });
           },
+          onLogicSection: (section) => {
+            flushSync(() => {
+              setLogicAuditReport((prev) => mergeLogicSectionReport(prev, section));
+              setToolsOpen(true);
+            });
+          },
           onDone: (result) => {
             const progress = getChatStreamProgressSnapshot();
             const finalSteps = filterDisplaySteps(
               progress.steps.length ? progress.steps : [],
             );
+            const hasLogicReport = Boolean(result.logic_audit_report?.sections?.length);
             patchAssistant((msg) => ({
               ...msg,
-              content: result.response || msg.content,
+              content: result.response || (hasLogicReport ? "" : msg.content),
               isStreaming: false,
               aiSteps: filterDisplaySteps(msg.aiSteps ?? []).length
                 ? filterDisplaySteps(msg.aiSteps ?? [])
@@ -1210,6 +1262,35 @@ function EditorPage() {
       });
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
+  };
+
+  const runLogicAuditFromPanel = (
+    mode: LogicAuditMode,
+    scope: LogicAuditScope,
+    sections: string[],
+  ) => {
+    if (chatLoading || !projectId) return;
+    if (scope !== "full" && sections.length === 0) return;
+    const full = scope === "full";
+    logicAuditLaunchRef.current = {
+      mode,
+      scope,
+      sections,
+      userDisplay: full
+        ? mode === "deep"
+          ? "Logic audit · Deep · toàn bộ"
+          : "Logic audit · Quick · toàn bộ"
+        : mode === "deep"
+          ? "Logic audit · Deep"
+          : "Logic audit · Quick",
+      message: full
+        ? "Kiểm tra logic toàn bộ bài báo"
+        : mode === "deep"
+          ? "Logic audit sâu phần đã chọn"
+          : "Kiểm tra logic bài báo",
+    };
+    openChatPanel();
+    void handleSend();
   };
 
   const handleAcceptSuggestion = () => {
@@ -1463,6 +1544,8 @@ function EditorPage() {
       <MobileHeader
         projectName={projectName}
         onUpload={() => fileInputRef.current?.click()}
+        onExport={() => setExportOpen(true)}
+        exportEnabled={Boolean(pdfData)}
       />
       <MobileTabBar tab={mobileTab} onChange={setMobileTab} />
 
@@ -1539,6 +1622,8 @@ function EditorPage() {
               toolsOpen={toolsOpen}
               onToggleTools={() => setToolsOpen((v) => !v)}
               onShare={() => setShareOpen(true)}
+              onExport={() => setExportOpen(true)}
+              exportEnabled={Boolean(pdfData)}
               shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
               activeEditId={activeEditId}
@@ -1561,6 +1646,8 @@ function EditorPage() {
                 citationResults={citationResults}
                 citationSummary={citationSummary}
                 logicAuditReport={logicAuditReport}
+                onRunLogicAudit={runLogicAuditFromPanel}
+                logicAuditLoading={chatLoading}
                 onCitationsUpdated={(results, summary) => {
                   setCitationResults(results);
                   setCitationSummary(summary);
@@ -1676,6 +1763,16 @@ function EditorPage() {
           onStatusChange={setShareStatus}
         />
       ) : null}
+      <PaperScoreDownloadDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        projectName={projectName}
+        latex={mainLatexSource}
+        pdfData={pdfData}
+        compileError={compileError}
+        citationResults={citationResults}
+        logicAuditReport={logicAuditReport}
+      />
         </div>
       )}
     </div>
@@ -1737,9 +1834,13 @@ function ArionearMasthead({
 function MobileHeader({
   projectName,
   onUpload,
+  onExport,
+  exportEnabled = false,
 }: {
   projectName: string;
   onUpload: () => void;
+  onExport?: () => void;
+  exportEnabled?: boolean;
 }) {
   return (
     <header className="flex md:hidden shrink-0 items-center justify-between border-b border-border/40 bg-card px-3 py-2.5">
@@ -1750,16 +1851,30 @@ function MobileHeader({
         <Settings className="h-4 w-4" />
       </Link>
       <span className="text-sm font-medium truncate px-2">{projectName}</span>
-      {SHOW_EDITOR_IMPORT ? (
-        <button
-          onClick={onUpload}
-          className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
-        >
-          Upload
-        </button>
-      ) : (
-        <div className="w-16 shrink-0" aria-hidden />
-      )}
+      <div className="flex items-center gap-1.5">
+        {onExport ? (
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={!exportEnabled}
+            className="editor-export-btn-icon md:hidden"
+            aria-label="Export"
+            title={exportEnabled ? "Export" : "Compile trước khi Export"}
+          >
+            <FileOutput className="h-4 w-4" />
+          </button>
+        ) : null}
+        {SHOW_EDITOR_IMPORT ? (
+          <button
+            onClick={onUpload}
+            className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-medium text-background shadow-sm transition hover:opacity-90"
+          >
+            Upload
+          </button>
+        ) : (
+          <div className="w-9 shrink-0" aria-hidden />
+        )}
+      </div>
     </header>
   );
 }
@@ -2220,6 +2335,8 @@ function CenterPanel({
   toolsOpen,
   onToggleTools,
   onShare,
+  onExport,
+  exportEnabled = false,
   shareEnabled = false,
   chatEndRef,
   chatLoading,
@@ -2277,6 +2394,8 @@ function CenterPanel({
   toolsOpen: boolean;
   onToggleTools: () => void;
   onShare?: () => void;
+  onExport?: () => void;
+  exportEnabled?: boolean;
   shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
@@ -2354,6 +2473,18 @@ function CenterPanel({
             >
               <Share2 className="h-3 w-3" />
               Share
+            </button>
+          ) : null}
+          {onExport ? (
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={!exportEnabled}
+              className="editor-export-btn hidden md:inline-flex"
+              title={exportEnabled ? "Export PDF" : "Compile trước khi Export"}
+            >
+              <FileOutput className="h-3.5 w-3.5" />
+              Export
             </button>
           ) : null}
           <button
@@ -2520,6 +2651,8 @@ function ToolsPanel({
   citationResults: citationResultsProp,
   citationSummary: citationSummaryProp,
   logicAuditReport: logicAuditReportProp,
+  onRunLogicAudit,
+  logicAuditLoading = false,
   onCitationsUpdated,
   onClose,
 }: {
@@ -2531,6 +2664,8 @@ function ToolsPanel({
   citationResults: Record<string, unknown>[];
   citationSummary: string;
   logicAuditReport: LogicAuditReport | null;
+  onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
+  logicAuditLoading?: boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
 }) {
@@ -2679,62 +2814,12 @@ function ToolsPanel({
         ) : tab === "logic" ? (
           <div className="tools-section">
             <h2 className="tools-section-title">Logic Audit</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Multi-agent comment-only report (adapted from AutoResearchClaw debate). Không tự sửa
-              bản thảo — chỉ góp ý logic và mâu thuẫn.
-            </p>
-            {!logicAuditReportProp?.sections?.length ? (
-              <p className="mt-4 text-xs text-muted-foreground">
-                Chưa có báo cáo. Hỏi Ario: &quot;Kiểm tra logic bài báo&quot; hoặc &quot;Logic
-                audit&quot;.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-4">
-                {logicAuditReportProp.summary && (
-                  <p className="text-sm text-foreground">{logicAuditReportProp.summary}</p>
-                )}
-                {logicAuditReportProp.sections.map((section) => (
-                  <div key={section.section} className="rounded-md border border-border/60 p-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {section.section}
-                    </h3>
-                    {(section.conflicts ?? []).length === 0 &&
-                    !(section.weak_claims ?? []).length ? (
-                      <p className="mt-2 text-xs text-muted-foreground">Không có vấn đề rõ ràng.</p>
-                    ) : (
-                      <ul className="mt-2 space-y-2">
-                        {(section.conflicts ?? []).map((c) => (
-                          <li key={c.id} className="text-xs">
-                            <span className="font-medium text-[color:var(--editorial-red)]">
-                              [{c.severity?.toUpperCase()}]
-                            </span>{" "}
-                            {c.comment}
-                            {c.claim_text ? (
-                              <span className="mt-0.5 block text-muted-foreground">
-                                Claim: {c.claim_text.slice(0, 160)}
-                              </span>
-                            ) : null}
-                          </li>
-                        ))}
-                        {(section.weak_claims ?? []).map((w, i) => (
-                          <li key={`weak-${i}`} className="text-xs text-muted-foreground">
-                            [WEAK] {w}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-                {(logicAuditReportProp.cross_section_conflicts ?? []).map((cross, i) => (
-                  <div
-                    key={`cross-${i}`}
-                    className="rounded-md border border-dashed border-border/60 p-3 text-xs"
-                  >
-                    <span className="font-medium">Cross-section:</span> {cross.description}
-                  </div>
-                ))}
-              </div>
-            )}
+            <LogicAuditPanel
+              latex={latex}
+              report={logicAuditReportProp}
+              loading={logicAuditLoading}
+              onRun={onRunLogicAudit}
+            />
           </div>
         ) : tab === "citations" ? (
           <div className="tools-section">

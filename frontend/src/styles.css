@@ -602,6 +602,46 @@
   background: oklch(0.5 0.05 255 / 45%);
 }
 
+/* Paper score dialog — portaled outside .editor-shell */
+.paper-score-dialog .paper-score-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.58 0.03 80 / 38%) transparent;
+  scrollbar-gutter: stable;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-button,
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-button:single-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.52 0.03 80 / 32%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.42 0.04 80 / 48%);
+  background-clip: padding-box;
+}
+
+.paper-score-dialog .paper-score-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .editor-shell .latex-input::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -2521,6 +2561,76 @@
   cursor: not-allowed;
 }
 
+.editor-shell .editor-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  border: 1.5px solid color-mix(in oklch, var(--foreground) 88%, transparent);
+  background: color-mix(in oklch, var(--foreground) 4%, var(--background));
+  padding: 0.375rem 0.75rem;
+  font-family: var(--font-sans-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  box-shadow: 2px 2px 0 0 color-mix(in oklch, var(--foreground) 12%, transparent);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.editor-shell .editor-export-btn:not(:disabled):hover {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: 3px 3px 0 0 color-mix(in oklch, var(--foreground) 18%, transparent);
+  transform: translate(-1px, -1px);
+}
+
+.editor-shell .editor-export-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  box-shadow: none;
+}
+
+.editor-shell .editor-export-btn-icon {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1.5px solid color-mix(in oklch, var(--foreground) 88%, transparent);
+  background: color-mix(in oklch, var(--foreground) 4%, var(--background));
+  color: var(--foreground);
+  box-shadow: 2px 2px 0 0 color-mix(in oklch, var(--foreground) 12%, transparent);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.editor-shell .editor-export-btn-icon:not(:disabled):hover {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: 3px 3px 0 0 color-mix(in oklch, var(--foreground) 18%, transparent);
+  transform: translate(-1px, -1px);
+}
+
+.editor-shell .editor-export-btn-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  box-shadow: none;
+}
+
 .editor-shell .chat-overlay-root {
   z-index: 20;
 }
@@ -4134,9 +4244,18 @@
 }
 
 .editor-shell .chat-slash-menu-desc {
-  font-size: 0.75rem;
+  display: block;
+  font-size: 0.72rem;
   line-height: 1.35;
   color: var(--muted-foreground);
+}
+
+.editor-shell .chat-slash-menu-detail {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  color: color-mix(in oklch, var(--muted-foreground) 88%, var(--primary) 12%);
 }
 
 .editor-shell .chat-input-shell {

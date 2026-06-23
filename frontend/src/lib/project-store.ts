@@ -1,3 +1,5 @@
+import type { LogicAuditReport } from "@/lib/api/academic";
+
 export type ProjectAsset = {
   name: string;
   mimeType: string;
@@ -19,6 +21,7 @@ export type StoredProject = {
   mainFile?: string;
   compiler?: LatexCompiler;
   assets?: ProjectAsset[];
+  logicAuditReport?: LogicAuditReport;
   createdAt: number;
   updatedAt: number;
 };

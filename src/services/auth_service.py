@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -11,10 +12,24 @@ from sqlalchemy.orm import Session
 
 from src.config import Settings, get_settings
 from src.db.models import PasswordResetToken, SignupVerification, User, UserRole
-from src.services.email_service import send_signup_verification_email
+from src.services.email_service import send_password_reset_email, send_signup_verification_email
 from src.services.profile_service import apply_google_avatar_if_empty
 
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+@dataclass(frozen=True)
+class SignupCodeRequestResult:
+    dev_code: str | None = None
+    error: str | None = None
+    email_sent_via_smtp: bool = False
+
+
+@dataclass(frozen=True)
+class PasswordResetRequestResult:
+    dev_reset_url: str | None = None
+    error: str | None = None
+    email_sent_via_smtp: bool = False
 
 
 def normalize_email(email: str) -> str:
@@ -234,22 +249,41 @@ def request_signup_verification(
     email: str,
     password: str,
     affiliation: str | None = None,
-) -> tuple[str | None, str | None]:
-    """Send a signup verification code. Returns (dev_code, error)."""
+) -> SignupCodeRequestResult:
+    """Send a signup verification code."""
     normalized, full_name, field_error = _validate_signup_fields(
         name=name,
         email=email,
         password=password,
     )
     if field_error:
-        return None, field_error
+        return SignupCodeRequestResult(error=field_error)
 
     existing = db.query(User).filter(User.email == normalized).first()
     if existing:
-        return None, "An account with this email already exists."
+        return SignupCodeRequestResult(error="An account with this email already exists.")
 
     settings = get_settings()
     now = datetime.now(UTC)
+
+    last_sent = (
+        db.query(SignupVerification)
+        .filter(SignupVerification.email == normalized)
+        .order_by(SignupVerification.created_at.desc())
+        .first()
+    )
+    if last_sent and last_sent.created_at:
+        created = last_sent.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        elapsed = (now - created).total_seconds()
+        cooldown = settings.auth_signup_resend_cooldown_seconds
+        if elapsed < cooldown:
+            wait = int(cooldown - elapsed) + 1
+            return SignupCodeRequestResult(
+                error=f"Please wait {wait} seconds before requesting a new code.",
+            )
+
     code = _generate_verification_code()
 
     (
@@ -272,12 +306,16 @@ def request_signup_verification(
     db.add(record)
     db.flush()
 
-    sent, send_error = send_signup_verification_email(to_email=normalized, code=code)
-    if not sent:
-        return None, send_error or "Could not send verification email."
+    delivery = send_signup_verification_email(to_email=normalized, code=code)
+    if not delivery.ok:
+        return SignupCodeRequestResult(error=delivery.error or "Could not send verification email.")
 
-    dev_code = code if settings.app_env in ("development", "test") else None
-    return dev_code, None
+    dev_code = (
+        code
+        if settings.app_env in ("development", "test") and delivery.dev_echo
+        else None
+    )
+    return SignupCodeRequestResult(dev_code=dev_code, email_sent_via_smtp=delivery.delivered_via_smtp)
 
 
 def verify_signup_and_register(
@@ -338,15 +376,15 @@ def verify_signup_and_register(
     return user, None
 
 
-def request_password_reset(db: Session, email: str) -> tuple[str | None, str | None]:
-    """Returns (dev_reset_url, error). Always succeeds from caller perspective if no error."""
+def request_password_reset(db: Session, email: str) -> PasswordResetRequestResult:
+    """Request a password reset email. Always opaque to callers when email is unknown."""
     normalized = normalize_email(email)
     if not validate_email(normalized):
-        return None, "Please enter a valid email address."
+        return PasswordResetRequestResult(error="Please enter a valid email address.")
 
     user = db.query(User).filter(User.email == normalized, User.is_active.is_(True)).first()
     if not user:
-        return None, None
+        return PasswordResetRequestResult()
 
     raw_token = secrets.token_urlsafe(32)
     settings = get_settings()
@@ -358,8 +396,20 @@ def request_password_reset(db: Session, email: str) -> tuple[str | None, str | N
     db.add(record)
     db.flush()
 
-    dev_url = f"{settings.frontend_base_url.rstrip('/')}/reset-password?token={raw_token}"
-    return dev_url, None
+    reset_url = f"{settings.frontend_base_url.rstrip('/')}/reset-password?token={raw_token}"
+    delivery = send_password_reset_email(to_email=normalized, reset_url=reset_url)
+    if not delivery.ok:
+        return PasswordResetRequestResult(error=delivery.error or "Could not send password reset email.")
+
+    dev_url = (
+        reset_url
+        if settings.app_env in ("development", "test") and delivery.dev_echo
+        else None
+    )
+    return PasswordResetRequestResult(
+        dev_reset_url=dev_url,
+        email_sent_via_smtp=delivery.delivered_via_smtp,
+    )
 
 
 def reset_password_with_token(db: Session, token: str, new_password: str) -> str | None:

@@ -118,12 +118,14 @@ class Settings(BaseSettings):
     auth_reset_expire_minutes: int = Field(default=30, ge=5, le=120)
     auth_signup_code_expire_minutes: int = Field(default=15, ge=5, le=60)
     auth_signup_max_attempts: int = Field(default=5, ge=3, le=10)
+    auth_signup_resend_cooldown_seconds: int = Field(default=60, ge=15, le=300)
     smtp_host: str = ""
     smtp_port: int = Field(default=587, ge=1, le=65535)
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
     smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
     frontend_base_url: str = "http://localhost:8080"
     backend_base_url: str = "http://127.0.0.1:8001"
 
