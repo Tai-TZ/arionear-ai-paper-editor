@@ -1780,7 +1780,7 @@ function ArionearMasthead({
 
   return (
     <div
-      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background ${className}`}
+      className={`editor-masthead flex shrink-0 items-center justify-between border-b px-4 py-1.5 text-[10px] font-mono-data uppercase tracking-widest ${className}`}
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
@@ -2723,8 +2723,8 @@ function ToolsPanel({
 
   return (
     <section className="tools-panel flex h-full min-h-0 flex-col bg-secondary/20">
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 backdrop-blur-sm">
-        <nav className="tools-tab-nav flex items-center gap-1">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 bg-card/80 px-3 backdrop-blur-sm min-w-0">
+        <nav className="tools-tab-nav flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {(
             [
               { id: "info" as const, label: t.tools.projectInfo },
@@ -2744,7 +2744,7 @@ function ToolsPanel({
         </nav>
         <button
           onClick={onClose}
-          className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
+          className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           <X className="h-3 w-3" />
           {t.tools.close}

@@ -19,6 +19,11 @@ export type EditorCopy = {
     outline: string;
     mainBadge: string;
     aiDisclaimer: string;
+    uploadFiles: string;
+    uploadFolder: string;
+    importZip: string;
+    emptyTree: string;
+    fileActions: string;
   };
   toolbar: {
     share: string;
@@ -161,6 +166,11 @@ const EN: EditorCopy = {
     outline: "Outline",
     mainBadge: "Main",
     aiDisclaimer: "AI assists with expression — never invents data or results.",
+    uploadFiles: "Upload files",
+    uploadFolder: "Upload folder",
+    importZip: "Import Overleaf ZIP",
+    emptyTree: "No files yet. Import a ZIP or upload files.",
+    fileActions: "File actions",
   },
   toolbar: {
     share: "Share",
@@ -311,6 +321,11 @@ const VI: EditorCopy = {
     outline: "Dàn ý",
     mainBadge: "Chính",
     aiDisclaimer: "AI hỗ trợ diễn đạt — không bịa dữ liệu hay kết quả.",
+    uploadFiles: "Tải tệp lên",
+    uploadFolder: "Tải thư mục lên",
+    importZip: "Nhập ZIP Overleaf",
+    emptyTree: "Chưa có tệp. Nhập ZIP Overleaf hoặc tải tệp lên.",
+    fileActions: "Thao tác tệp",
   },
   toolbar: {
     share: "Chia sẻ",

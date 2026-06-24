@@ -69,6 +69,7 @@ export function buildProjectFileTree(
       built = built ? `${built}/${part}` : part;
 
       if (isLast) {
+        if (part === ".gitkeep") break;
         level.push({
           id: path,
           name: part,

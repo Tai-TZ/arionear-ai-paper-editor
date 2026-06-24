@@ -184,7 +184,7 @@ const VI: AuthPagesCopy = {
   },
   signin: {
     eyebrow: "Phòng đọc",
-    title: "Đăng nhập để tiếp tục.",
+    title: "Đăng nhập để tiếp\u00A0tục.",
     lede: "Tiếp tục nơi bạn đã dừng — bản thảo, ghi chú và phản hồi phản biện đang chờ bạn.",
     emailLabel: "Email",
     passwordLabel: "Mật khẩu",

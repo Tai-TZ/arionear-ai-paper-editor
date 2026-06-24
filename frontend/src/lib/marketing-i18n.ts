@@ -216,7 +216,7 @@ const EN: MarketingCopy = {
 const VI: MarketingCopy = {
   hero: {
     breaking: "Tin nóng",
-    deskEdition: "Ban Thảo · Phiên bản LaTeX",
+    deskEdition: "Bản Thảo · Phiên bản LaTeX",
     headline: "Nghiên cứu ",
     headlineEm: "Xứng đáng",
     headlineEnd: " được đọc công bằng.",

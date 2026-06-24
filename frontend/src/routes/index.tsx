@@ -34,10 +34,24 @@ function Hero() {
             <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">{h.breaking}</span>
             <span>{h.deskEdition}</span>
           </div>
-          <h1 className="font-serif-display font-black leading-[0.88] tracking-tighter text-5xl sm:text-6xl lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
-            {h.headline}
-            <em className="italic font-serif-display">{h.headlineEm}</em>
-            {h.headlineEnd}
+          <h1 className="hero-headline font-serif-display font-black tracking-tighter text-5xl sm:text-6xl lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
+            {locale === "vi" ? (
+              <>
+                Nghiên cứu
+                <br />
+                <em className="italic font-serif-display">Xứng đáng</em>
+                <br />
+                được đọc
+                <br />
+                công bằng.
+              </>
+            ) : (
+              <>
+                {h.headline}
+                <em className="italic font-serif-display">{h.headlineEm}</em>
+                {h.headlineEnd}
+              </>
+            )}
           </h1>
           <div className="mt-8 grid grid-cols-1 md:grid-cols-12 gap-6">
             <p className="md:col-span-7 font-body text-lg leading-relaxed text-justify drop-cap">{h.lede}</p>
@@ -74,7 +88,7 @@ function Hero() {
             {h.stats.map((s, i) => (
               <div key={i} className={`p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
                 <div className="font-mono-data text-2xl font-bold">{s.k}</div>
-                <div className="font-sans-ui text-[10px] uppercase tracking-widest mt-1 text-neutral-600">{s.v}</div>
+                <div className="font-sans-ui text-[10px] uppercase tracking-widest mt-1 text-muted-foreground">{s.v}</div>
               </div>
             ))}
           </div>
@@ -102,7 +116,7 @@ function Features() {
           {f.items.map(({ title, body }, i) => {
             const Icon = FEATURE_ICONS[i]!;
             return (
-              <article key={title} className="p-8 border-r border-b border-foreground hover:bg-neutral-100 transition-colors">
+              <article key={title} className="p-8 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors">
                 <div className="flex items-center gap-4 mb-5">
                   <div className="h-12 w-12 border border-foreground flex items-center justify-center hover:bg-foreground hover:text-background transition-colors">
                     <Icon className="h-5 w-5" strokeWidth={1.5} />
@@ -110,7 +124,7 @@ function Features() {
                   <span className="font-mono-data text-xs uppercase tracking-widest">No. {String(i + 1).padStart(2, "0")}</span>
                 </div>
                 <h3 className="font-serif-display font-bold text-2xl mb-3">{title}</h3>
-                <p className="font-body text-base leading-relaxed text-neutral-700">{body}</p>
+                <p className="font-body text-base leading-relaxed text-muted-foreground">{body}</p>
               </article>
             );
           })}
@@ -187,7 +201,7 @@ function Integrity() {
           <div className="lg:col-span-7 lg:pl-10">
             <div className="flex items-end justify-between border-b border-foreground pb-3 mb-0">
               <span className="font-mono-data uppercase text-xs tracking-widest">{ig.guaranteesLabel}</span>
-              <span className="font-mono-data uppercase text-[10px] tracking-widest text-neutral-500 hidden sm:inline">
+              <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {ig.sectionRef}
               </span>
             </div>
@@ -197,7 +211,7 @@ function Integrity() {
                 return (
                   <li
                     key={n}
-                    className="p-6 border-r border-b border-foreground hover:bg-neutral-100/80 transition-colors group"
+                    className="p-6 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors group"
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
@@ -208,7 +222,7 @@ function Integrity() {
                       </span>
                     </div>
                     <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-                    <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
+                    <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
                   </li>
                 );
               })}

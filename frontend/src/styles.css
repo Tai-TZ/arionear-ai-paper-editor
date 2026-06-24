@@ -363,6 +363,25 @@
   --font-serif: var(--font-serif-prose);
   --font-sans: var(--font-sans-ui);
   --font-mono: var(--font-mono-data);
+  --editor-latex-bg: #ffffff;
+  --editor-latex-gutter: #ffffff;
+  --editor-latex-border: oklch(0.9 0.012 90 / 90%);
+  --editor-latex-line-num: #a0a0a0;
+  --editor-latex-caret: #000000;
+  --editor-latex-tok-text: #000000;
+  --editor-latex-tok-cmd: #0000c0;
+  --editor-latex-tok-comment: #3f7f5f;
+  --editor-latex-tok-key: #800000;
+  --editor-code-panel-bg: oklch(0.975 0.006 88);
+  --editor-pdf-chrome: #f3f3f3;
+  --editor-pdf-viewport: #e8e8e8;
+  --editor-chat-input-bg: oklch(1 0 0 / 96%);
+  --editor-chat-border: oklch(0.88 0.012 90 / 85%);
+  --editor-chat-banner-bg: oklch(0.96 0.035 85 / 90%);
+  --editor-chat-banner-text: oklch(0.42 0.07 70);
+  --editor-surface-hover: oklch(0.94 0.01 90);
+  --editor-latex-diff-bg: #ffffff;
+  --editor-latex-diff-text: #000000;
   font-family: var(--font-sans-ui);
   font-feature-settings: "cv11", "ss01", "ss03";
   -webkit-font-smoothing: antialiased;
@@ -370,30 +389,125 @@
 
 .dark .editor-shell {
   --ink: oklch(0.94 0.005 90);
-  --newsprint: oklch(0.18 0.02 255);
-  --background: oklch(0.15 0.02 255);
-  --foreground: oklch(0.93 0.01 90);
-  --card: oklch(0.19 0.02 255);
-  --card-foreground: oklch(0.93 0.01 90);
-  --popover: oklch(0.19 0.02 255);
-  --popover-foreground: oklch(0.93 0.01 90);
-  --primary: oklch(0.78 0.08 255);
-  --primary-foreground: oklch(0.16 0.02 255);
-  --secondary: oklch(0.24 0.02 255);
-  --secondary-foreground: oklch(0.9 0.01 90);
-  --muted: oklch(0.24 0.02 255);
-  --muted-foreground: oklch(0.68 0.02 255);
-  --border: oklch(0.32 0.02 255);
-  --input: oklch(0.32 0.02 255);
-  --ring: oklch(0.62 0.08 255);
-  --sidebar: oklch(0.13 0.02 255);
-  --sidebar-foreground: oklch(0.93 0.01 90);
-  --sidebar-primary: oklch(0.78 0.08 255);
-  --sidebar-primary-foreground: oklch(0.16 0.02 255);
-  --sidebar-accent: oklch(0.22 0.02 255);
-  --sidebar-accent-foreground: oklch(0.9 0.01 90);
-  --sidebar-border: oklch(0.32 0.02 255);
-  --sidebar-ring: oklch(0.62 0.08 255);
+  --newsprint: oklch(0.16 0.01 90);
+  --background: var(--newsprint);
+  --foreground: var(--ink);
+  --card: oklch(0.19 0.01 90);
+  --card-foreground: var(--ink);
+  --popover: oklch(0.19 0.01 90);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--newsprint);
+  --secondary: oklch(0.28 0.01 90);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.28 0.01 90);
+  --muted-foreground: oklch(0.72 0.01 90);
+  --border: oklch(0.38 0.01 90);
+  --input: oklch(0.38 0.01 90);
+  --ring: oklch(0.72 0.01 90);
+  --sidebar: oklch(0.14 0.01 90);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--newsprint);
+  --sidebar-accent: oklch(0.28 0.01 90);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: oklch(0.38 0.01 90);
+  --sidebar-ring: oklch(0.72 0.01 90);
+  --editor-latex-bg: oklch(0.14 0.01 90);
+  --editor-latex-gutter: oklch(0.17 0.01 90);
+  --editor-latex-border: oklch(0.32 0.01 90);
+  --editor-latex-line-num: oklch(0.55 0.01 90);
+  --editor-latex-caret: oklch(0.94 0.005 90);
+  --editor-latex-tok-text: oklch(0.88 0.005 90);
+  --editor-latex-tok-cmd: oklch(0.74 0.1 250);
+  --editor-latex-tok-comment: oklch(0.62 0.08 155);
+  --editor-latex-tok-key: oklch(0.72 0.1 25);
+  --editor-code-panel-bg: oklch(0.16 0.01 90);
+  --editor-pdf-chrome: oklch(0.16 0.01 90);
+  --editor-pdf-viewport: oklch(0.12 0.01 90);
+  --editor-chat-input-bg: oklch(0.19 0.01 90 / 96%);
+  --editor-chat-border: oklch(0.38 0.01 90 / 85%);
+  --editor-chat-banner-bg: oklch(0.22 0.04 70 / 90%);
+  --editor-chat-banner-text: oklch(0.78 0.06 70);
+  --editor-surface-hover: oklch(0.24 0.01 90);
+  --editor-latex-diff-bg: oklch(0.14 0.01 90);
+  --editor-latex-diff-text: oklch(0.88 0.005 90);
+}
+
+.dark .editor-shell .chat-dock {
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
+}
+
+.dark .editor-shell .chat-overlay-panel {
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
+  --chat-banner-bg: var(--editor-chat-banner-bg);
+  --chat-banner-text: var(--editor-chat-banner-text);
+}
+
+.dark .editor-shell .chat-dock-icon-btn:hover,
+.dark .editor-shell .chat-dock-resize-handle--top:hover,
+.dark .editor-shell .chat-dock-resize-handle--top:active {
+  background: var(--editor-surface-hover);
+}
+
+.dark .editor-shell .chat-dock-resize-handle--top {
+  border-bottom-color: var(--editor-chat-border);
+  background: color-mix(in oklch, var(--card) 96%, transparent);
+}
+
+.dark .editor-shell .chat-dock-panel {
+  border-bottom-color: var(--editor-chat-border);
+}
+
+.dark .editor-shell .editor-history-btn:hover:not(:disabled) {
+  background: var(--editor-surface-hover);
+}
+
+.dark .editor-shell .tools-setting-row,
+.dark .editor-shell .tools-stat-card,
+.dark .editor-shell .tools-version-entry {
+  border-color: var(--border);
+}
+
+.dark .editor-shell .latex-diff-shell.latex-editor-shell {
+  background: var(--editor-latex-diff-bg);
+  border-color: var(--editor-latex-border);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-gutter {
+  background: var(--editor-latex-gutter);
+  border-right-color: var(--editor-latex-border);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-line-num,
+.dark .editor-shell .latex-diff-shell .latex-line-num-eq {
+  color: var(--editor-latex-line-num);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-diff-line-del,
+.dark .editor-shell .latex-diff-shell .latex-diff-line-ins,
+.dark .editor-shell .latex-diff-shell .latex-diff-line-eq {
+  color: var(--editor-latex-diff-text);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-tok-comment {
+  color: var(--editor-latex-tok-comment);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-tok-cmd,
+.dark .editor-shell .latex-diff-shell .latex-tok-opt {
+  color: var(--editor-latex-tok-cmd);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-tok-key {
+  color: var(--editor-latex-tok-key);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-tok-text,
+.dark .editor-shell .latex-diff-shell .latex-tok-brace {
+  color: var(--editor-latex-tok-text);
 }
 
 .editor-shell,
@@ -403,6 +517,15 @@
 
 .editor-shell .editor-masthead {
   border-radius: 0 !important;
+  background: oklch(0.145 0 0);
+  color: oklch(0.978 0.006 90);
+  border-bottom-color: oklch(0.978 0.006 90 / 20%);
+}
+
+.dark .editor-shell .editor-masthead {
+  background: oklch(0.11 0.01 90);
+  color: oklch(0.9 0.005 90);
+  border-bottom-color: oklch(0.9 0.005 90 / 15%);
 }
 
 .editor-shell .font-serif { font-family: var(--font-serif-prose); }
@@ -448,20 +571,20 @@
   border-radius: 2px;
 }
 
-/* LaTeX code editor — white + classic TeXshop-style syntax colors */
+/* LaTeX code editor */
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) {
-  background: #ffffff;
+  background: var(--editor-latex-bg);
   font-family: var(--font-mono-data);
-  border-color: oklch(0.9 0.012 90 / 90%);
+  border-color: var(--editor-latex-border);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-gutter {
-  border-right: 1px solid #e3e3e3;
-  background: #ffffff;
+  border-right: 1px solid var(--editor-latex-border);
+  background: var(--editor-latex-gutter);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-line-num {
-  color: #a0a0a0;
+  color: var(--editor-latex-line-num);
   height: calc(13px * 1.65);
   line-height: calc(13px * 1.65);
   font-size: 11px;
@@ -536,31 +659,36 @@
   -webkit-box-decoration-break: clone;
 }
 
-/* Syntax tokens — light editor (always on) */
+/* Syntax tokens */
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-comment {
-  color: #3f7f5f;
+  color: var(--editor-latex-tok-comment);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-cmd {
-  color: #0000c0;
+  color: var(--editor-latex-tok-cmd);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-opt {
-  color: #0000c0;
+  color: var(--editor-latex-tok-cmd);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-key {
-  color: #800000;
+  color: var(--editor-latex-tok-key);
 }
 
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-text,
 .editor-shell .latex-editor-shell:not(.latex-diff-shell) .latex-tok-brace {
-  color: #000000;
+  color: var(--editor-latex-tok-text);
 }
 
 .editor-shell .latex-input-overlay {
   color: rgba(0, 0, 0, 0.01);
-  caret-color: #000000;
+  caret-color: var(--editor-latex-caret);
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.01);
+}
+
+.dark .editor-shell .latex-input-overlay {
+  color: rgba(0, 0, 0, 0.01);
   -webkit-text-fill-color: rgba(0, 0, 0, 0.01);
 }
 
@@ -570,8 +698,12 @@
   -webkit-text-fill-color: rgba(0, 0, 0, 0.01);
 }
 
+.dark .editor-shell .latex-input-overlay::selection {
+  background-color: rgba(96, 165, 250, 0.35);
+}
+
 .editor-shell .latex-input {
-  caret-color: #000000;
+  caret-color: var(--editor-latex-caret);
 }
 
 .editor-shell .latex-input::selection {
@@ -1976,6 +2108,27 @@
   background: var(--hero-demo-inset);
 }
 
+.hero-headline {
+  line-height: 0.88;
+}
+
+/* Vietnamese diacritics need more vertical room between wrapped lines */
+html[lang="vi"] .hero-headline {
+  line-height: 1.18;
+}
+
+@media (min-width: 1024px) {
+  html[lang="vi"] .hero-headline {
+    line-height: 1.12;
+  }
+}
+
+@media (min-width: 1536px) {
+  html[lang="vi"] .hero-headline {
+    line-height: 1.08;
+  }
+}
+
 .hero-split {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -2379,7 +2532,71 @@
 
 /* ── PDF.js preview panel (Overleaf-style) ── */
 .editor-shell .pdf-preview-shell {
-  background: #f3f3f3;
+  background: var(--editor-pdf-chrome);
+}
+
+.editor-shell .pdf-preview-toolbar-top {
+  border-bottom: 1px solid oklch(0.83 0.01 90);
+  background: #ffffff;
+  color: var(--foreground);
+}
+
+.dark .editor-shell .pdf-preview-toolbar-top {
+  border-bottom-color: var(--border);
+  background: var(--card);
+}
+
+.editor-shell .pdf-preview-toolbar-muted {
+  color: oklch(0.45 0.01 90);
+}
+
+.dark .editor-shell .pdf-preview-toolbar-muted {
+  color: var(--muted-foreground);
+}
+
+.editor-shell .pdf-preview-toolbar-select,
+.editor-shell .pdf-preview-toolbar-search {
+  border: 1px solid oklch(0.83 0.01 90);
+  background: oklch(0.98 0.003 90);
+  color: oklch(0.42 0.01 90);
+}
+
+.dark .editor-shell .pdf-preview-toolbar-select,
+.dark .editor-shell .pdf-preview-toolbar-search {
+  border-color: var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.editor-shell .pdf-preview-toolbar-btn {
+  color: oklch(0.42 0.01 90);
+  transition: background 0.15s ease;
+}
+
+.editor-shell .pdf-preview-toolbar-btn:hover {
+  background: oklch(0 0 0 / 5%);
+}
+
+.dark .editor-shell .pdf-preview-toolbar-btn:hover {
+  background: oklch(1 0 0 / 8%);
+}
+
+.editor-shell .pdf-preview-live-badge {
+  background: oklch(0.32 0.09 255 / 10%);
+  color: oklch(0.32 0.09 255);
+}
+
+.dark .editor-shell .pdf-preview-live-badge {
+  background: oklch(0.94 0.005 90 / 10%);
+  color: oklch(0.88 0.005 90);
+}
+
+.editor-shell .pdf-preview-icon-btn:hover {
+  background: oklch(0 0 0 / 5%);
+}
+
+.dark .editor-shell .pdf-preview-icon-btn:hover {
+  background: oklch(1 0 0 / 8%);
 }
 
 .editor-shell .pdf-preview-compile-btn {
@@ -2391,7 +2608,7 @@
 }
 
 .editor-shell .pdf-preview-viewport {
-  background: #e8e8e8;
+  background: var(--editor-pdf-viewport);
 }
 
 .editor-shell .pdf-preview-pages {
@@ -2537,7 +2754,7 @@
 }
 
 .editor-shell .editor-code-panel {
-  background: oklch(0.975 0.006 88);
+  background: var(--editor-code-panel-bg);
 }
 
 .editor-shell .editor-history-btn {
@@ -2552,7 +2769,7 @@
 }
 
 .editor-shell .editor-history-btn:hover:not(:disabled) {
-  background: oklch(0.94 0.01 90);
+  background: var(--editor-surface-hover);
   color: var(--foreground);
 }
 
@@ -2638,8 +2855,8 @@
 /* Chat dock — fixed bottom panel inside editor column (does not overlay code) */
 .editor-shell .chat-dock {
   --chat-bg: color-mix(in oklch, var(--card) 98%, transparent);
-  --chat-input-bg: oklch(1 0 0 / 96%);
-  --chat-border: oklch(0.88 0.012 90 / 85%);
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
   --chat-text: var(--foreground);
   --chat-muted: var(--muted-foreground);
   --chat-accent: var(--primary);
@@ -2701,7 +2918,7 @@
 }
 
 .editor-shell .chat-dock-icon-btn:hover {
-  background: oklch(0.95 0.008 90);
+  background: var(--editor-surface-hover);
   color: var(--foreground);
 }
 
@@ -2725,7 +2942,7 @@
 
 .editor-shell .chat-dock-resize-handle--top:hover,
 .editor-shell .chat-dock-resize-handle--top:active {
-  background: oklch(0.95 0.008 90);
+  background: var(--editor-surface-hover);
 }
 
 .editor-shell .chat-dock-resize-handle--top:hover .chat-dock-resize-bar,
@@ -3188,13 +3405,13 @@
 
 .editor-shell .chat-overlay-panel {
   --chat-bg: color-mix(in oklch, var(--card) 96%, transparent);
-  --chat-input-bg: oklch(1 0 0 / 92%);
-  --chat-border: oklch(0.88 0.012 90 / 85%);
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
   --chat-text: var(--foreground);
   --chat-muted: var(--muted-foreground);
   --chat-accent: var(--primary);
-  --chat-banner-bg: oklch(0.96 0.035 85 / 90%);
-  --chat-banner-text: oklch(0.42 0.07 70);
+  --chat-banner-bg: var(--editor-chat-banner-bg);
+  --chat-banner-text: var(--editor-chat-banner-text);
   --chat-user-bg: var(--primary);
   --chat-user-text: var(--primary-foreground);
   border-radius: 1.5rem;
@@ -3393,8 +3610,8 @@
 .editor-shell .chat-input-shell-collapsed {
   height: 100%;
   border-radius: 1.5rem;
-  border: 1px solid oklch(0.88 0.012 90 / 80%);
-  background: oklch(1 0 0 / 94%);
+  border: 1px solid var(--editor-chat-border);
+  background: var(--editor-chat-input-bg);
   box-shadow:
     0 4px 24px -8px oklch(0.2 0.02 255 / 12%),
     0 1px 3px oklch(0.2 0.02 255 / 6%);
@@ -4263,7 +4480,7 @@
   align-items: center;
   gap: 0.375rem;
   border-radius: 1.75rem;
-  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  border: 1px solid var(--editor-chat-border);
   background: var(--chat-input-bg);
   padding: 0.4375rem 0.5rem 0.4375rem 1rem;
   box-shadow: inset 0 1px 2px oklch(0.2 0.02 255 / 4%);
@@ -4313,7 +4530,7 @@
 }
 
 .editor-shell .chat-input-icon-btn:hover {
-  background: oklch(0.96 0.008 90);
+  background: var(--editor-surface-hover);
   color: var(--foreground);
 }
 
@@ -4368,6 +4585,11 @@
 /* Tools panel */
 .editor-shell .tools-tab-nav {
   min-width: 0;
+  scrollbar-width: none;
+}
+
+.editor-shell .tools-tab-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .editor-shell .tools-tab-btn {
@@ -4413,7 +4635,7 @@
   gap: 1rem;
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
-  border: 1px solid oklch(0.88 0.012 90 / 80%);
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
   background: var(--card);
   box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 4%);
 }
