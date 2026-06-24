@@ -7,7 +7,6 @@ import {
   FilePlus,
   FileText,
   Folder,
-  FolderPlus,
   Image as ImageIcon,
   Upload,
 } from "lucide-react";
@@ -21,6 +20,12 @@ import {
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ProjectFileTreeProps = {
   files: ProjectFile[];
@@ -181,26 +186,36 @@ export function ProjectFileTree({
           <span className="project-file-tree-count">{fileCount}</span>
         </button>
         {SHOW_EDITOR_IMPORT ? (
-          <div className="project-file-tree-toolbar" role="toolbar" aria-label="File actions">
-            <button type="button" className="project-file-tree-tool" onClick={onUpload} title="Upload .tex + assets">
-              <FilePlus className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              className="project-file-tree-tool"
-              onClick={onUploadFolder}
-              title="Upload folder"
-            >
-              <FolderPlus className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              className="project-file-tree-tool"
-              onClick={onUploadZip}
-              title="Import Overleaf ZIP"
-            >
-              <Upload className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </button>
+          <div className="project-file-tree-toolbar" role="toolbar" aria-label={t.sidebar.fileActions}>
+            {onUpload && onUploadFolder ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="project-file-tree-tool"
+                    title={`${t.sidebar.uploadFiles} / ${t.sidebar.uploadFolder}`}
+                  >
+                    <Upload className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[11rem]">
+                  <DropdownMenuItem onClick={onUpload}>
+                    <FilePlus className="h-3.5 w-3.5" />
+                    {t.sidebar.uploadFiles}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onUploadFolder}>
+                    <Folder className="h-3.5 w-3.5" />
+                    {t.sidebar.uploadFolder}
+                  </DropdownMenuItem>
+                  {onUploadZip ? (
+                    <DropdownMenuItem onClick={onUploadZip}>
+                      <Upload className="h-3.5 w-3.5" />
+                      {t.sidebar.importZip}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -208,7 +223,7 @@ export function ProjectFileTree({
       {treeOpen ? (
         <div className="project-file-tree-body soft-scrollbar">
           {tree.length === 0 ? (
-            <p className="project-file-tree-empty">Chưa có file. Import Overleaf ZIP hoặc upload thư mục.</p>
+            <p className="project-file-tree-empty">{t.sidebar.emptyTree}</p>
           ) : (
             tree.map((node) => (
               <TreeRow

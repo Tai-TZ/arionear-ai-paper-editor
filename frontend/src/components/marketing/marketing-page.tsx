@@ -19,12 +19,12 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
     <MarketingLayout>
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
-          <div className="max-w-3xl">
-            <p className="font-mono-data uppercase text-xs tracking-widest text-neutral-600">{content.eyebrow}</p>
-            <h1 className="mt-3 font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+          <div>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
               {content.title}
             </h1>
-            <p className="mt-6 font-body text-lg leading-relaxed text-neutral-700">{content.lede}</p>
+            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">{content.lede}</p>
           </div>
 
           <div className="mt-12 max-w-3xl space-y-10 border-t border-foreground pt-10">
@@ -34,7 +34,7 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
                   <h2 className="font-serif-display font-bold text-2xl mb-3">{section.heading}</h2>
                 ) : null}
                 {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph} className="font-body text-base leading-relaxed text-neutral-700 mb-3 last:mb-0">
+                  <p key={paragraph} className="font-body text-base leading-relaxed text-muted-foreground mb-3 last:mb-0">
                     {paragraph}
                   </p>
                 ))}

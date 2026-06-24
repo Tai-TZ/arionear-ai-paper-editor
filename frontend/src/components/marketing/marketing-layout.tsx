@@ -162,7 +162,7 @@ export function MarketingColophon() {
             Arionear
           </Link>
           <p className="mt-2 font-body italic text-sm">{f.tagline}</p>
-          <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-neutral-600">
+          <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
             {f.edition} {new Date().getFullYear()}
           </p>
         </div>

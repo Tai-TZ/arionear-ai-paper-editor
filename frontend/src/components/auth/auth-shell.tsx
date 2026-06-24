@@ -63,11 +63,11 @@ export function AuthShell({
         </div>
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-lg">
             <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-3">
               {eyebrow}
             </p>
-            <h1 className="font-serif-display text-4xl sm:text-5xl font-bold leading-[1.05] tracking-tight">
+            <h1 className="font-serif-display text-3xl sm:text-4xl xl:text-5xl font-bold leading-[1.08] tracking-tight text-balance">
               {title}
             </h1>
             <p className="mt-4 font-serif-body text-base text-foreground/70 border-l-2 border-foreground pl-4">

@@ -79,7 +79,7 @@ function IconBtn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="pdf-preview-icon-btn inline-flex h-7 w-7 items-center justify-center rounded transition hover:bg-black/5 disabled:opacity-40"
+      className="pdf-preview-icon-btn inline-flex h-7 w-7 items-center justify-center rounded transition disabled:opacity-40"
     >
       {children}
     </button>
@@ -459,11 +459,11 @@ export function PdfPreviewPanel({
         mobile ? "flex-1 w-full" : "h-full w-full"
       }`}
     >
-      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between border-b border-[#D3D3D3] bg-white px-3 md:px-4">
+      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between px-3 md:px-4">
         <div className="flex items-center gap-2.5">
           {readOnly ? (
             <>
-              <span className="inline-flex items-center gap-1.5 rounded bg-[#133a5d]/10 px-2.5 py-1 text-[11px] font-semibold text-[#133a5d]">
+              <span className="pdf-preview-live-badge inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold">
                 {isCompiling ? (
                   <>
                     <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
@@ -473,7 +473,7 @@ export function PdfPreviewPanel({
                   "Live preview"
                 )}
               </span>
-              <span className="font-mono text-[11px] text-[#666]">
+              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
                 {numPages > 0 ? `${currentPage} of ${numPages} pages` : "Waiting for PDF…"}
               </span>
             </>
@@ -488,14 +488,14 @@ export function PdfPreviewPanel({
                 <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
                 {isCompiling ? t.pdf.compiling : t.pdf.compile}
               </button>
-              <span className="font-mono text-[11px] text-[#666]">
+              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
                 {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
               </span>
               {onCompilerChange && (
                 <select
                   value={compiler}
                   onChange={(e) => onCompilerChange(e.target.value as LatexCompiler)}
-                  className="rounded border border-[#D3D3D3] bg-[#FAFAFA] px-1.5 py-0.5 font-mono text-[10px] text-[#555] outline-none"
+                  className="pdf-preview-toolbar-select rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
                   title="LaTeX compiler (Overleaf-style)"
                 >
                   {availableCompilerOptions.map((opt) => (
@@ -514,13 +514,13 @@ export function PdfPreviewPanel({
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
-              className="rounded px-2 py-1 font-mono text-[10px] text-[#555] transition hover:bg-black/5"
+              className="pdf-preview-toolbar-btn rounded px-2 py-1 font-mono text-[10px]"
             >
               {t.pdf.log}
             </button>
           )}
           {!readOnly && searchOpen ? (
-            <div className="mr-1 flex items-center gap-1 rounded border border-[#D3D3D3] bg-[#FAFAFA] px-2 py-0.5">
+            <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-1 rounded px-2 py-0.5">
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -531,13 +531,13 @@ export function PdfPreviewPanel({
                 placeholder="Find in PDF…"
                 className="w-28 bg-transparent text-[11px] outline-none md:w-40"
               />
-              <button type="button" onClick={() => setSearchOpen(false)} className="text-[#777]">
+              <button type="button" onClick={() => setSearchOpen(false)} className="pdf-preview-toolbar-muted">
                 <X className="h-3 w-3" />
               </button>
             </div>
           ) : !readOnly ? (
             <IconBtn title="Search" onClick={() => setSearchOpen(true)}>
-              <Search className="h-3.5 w-3.5 text-[#555]" />
+              <Search className="pdf-preview-toolbar-muted h-3.5 w-3.5" />
             </IconBtn>
           ) : null}
 
@@ -547,7 +547,7 @@ export function PdfPreviewPanel({
               const value = Number(e.target.value);
               setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
             }}
-            className="rounded px-1 py-1 font-mono text-[11px] text-[#666] outline-none hover:bg-black/5"
+            className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
           >
             <option value={100}>{t.pdf.fit}</option>
             {ZOOM_PRESETS.map((preset) => (
@@ -565,7 +565,7 @@ export function PdfPreviewPanel({
       >
         {!pdf && !isCompiling && (
           <div className="flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center">
-            <p className="max-w-sm text-sm text-[#666]">
+            <p className="pdf-preview-toolbar-muted max-w-sm text-sm">
               {readOnly
                 ? "PDF preview will appear here when the manuscript finishes compiling."
                 : t.pdf.emptyHint}
@@ -601,7 +601,7 @@ export function PdfPreviewPanel({
         )}
 
         {isCompiling && !pdf && (
-          <div className="flex h-full min-h-[24rem] items-center justify-center text-sm text-[#666]">
+          <div className="pdf-preview-toolbar-muted flex h-full min-h-[24rem] items-center justify-center text-sm">
             Compiling LaTeX…
           </div>
         )}
