@@ -225,7 +225,7 @@ export function HeroPeerReviewFigure() {
 
   return (
     <div
-      className={`hero-demo border border-foreground flex flex-col min-h-[360px]${flashAccept ? " hero-demo-flash-accept" : ""}${flashRefuse ? " hero-demo-flash-refuse" : ""}${loopFade ? " hero-demo-loop-fade" : ""}${autoPlay ? " hero-demo-autoplay" : ""}`}
+      className={`hero-demo border border-foreground flex flex-col min-h-[400px] lg:min-h-[460px] xl:min-h-[500px]${flashAccept ? " hero-demo-flash-accept" : ""}${flashRefuse ? " hero-demo-flash-refuse" : ""}${loopFade ? " hero-demo-loop-fade" : ""}${autoPlay ? " hero-demo-autoplay" : ""}`}
       role="application"
       aria-label={demo.ariaLabel}
       onMouseEnter={() => {
@@ -235,7 +235,7 @@ export function HeroPeerReviewFigure() {
         if (!userInteractedRef.current) setAutoPlay(true);
       }}
     >
-      <div className="hero-demo-chrome flex items-center justify-between border-b border-foreground px-3 py-2 font-mono-data text-[9px] uppercase tracking-widest">
+      <div className="hero-demo-chrome flex items-center justify-between border-b border-foreground px-4 py-2.5 font-mono-data text-[11px] uppercase tracking-widest">
         <span>{demo.deskSession}</span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5">
@@ -245,7 +245,7 @@ export function HeroPeerReviewFigure() {
           <button
             type="button"
             onClick={togglePlay}
-            className="hero-demo-play-btn inline-flex items-center justify-center border border-foreground/30 h-6 w-6 hover:bg-foreground hover:text-background transition-colors"
+            className="hero-demo-play-btn inline-flex items-center justify-center border border-foreground/30 h-7 w-7 hover:bg-foreground hover:text-background transition-colors"
             aria-label={autoPlay ? demo.pauseDemo : demo.playDemo}
             title={autoPlay ? demo.pause : demo.play}
           >
@@ -254,18 +254,18 @@ export function HeroPeerReviewFigure() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 flex-1 border-b border-foreground min-h-[240px]">
-        <div className="border-r border-foreground p-3 flex flex-col gap-2 min-w-0">
-          <div className="flex items-center gap-2 pb-2 border-b border-foreground/20">
-            <div className="h-8 w-8 border border-foreground flex items-center justify-center shrink-0">
-              <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
+      <div className="grid grid-cols-2 flex-1 border-b border-foreground min-h-[280px] lg:min-h-[320px]">
+        <div className="border-r border-foreground p-4 flex flex-col gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 pb-2.5 border-b border-foreground/20">
+            <div className="h-10 w-10 border border-foreground flex items-center justify-center shrink-0">
+              <MessageSquare className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
-              <p className="font-mono-data text-[9px] uppercase tracking-widest">{demo.arioRole}</p>
-              <p className="font-body text-[10px] text-neutral-600 italic">{demo.aiEditor}</p>
+              <p className="font-mono-data text-[11px] uppercase tracking-widest">{demo.arioRole}</p>
+              <p className="font-body text-xs text-neutral-600 italic">{demo.aiEditor}</p>
             </div>
             {thinking && (
-              <span className="ml-auto hero-demo-thinking font-mono-data text-[8px] text-[color:var(--editorial-red)] shrink-0">
+              <span className="ml-auto hero-demo-thinking font-mono-data text-[10px] text-[color:var(--editorial-red)] shrink-0">
                 {demo.thinking}
               </span>
             )}
@@ -284,19 +284,19 @@ export function HeroPeerReviewFigure() {
           </div>
         </div>
 
-        <div className="p-3 flex flex-col gap-2 min-w-0">
-          <div className="flex items-center gap-2 pb-2 border-b border-foreground/20">
-            <div className="h-8 w-8 border border-foreground flex items-center justify-center shrink-0">
-              <FileText className="h-3.5 w-3.5" strokeWidth={1.5} />
+        <div className="p-4 flex flex-col gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 pb-2.5 border-b border-foreground/20">
+            <div className="h-10 w-10 border border-foreground flex items-center justify-center shrink-0">
+              <FileText className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
-              <p className="font-mono-data text-[9px] uppercase tracking-widest">{demo.proof}</p>
-              <p className="font-body text-[10px] text-neutral-600 italic truncate">main.tex</p>
+              <p className="font-mono-data text-[11px] uppercase tracking-widest">{demo.proof}</p>
+              <p className="font-body text-xs text-neutral-600 italic truncate">main.tex</p>
             </div>
           </div>
 
           <div
-            className={`hero-demo-proof border border-foreground/30 p-2.5 flex-1 font-mono text-[10px] leading-[1.65] relative overflow-hidden min-h-[120px]${thinking ? " hero-demo-proof-thinking" : ""}`}
+            className={`hero-demo-proof border border-foreground/30 p-3 flex-1 font-mono text-xs leading-[1.7] relative overflow-hidden min-h-[140px]${thinking ? " hero-demo-proof-thinking" : ""}`}
             onClick={pauseAutoplay}
           >
             <p className="text-neutral-500">\section{"{Introduction}"}</p>
@@ -339,34 +339,34 @@ export function HeroPeerReviewFigure() {
         </div>
       </div>
 
-      <div className="bg-foreground text-background px-3 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <PenLine className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-            <p className="font-serif-display italic text-sm truncate hero-demo-status">{status}</p>
+      <div className="bg-foreground text-background px-4 py-3.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <PenLine className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <p className="font-serif-display italic text-sm lg:text-base truncate hero-demo-status">{status}</p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               disabled={resolved[activeId] !== "pending"}
               onClick={() => resolveActive("accepted")}
-              className="hero-demo-action hero-demo-action-accept inline-flex items-center gap-1 border px-2 py-1 font-mono-data text-[8px] uppercase tracking-wider transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="hero-demo-action hero-demo-action-accept inline-flex items-center gap-1.5 border px-2.5 py-1.5 font-mono-data text-[10px] uppercase tracking-wider transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Check className="h-2.5 w-2.5" strokeWidth={2} /> {demo.accept}
+              <Check className="h-3 w-3" strokeWidth={2} /> {demo.accept}
             </button>
             <button
               type="button"
               disabled={resolved[activeId] !== "pending"}
               onClick={() => resolveActive("refused")}
-              className="hero-demo-action hero-demo-action-refuse inline-flex items-center gap-1 border border-background/30 px-2 py-1 font-mono-data text-[8px] uppercase tracking-wider transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="hero-demo-action hero-demo-action-refuse inline-flex items-center gap-1.5 border border-background/30 px-2.5 py-1.5 font-mono-data text-[10px] uppercase tracking-wider transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <X className="h-2.5 w-2.5" strokeWidth={2} /> {demo.refuse}
+              <X className="h-3 w-3" strokeWidth={2} /> {demo.refuse}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="hero-demo-footer border-t border-foreground/20 px-3 py-2 space-y-2">
+      <div className="hero-demo-footer border-t border-foreground/20 px-4 py-2.5 space-y-2">
         <div className="hero-demo-progress-track h-0.5 bg-foreground/10 overflow-hidden rounded-full" role="presentation">
           <div
             key={`${stepKey}-${loopKey}`}
@@ -390,7 +390,7 @@ export function HeroPeerReviewFigure() {
               />
             ))}
           </div>
-          <p className="font-mono-data text-[8px] uppercase tracking-widest text-neutral-500">
+          <p className="font-mono-data text-[10px] uppercase tracking-widest text-neutral-500">
             {autoPlay ? (
               demo.loopHint
             ) : (
@@ -427,7 +427,7 @@ function SuggestionChip({
       type="button"
       disabled={!isPending}
       onClick={onSelect}
-      className={`hero-demo-chip w-full text-left border px-2 py-1.5 transition-all duration-500 ease-out ${
+      className={`hero-demo-chip w-full text-left border px-2.5 py-2 transition-all duration-500 ease-out ${
         !isPending
           ? resolved === "accepted"
             ? "hero-demo-chip-accepted border-foreground/20 opacity-55"
@@ -439,7 +439,7 @@ function SuggestionChip({
       aria-pressed={active}
     >
       <p
-        className={`font-mono-data text-[8px] uppercase tracking-widest transition-colors duration-300 ${
+        className={`font-mono-data text-[10px] uppercase tracking-widest transition-colors duration-300 ${
           active && isPending ? "text-[color:var(--editorial-red)]" : "text-muted-foreground"
         }`}
       >
@@ -447,7 +447,7 @@ function SuggestionChip({
         {resolved === "accepted" && " · ✓"}
         {resolved === "refused" && " · ✕"}
       </p>
-      <p className="font-body text-[10px] leading-snug mt-0.5 text-foreground/90">{suggestion.text}</p>
+      <p className="font-body text-xs leading-snug mt-1 text-foreground/90">{suggestion.text}</p>
     </button>
   );
 }

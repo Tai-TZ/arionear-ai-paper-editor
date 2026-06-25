@@ -28,8 +28,8 @@ function Hero() {
 
   return (
     <section className="border-b-4 border-foreground newsprint-texture">
-      <div className="hero-split max-w-screen-xl mx-auto px-4 grid grid-cols-1 gap-0">
-        <div className="hero-split-copy lg:border-r border-foreground p-6 lg:p-10 xl:p-12">
+      <div className="hero-split max-w-screen-2xl mx-auto px-4 sm:px-6 grid grid-cols-1 gap-0">
+        <div className="hero-split-copy lg:border-r border-foreground p-6 lg:p-8 xl:p-10">
           <div className="flex items-center gap-3 font-mono-data uppercase text-xs tracking-widest mb-6">
             <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">{h.breaking}</span>
             <span>{h.deskEdition}</span>
@@ -78,17 +78,17 @@ function Hero() {
             </Link>
           </div>
         </div>
-        <aside className="hero-split-demo p-6 lg:p-8 xl:p-10 flex flex-col justify-between gap-6">
-          <div className="hero-figure-frame border border-foreground p-4 lg:p-5 min-w-0">
-            <div className="font-mono-data uppercase text-[10px] tracking-widest mb-2">{h.figCaption}</div>
+        <aside className="hero-split-demo p-6 lg:p-6 xl:p-8 flex flex-col gap-5 lg:gap-6">
+          <div className="hero-figure-frame border border-foreground p-4 lg:p-6 min-w-0 flex-1">
+            <div className="font-mono-data uppercase text-xs tracking-widest mb-3">{h.figCaption}</div>
             <HeroPeerReviewFigure />
-            <p className="font-body italic text-sm mt-3 leading-snug">{h.figNote}</p>
+            <p className="font-body italic text-sm lg:text-base mt-4 leading-snug">{h.figNote}</p>
           </div>
-          <div className="grid grid-cols-3 border border-foreground">
+          <div className="grid grid-cols-3 border border-foreground shrink-0">
             {h.stats.map((s, i) => (
-              <div key={i} className={`p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
-                <div className="font-mono-data text-2xl font-bold">{s.k}</div>
-                <div className="font-sans-ui text-[10px] uppercase tracking-widest mt-1 text-muted-foreground">{s.v}</div>
+              <div key={i} className={`p-3 lg:p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
+                <div className="font-mono-data text-xl lg:text-2xl font-bold">{s.k}</div>
+                <div className="font-sans-ui text-[10px] lg:text-xs uppercase tracking-widest mt-1 text-muted-foreground">{s.v}</div>
               </div>
             ))}
           </div>

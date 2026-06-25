@@ -21,6 +21,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LatexGuideRouteImport } from './routes/latex-guide'
 import { Route as IntegrityRouteImport } from './routes/integrity'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as EthicsRouteImport } from './routes/ethics'
@@ -93,6 +94,11 @@ const IntegrityRoute = IntegrityRouteImport.update({
   path: '/integrity',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
+    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
+    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
+    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   EthicsRoute: typeof EthicsRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GuideRoute: typeof GuideRoute
   IntegrityRoute: typeof IntegrityRoute
   LatexGuideRoute: typeof LatexGuideRoute
   LoginRoute: typeof LoginRoute
@@ -415,6 +428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -505,6 +525,7 @@ const rootRouteChildren: RootRouteChildren = {
   EthicsRoute: EthicsRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GuideRoute: GuideRoute,
   IntegrityRoute: IntegrityRoute,
   LatexGuideRoute: LatexGuideRoute,
   LoginRoute: LoginRoute,

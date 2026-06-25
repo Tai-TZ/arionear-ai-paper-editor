@@ -28,6 +28,7 @@ import {
 import { getSession } from "@/lib/auth-store";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy, formatMastheadDate, revisionActionLabel, translateCitationSummary } from "@/lib/editor-i18n";
+import { commonCopy } from "@/lib/common-i18n";
 import {
   formatTimeAgo,
   getCompilePayload,
@@ -317,6 +318,7 @@ function computeProjectStats(latex: string): ProjectStats {
 function EditorPage() {
   const navigate = useNavigate();
   const { locale } = useLocale();
+  const shell = useMemo(() => commonCopy(locale).shell, [locale]);
   const { projectId } = Route.useSearch();
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
@@ -1513,7 +1515,7 @@ function EditorPage() {
       {bootState !== "error" && showSplash && (
         <EditorEntrySplash
           exiting={splashPhase === "exiting"}
-          label={bootState === "loading" ? "Loading project…" : "Opening editor…"}
+          label={bootState === "loading" ? shell.loadingProject : shell.openingEditor}
         />
       )}
       {bootState !== "error" && showEditor && (

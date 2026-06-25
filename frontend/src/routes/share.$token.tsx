@@ -3,6 +3,8 @@ import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { useLocale } from "@/components/locale-provider";
+import { commonCopy } from "@/lib/common-i18n";
 import { LatexCodeEditor } from "@/components/latex-code-editor";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
@@ -29,6 +31,8 @@ export const Route = createFileRoute("/share/$token")({
 
 function ShareViewerPage() {
   const { token } = Route.useParams();
+  const { locale } = useLocale();
+  const shell = useMemo(() => commonCopy(locale).shell, [locale]);
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
   const [bootError, setBootError] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Shared manuscript");
@@ -176,7 +180,7 @@ function ShareViewerPage() {
   const outlineLatex = mainLatexSource;
 
   if (bootState === "loading") {
-    return <AppLoadingScreen label="Loading shared manuscript…" variant="fullscreen" />;
+    return <AppLoadingScreen label={shell.loadingShared} variant="fullscreen" />;
   }
 
   if (bootState === "error") {
