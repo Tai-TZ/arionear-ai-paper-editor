@@ -1,3 +1,4 @@
+import { isValidPdfCitationSearch } from "@/lib/defense-pdf-stopwords";
 import {
   AnnotationLayer,
   DOMSVGFactory,
@@ -293,38 +294,34 @@ function bindInternalPdfLinkClicks(container: HTMLElement, linkService: PdfLinkS
   );
 }
 
+/**
+ * Scan all pages for the first one containing `query` (case-insensitive substring).
+ * Wraps around from page 1 if startPage > 1.
+ */
 export async function findPageForQuery(
   pdf: PDFDocumentProxy,
   query: string,
   startPage = 1,
 ): Promise<number | null> {
   const needle = query.trim().toLowerCase();
-  if (!needle) return null;
+  if (!needle || !isValidPdfCitationSearch(query.trim())) return null;
 
-  for (let pageNumber = startPage; pageNumber <= pdf.numPages; pageNumber += 1) {
+  const pageContains = async (pageNumber: number): Promise<boolean> => {
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
-    const haystack = textContent.items
+    const text = textContent.items
       .map((item) => ("str" in item ? item.str : ""))
       .join(" ")
       .toLowerCase();
-    if (haystack.includes(needle)) {
-      return pageNumber;
-    }
-  }
+    return text.includes(needle);
+  };
 
-  for (let pageNumber = 1; pageNumber < startPage; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber);
-    const textContent = await page.getTextContent();
-    const haystack = textContent.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ")
-      .toLowerCase();
-    if (haystack.includes(needle)) {
-      return pageNumber;
-    }
+  for (let n = startPage; n <= pdf.numPages; n++) {
+    if (await pageContains(n)) return n;
   }
-
+  for (let n = 1; n < startPage; n++) {
+    if (await pageContains(n)) return n;
+  }
   return null;
 }
 

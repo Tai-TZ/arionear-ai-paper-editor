@@ -1,0 +1,137 @@
+/** Terms that must never become PDF citation search targets. */
+
+export const PDF_CITATION_STOPWORDS = new Set([
+  // Vietnamese function words / pronouns
+  "trong",
+  "cho",
+  "của",
+  "cua",
+  "và",
+  "va",
+  "là",
+  "la",
+  "có",
+  "co",
+  "được",
+  "duoc",
+  "này",
+  "nay",
+  "đó",
+  "do",
+  "các",
+  "cac",
+  "một",
+  "mot",
+  "với",
+  "voi",
+  "từ",
+  "tu",
+  "khi",
+  "như",
+  "nhu",
+  "về",
+  "ve",
+  "tại",
+  "tai",
+  "bạn",
+  "ban",
+  "tôi",
+  "toi",
+  "để",
+  "de",
+  "hoặc",
+  "hoac",
+  "hay",
+  "cũng",
+  "cung",
+  "đã",
+  "da",
+  "sẽ",
+  "se",
+  "bối",
+  "boi",
+  "cảnh",
+  "canh",
+  "những",
+  "nhung",
+  "gì",
+  "gi",
+  "không",
+  "khong",
+  "còn",
+  "con",
+  "cũng",
+  // English stopwords
+  "the",
+  "and",
+  "for",
+  "with",
+  "from",
+  "this",
+  "that",
+  "using",
+  "use",
+  "used",
+  "paper",
+  "section",
+  "figure",
+  "table",
+  "abstract",
+  "introduction",
+  "conclusion",
+  "chapter",
+  "in",
+  "on",
+  "at",
+  "to",
+  "of",
+  "by",
+  "an",
+  "or",
+  "as",
+  "is",
+  "are",
+  "was",
+  "be",
+  "been",
+  "it",
+  "its",
+  "we",
+  "you",
+  "your",
+]);
+
+export function isValidPdfCitationSearch(search: string): boolean {
+  const normalized = search.trim().toLowerCase();
+  if (!normalized) return false;
+  if (PDF_CITATION_STOPWORDS.has(normalized)) return false;
+  if (normalized.length < 4) return false;
+  // Plain short lowercase tokens (e.g. author surnames mis-linked) — require tech shape or length.
+  const hasUpper = /[A-Z]/.test(search);
+  const hasHyphen = search.includes("-");
+  const isMultiWord = normalized.split(/\s+/).length >= 2;
+  if (!hasUpper && !hasHyphen && !isMultiWord && normalized.length < 6) return false;
+  return true;
+}
+
+/** Find first whole-word match (avoids matching substrings inside longer tokens). */
+export function findWholeWordMatchIndex(text: string, query: string): number {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return -1;
+
+  const lower = text.toLowerCase();
+  const wordChar = (c: string) => /[\p{L}\p{N}]/u.test(c);
+  let start = 0;
+
+  while (start <= lower.length - needle.length) {
+    const idx = lower.indexOf(needle, start);
+    if (idx < 0) return -1;
+    const before = idx > 0 ? lower[idx - 1]! : " ";
+    const afterIdx = idx + needle.length;
+    const after = afterIdx < lower.length ? lower[afterIdx]! : " ";
+    if (!wordChar(before) && !wordChar(after)) return idx;
+    start = idx + 1;
+  }
+
+  return -1;
+}
