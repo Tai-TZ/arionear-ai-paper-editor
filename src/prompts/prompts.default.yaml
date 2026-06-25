@@ -239,3 +239,60 @@ logic_combined_role:
     Response language: {audit_language}
 
     Bullet list of logic issues (max 8 bullets) in {audit_language}.
+
+# One-pass full-manuscript skim for the pre-publication score gate.
+paper_gate_skim:
+  system: |
+    You skim a FULL academic manuscript (condensed excerpt per section) for a pre-publication readiness gate.
+    Goal: understand the paper's topic, contribution, structure, and obvious gaps at a HIGH LEVEL.
+    This is NOT deep line-by-line peer review — only an overview for scoring.
+
+    COMMENT ONLY — do not rewrite, add facts, citations, or experiments.
+
+    Return ONE JSON object:
+    {
+      "summary": "2-3 sentence overview in {audit_language}",
+      "sections": [
+        {
+          "section": "section name",
+          "conflicts": [
+            {
+              "id": "string",
+              "type": "claim_evidence_mismatch|internal_contradiction|unsupported_claim|missing_citation|unclear_reasoning",
+              "severity": "critical|warning|info",
+              "claim_text": "",
+              "evidence_text": "",
+              "comment": "short high-level note",
+              "suggested_action": "clarify|add_citation|revise_claim|none",
+              "persona_sources": ["gate_skim"]
+            }
+          ],
+          "weak_claims": ["high-level gap or weakness"],
+          "consensus_notes": []
+        }
+      ],
+      "cross_section_conflicts": [
+        {"type": "coherence", "description": "cross-section note", "spans": []}
+      ]
+    }
+
+    Rules:
+    - Cover the manuscript holistically using ALL skimmed sections.
+    - Max 3 conflicts and 2 weak_claims per section; omit sections with no issues.
+    - Max 3 cross_section_conflicts.
+    - Prefer warning/info severity unless a claim is clearly unsupported.
+    - Write summary, comments, and weak_claims in {audit_language} only.
+    - Return ONLY valid JSON — no markdown fences, no reasoning tags.
+
+  user: |
+    Sections skimmed ({section_list}):
+    {manuscript_outline}
+
+    ---
+    {manuscript_skim}
+    ---
+
+    User request: {query}
+    Response language: {audit_language}
+
+    Skim the entire manuscript and return the JSON overview for the publication gate.

@@ -213,6 +213,22 @@ async def run_logic_audit(
     on_section_complete: LogicSectionFn | None = None,
 ) -> dict[str, Any]:
     """Multi-agent logic audit — comment-only, no draft mutation."""
+    normalized_mode = (mode or "quick").strip().lower()
+    if normalized_mode == "gate":
+        from src.services.logic_audit.paper_gate_skim import run_paper_gate_skim
+
+        return await run_paper_gate_skim(
+            latex=latex,
+            sections=sections,
+            query=query,
+            provider=provider,
+            model=model,
+            chat_provider=chat_provider,
+            ui_language="Vietnamese",
+            on_progress=on_progress,
+            on_reasoning=on_reasoning,
+        )
+
     flags = logic_audit_runtime_flags(mode, provider, scope=scope)
     audit_provider, audit_model = resolve_logic_audit_llm(mode, chat_provider or provider)
     provider = audit_provider

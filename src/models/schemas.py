@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from src.config import LLMProvider, normalize_llm_provider
 
 ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
-LogicAuditMode = Literal["quick", "deep"]
+LogicAuditMode = Literal["quick", "deep", "gate"]
 LogicAuditScope = Literal["selected", "full"]
 
 
@@ -32,7 +32,7 @@ class ChatRequest(BaseModel):
             return None
         if isinstance(value, str):
             normalized = value.strip().lower()
-            if normalized in {"quick", "deep"}:
+            if normalized in {"quick", "deep", "gate"}:
                 return normalized
         return value
 

@@ -124,6 +124,12 @@ import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
 import { mergeLogicSectionReport } from "@/lib/logic-audit";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
 import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
+import {
+  formatPaperScoreGateError,
+  logicAuditFingerprint,
+  needsScoreGateAudit,
+  runQuickLogicAuditForScore,
+} from "@/lib/paper-score-audit";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
@@ -391,6 +397,12 @@ function EditorPage() {
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [logicAuditReport, setLogicAuditReport] = useState<LogicAuditReport | null>(null);
+  const [scoreAuditLoading, setScoreAuditLoading] = useState(false);
+  const [scoreAuditProgress, setScoreAuditProgress] = useState<string | null>(null);
+  const [scoreAuditError, setScoreAuditError] = useState<string | null>(null);
+  const scoreAuditAbortRef = useRef<AbortController | null>(null);
+  const lastAuditFingerprintRef = useRef<string | null>(null);
+  const scoreAuditAttemptedForRef = useRef<string | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
@@ -491,6 +503,7 @@ function EditorPage() {
         setAssets(project.assets ?? []);
         if (project.logicAuditReport?.sections?.length) {
           setLogicAuditReport(project.logicAuditReport);
+          lastAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
         }
         setBootState("ready");
         void loadSessionAudit(projectId);
@@ -1201,6 +1214,7 @@ function EditorPage() {
             }
             if (result.logic_audit_report?.sections?.length) {
               setLogicAuditReport(result.logic_audit_report);
+              lastAuditFingerprintRef.current = logicAuditFingerprint(latex);
               setToolsOpen(true);
             }
             if (result.revision_id) {
@@ -1276,6 +1290,101 @@ function EditorPage() {
     openChatPanel();
     void handleSend();
   };
+
+  const runScoreGateAudit = useCallback(async () => {
+    if (!projectId || scoreAuditLoading) return;
+
+    scoreAuditAbortRef.current?.abort();
+    const abort = new AbortController();
+    scoreAuditAbortRef.current = abort;
+
+    setScoreAuditLoading(true);
+    setScoreAuditError(null);
+    setScoreAuditProgress("Ario đang đọc lướt toàn bộ bài…");
+
+    try {
+      const report = await runQuickLogicAuditForScore({
+        latex: mainLatexSource,
+        sessionId: projectId,
+        integrityStrictness,
+        llmProvider,
+        llmModel,
+        signal: abort.signal,
+        onProgress: (label) => setScoreAuditProgress(label),
+      });
+      if (abort.signal.aborted) return;
+      scoreAuditAttemptedForRef.current = logicAuditFingerprint(mainLatexSource);
+      if (report?.sections?.length) {
+        setLogicAuditReport(report);
+        lastAuditFingerprintRef.current = logicAuditFingerprint(mainLatexSource);
+      } else {
+        // Gate returned empty — clear any stale gate report so score shows
+        // heuristic-only rather than outdated agent result.
+        setLogicAuditReport((prev) => {
+          const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
+          return prevMeta?.audit_mode === "gate" ? null : prev;
+        });
+        setScoreAuditError("Không nhận được báo cáo phản biện — điểm dựa trên tiêu chí kỹ thuật.");
+      }
+    } catch (error) {
+      if (abort.signal.aborted) return;
+      const message =
+        error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
+      // Also clear stale gate report on hard error.
+      setLogicAuditReport((prev) => {
+        const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
+        return prevMeta?.audit_mode === "gate" ? null : prev;
+      });
+      setScoreAuditError(formatPaperScoreGateError(message));
+    } finally {
+      if (!abort.signal.aborted) {
+        // Only mark as attempted when we got a result (success or empty).
+        // On hard error, leave ref unset so the dialog can retry on reopen.
+        setScoreAuditLoading(false);
+        setScoreAuditProgress(null);
+      }
+      scoreAuditAbortRef.current = null;
+    }
+  }, [
+    projectId,
+    scoreAuditLoading,
+    mainLatexSource,
+    integrityStrictness,
+    llmProvider,
+    llmModel,
+  ]);
+
+  useEffect(() => {
+    if (!exportOpen) {
+      scoreAuditAbortRef.current?.abort();
+      scoreAuditAbortRef.current = null;
+      scoreAuditAttemptedForRef.current = null;
+      setScoreAuditLoading(false);
+      setScoreAuditProgress(null);
+      return;
+    }
+    if (!projectId || scoreAuditLoading) return;
+
+    const fingerprint = logicAuditFingerprint(mainLatexSource);
+    if (scoreAuditAttemptedForRef.current === fingerprint) return;
+    if (
+      !needsScoreGateAudit(
+        mainLatexSource,
+        logicAuditReport,
+        lastAuditFingerprintRef.current,
+      )
+    ) {
+      return;
+    }
+    void runScoreGateAudit();
+  }, [
+    exportOpen,
+    projectId,
+    mainLatexSource,
+    logicAuditReport,
+    scoreAuditLoading,
+    runScoreGateAudit,
+  ]);
 
   const handleAcceptSuggestion = () => {
     if (!pendingSuggestion) return;
@@ -1756,6 +1865,9 @@ function EditorPage() {
         compileError={compileError}
         citationResults={citationResults}
         logicAuditReport={logicAuditReport}
+        auditLoading={scoreAuditLoading}
+        auditProgress={scoreAuditProgress}
+        auditError={scoreAuditError}
       />
         </div>
       )}
