@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 
 _RENAME_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"đổi\s+(?:đề\s+tài\s+)?từ\s+(.+?)\s+sang\s+(.+)", re.IGNORECASE),
+    re.compile(r"đổi\s+(.+?)\s+sang\s+(.+)", re.IGNORECASE),
     re.compile(r"đổi\s+(.+?)\s+thành\s+(.+)", re.IGNORECASE),
     re.compile(r"thay\s+(.+?)\s+bằng\s+(.+)", re.IGNORECASE),
     re.compile(r"sửa\s+(.+?)\s+thành\s+(.+)", re.IGNORECASE),
@@ -24,7 +26,9 @@ _SELECTION_REPLACE_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 
 def _clean_fragment(text: str) -> str:
-    return text.strip().strip("*#.,;:!?\"'""''")
+    cleaned = text.strip().strip("*#.,;:!?\"'""''")
+    cleaned = re.sub(r"\s+(?:giúp\s+tôi|please)(?:\s+nhé)?\s*$", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip().strip(".,;:!?")
 
 
 def _word_permutations(words: list[str]) -> list[str]:

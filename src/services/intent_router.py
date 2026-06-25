@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass
@@ -7,8 +8,8 @@ from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.config import LLMProvider
-from src.services.llm import get_llm
+from src.config import LLMProvider, get_settings, normalize_llm_provider
+from src.services.llm import get_llm, is_reasoning_model
 from src.services.prompts import (
     build_router_system_prompt,
     render_user_prompt,
@@ -27,7 +28,8 @@ _STYLE_RE = re.compile(
     re.IGNORECASE,
 )
 _RENAME_EDIT_RE = re.compile(
-    r"đổi\s+.+\s+thành|thay\s+.+\s+bằng|sửa\s+.+\s+thành|chỉnh\s+.+\s+thành|"
+    r"đổi\s+.+\s+thành|đổi\s+.+\s+sang|đổi\s+.+\s+từ\s+.+\s+sang|"
+    r"thay\s+.+\s+bằng|sửa\s+.+\s+thành|chỉnh\s+.+\s+thành|"
     r"replace\s+.+\s+with|change\s+.+\s+to",
     re.IGNORECASE,
 )
@@ -59,6 +61,7 @@ _CONVERSATIONAL_CHAT_RE = re.compile(
     r"what\s+can\s+you\s+do|bạn\s+làm\s+được\s+gì|giúp\s+đỡ|help\s+me",
     re.IGNORECASE,
 )
+ROUTER_LLM_TIMEOUT_SEC = 20.0
 
 
 @dataclass(frozen=True)
@@ -161,7 +164,8 @@ def _should_use_fast_intent(query: str, has_latex: bool) -> bool:
         return True
     return bool(
         re.search(
-            r"đổi\s+.+\s+thành|thay\s+.+\s+bằng|sửa\s+.+\s+thành|chỉnh\s+.+\s+thành",
+            r"đổi\s+.+\s+thành|đổi\s+.+\s+sang|đổi\s+.+\s+từ\s+.+\s+sang|"
+            r"thay\s+.+\s+bằng|sửa\s+.+\s+thành|chỉnh\s+.+\s+thành",
             q,
             re.IGNORECASE,
         )
@@ -191,9 +195,8 @@ async def classify_intent(
         )
         return IntentResult(action=explicit_task, scope=scope)  # type: ignore[arg-type]
 
-    from src.config import get_settings
-
-    if get_settings().app_env == "test":
+    settings = get_settings()
+    if settings.app_env == "test":
         return _fallback_intent(query, has_latex, has_selection)
 
     if _should_use_fast_intent(query, has_latex):
@@ -217,13 +220,21 @@ async def classify_intent(
             f"- text_selected: {has_selection}\n"
         )
 
-    llm = get_llm(provider=provider, model=model, temperature=0)
+    router_provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
+    router_model = model
+    if router_provider == "openrouter" and (not model or is_reasoning_model(model)):
+        router_model = settings.openrouter_logic_audit_quick_model
+
+    llm = get_llm(provider=router_provider, model=router_model, temperature=0)
     try:
-        response = await llm.ainvoke(
-            [
-                SystemMessage(content=system),
-                HumanMessage(content=context),
-            ]
+        response = await asyncio.wait_for(
+            llm.ainvoke(
+                [
+                    SystemMessage(content=system),
+                    HumanMessage(content=context),
+                ]
+            ),
+            timeout=ROUTER_LLM_TIMEOUT_SEC,
         )
     except Exception:
         return _fallback_intent(query, has_latex, has_selection)

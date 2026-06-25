@@ -13,6 +13,13 @@ def test_parse_rename_vietnamese():
     )
 
 
+def test_parse_rename_tu_sang():
+    assert parse_rename_instruction("Đổi đề tài từ EfficientNetV2 sang V3 giúp tôi nhé") == (
+        "EfficientNetV2",
+        "V3",
+    )
+
+
 def test_direct_edit_name_permutation():
     latex = r"\author{Anh Hoang Tuan and Thuan Ho Hai and Nhut Nguyen Minh}"
     result = try_direct_text_edit("Đổi HO HAI THUAN thành NGUYEN VAN A", latex)
@@ -34,7 +41,8 @@ def test_direct_edit_selection_replace_english():
 
 
 @pytest.mark.asyncio
-async def test_classify_intent_skips_llm_for_rename():
+async def test_classify_intent_skips_llm_for_rename(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "test")
     intent = await classify_intent(
         "Đổi HO HAI THUAN thành NGUYEN VAN A",
         has_latex=True,
