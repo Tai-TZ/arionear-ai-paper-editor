@@ -24,6 +24,7 @@ import {
   Sparkles,
   Share2,
   FileOutput,
+  GraduationCap,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import { useLocale } from "@/components/locale-provider";
@@ -1716,6 +1717,7 @@ function EditorPage() {
               onToggleTools={() => setToolsOpen((v) => !v)}
               onShare={() => setShareOpen(true)}
               onExport={() => setExportOpen(true)}
+              onDefense={projectId ? () => void navigate({ to: "/defense", search: { projectId } }) : undefined}
               exportEnabled={Boolean(pdfData)}
               shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
@@ -2444,6 +2446,7 @@ function CenterPanel({
   onToggleTools,
   onShare,
   onExport,
+  onDefense,
   exportEnabled = false,
   shareEnabled = false,
   chatEndRef,
@@ -2503,6 +2506,7 @@ function CenterPanel({
   onToggleTools: () => void;
   onShare?: () => void;
   onExport?: () => void;
+  onDefense?: () => void;
   exportEnabled?: boolean;
   shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
@@ -2572,6 +2576,17 @@ function CenterPanel({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {onDefense ? (
+            <button
+              type="button"
+              onClick={onDefense}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted hidden md:inline-flex"
+              title="Chuẩn bị bảo vệ luận văn (Defense Mode)"
+            >
+              <GraduationCap className="h-3 w-3" />
+              Bảo vệ
+            </button>
+          ) : null}
           {onShare ? (
             <button
               type="button"

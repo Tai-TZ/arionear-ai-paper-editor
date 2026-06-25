@@ -1,0 +1,302 @@
+import { resolveApiBase } from "./base-url";
+import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
+import { getAccessToken } from "@/lib/auth-store";
+import type { LLMProvider } from "./academic";
+
+const API_BASE = resolveApiBase();
+
+export type DefenseConversationTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type DefenseMode = "proactive" | "responsive";
+
+export type DefenseQuota = {
+  plan: "free" | "pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  period: string;
+  period_type: "daily" | "monthly";
+};
+
+/** Set to true when re-enabling per-plan defense turn limits. */
+export const DEFENSE_QUOTA_ENABLED = false;
+
+export type DefenseStreamRequest = {
+  latex_content: string;
+  conversation_history: DefenseConversationTurn[];
+  mode: DefenseMode;
+  paper_id?: string;
+  llm_provider?: LLMProvider;
+  llm_model?: string;
+};
+
+export type DefenseStreamCallbacks = {
+  onActivity: (text: string) => void;
+  onToken: (delta: string) => void;
+  onDone: (response: string) => void;
+  onError: (message: string) => void;
+};
+
+// ─── SSE parsing (shared with academic.ts pattern) ────────────────────────
+
+function normalizeSseText(text: string): string {
+  return text.replace(/\r\n/g, "\n");
+}
+
+function parseSseBlock(block: string): { event: string; data: string } | null {
+  const normalized = normalizeSseText(block.trim());
+  if (!normalized || normalized.startsWith(":")) return null;
+  let event = "message";
+  let data = "";
+  for (const line of normalized.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) data += line.slice(5).trim();
+  }
+  if (!data) return null;
+  return { event, data };
+}
+
+function createDefenseDispatcher(callbacks: DefenseStreamCallbacks): {
+  dispatchBlock: (block: string) => void;
+  isFinished: () => boolean;
+} {
+  let finished = false;
+
+  const dispatchBlock = (block: string) => {
+    const parsed = parseSseBlock(block);
+    if (!parsed) return;
+    try {
+      const payload = JSON.parse(parsed.data) as Record<string, unknown>;
+      const eventType = parsed.event !== "message" ? parsed.event : inferEventType(payload);
+      switch (eventType) {
+        case "activity":
+          if (typeof payload.text === "string") callbacks.onActivity(payload.text);
+          break;
+        case "token":
+          if (typeof payload.delta === "string") callbacks.onToken(payload.delta);
+          break;
+        case "done":
+          finished = true;
+          callbacks.onDone(typeof payload.response === "string" ? payload.response : "");
+          break;
+        case "error":
+          finished = true;
+          callbacks.onError(
+            typeof payload.message === "string"
+              ? streamErrorMessage(payload.message)
+              : streamErrorMessage("UNKNOWN"),
+          );
+          break;
+        default:
+          break;
+      }
+    } catch {
+      /* malformed chunk — ignore */
+    }
+  };
+
+  return { dispatchBlock, isFinished: () => finished };
+}
+
+function inferEventType(payload: Record<string, unknown>): string {
+  if (typeof payload.text === "string") return "activity";
+  if (typeof payload.delta === "string") return "token";
+  if ("response" in payload) return "done";
+  if (typeof payload.message === "string") return "error";
+  return "unknown";
+}
+
+function ingestSseText(
+  buffer: string,
+  incoming: string,
+  dispatchBlock: (block: string) => void,
+): string {
+  let next = normalizeSseText(buffer + incoming);
+  const parts = next.split("\n\n");
+  next = parts.pop() ?? "";
+  for (const part of parts) {
+    if (part.trim()) dispatchBlock(part);
+  }
+  return next;
+}
+
+// ─── XHR streaming (preferred — avoids Vite proxy buffering) ──────────────
+
+function streamDefenseWithXhr(
+  url: string,
+  body: string,
+  authToken: string | null,
+  callbacks: DefenseStreamCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    const { dispatchBlock, isFinished } = createDefenseDispatcher(callbacks);
+    let buffer = "";
+    let responseSeen = 0;
+    let failed = false;
+
+    const finish = () => {
+      buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
+      if (!failed && !isFinished() && !signal?.aborted) {
+        callbacks.onError(
+          streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
+        );
+      }
+      resolve();
+    };
+
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Accept", "text/event-stream");
+    xhr.setRequestHeader("Cache-Control", "no-cache");
+    if (authToken) xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.HEADERS_RECEIVED) return;
+      if (xhr.status >= 200 && xhr.status < 300) return;
+      failed = true;
+      let detail: unknown = xhr.statusText;
+      try {
+        detail = JSON.parse(xhr.responseText)?.detail ?? detail;
+      } catch {
+        /* ignore */
+      }
+      callbacks.onError(mapApiHttpError(xhr.status, detail));
+      xhr.abort();
+    };
+
+    xhr.onprogress = () => {
+      const chunk = xhr.responseText.slice(responseSeen);
+      responseSeen = xhr.responseText.length;
+      if (!chunk) return;
+      buffer = ingestSseText(buffer, chunk, dispatchBlock);
+    };
+
+    xhr.onload = finish;
+    xhr.onerror = () => {
+      if (!failed && !signal?.aborted) {
+        callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
+      }
+      resolve();
+    };
+    xhr.onabort = () => resolve();
+
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(body);
+  });
+}
+
+// ─── fetch fallback ────────────────────────────────────────────────────────
+
+async function streamDefenseWithFetch(
+  url: string,
+  body: string,
+  authToken: string | null,
+  callbacks: DefenseStreamCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+    "Cache-Control": "no-cache",
+  };
+  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers, body, signal });
+  } catch {
+    callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
+    return;
+  }
+
+  if (!res.ok || !res.body) {
+    let detail: unknown = res.statusText;
+    try {
+      const parsed = await res.json();
+      detail = parsed.detail ?? detail;
+    } catch {
+      /* ignore */
+    }
+    callbacks.onError(mapApiHttpError(res.status, detail));
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const { dispatchBlock, isFinished } = createDefenseDispatcher(callbacks);
+  let buffer = "";
+
+  const onAbort = () => void reader.cancel().catch(() => {});
+  signal?.addEventListener("abort", onAbort, { once: true });
+
+  while (true) {
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch (err) {
+      if (signal?.aborted) return;
+      callbacks.onError(toUserFacingMessage(err));
+      return;
+    }
+    const { done, value } = chunk;
+    if (done) break;
+    buffer = ingestSseText(buffer, decoder.decode(value, { stream: true }), dispatchBlock);
+  }
+  if (buffer.trim()) dispatchBlock(buffer);
+  if (!isFinished() && !signal?.aborted) {
+    callbacks.onError(
+      streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
+    );
+  }
+  signal?.removeEventListener("abort", onAbort);
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────
+
+export async function fetchDefenseQuota(): Promise<DefenseQuota> {
+  const authToken = getAccessToken();
+  if (!authToken) throw new Error("Not authenticated.");
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/defense/quota`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+  } catch {
+    throw new Error("Cannot reach the server.");
+  }
+
+  if (!res.ok) {
+    let detail: unknown = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(mapApiHttpError(res.status, detail));
+  }
+
+  return res.json() as Promise<DefenseQuota>;
+}
+
+export async function streamDefense(
+  request: DefenseStreamRequest,
+  callbacks: DefenseStreamCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  const url = `${API_BASE}/defense/stream`;
+  const authToken = getAccessToken();
+  const body = JSON.stringify(request);
+
+  if (typeof XMLHttpRequest !== "undefined") {
+    await streamDefenseWithXhr(url, body, authToken, callbacks, signal);
+    return;
+  }
+  await streamDefenseWithFetch(url, body, authToken, callbacks, signal);
+}

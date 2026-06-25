@@ -17,6 +17,15 @@ function useClientMounted() {
 type EditorDesktopPanelsProps = {
   center: ReactNode;
   right: ReactNode;
+  groupId?: string;
+  centerPanelId?: string;
+  previewPanelId?: string;
+  centerDefaultSize?: number;
+  previewDefaultSize?: number;
+  centerMinSize?: number;
+  previewMinSize?: number;
+  centerMaxSize?: number;
+  previewMaxSize?: number;
 };
 
 function PanelFallback({ center }: { center: ReactNode }) {
@@ -31,7 +40,19 @@ function PanelFallback({ center }: { center: ReactNode }) {
   );
 }
 
-export function EditorDesktopPanels({ center, right }: EditorDesktopPanelsProps) {
+export function EditorDesktopPanels({
+  center,
+  right,
+  groupId = "editor-main",
+  centerPanelId = "center",
+  previewPanelId = "preview",
+  centerDefaultSize = 58,
+  previewDefaultSize = 42,
+  centerMinSize = 28,
+  previewMinSize = 22,
+  centerMaxSize,
+  previewMaxSize,
+}: EditorDesktopPanelsProps) {
   const mounted = useClientMounted();
 
   useEffect(() => {
@@ -48,24 +69,29 @@ export function EditorDesktopPanels({ center, right }: EditorDesktopPanelsProps)
 
   return (
     <ResizablePanelGroup
-      id="editor-main"
+      id={groupId}
       orientation="horizontal"
-      className="min-w-0 flex-1"
-      defaultLayout={{ center: 58, preview: 42 }}
+      className="min-h-0 min-w-0 flex-1"
+      defaultLayout={{
+        [centerPanelId]: centerDefaultSize,
+        [previewPanelId]: previewDefaultSize,
+      }}
     >
       <ResizablePanel
-        id="center"
-        defaultSize={58}
-        minSize={28}
+        id={centerPanelId}
+        defaultSize={centerDefaultSize}
+        minSize={centerMinSize}
+        maxSize={centerMaxSize}
         className="flex min-h-0 min-w-0 flex-col"
       >
         {center}
       </ResizablePanel>
       <ResizableHandle className="editor-resize-handle" />
       <ResizablePanel
-        id="preview"
-        defaultSize={42}
-        minSize={22}
+        id={previewPanelId}
+        defaultSize={previewDefaultSize}
+        minSize={previewMinSize}
+        maxSize={previewMaxSize}
         className="flex min-h-0 min-w-0 flex-col"
       >
         {right}
