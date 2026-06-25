@@ -10,12 +10,9 @@ from src.config import LLMProvider, Settings, get_settings, normalize_llm_provid
 if TYPE_CHECKING:
     pass
 
-# TokenRouter — MiniMax M3 (OpenAI-compatible API).
-TOKENROUTER_MINIMAX_M3_MODEL = "MiniMax-M3"
-TOKENROUTER_MINIMAX_M3_TEMPERATURE = 1.0
-
-# Backward-compatible aliases (logic audit / chat_stream imports).
-MINIMAX_M3_TEMPERATURE = TOKENROUTER_MINIMAX_M3_TEMPERATURE
+# OpenRouter — NVIDIA Nemotron 3 Ultra (free tier).
+OPENROUTER_NEMOTRON_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+REASONING_MODEL_TEMPERATURE = 1.0
 
 
 def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None) -> str:
@@ -26,7 +23,6 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
         "anthropic": settings.anthropic_default_model,
         "openrouter": settings.openrouter_default_model,
         "zai": settings.zai_default_model,
-        "tokenrouter": settings.tokenrouter_default_model,
     }
     return defaults.get(provider, settings.model_name)
 
@@ -37,7 +33,6 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
         "zai": settings.zai_api_key,
-        "tokenrouter": settings.tokenrouter_api_key,
     }
     key = keys.get(provider, "")
     if not key:
@@ -48,18 +43,28 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
     return key
 
 
-def resolve_tokenrouter_model(_model: str | None = None) -> str:
-    """TokenRouter provider always uses MiniMax-M3."""
-    return TOKENROUTER_MINIMAX_M3_MODEL
+def is_reasoning_model(model: str | None) -> bool:
+    if not model:
+        return False
+    return "nemotron" in model.lower()
 
 
-def is_minimax_m3_provider(provider: str | None) -> bool:
-    normalized = normalize_llm_provider(provider)
-    return normalized == "tokenrouter"
+def resolve_heavy_edit_model(
+    model: str | None,
+    *,
+    text_chars: int,
+    apply_mode: str = "selection",
+) -> str:
+    """Reasoning models (Nemotron) time out on full-manuscript edits — use a fast model."""
+    settings = get_settings()
+    effective = model or settings.openrouter_default_model
+    if apply_mode == "document" and text_chars > 6000 and is_reasoning_model(effective):
+        return settings.openrouter_logic_audit_quick_model
+    return effective
 
 
 def extract_llm_text(response: object) -> str:
-    """Merge visible content and reasoning_content (MiniMax M3 / thinking models)."""
+    """Merge visible content and reasoning_content (reasoning / thinking models)."""
     content = str(getattr(response, "content", None) or "").strip()
     if content:
         return content
@@ -103,16 +108,13 @@ def get_llm(
     """Return a chat model for OpenAI, Anthropic, OpenRouter, or Z.AI (GLM)."""
     settings = get_settings()
     provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
-    if provider == "tokenrouter":
-        model_name = resolve_tokenrouter_model(model)
-        temp = (
-            temperature
-            if temperature is not None
-            else TOKENROUTER_MINIMAX_M3_TEMPERATURE
-        )
+    model_name = _resolve_model(settings, provider, model)
+    if temperature is not None:
+        temp = temperature
+    elif is_reasoning_model(model_name):
+        temp = REASONING_MODEL_TEMPERATURE
     else:
-        model_name = _resolve_model(settings, provider, model)
-        temp = temperature if temperature is not None else settings.llm_temperature
+        temp = settings.llm_temperature
 
     if provider == "openai":
         return ChatOpenAI(
@@ -164,15 +166,6 @@ def get_llm(
             extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
         )
 
-    if provider == "tokenrouter":
-        return ChatOpenAI(
-            model=model_name,
-            api_key=_resolve_api_key(settings, "tokenrouter"),
-            base_url=settings.tokenrouter_base_url,
-            temperature=temp,
-            max_tokens=8192,
-        )
-
     raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
@@ -188,6 +181,7 @@ def _dedupe_models(models: list[str]) -> list[str]:
 
 
 OPENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
+    (OPENROUTER_NEMOTRON_MODEL, "Nemotron 3 Ultra · reasoning (free)"),
     ("openai/gpt-4o-mini", "GPT-4o Mini · fast & cheap"),
     ("google/gemini-2.5-flash-preview", "Gemini 2.5 Flash · fast"),
     ("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku · fast"),
@@ -211,10 +205,6 @@ ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
     ("glm-4.7-flash", "GLM-4.7 Flash · free"),
     ("glm-4.7-flashx", "GLM-4.7 FlashX"),
     ("glm-4.7", "GLM-4.7 · quality"),
-]
-
-TOKENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
-    ("MiniMax-M3", "MiniMax M3 · reasoning"),
 ]
 
 
@@ -280,17 +270,6 @@ def list_providers() -> list[dict]:
                 "name": "Z.AI (GLM)",
                 "default_model": default,
                 "models": _model_options(ZAI_MODEL_CATALOG, default),
-            }
-        )
-
-    if settings.tokenrouter_api_key:
-        default = resolve_tokenrouter_model(settings.tokenrouter_default_model)
-        providers.append(
-            {
-                "id": "tokenrouter",
-                "name": "TokenRouter (MiniMax M3)",
-                "default_model": default,
-                "models": _model_options(TOKENROUTER_MODEL_CATALOG, default),
             }
         )
 

@@ -6,7 +6,7 @@ import re
 import uuid
 from typing import Any
 
-from src.services.llm import TOKENROUTER_MINIMAX_M3_MODEL, is_minimax_m3_provider
+from src.services.llm import OPENROUTER_NEMOTRON_MODEL, is_reasoning_model
 from src.services.logic_audit.config import (
     logic_audit_runtime_flags,
     resolve_logic_audit_llm,
@@ -233,7 +233,7 @@ async def run_logic_audit(
     audit_provider, audit_model = resolve_logic_audit_llm(mode, chat_provider or provider)
     provider = audit_provider
     model = model or audit_model
-    is_minimax = is_minimax_m3_provider(provider)
+    is_deep_reasoning = flags["mode"] == "deep" or is_reasoning_model(model)
 
     if flags["use_combined_persona"]:
         roles = load_combined_logic_role() or load_debate_roles()
@@ -272,7 +272,7 @@ async def run_logic_audit(
     persona_count = len(roles)
     if on_progress:
         parallel = "tuần tự" if persona_sequential else "song song"
-        engine = "MiniMax M3" if is_minimax else "fast scan"
+        engine = "Nemotron 3 Ultra" if is_deep_reasoning else "fast scan"
         on_progress(
             "logic-plan",
             f"Logic audit · {mode_label}",
@@ -349,7 +349,7 @@ async def run_logic_audit(
 
     if on_progress:
         parallel = "tuần tự" if persona_sequential else "song song"
-        engine = "MiniMax M3" if is_minimax else "fast scan"
+        engine = "Nemotron 3 Ultra" if is_deep_reasoning else "fast scan"
         on_progress(
             "logic-plan",
             f"Logic audit · {mode_label}",
@@ -462,8 +462,8 @@ async def run_logic_audit(
             "logic_audit_report": {},
             "response": (
                 "Logic audit chưa hoàn thành — model LLM quá chậm hoặc timeout "
-                "(thường gặp với MiniMax M3). Thử lại hoặc chọn model nhanh hơn "
-                "(Z.AI GLM / OpenRouter)."
+                "(thường gặp với Nemotron 3 Ultra). Thử lại hoặc chọn model nhanh hơn "
+                "(GPT-4o Mini / Z.AI GLM)."
             ),
             "analysis": "Logic audit: all persona calls failed or timed out.",
         }
@@ -479,7 +479,7 @@ async def run_logic_audit(
             "personas": list(roles.keys()),
             "sections_scanned": len(audit_sections),
             "provider": provider or "",
-            "model": (model if not is_minimax else TOKENROUTER_MINIMAX_M3_MODEL) or "",
+            "model": model or "",
             "parallel_sections": section_concurrency,
             "persona_sequential": persona_sequential,
             "audit_mode": flags["mode"],

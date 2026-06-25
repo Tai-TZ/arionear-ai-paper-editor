@@ -1,5 +1,7 @@
 import { isValidPdfCitationSearch } from "@/lib/defense-pdf-stopwords";
 import {
+  AnnotationLayer,
+  DOMSVGFactory,
   getDocument,
   GlobalWorkerOptions,
   TextLayer,
@@ -8,6 +10,8 @@ import {
   type PageViewport,
 } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { PdfLinkService } from "@/lib/pdf-link-service";
+import { parseInternalPdfLink } from "@/lib/pdf-link-service";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -231,6 +235,63 @@ export async function renderPageTextLayer(
   });
   await textLayer.render();
   return textLayer;
+}
+
+export async function renderPageAnnotationLayer(
+  page: PDFPageProxy,
+  container: HTMLElement,
+  viewport: PageViewport,
+  linkService: PdfLinkService,
+): Promise<AnnotationLayer> {
+  container.replaceChildren();
+  container.className = "annotationLayer pdf-preview-annotation-layer";
+  container.style.setProperty("--scale-factor", String(viewport.scale));
+  container.style.width = `${viewport.width}px`;
+  container.style.height = `${viewport.height}px`;
+
+  const layer = new AnnotationLayer({
+    div: container,
+    accessibilityManager: null,
+    annotationCanvasMap: null,
+    annotationEditorUIManager: null,
+    page,
+    viewport,
+    structTreeLayer: null,
+  });
+
+  const annotations = await page.getAnnotations({ intent: "display" });
+  await layer.render({
+    viewport,
+    div: container,
+    annotations,
+    page,
+    linkService,
+    renderForms: false,
+    svgFactory: new DOMSVGFactory(),
+  });
+
+  bindInternalPdfLinkClicks(container, linkService);
+
+  return layer;
+}
+
+function bindInternalPdfLinkClicks(container: HTMLElement, linkService: PdfLinkService) {
+  container.addEventListener(
+    "click",
+    (event) => {
+      const anchor = (event.target as HTMLElement | null)?.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") ?? "";
+      const dest = href.startsWith("#") && href.length > 1
+        ? decodeURIComponent(href.slice(1))
+        : parseInternalPdfLink(href);
+      if (!dest) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void linkService.goToDestination(dest);
+    },
+    true,
+  );
 }
 
 /**

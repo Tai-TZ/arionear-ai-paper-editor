@@ -14,6 +14,7 @@ type CommonCopy = {
     workflow: string;
     guide: string;
     integrity: string;
+    templates: string;
   };
   footer: {
     tagline: string;
@@ -31,6 +32,7 @@ type CommonCopy = {
       workflow: string;
       guide: string;
       integrity: string;
+      templates: string;
       openEditor: string;
       latexGuide: string;
       about: string;
@@ -96,6 +98,7 @@ const EN: CommonCopy = {
     workflow: "Workflow",
     guide: "User Guide",
     integrity: "Integrity",
+    templates: "Templates",
   },
   footer: {
     tagline: "AI Academic Writing & Editing Assistant.",
@@ -108,6 +111,7 @@ const EN: CommonCopy = {
       workflow: "Workflow",
       guide: "User Guide",
       integrity: "Integrity",
+      templates: "Templates",
       openEditor: "Open Editor",
       latexGuide: "LaTeX Guide",
       about: "About",
@@ -179,6 +183,7 @@ const VI: CommonCopy = {
     workflow: "Quy trình",
     guide: "Hướng dẫn",
     integrity: "Toàn vẹn",
+    templates: "Mẫu bài",
   },
   footer: {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
@@ -191,6 +196,7 @@ const VI: CommonCopy = {
       workflow: "Quy trình",
       guide: "Hướng dẫn sử dụng",
       integrity: "Toàn vẹn",
+      templates: "Mẫu bài",
       openEditor: "Mở Trình biên tập",
       latexGuide: "Hướng dẫn LaTeX",
       about: "Giới thiệu",

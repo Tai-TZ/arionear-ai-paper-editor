@@ -56,13 +56,13 @@ export const CHAT_SLASH_COMMANDS: SlashCommandDef[] = [
     command: "logic deep",
     task: "logic",
     description: "Logic audit Deep — soi sâu 1 phần",
-    detail: "MiniMax M3 (engine riêng) · ~3–5 phút · không dùng provider chat",
+    detail: "Nemotron 3 Ultra (engine riêng) · ~3–5 phút · không dùng provider chat",
   },
   {
     command: "logic deep full",
     task: "logic",
     description: "Logic audit Deep — toàn bộ bài",
-    detail: "MiniMax M3 · ~10–20 phút · tối đa 8 section · chọn section ở tab Logic Audit",
+    detail: "Nemotron 3 Ultra · ~10–20 phút · tối đa 8 section · chọn section ở tab Logic Audit",
   },
   {
     command: "style",

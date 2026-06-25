@@ -17,6 +17,7 @@ import { getSession, refreshSession, signOut } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
 import { WorkspacePanelSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminTemplatesPanel } from "@/components/admin/admin-templates-panel";
 import type { AdminNavTab } from "@/components/admin/admin-sidebar";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -69,6 +70,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
   users: "Users & Quotas",
   cost: "Cost Report",
   llm: "LLM Policy",
+  templates: "Templates",
 };
 
 function currentMonthValue() {
@@ -831,6 +833,8 @@ function AdminPage() {
                 </div>
               </section>
             ) : null}
+
+            {tab === "templates" ? <AdminTemplatesPanel /> : null}
           </div>
         )}
       </main>

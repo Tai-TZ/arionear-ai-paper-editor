@@ -21,6 +21,21 @@ def test_uses_biblatex_detection():
     assert not lc.uses_biblatex(r"\bibliography{refs}")
 
 
+def test_extract_bib_files_ignores_commented_ieee_example():
+    latex = r"""
+\begin{document}
+%\bibliography{IEEEabrv,../bib/paper}
+\bibliography{references}
+\end{document}
+"""
+    assert lc._extract_bib_files(latex) == ["references"]
+
+
+def test_extract_bib_files_splits_comma_separated_names():
+    latex = r"\bibliography{refs,extra}"
+    assert lc._extract_bib_files(latex) == ["refs", "extra"]
+
+
 def test_compile_status_shape():
     status = lc.compile_status()
     assert hasattr(status, "available")

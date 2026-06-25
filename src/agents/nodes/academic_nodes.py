@@ -20,7 +20,7 @@ from src.services.guardrails.output_sanitize import (
     looks_like_chatty_output,
     sanitize_style_output,
 )
-from src.services.llm import get_llm
+from src.services.llm import get_llm, resolve_heavy_edit_model
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     analyze_structure,
@@ -30,6 +30,7 @@ from src.services.parser.latex import (
     parse_bib_entries,
     parse_latex_sections,
 )
+from src.services.chat_context import build_chat_user_content
 from src.services.prompts import (
     build_system_prompt,
     format_sections_summary,
@@ -292,7 +293,12 @@ async def edit_node(state: AgentState) -> dict:
         }
 
     system = build_system_prompt("edit")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.1))
+    edit_model = resolve_heavy_edit_model(
+        _model(prepared),
+        text_chars=len(original),
+        apply_mode=str(prepared.get("apply_mode", "document")),
+    )
+    llm = get_llm(provider=_provider(prepared), model=edit_model, temperature=resolve_llm_temperature(0.1))
 
     user_content = render_user_prompt(
         "edit",
@@ -407,7 +413,12 @@ async def style_node(state: AgentState) -> dict:
     settings = get_settings()
     section_label = prepared.get("section", "")
     system = build_system_prompt("style")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.2))
+    style_model = resolve_heavy_edit_model(
+        _model(prepared),
+        text_chars=len(original),
+        apply_mode=str(apply_mode),
+    )
+    llm = get_llm(provider=_provider(prepared), model=style_model, temperature=resolve_llm_temperature(0.2))
 
     suggestion = ""
     flags: list[dict] = []
@@ -664,18 +675,12 @@ async def chat_node(state: AgentState) -> dict:
     latex = state.get("latex", "")
     system = build_system_prompt("chat")
 
-    context_parts: list[str] = []
-    if selection:
-        context_parts.append(f"Selected text:\n{selection[:4000]}")
-    elif latex:
-        context_parts.append(f"Manuscript excerpt:\n{latex[:4000]}")
-    context_block = "\n\n".join(context_parts)
-
-    user_content = render_user_prompt("chat", context_block=context_block, query=query)
-    if not user_content:
-        user_content = query
-        if context_block:
-            user_content = f"{context_block}\n\nUser request: {query}"
+    user_content = build_chat_user_content(
+        query,
+        selection=selection,
+        latex=latex,
+        include_manuscript=False,
+    )
 
     llm = get_llm(provider=_provider(state), model=_model(state))
     response = await llm.ainvoke(

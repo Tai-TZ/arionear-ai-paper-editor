@@ -32,7 +32,10 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TemplatesIndexRouteImport } from './routes/templates/index'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
+import { Route as TemplatesTemplateIdIndexRouteImport } from './routes/templates/$templateId/index'
+import { Route as TemplatesTemplateIdPdfRouteImport } from './routes/templates/$templateId/pdf'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const WorkflowRoute = WorkflowRouteImport.update({
@@ -150,9 +153,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
+  id: '/templates/',
+  path: '/templates/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesTemplateIdIndexRoute =
+  TemplatesTemplateIdIndexRouteImport.update({
+    id: '/templates/$templateId/',
+    path: '/templates/$templateId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TemplatesTemplateIdPdfRoute = TemplatesTemplateIdPdfRouteImport.update({
+  id: '/templates/$templateId/pdf',
+  path: '/templates/$templateId/pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
@@ -186,7 +205,10 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
   '/share/$token': typeof ShareTokenRoute
+  '/templates/': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
+  '/templates/$templateId/': typeof TemplatesTemplateIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -213,7 +235,10 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
   '/share/$token': typeof ShareTokenRoute
+  '/templates': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
+  '/templates/$templateId': typeof TemplatesTemplateIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -241,7 +266,10 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
   '/share/$token': typeof ShareTokenRoute
+  '/templates/': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
+  '/templates/$templateId/': typeof TemplatesTemplateIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,7 +298,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/workflow'
     | '/share/$token'
+    | '/templates/'
     | '/auth/google/callback'
+    | '/templates/$templateId/pdf'
+    | '/templates/$templateId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -297,7 +328,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/workflow'
     | '/share/$token'
+    | '/templates'
     | '/auth/google/callback'
+    | '/templates/$templateId/pdf'
+    | '/templates/$templateId'
   id:
     | '__root__'
     | '/'
@@ -324,7 +358,10 @@ export interface FileRouteTypes {
     | '/terms'
     | '/workflow'
     | '/share/$token'
+    | '/templates/'
     | '/auth/google/callback'
+    | '/templates/$templateId/pdf'
+    | '/templates/$templateId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -352,7 +389,10 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WorkflowRoute: typeof WorkflowRoute
   ShareTokenRoute: typeof ShareTokenRoute
+  TemplatesIndexRoute: typeof TemplatesIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
+  TemplatesTemplateIdPdfRoute: typeof TemplatesTemplateIdPdfRoute
+  TemplatesTemplateIdIndexRoute: typeof TemplatesTemplateIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -518,11 +558,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/templates/': {
+      id: '/templates/'
+      path: '/templates'
+      fullPath: '/templates/'
+      preLoaderRoute: typeof TemplatesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$token': {
       id: '/share/$token'
       path: '/share/$token'
       fullPath: '/share/$token'
       preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates/$templateId/': {
+      id: '/templates/$templateId/'
+      path: '/templates/$templateId'
+      fullPath: '/templates/$templateId/'
+      preLoaderRoute: typeof TemplatesTemplateIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates/$templateId/pdf': {
+      id: '/templates/$templateId/pdf'
+      path: '/templates/$templateId/pdf'
+      fullPath: '/templates/$templateId/pdf'
+      preLoaderRoute: typeof TemplatesTemplateIdPdfRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/google/callback': {
@@ -560,7 +621,10 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WorkflowRoute: WorkflowRoute,
   ShareTokenRoute: ShareTokenRoute,
+  TemplatesIndexRoute: TemplatesIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
+  TemplatesTemplateIdPdfRoute: TemplatesTemplateIdPdfRoute,
+  TemplatesTemplateIdIndexRoute: TemplatesTemplateIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

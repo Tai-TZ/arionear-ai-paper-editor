@@ -3876,6 +3876,60 @@ html[lang="vi"] .hero-headline {
   background: transparent;
 }
 
+/* PDF.js annotation layer — citation / internal links (requires pdf_viewer section rules) */
+.editor-shell .pdf-preview-annotation-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  pointer-events: none;
+  transform-origin: 0 0;
+  z-index: 3;
+  --link-outline: none;
+}
+
+.editor-shell .pdf-preview-annotation-layer section {
+  position: absolute;
+  text-align: initial;
+  pointer-events: auto;
+  box-sizing: border-box;
+  transform-origin: 0 0;
+}
+
+/* Let hyperref/pdf border color show on citation boxes; anchor is invisible click target */
+.editor-shell .pdf-preview-annotation-layer .linkAnnotation.hasBorder {
+  background-size: 100% 100%;
+}
+
+.editor-shell .pdf-preview-annotation-layer .linkAnnotation > a {
+  position: absolute;
+  font-size: 1em;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.editor-shell .pdf-preview-annotation-layer
+  .linkAnnotation:not(.hasBorder)
+  > a:hover {
+  opacity: 0.2;
+  background-color: rgb(255 255 0);
+  box-shadow: 0 2px 10px rgb(255 255 0);
+}
+
+.editor-shell .pdf-preview-annotation-layer .linkAnnotation.hasBorder:hover {
+  background-color: rgb(255 255 0 / 0.2);
+}
+
+.editor-shell .pdf-preview-annotation-layer .linkAnnotation.hasBorder > a:hover {
+  opacity: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .editor-shell .pdf-preview-toolbar-bottom {
   background: transparent;
 }
@@ -5387,6 +5441,98 @@ html[lang="vi"] .hero-headline {
   font-size: 0.82rem;
   padding-top: 0.38rem;
   padding-bottom: 0.38rem;
+}
+
+.editor-shell .sidebar-outline-nav {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+/* Editor left sidebar — Overleaf-style icon rail + collapsible panel */
+.editor-shell .editor-left-sidebar {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+.editor-shell .editor-sidebar-rail {
+  display: flex;
+  width: 2.75rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border-right: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--sidebar) 92%, transparent);
+  padding: 0.5rem 0;
+}
+
+.editor-shell .editor-sidebar-rail-btn {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell .editor-sidebar-rail-btn:hover {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+
+.editor-shell .editor-sidebar-rail-btn.is-active {
+  background: color-mix(in oklab, var(--primary) 12%, var(--sidebar-accent));
+  color: var(--foreground);
+}
+
+.editor-shell .editor-sidebar-panel {
+  display: flex;
+  width: 14rem;
+  min-width: 0;
+  flex-direction: column;
+  border-right: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--sidebar) 90%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .editor-shell .editor-sidebar-panel {
+    width: 15rem;
+  }
+}
+
+.editor-shell .editor-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.125rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 0 0.25rem 0.25rem 0;
+  background: var(--background);
+  color: var(--muted-foreground);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell .editor-sidebar-toggle:hover {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+
+.editor-shell .editor-sidebar-toggle--collapse {
+  right: -0.625rem;
+}
+
+.editor-shell .editor-sidebar-toggle--expand {
+  left: 2.625rem;
 }
 
 .editor-shell .sidebar-file-outline-split {
