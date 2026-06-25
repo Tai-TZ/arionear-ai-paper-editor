@@ -12,33 +12,46 @@ export type PaperScoreResult = {
   grade: string;
   gradeLabel: string;
   dimensions: PaperScoreDimension[];
+  /** One-line summary from logic audit agent, when available. */
+  auditSummary?: string;
+  /** Whether agent peer-review dimension is included in the score. */
+  agentScored: boolean;
 };
 
 const IMRAD_CORE = ["abstract", "introduction", "methods", "results", "discussion", "conclusion"];
 
 const SECTION_ALIASES: Record<string, string> = {
+  // English variants
   methodology: "methods",
   "materials and methods": "methods",
   experiments: "results",
   "related work": "introduction",
+  // Vietnamese
+  "giới thiệu": "introduction",
+  "phương pháp": "methods",
+  "phương pháp nghiên cứu": "methods",
+  "kết quả": "results",
+  "thảo luận": "discussion",
+  "kết luận": "conclusion",
+  "tóm tắt": "abstract",
+  // Short forms
+  intro: "introduction",
+  method: "methods",
+  result: "results",
+  concl: "conclusion",
 };
+
+const MIN_ABSTRACT_CHARS = 40;
+const MIN_SECTION_CHARS = 50;
+const MIN_SECTION_FILL_CHARS = 120;
 
 function normalizeSectionName(name: string): string {
   const lower = name.trim().toLowerCase();
   return SECTION_ALIASES[lower] ?? lower;
 }
 
-function extractSectionNames(latex: string): Set<string> {
-  const names = new Set<string>();
-  const abstract = /\\begin\{abstract\}/i.test(latex);
-  if (abstract) names.add("abstract");
-
-  const sectionRe = /\\section\*?\{([^}]+)\}/gi;
-  let match: RegExpExecArray | null;
-  while ((match = sectionRe.exec(latex)) !== null) {
-    names.add(normalizeSectionName(match[1]));
-  }
-  return names;
+function plainTextLen(text: string): number {
+  return text.replace(/%.*$/gm, "").replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, "").trim().length;
 }
 
 function sectionContentLength(latex: string, sectionName: string): number {
@@ -48,41 +61,85 @@ function sectionContentLength(latex: string, sectionName: string): number {
   );
   const match = re.exec(latex);
   if (!match) return 0;
-  return match[1].replace(/%.*$/gm, "").replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, "").trim().length;
+  return plainTextLen(match[1]);
+}
+
+function imradCoreStatus(latex: string): { present: string[]; missing: string[] } {
+  const body = latex.replace(/%.*$/gm, "");
+  const present: string[] = [];
+  const missing: string[] = [];
+
+  for (const key of IMRAD_CORE) {
+    if (key === "abstract") {
+      const abstractMatch = /\\begin\{abstract\}(.*?)\\end\{abstract\}/is.exec(body);
+      const len = plainTextLen(abstractMatch?.[1] ?? "");
+      if (len >= MIN_ABSTRACT_CHARS) present.push(key);
+      else missing.push(key);
+      continue;
+    }
+
+    const sectionRe = /\\section\*?\{([^}]+)\}/gi;
+    let matched = false;
+    let match: RegExpExecArray | null;
+    while ((match = sectionRe.exec(body)) !== null) {
+      const norm = normalizeSectionName(match[1]);
+      if (norm === key || norm.includes(key) || key.includes(norm)) {
+        if (sectionContentLength(body, match[1]) >= MIN_SECTION_CHARS) {
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (matched) present.push(key);
+    else missing.push(key);
+  }
+
+  return { present, missing };
 }
 
 function scoreStructure(latex: string): PaperScoreDimension {
-  const found = extractSectionNames(latex);
-  const present = IMRAD_CORE.filter((s) => found.has(s) || [...found].some((n) => n.includes(s)));
+  const { present, missing } = imradCoreStatus(latex);
   const ratio = present.length / IMRAD_CORE.length;
   const score = Math.round(ratio * 100);
-  const missing = IMRAD_CORE.filter((s) => !present.includes(s));
   return {
     id: "structure",
     label: "Cấu trúc IMRaD",
     score,
     hint:
       missing.length === 0
-        ? "Đủ các phần cốt lõi IMRaD."
-        : `Thiếu: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`,
+        ? "Đủ các phần cốt lõi IMRaD với nội dung tối thiểu."
+        : `Thiếu hoặc quá ngắn: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`,
   };
 }
 
 function scoreCompleteness(latex: string): PaperScoreDimension {
   const body = latex.replace(/%.*$/gm, "");
   const abstractMatch = /\\begin\{abstract\}(.*?)\\end\{abstract\}/is.exec(body);
-  const abstractLen = abstractMatch?.[1]?.replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, "").trim().length ?? 0;
+  const abstractLen = plainTextLen(abstractMatch?.[1] ?? "");
 
+  // Scan all actual sections in the document to count filled vs thin.
+  // Uses normalizeSectionName so Vietnamese/aliased names are handled.
+  const BODY_KEYS = new Set(["introduction", "methods", "results", "discussion", "conclusion"]);
+  const sectionRe = /\\section\*?\{([^}]+)\}/gi;
+  const seen = new Set<string>();
   let filledSections = 0;
-  let totalSections = 0;
-  for (const name of ["Introduction", "Methods", "Results", "Discussion", "Conclusion"]) {
-    const len = sectionContentLength(body, name);
-    if (len > 0) totalSections += 1;
-    if (len >= 120) filledSections += 1;
+  let totalBodySections = 0;
+
+  let match: RegExpExecArray | null;
+  while ((match = sectionRe.exec(body)) !== null) {
+    const norm = normalizeSectionName(match[1]);
+    const key = BODY_KEYS.has(norm)
+      ? norm
+      : [...BODY_KEYS].find((k) => norm.includes(k) || k.includes(norm));
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    totalBodySections += 1;
+    const len = sectionContentLength(body, match[1]);
+    if (len >= MIN_SECTION_FILL_CHARS) filledSections += 1;
   }
 
   const abstractScore = abstractLen >= 80 ? 1 : abstractLen >= 30 ? 0.6 : abstractLen > 0 ? 0.3 : 0;
-  const sectionScore = totalSections > 0 ? filledSections / Math.max(totalSections, 4) : 0;
+  const sectionScore = totalBodySections > 0 ? filledSections / Math.max(totalBodySections, 4) : 0;
   const score = Math.round((abstractScore * 0.35 + sectionScore * 0.65) * 100);
 
   return {
@@ -138,54 +195,61 @@ function scoreCitations(
   };
 }
 
-function scoreLogicIntegrity(report?: LogicAuditReport | null): PaperScoreDimension {
+function scoreLogicIntegrity(
+  report?: LogicAuditReport | null,
+  auditPending = false,
+): PaperScoreDimension {
+  if (auditPending) {
+    return {
+      id: "logic",
+      label: "Mạch lập luận & phản biện",
+      score: 0,
+      hint: "Ario đang đọc lướt toàn bộ bài…",
+    };
+  }
+
   if (!report?.sections?.length) {
     return {
       id: "logic",
-      label: "Logic & phản biện",
-      score: 50,
+      label: "Mạch lập luận & phản biện",
+      score: 45,
       hint: "Chưa có báo cáo phản biện — Ario sẽ phân tích khi mở dialog.",
     };
   }
 
   let critical = 0;
   let warning = 0;
+  let weakCount = 0;
   for (const section of report.sections) {
     for (const conflict of section.conflicts ?? []) {
       if (conflict.severity === "critical") critical += 1;
       else if (conflict.severity === "warning") warning += 1;
     }
+    weakCount += (section.weak_claims ?? []).length;
   }
   critical += (report.cross_section_conflicts ?? []).length;
 
-  const penalty = critical * 18 + warning * 8;
+  const penalty = critical * 18 + warning * 8 + weakCount * 4;
   const score = Math.max(0, Math.min(100, 100 - penalty));
+
+  let hint: string;
+  if (report.summary?.trim()) {
+    hint = report.summary.trim();
+  } else if (critical + warning + weakCount === 0) {
+    hint = "Phản biện AI không phát hiện vấn đề logic nghiêm trọng ở các phần đã quét.";
+  } else {
+    const parts: string[] = [];
+    if (critical) parts.push(`${critical} nghiêm trọng`);
+    if (warning) parts.push(`${warning} cảnh báo`);
+    if (weakCount) parts.push(`${weakCount} claim yếu`);
+    hint = `Phản biện AI: ${parts.join(", ")}. Xem chi tiết trong Logic Audit.`;
+  }
 
   return {
     id: "logic",
-    label: "Logic & phản biện",
+    label: "Mạch lập luận & phản biện",
     score,
-    hint:
-      critical + warning === 0
-        ? "Không phát hiện xung đột logic nghiêm trọng."
-        : `${critical} vấn đề nghiêm trọng, ${warning} cảnh báo từ phản biện AI.`,
-  };
-}
-
-function scoreReadiness(hasPdf: boolean, compileError: string | null): PaperScoreDimension {
-  if (!hasPdf) {
-    return {
-      id: "readiness",
-      label: "Sẵn sàng xuất bản",
-      score: compileError ? 10 : 25,
-      hint: compileError ? "Compile lỗi — sửa trước khi nộp." : "Chưa compile PDF — nhấn Compile trước.",
-    };
-  }
-  return {
-    id: "readiness",
-    label: "Sẵn sàng xuất bản",
-    score: 95,
-    hint: "PDF compile thành công — sẵn sàng tải về.",
+    hint,
   };
 }
 
@@ -197,8 +261,8 @@ function gradeFromScore(overall: number): { grade: string; gradeLabel: string } 
   return { grade: "F", gradeLabel: "Chưa đạt" };
 }
 
-/** Peer-review agent UI — off while Module_score ships without multi-agent review. */
-export const PAPER_PEER_REVIEW_ENABLED = false;
+/** Agent peer-review dimension is included in the publication gate score. */
+export const PAPER_PEER_REVIEW_ENABLED = true;
 
 export function computePaperScore(opts: {
   latex: string;
@@ -207,27 +271,49 @@ export function computePaperScore(opts: {
   citationResults?: Record<string, unknown>[] | null;
   logicAuditReport?: LogicAuditReport | null;
   includeLogicReview?: boolean;
+  auditPending?: boolean;
 }): PaperScoreResult {
   const includeLogic = opts.includeLogicReview ?? PAPER_PEER_REVIEW_ENABLED;
+  const auditPending = Boolean(opts.auditPending && includeLogic);
+
+  const logicDim = includeLogic
+    ? scoreLogicIntegrity(opts.logicAuditReport, auditPending)
+    : null;
 
   const dimensions = [
     scoreStructure(opts.latex),
     scoreCompleteness(opts.latex),
     scoreCitations(opts.latex, opts.citationResults),
-    ...(includeLogic ? [scoreLogicIntegrity(opts.logicAuditReport)] : []),
-    scoreReadiness(opts.hasPdf, opts.compileError ?? null),
+    ...(logicDim ? [logicDim] : []),
   ];
 
-  const weights = includeLogic
-    ? [0.25, 0.2, 0.15, 0.25, 0.15]
-    : [0.3, 0.25, 0.2, 0.25];
-  const weighted =
-    dimensions.reduce((sum, dim, i) => sum + dim.score * weights[i], 0) /
-    weights.reduce((a, b) => a + b, 0);
-  const overall = Math.round(weighted);
-  const { grade, gradeLabel } = gradeFromScore(overall);
+  const weights = includeLogic ? [0.2, 0.2, 0.2, 0.4] : [0.35, 0.35, 0.3];
 
-  return { overall, grade, gradeLabel, dimensions };
+  const scoredDimensions = auditPending
+    ? dimensions.filter((d) => d.id !== "logic")
+    : dimensions;
+  const scoredWeights = auditPending ? weights.filter((_, i) => dimensions[i]?.id !== "logic") : weights;
+
+  const weightSum = scoredWeights.reduce((a, b) => a + b, 0);
+  const weighted =
+    scoredDimensions.reduce((sum, dim, i) => sum + dim.score * scoredWeights[i], 0) / weightSum;
+  // While audit is pending, show partial score from heuristic dimensions only
+  // so the ring is informative rather than blank.
+  const overall = Math.round(weighted);
+  const { grade, gradeLabel } = auditPending
+    ? { grade: "~", gradeLabel: "Đang đánh giá…" }
+    : gradeFromScore(overall);
+
+  const auditSummary = opts.logicAuditReport?.summary?.trim() || logicDim?.hint;
+
+  return {
+    overall,
+    grade,
+    gradeLabel,
+    dimensions,
+    auditSummary: includeLogic ? auditSummary : undefined,
+    agentScored: includeLogic && !auditPending && Boolean(opts.logicAuditReport?.sections?.length),
+  };
 }
 
 export type PeerReviewItem = {

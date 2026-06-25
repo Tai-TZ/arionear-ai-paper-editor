@@ -193,7 +193,7 @@ function buildChatRequestBody(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,
@@ -575,7 +575,7 @@ export async function streamChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,
@@ -601,7 +601,7 @@ export async function sendChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,
