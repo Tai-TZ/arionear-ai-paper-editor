@@ -9,11 +9,10 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.services.llm import (
-    MINIMAX_M3_TEMPERATURE,
+    REASONING_MODEL_TEMPERATURE,
     extract_llm_stream_deltas,
     get_llm,
-    is_minimax_m3_provider,
-    resolve_tokenrouter_model,
+    is_reasoning_model,
 )
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.prompts import render_template
@@ -31,26 +30,20 @@ PERSONA_LABELS: dict[str, str] = {
 }
 
 PERSONA_TIMEOUT_DEFAULT_SEC = 30.0
-PERSONA_TIMEOUT_MINIMAX_SEC = 180.0
-SYNTH_TIMEOUT_MINIMAX_SEC = 180.0
+PERSONA_TIMEOUT_REASONING_SEC = 180.0
+SYNTH_TIMEOUT_REASONING_SEC = 180.0
 
 
-def _persona_timeout_sec(provider: str | None) -> float:
-    if is_minimax_m3_provider(provider):
-        return PERSONA_TIMEOUT_MINIMAX_SEC
+def _persona_timeout_sec(model: str | None) -> float:
+    if is_reasoning_model(model):
+        return PERSONA_TIMEOUT_REASONING_SEC
     return PERSONA_TIMEOUT_DEFAULT_SEC
 
 
-def _resolve_llm_temperature(provider: str | None, task_temp: float) -> float:
-    if is_minimax_m3_provider(provider):
-        return MINIMAX_M3_TEMPERATURE
+def _resolve_llm_temperature(model: str | None, task_temp: float) -> float:
+    if is_reasoning_model(model):
+        return REASONING_MODEL_TEMPERATURE
     return resolve_llm_temperature(task_temp)
-
-
-def _resolve_model(provider: str | None, model: str | None) -> str | None:
-    if is_minimax_m3_provider(provider):
-        return resolve_tokenrouter_model(model)
-    return model
 
 
 def _report(
@@ -169,12 +162,13 @@ async def _invoke_persona(
     *,
     llm: BaseChatModel,
     provider: str | None,
+    model: str | None = None,
     on_reasoning: LogicReasoningFn | None = None,
 ) -> tuple[str, str]:
     """Run one debate persona; returns (role_name, response_text)."""
     system = render_template(role_prompts.get("system", ""), **variables)
     user = render_template(role_prompts.get("user", ""), **variables)
-    timeout = _persona_timeout_sec(provider)
+    timeout = _persona_timeout_sec(model)
     messages = [SystemMessage(content=system), HumanMessage(content=user)]
     try:
         text = await _stream_llm_text(
@@ -212,11 +206,11 @@ async def multi_perspective_generate(
     if not roles:
         return {}
 
-    effective_model = _resolve_model(provider, model)
+    effective_model = model
     llm = get_llm(
         provider=provider,  # type: ignore[arg-type]
         model=effective_model,
-        temperature=_resolve_llm_temperature(provider, 0.2),
+        temperature=_resolve_llm_temperature(effective_model, 0.2),
     )
     section_name = variables.get("section_name", "")
 
@@ -234,6 +228,7 @@ async def multi_perspective_generate(
             variables,
             llm=llm,
             provider=provider,
+            model=effective_model,
             on_reasoning=on_reasoning,
         )
         _report(
@@ -301,10 +296,10 @@ async def synthesize_perspectives(
     user = render_template(user_template, **merged_vars)
     llm = get_llm(
         provider=provider,  # type: ignore[arg-type]
-        model=_resolve_model(provider, model),
-        temperature=_resolve_llm_temperature(provider, 0.1),
+        model=model,
+        temperature=_resolve_llm_temperature(model, 0.1),
     )
-    timeout = SYNTH_TIMEOUT_MINIMAX_SEC if is_minimax_m3_provider(provider) else None
+    timeout = SYNTH_TIMEOUT_REASONING_SEC if is_reasoning_model(model) else None
     messages = [SystemMessage(content=system), HumanMessage(content=user)]
     try:
         text = await _stream_llm_text(

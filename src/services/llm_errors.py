@@ -27,6 +27,12 @@ def friendly_llm_error(exc: BaseException) -> str:
     if "rate" in lower and "limit" in lower:
         return "Đã vượt giới hạn gọi API. Đợi vài phút hoặc đổi sang model/provider khác."
 
+    if "504" in lower or "gateway timeout" in lower or "timeout" in lower:
+        return (
+            "OpenRouter/provider quá thời gian chờ (504). Nemotron chậm với bài dài — "
+            "chọn đoạn/section cần sửa, hoặc đổi sang GPT-4o Mini trong khung chat."
+        )
+
     if "401" in lower or "unauthorized" in lower or "authentication" in lower:
         return "API key LLM không hợp lệ hoặc đã hết hạn. Kiểm tra lại .env."
 

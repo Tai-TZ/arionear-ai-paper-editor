@@ -1,0 +1,71 @@
+import type { UiLanguage } from "@/lib/researcher-profile";
+
+export function templatesCopy(locale: UiLanguage) {
+  return locale === "vi" ? VI : EN;
+}
+
+const EN = {
+  galleryTitle: "LaTeX templates",
+  gallerySubtitle:
+    "LaTeX templates for journal articles, conference papers, theses, and more — curated for Arionear Paper IDE.",
+  searchPlaceholder: "Search templates…",
+  search: "Search",
+  filtersAll: "All",
+  filtersTemplates: "Templates",
+  official: "Official",
+  openAsTemplate: "Open as Template",
+  viewPdf: "View PDF",
+  backToGallery: "Back to all templates",
+  author: "Author",
+  lastUpdated: "Last updated",
+  license: "License",
+  abstract: "Abstract",
+  tags: "Tags",
+  noResults: "No templates match your search.",
+  loading: "Loading templates…",
+  pdfTitle: "Template preview",
+  signInToOpen: "Sign in to open this template in the editor.",
+  opening: "Creating project…",
+  admin: {
+    title: "Template gallery",
+    create: "Add template",
+    uploadPreview: "Upload preview image",
+    uploadPdf: "Upload sample PDF",
+    delete: "Delete",
+    saved: "Template saved.",
+    deleted: "Template deleted.",
+  },
+};
+
+const VI = {
+  galleryTitle: "Mẫu LaTeX",
+  gallerySubtitle:
+    "Mẫu LaTeX cho bài tạp chí, hội nghị, luận văn và nhiều hơn — dành cho Paper IDE Arionear.",
+  searchPlaceholder: "Tìm mẫu…",
+  search: "Tìm",
+  filtersAll: "Tất cả",
+  filtersTemplates: "Mẫu",
+  official: "Chính thức",
+  openAsTemplate: "Mở làm mẫu",
+  viewPdf: "Xem PDF",
+  backToGallery: "Quay lại danh sách mẫu",
+  author: "Tác giả",
+  lastUpdated: "Cập nhật",
+  license: "Giấy phép",
+  abstract: "Mô tả",
+  tags: "Nhãn",
+  noResults: "Không có mẫu phù hợp.",
+  loading: "Đang tải mẫu…",
+  pdfTitle: "Xem trước mẫu",
+  signInToOpen: "Đăng nhập để mở mẫu này trong editor.",
+  opening: "Đang tạo project…",
+  admin: {
+    title: "Kho mẫu bài báo",
+    create: "Thêm mẫu",
+    uploadPreview: "Tải ảnh xem trước",
+    uploadPdf: "Tải PDF mẫu",
+    delete: "Xóa",
+    saved: "Đã lưu mẫu.",
+    deleted: "Đã xóa mẫu.",
+  },
+};

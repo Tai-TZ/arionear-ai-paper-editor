@@ -5,15 +5,15 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "tokenrouter"]
+LLMProvider = Literal["openai", "anthropic", "openrouter", "zai"]
 
 
 def normalize_llm_provider(provider: str | None) -> LLMProvider | None:
     """Map legacy provider ids to current ones."""
     if not provider:
         return None
-    if provider == "nvidia":
-        return "tokenrouter"
+    if provider in {"nvidia", "tokenrouter"}:
+        return "openrouter"
     return provider  # type: ignore[return-value]
 
 
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     # LLM — default provider & model
     llm_provider: LLMProvider = "openrouter"
-    model_name: str = "openai/gpt-4o-mini"
+    model_name: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
     # Provider API keys (set at least one)
@@ -44,14 +44,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     zai_api_key: str = ""
-    tokenrouter_api_key: str = ""
 
     # Provider base URLs
     openai_base_url: str = "https://api.openai.com/v1"
     anthropic_base_url: str = "https://api.anthropic.com"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     zai_base_url: str = "https://api.z.ai/api/paas/v4"
-    tokenrouter_base_url: str = "https://api.tokenrouter.com/v1"
 
     # OpenRouter optional headers
     openrouter_site_url: str = ""
@@ -81,9 +79,9 @@ class Settings(BaseSettings):
     # Default models per provider (used when client does not specify)
     openai_default_model: str = "gpt-4o-mini"
     anthropic_default_model: str = "claude-sonnet-4-20250514"
-    openrouter_default_model: str = "openai/gpt-4o-mini"
+    openrouter_default_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    openrouter_logic_audit_quick_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
-    tokenrouter_default_model: str = "MiniMax-M3"
 
     # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
     # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).

@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Brain, Coins, Gauge, LogOut, Shield, Users } from "lucide-react";
+import { Brain, Coins, FileStack, Gauge, LogOut, Shield, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";
 
-export type AdminNavTab = "overview" | "users" | "cost" | "llm";
+export type AdminNavTab = "overview" | "users" | "cost" | "llm" | "templates";
 
 type AdminSidebarProps = {
   activeTab: AdminNavTab;
@@ -20,6 +20,7 @@ const NAV_ITEMS: { id: AdminNavTab; label: string; icon: typeof Gauge }[] = [
   { id: "users", label: "Users & Quotas", icon: Users },
   { id: "cost", label: "Cost Report", icon: Coins },
   { id: "llm", label: "LLM Policy", icon: Brain },
+  { id: "templates", label: "Templates", icon: FileStack },
 ];
 
 function AdminIdentityCard({ user }: { user: AuthUser }) {

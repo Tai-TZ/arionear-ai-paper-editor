@@ -12,6 +12,8 @@ from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.api.share_routes import router as share_router
+from src.api.template_routes import router as template_router
+from src.services.template_store import ensure_template_seed
 from src.config import get_settings
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
@@ -49,6 +51,10 @@ async def lifespan(app: FastAPI):
             print(f"Database init failed, using in-memory store: {exc}")
     else:
         print("DATABASE_URL not set — using in-memory session store")
+    try:
+        await asyncio.to_thread(ensure_template_seed)
+    except Exception as exc:
+        print(f"Template gallery seed skipped: {exc}")
     if settings.inngest_serve_enabled():
         print("Inngest sync endpoint: /api/inngest")
     yield
@@ -85,6 +91,7 @@ app.include_router(profile_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
 app.include_router(defense_router, prefix="/api/v1")
+app.include_router(template_router, prefix="/api/v1")
 
 if settings.inngest_serve_enabled():
     inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)
