@@ -462,21 +462,18 @@ export function PdfPreviewPanel({
       <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between px-3 md:px-4">
         <div className="flex items-center gap-2.5">
           {readOnly ? (
-            <>
-              <span className="pdf-preview-live-badge inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold">
-                {isCompiling ? (
-                  <>
-                    <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                    Updating preview…
-                  </>
-                ) : (
-                  "Live preview"
-                )}
-              </span>
-              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
-                {numPages > 0 ? `${currentPage} of ${numPages} pages` : "Waiting for PDF…"}
-              </span>
-            </>
+            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
+              {isCompiling ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
+                  {t.pdf.compiling}
+                </span>
+              ) : numPages > 0 ? (
+                t.pdf.pagesOf(currentPage, numPages)
+              ) : (
+                t.pdf.noPdfYet
+              )}
+            </span>
           ) : (
             <>
               <button
@@ -541,21 +538,25 @@ export function PdfPreviewPanel({
             </IconBtn>
           ) : null}
 
-          <select
-            value={zoomMode === "fit" ? 100 : zoomMode}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
-            }}
-            className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
-          >
-            <option value={100}>{t.pdf.fit}</option>
-            {ZOOM_PRESETS.map((preset) => (
-              <option key={preset} value={preset}>
-                {preset}%
-              </option>
-            ))}
-          </select>
+          {readOnly ? (
+            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">{displayZoom}%</span>
+          ) : (
+            <select
+              value={zoomMode === "fit" ? 100 : zoomMode}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
+              }}
+              className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
+            >
+              <option value={100}>{t.pdf.fit}</option>
+              {ZOOM_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}%
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </header>
 
@@ -566,9 +567,7 @@ export function PdfPreviewPanel({
         {!pdf && !isCompiling && (
           <div className="flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center">
             <p className="pdf-preview-toolbar-muted max-w-sm text-sm">
-              {readOnly
-                ? "PDF preview will appear here when the manuscript finishes compiling."
-                : t.pdf.emptyHint}
+              {readOnly ? t.pdf.readOnlyEmptyHint : t.pdf.emptyHint}
             </p>
             {engineReady === false && !compileError && (
               <p className="mt-3 max-w-md text-xs text-amber-800">

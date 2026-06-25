@@ -35,6 +35,7 @@ DEFAULT_PROFILE_SETTINGS: dict[str, Any] = {
     "synctex_highlight_ms": 5000,
     "store_drafts": True,
     "telemetry_opt_in": False,
+    "subscription_plan": "free",
 }
 
 _COLUMN_FIELDS = {

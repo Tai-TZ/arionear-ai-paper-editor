@@ -15,6 +15,7 @@ import {
   Trash2,
   Loader2,
   BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
@@ -136,6 +137,14 @@ function ProjectsPage() {
     markEditorEntryTransition();
     void navigate({
       to: "/editor",
+      search: { projectId: projectId.trim() },
+    });
+  };
+
+  const openDefense = (projectId: string) => {
+    if (!projectId.trim()) return;
+    void navigate({
+      to: "/defense",
       search: { projectId: projectId.trim() },
     });
   };
@@ -469,6 +478,7 @@ function ProjectsPage() {
                   onOpen={() => openEditor(project.id)}
                   onRename={(name) => handleRename(project.id, name)}
                   onDelete={() => handleDelete(project.id)}
+                  onDefense={() => openDefense(project.id)}
                 />
               ))}
             </div>
@@ -577,12 +587,14 @@ function ProjectRow({
   onOpen,
   onRename,
   onDelete,
+  onDefense,
 }: {
   project: StoredProject;
   deleting: boolean;
   onOpen: () => void;
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
+  onDefense: () => void;
 }) {
   const { locale } = useLocale();
   const nameRef = useRef<EditableProjectNameHandle>(null);
@@ -638,6 +650,19 @@ function ProjectRow({
         {formatTimeAgo(project.updatedAt, locale)}
       </span>
       <div className="projects-col-actions flex justify-end gap-1">
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDefense();
+          }}
+          className="projects-row-menu"
+          aria-label="Phản biện"
+          title="Chuẩn bị bảo vệ (Defense Mode)"
+        >
+          <GraduationCap className="h-4 w-4" />
+        </button>
         <button
           type="button"
           disabled={deleting}

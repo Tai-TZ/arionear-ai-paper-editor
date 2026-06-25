@@ -256,6 +256,45 @@ class SyncTeXLookupResponse(BaseModel):
     found: bool = False
 
 
+class DefenseConversationTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class DefenseRequest(BaseModel):
+    latex_content: str = Field(..., max_length=500_000)
+    conversation_history: list[DefenseConversationTurn] = Field(default_factory=list)
+    mode: Literal["proactive", "responsive"] = "proactive"
+    paper_id: str | None = None
+    llm_provider: LLMProvider | None = None
+    llm_model: str | None = None
+
+    @field_validator("llm_provider", mode="before")
+    @classmethod
+    def _normalize_provider(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        if isinstance(value, str):
+            return normalize_llm_provider(value)
+        return value
+
+    @field_validator("llm_model", "paper_id", mode="before")
+    @classmethod
+    def _empty_str_to_none(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        return value
+
+
+class DefenseQuotaResponse(BaseModel):
+    plan: Literal["free", "pro"]
+    limit: int
+    used: int
+    remaining: int
+    period: str
+    period_type: Literal["daily", "monthly"] = "daily"
+
+
 class PaperCreate(BaseModel):
     name: str = Field(default="Untitled", min_length=1, max_length=512)
     latex: str = Field(default="", max_length=500_000)

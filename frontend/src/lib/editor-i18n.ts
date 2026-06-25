@@ -44,6 +44,7 @@ export type EditorCopy = {
     compiling: string;
     noPdfYet: string;
     pagesOf: (current: number, total: number) => string;
+    readOnlyEmptyHint: string;
     fit: string;
     emptyHint: string;
     compilerAuto: string;
@@ -191,6 +192,7 @@ const EN: EditorCopy = {
     compiling: "Compiling…",
     noPdfYet: "No PDF yet",
     pagesOf: (current, total) => `${current} of ${total} pages`,
+    readOnlyEmptyHint: "PDF preview will appear here when the manuscript finishes compiling.",
     fit: "Fit",
     emptyHint: "Press Compile to generate a PDF preview with PDF.js.",
     compilerAuto: "Auto",
@@ -346,6 +348,7 @@ const VI: EditorCopy = {
     compiling: "Đang biên dịch…",
     noPdfYet: "Chưa có PDF",
     pagesOf: (current, total) => `Trang ${current}/${total}`,
+    readOnlyEmptyHint: "Bản xem PDF sẽ hiện ở đây sau khi biên dịch xong bài nghiên cứu.",
     fit: "Vừa khung",
     emptyHint: "Nhấn Biên dịch để tạo bản xem trước PDF với PDF.js.",
     compilerAuto: "Tự động",

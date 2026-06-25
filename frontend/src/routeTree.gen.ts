@@ -26,6 +26,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as EthicsRouteImport } from './routes/ethics'
 import { Route as EditorRouteImport } from './routes/editor'
+import { Route as DefenseRouteImport } from './routes/defense'
 import { Route as DataUseRouteImport } from './routes/data-use'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -119,6 +120,11 @@ const EditorRoute = EditorRouteImport.update({
   path: '/editor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DefenseRoute = DefenseRouteImport.update({
+  id: '/defense',
+  path: '/defense',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DataUseRoute = DataUseRouteImport.update({
   id: '/data-use',
   path: '/data-use',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
+  '/defense': typeof DefenseRoute
   '/editor': typeof EditorRoute
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
+  '/defense': typeof DefenseRoute
   '/editor': typeof EditorRoute
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/data-use': typeof DataUseRoute
+  '/defense': typeof DefenseRoute
   '/editor': typeof EditorRoute
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/data-use'
+    | '/defense'
     | '/editor'
     | '/ethics'
     | '/features'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/data-use'
+    | '/defense'
     | '/editor'
     | '/ethics'
     | '/features'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/data-use'
+    | '/defense'
     | '/editor'
     | '/ethics'
     | '/features'
@@ -321,6 +333,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DataUseRoute: typeof DataUseRoute
+  DefenseRoute: typeof DefenseRoute
   EditorRoute: typeof EditorRoute
   EthicsRoute: typeof EthicsRoute
   FeaturesRoute: typeof FeaturesRoute
@@ -463,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/defense': {
+      id: '/defense'
+      path: '/defense'
+      fullPath: '/defense'
+      preLoaderRoute: typeof DefenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/data-use': {
       id: '/data-use'
       path: '/data-use'
@@ -521,6 +541,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DataUseRoute: DataUseRoute,
+  DefenseRoute: DefenseRoute,
   EditorRoute: EditorRoute,
   EthicsRoute: EthicsRoute,
   FeaturesRoute: FeaturesRoute,
