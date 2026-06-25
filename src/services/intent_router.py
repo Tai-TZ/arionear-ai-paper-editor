@@ -48,6 +48,17 @@ _TEMPLATE_RE = re.compile(
     r"khung\s*imrad|tạo\s*khung|dựng\s*khung|template|skeleton",
     re.IGNORECASE,
 )
+_GREETING_CHAT_RE = re.compile(
+    r"^(?:hi|hello|hey|chào|xin\s*chào|hú|hí|yo|"
+    r"thanks|thank\s+you|cảm\s*ơn|ok|okay|oke)[\s!.?]*$",
+    re.IGNORECASE,
+)
+_CONVERSATIONAL_CHAT_RE = re.compile(
+    r"bạn\s+là\s+ai|ban\s+la\s+ai|who\s+are\s+you|"
+    r"what(?:'s|\s+is)\s+your\s+name|tên\s+bạn\s+là\s+gì|"
+    r"what\s+can\s+you\s+do|bạn\s+làm\s+được\s+gì|giúp\s+đỡ|help\s+me",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -90,9 +101,21 @@ def parse_intent_payload(raw: str) -> IntentResult | None:
     return IntentResult(action=action, scope=scope)  # type: ignore[arg-type]
 
 
+def _is_casual_chat(query: str) -> bool:
+    q = query.strip()
+    if not q:
+        return True
+    if _GREETING_CHAT_RE.match(q):
+        return True
+    return _CONVERSATIONAL_CHAT_RE.search(q) is not None
+
+
 def _fallback_intent(query: str, has_latex: bool, has_selection: bool) -> IntentResult:
     q = query.strip().lower()
     if not has_latex:
+        return IntentResult(action="chat")
+
+    if _is_casual_chat(query):
         return IntentResult(action="chat")
 
     # Style polish first — "chỉnh sửa Abstract cho học thuật hơn" is style, not full-file edit.
@@ -129,6 +152,8 @@ def _fallback_intent(query: str, has_latex: bool, has_selection: bool) -> Intent
 def _should_use_fast_intent(query: str, has_latex: bool) -> bool:
     if not has_latex:
         return True
+    if _is_casual_chat(query):
+        return True
     q = query.strip().lower()
     if q.endswith("?"):
         return True
@@ -155,6 +180,9 @@ async def classify_intent(
     provider: LLMProvider | None = None,
     model: str | None = None,
 ) -> IntentResult:
+    if explicit_task == "chat":
+        return IntentResult(action="chat")
+
     if explicit_task and explicit_task != "chat":
         scope: Scope = (
             "selection"

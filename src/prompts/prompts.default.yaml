@@ -97,6 +97,7 @@ router:
     - selection — highlighted text only (when text_selected is true)
 
     Rules:
+    - Greetings and small talk (hello, chào, hú, thanks, "bạn là ai", "who are you") → chat even when manuscript_open is true.
     - "viết lại văn phong", "polish abstract", "học thuật hơn", "chỉnh sửa abstract" → style (NOT edit).
     - "đổi tên", "thay author", "sửa title", "replace X with Y" → edit.
     - "kiểm tra cấu trúc", "outline", "IMRAD" → structure or template if they want skeleton.

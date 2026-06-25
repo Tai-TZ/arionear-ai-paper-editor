@@ -84,7 +84,7 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
         {(
           [
             { id: "quick" as const, icon: Zap, label: t.modeQuick, subtitle: "OpenRouter" },
-            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: "MiniMax M3" },
+            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: "Nemotron 3 Ultra" },
           ] as const
         ).map(({ id, icon: Icon, label, subtitle }) => (
           <button

@@ -34,7 +34,6 @@ PROVIDER_LABELS = {
     "anthropic": "Anthropic",
     "openrouter": "OpenRouter",
     "zai": "Z.AI",
-    "tokenrouter": "TokenRouter (MiniMax M3)",
 }
 
 
@@ -225,12 +224,6 @@ def get_global_llm_config() -> LlmGlobalConfigResponse:
             label=PROVIDER_LABELS["zai"],
             configured=bool(settings.zai_api_key.strip()),
             default_model=settings.zai_default_model,
-        ),
-        LlmProviderStatus(
-            id="tokenrouter",
-            label=PROVIDER_LABELS["tokenrouter"],
-            configured=bool(settings.tokenrouter_api_key.strip()),
-            default_model=settings.tokenrouter_default_model,
         ),
     ]
     return LlmGlobalConfigResponse(

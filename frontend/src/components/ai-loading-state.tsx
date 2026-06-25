@@ -43,7 +43,7 @@ function resolveStatus(
   const lastDone = [...display].reverse().find((s) => s.status === "done");
   if (lastDone) return lastDone.label;
 
-  return "Đang xử lý";
+  return "Đang kiểm tra bài viết";
 }
 
 function LoadingAnimation({ progress, maskId }: { progress: number; maskId: string }) {

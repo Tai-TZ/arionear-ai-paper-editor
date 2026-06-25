@@ -2,29 +2,28 @@ from src.services.logic_audit.config import (
     resolve_logic_audit_llm,
     select_logic_targets,
 )
+from src.services.llm import OPENROUTER_NEMOTRON_MODEL
 
 
 def test_resolve_logic_audit_quick_prefers_openrouter(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_PROVIDER", "tokenrouter")
+    monkeypatch.setenv("LLM_PROVIDER", "openrouter")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
-    monkeypatch.setenv("TOKENROUTER_API_KEY", "sk-tr-test")
-    provider, model = resolve_logic_audit_llm("quick", "tokenrouter")
+    provider, model = resolve_logic_audit_llm("quick", "openrouter")
     assert provider == "openrouter"
-    assert model is not None
+    assert model == "openai/gpt-4o-mini"
 
 
-def test_resolve_logic_audit_deep_uses_tokenrouter(monkeypatch):
+def test_resolve_logic_audit_deep_uses_nemotron(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
-    monkeypatch.setenv("TOKENROUTER_API_KEY", "sk-tr-test")
     provider, model = resolve_logic_audit_llm("deep", "openrouter")
-    assert provider == "tokenrouter"
-    assert model == "MiniMax-M3"
+    assert provider == "openrouter"
+    assert model == OPENROUTER_NEMOTRON_MODEL
 
 
 def test_select_logic_targets_quick_defaults():

@@ -222,6 +222,43 @@ def _extract_cite_keys(latex: str) -> set[str]:
     return keys
 
 
+def _strip_latex_comments(latex: str) -> str:
+    lines: list[str] = []
+    for line in latex.splitlines():
+        out: list[str] = []
+        i = 0
+        while i < len(line):
+            if line[i] == "%" and (i == 0 or line[i - 1] != "\\"):
+                break
+            out.append(line[i])
+            i += 1
+        lines.append("".join(out))
+    return "\n".join(lines)
+
+
+def _normalize_bib_base(name: str) -> str | None:
+    cleaned = name.strip().replace("\\", "/")
+    if not cleaned or ".." in cleaned or cleaned.startswith("/"):
+        return None
+    base = Path(cleaned).name
+    if not base or base.lower() == "ieeeabrv":
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", base):
+        return None
+    return base
+
+
+def _extract_bib_files(latex: str) -> list[str]:
+    cleaned = _strip_latex_comments(latex)
+    names: list[str] = []
+    for match in re.finditer(r"\\bibliography\{([^}]+)\}", cleaned):
+        for part in match.group(1).split(","):
+            base = _normalize_bib_base(part)
+            if base and base not in names:
+                names.append(base)
+    return names
+
+
 def _ensure_bibliography(work_dir: Path, latex: str) -> None:
     if uses_biblatex(latex):
         return
@@ -230,6 +267,7 @@ def _ensure_bibliography(work_dir: Path, latex: str) -> None:
         bib_path = work_dir / f"{bib_name}.bib"
         if bib_path.is_file():
             continue
+        bib_path.parent.mkdir(parents=True, exist_ok=True)
         entries = "\n\n".join(
             f"@misc{{{key},\n  title = {{Reference placeholder for {key}}},\n  year = {{2024}}\n}}"
             for key in sorted(cite_keys)
@@ -368,10 +406,6 @@ def _extract_latex_error(log: str) -> str:
         if "Fatal error" in line or "Emergency stop" in line:
             return line.strip()
     return "PDF generation failed. Review the LaTeX log for errors."
-
-
-def _extract_bib_files(latex: str) -> list[str]:
-    return re.findall(r"\\bibliography\{([^}]+)\}", latex)
 
 
 def _jobname(main_file: str) -> str:

@@ -4,10 +4,10 @@ import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "tokenrouter";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai";
 
 export function normalizeLlmProvider(provider: string): LLMProvider {
-  if (provider === "nvidia") return "tokenrouter";
+  if (provider === "nvidia" || provider === "tokenrouter") return "openrouter";
   return provider as LLMProvider;
 }
 

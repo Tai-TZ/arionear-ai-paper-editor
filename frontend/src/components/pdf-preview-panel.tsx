@@ -23,10 +23,12 @@ import {
   loadPdfDocument,
   pdfPointFromClick,
   refineSynctexPoint,
+  renderPageAnnotationLayer,
   renderPageTextLayer,
   renderPageToCanvas,
   type PdfPageRenderResult,
 } from "@/lib/pdf-renderer";
+import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
@@ -90,6 +92,7 @@ function PdfPageView({
   pdf,
   pageNumber,
   scale,
+  linkService,
   onVisible,
   onPageClick,
   onPageNotReady,
@@ -97,6 +100,7 @@ function PdfPageView({
   pdf: PDFDocumentProxy;
   pageNumber: number;
   scale: number;
+  linkService: PdfLinkService;
   onVisible: (pageNumber: number) => void;
   onPageClick?: (
     pageNumber: number,
@@ -110,6 +114,7 @@ function PdfPageView({
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
+  const annotationLayerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [pageViewport, setPageViewport] = useState<PageViewport | null>(null);
   const pageRef = useRef<PDFPageProxy | null>(null);
@@ -137,7 +142,8 @@ function PdfPageView({
   useEffect(() => {
     const canvas = canvasRef.current;
     const textLayer = textLayerRef.current;
-    if (!canvas || !textLayer) return;
+    const annotationLayer = annotationLayerRef.current;
+    if (!canvas || !textLayer || !annotationLayer) return;
 
     const token = ++renderTokenRef.current;
     let cancelled = false;
@@ -153,6 +159,7 @@ function PdfPageView({
       setDimensions({ width: rendered.width, height: rendered.height });
       setPageViewport(rendered.viewport);
       await renderPageTextLayer(page, textLayer, rendered.viewport);
+      await renderPageAnnotationLayer(page, annotationLayer, rendered.viewport, linkService);
     })().catch(() => {
       if (!cancelled) {
         setDimensions(null);
@@ -163,7 +170,7 @@ function PdfPageView({
     return () => {
       cancelled = true;
     };
-  }, [pdf, pageNumber, scale]);
+  }, [pdf, pageNumber, scale, linkService]);
 
   return (
     <div
@@ -210,6 +217,7 @@ function PdfPageView({
       >
         <canvas ref={canvasRef} className="pdf-preview-canvas" />
         <div ref={textLayerRef} className="textLayer pdf-preview-text-layer" />
+        <div ref={annotationLayerRef} className="pdf-preview-annotation-layer" />
       </div>
     </div>
   );
@@ -238,6 +246,11 @@ export function PdfPreviewPanel({
   const { locale } = useLocale();
   const t = editorCopy(locale);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollToPageRef = useRef<(page: number) => void>(() => {});
+  const linkService = useMemo(
+    () => new PdfLinkService((page) => scrollToPageRef.current(page)),
+    [],
+  );
 
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -343,9 +356,26 @@ export function PdfPreviewPanel({
       const clamped = Math.max(1, Math.min(pageNumber, numPages || 1));
       const node = viewportRef.current?.querySelector(`[data-page="${clamped}"]`);
       node?.scrollIntoView({ behavior: "smooth", block: "start" });
+      linkService.setCurrentPage(clamped);
       setCurrentPage(clamped);
     },
-    [numPages],
+    [linkService, numPages],
+  );
+
+  useEffect(() => {
+    scrollToPageRef.current = scrollToPage;
+  }, [scrollToPage]);
+
+  useEffect(() => {
+    linkService.setDocument(pdf);
+  }, [linkService, pdf]);
+
+  const handlePageVisible = useCallback(
+    (pageNumber: number) => {
+      linkService.setCurrentPage(pageNumber);
+      setCurrentPage(pageNumber);
+    },
+    [linkService],
   );
 
   const handlePrevPage = () => scrollToPage(currentPage - 1);
@@ -619,7 +649,8 @@ export function PdfPreviewPanel({
                 pdf={pdf}
                 pageNumber={pageNumber}
                 scale={effectiveScale}
-                onVisible={setCurrentPage}
+                linkService={linkService}
+                onVisible={handlePageVisible}
                 onPageClick={synctexBase64 ? handleSynctexClick : undefined}
                 onPageNotReady={synctexBase64 ? handlePageNotReady : undefined}
               />
