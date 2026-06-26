@@ -37,13 +37,14 @@ const EN: GuidePageContent = {
   title: "User Guide",
   eyebrow: "Authors · Desk Manual",
   lede:
-    "A practical walkthrough for researchers using Arionear — from your first project to Accept/Reject on AI suggestions and PDF compile.",
+    "A practical walkthrough for researchers using Arionear — projects, templates, Ario chat, logic audit, publication score, defense rehearsal, and PDF compile.",
   tocTitle: "On this page",
   samplesTitle: "Try these prompts in chat",
   shortcutsTitle: "Keyboard shortcuts",
   openEditorCta: "Open your projects",
   relatedTitle: "Related",
   relatedLinks: [
+    { label: "LaTeX templates", to: "/templates" },
     { label: "Workflow overview", to: "/workflow" },
     { label: "LaTeX guide", to: "/latex-guide" },
     { label: "Integrity policy", to: "/integrity" },
@@ -53,34 +54,50 @@ const EN: GuidePageContent = {
       id: "start",
       heading: "1 · Create an account & open a project",
       paragraphs: [
-        "Sign up or sign in, then open Projects from the masthead or sidebar.",
-        "Start with a blank manuscript, the sample template, or upload LaTeX — a single `.tex` file, a folder, or an Overleaf ZIP export.",
+        "Sign up (email + verification code) or sign in — Google SSO is also available. Open Projects from the masthead or sidebar.",
+        "Your session is stored in the browser and shared across tabs. By default it lasts 3 days; tick Remember me on sign-in for a longer token (30 days).",
+        "Start with a blank manuscript, the sample template, browse LaTeX templates, or import — a single `.tex` file, a folder, or an Overleaf ZIP export.",
       ],
       bullets: [
         "Blank project — empty `main.tex` ready to type",
         "Sample project — short IMRAD-style starter you can edit",
+        "Templates gallery (`/templates`) — IEEE and academic `.tex` starters; open one as a new project",
         "Import — `.tex`, figures (`.png`, `.pdf`, …), and support files (`.bib`, `.cls`, `.sty`)",
       ],
     },
     {
-      id: "editor",
-      heading: "2 · Editor layout",
+      id: "templates",
+      heading: "2 · LaTeX templates gallery",
       paragraphs: [
-        "The desk is split into source, tools, and preview. Your manuscript saves to your account when you edit or leave the session.",
+        "Open Templates from the workspace navigation to browse curated journal and conference layouts.",
+        "Preview the sample PDF, then Open as Template to create a project pre-filled with the `.tex` tree.",
+      ],
+      bullets: [
+        "Search by keyword (e.g. IEEE, thesis, conference)",
+        "Official templates are marked with a badge",
+        "Sign in is required before opening a template in the editor",
+      ],
+    },
+    {
+      id: "editor",
+      heading: "3 · Editor layout",
+      paragraphs: [
+        "The desk is split into source, tools, and preview. Your manuscript syncs to your account as you edit.",
       ],
       bullets: [
         "Left — file tree & outline: switch files, upload assets, jump to sections",
         "Center — LaTeX source editor with undo/redo",
         "Right — PDF preview after Compile; double-click PDF to jump to source (SyncTeX)",
         "Bottom-right — Ario chat dock: ask questions or request edits",
+        "Toolbar — Compile, Export (publication score + PDF), Defense (mock viva), Share link",
       ],
     },
     {
       id: "chat",
-      heading: "3 · Chat with Ario",
+      heading: "4 · Chat with Ario",
       paragraphs: [
         "Open the chat dock and describe what you need. Ario reads your current manuscript context. Pick a task or let the intent router choose.",
-        "Style and template tasks return tracked changes (diff). Chat and structure tasks return analysis without auto-editing.",
+        "Style and template tasks return tracked changes (diff). Chat, structure, and logic tasks return analysis without auto-editing.",
       ],
       samples: [
         {
@@ -108,11 +125,16 @@ const EN: GuidePageContent = {
           prompt: "Check citations in this paper",
           expect: "Verification report per cite key (arXiv, CrossRef, Semantic Scholar)",
         },
+        {
+          task: "Logic",
+          prompt: "Check logic and consistency across sections",
+          expect: "Comment-only conflicts in Tools → Logic Audit (no auto-apply)",
+        },
       ],
     },
     {
       id: "diff",
-      heading: "4 · Accept or Refuse suggestions",
+      heading: "5 · Accept or Refuse suggestions",
       paragraphs: [
         "Every AI edit passes the author gate. Nothing is committed until you approve.",
       ],
@@ -126,7 +148,7 @@ const EN: GuidePageContent = {
     },
     {
       id: "quick-edit",
-      heading: "5 · Quick edit selection",
+      heading: "6 · Quick edit selection",
       paragraphs: [
         "Select text in the editor, then use Quick Edit (Ctrl+K / Cmd+K) for a focused rewrite of that passage only.",
       ],
@@ -138,7 +160,7 @@ const EN: GuidePageContent = {
     },
     {
       id: "compile",
-      heading: "6 · Compile PDF",
+      heading: "7 · Compile PDF",
       paragraphs: [
         "Click Compile in the toolbar to build a PDF preview. The log panel shows errors if TeX fails.",
         "Server-side TeX Live must be installed on the backend. Install MiKTeX/TeX Live locally for development.",
@@ -150,26 +172,58 @@ const EN: GuidePageContent = {
     },
     {
       id: "tools",
-      heading: "7 · Tools panel",
-      paragraphs: ["Open Tools from the editor sidebar for citation checks and revision audit."],
+      heading: "8 · Tools panel",
+      paragraphs: [
+        "Open Tools from the editor sidebar for project info, citation checks, logic audit, and revision history.",
+      ],
       bullets: [
-        "Citation verify — cross-check `\\cite{...}` keys against your `.bib` and external databases",
-        "Logic audit — optional section-level consistency check (when enabled)",
-        "Share link — generate a read-only view for collaborators (if enabled for your project)",
+        "Info — project metadata and share link settings",
+        "Citations — cross-check `\\cite{...}` keys against your `.bib` and external databases",
+        "Logic Audit — multi-agent comment-only review (Quick or Deep; full manuscript or selected sections)",
+        "Versions — revision audit trail for accepted/rejected AI suggestions",
+        "Chat shortcuts: `/logic`, `/logic full`, `/logic deep`",
+      ],
+    },
+    {
+      id: "score",
+      heading: "9 · Publication score & export",
+      paragraphs: [
+        "Click Export in the toolbar to open the publication readiness dialog. Ario may run a quick logic skim first, then shows an overall score (0–100) and dimension breakdown.",
+      ],
+      bullets: [
+        "Dimensions include structure, completeness, citations, compile health, and peer-review signals from logic audit",
+        "Download the compiled PDF when compile succeeded",
+        "Re-run export after major edits — the gate refreshes when the manuscript changes",
+      ],
+    },
+    {
+      id: "defense",
+      heading: "10 · Defense mode (mock viva)",
+      paragraphs: [
+        "From the editor toolbar or Projects card menu, open Defense to rehearse a viva with Ario’s council persona.",
+        "Your paper PDF appears beside the chat; citation links in answers can scroll and highlight the PDF.",
+      ],
+      bullets: [
+        "Proactive review — the council reads your paper and asks questions with rising difficulty",
+        "Open Q&A — you raise concerns; the council probes deeper",
+        "One question per turn; restart the session anytime from the panel header",
+        "Free-tier turn quotas may apply — check the counter in the defense UI",
       ],
     },
     {
       id: "profile",
-      heading: "8 · Profile & preferences",
+      heading: "11 · Profile & preferences",
       paragraphs: [
-        "Open Profile from the workspace sidebar to set your name, affiliation, research field, and AI preferences.",
-        "Language (EN/VI) and theme follow your browser session; profile defaults can guide Ario’s tone.",
+        "Open Profile from the workspace sidebar to set your name, affiliation, research field, default LLM provider, and integrity strictness.",
+        "Toggle EN/VI and light/dark theme from the sidebar footer — language applies across marketing, auth, projects, and editor.",
       ],
     },
     {
       id: "shortcuts",
-      heading: "9 · Shortcuts & tips",
-      paragraphs: ["Keep the manuscript saved; use the sample queries above to explore each AI task safely."],
+      heading: "12 · Shortcuts & tips",
+      paragraphs: [
+        "Use the sample prompts above to explore each AI task safely. Open User Guide anytime from the Projects header.",
+      ],
       shortcuts: [
         { keys: "Ctrl+K", description: "Quick edit selection" },
         { keys: "Ctrl+Z / Ctrl+Y", description: "Undo / redo in editor" },
@@ -183,13 +237,14 @@ const VI: GuidePageContent = {
   title: "Hướng dẫn sử dụng",
   eyebrow: "Tác giả · Sổ tay bàn biên tập",
   lede:
-    "Hướng dẫn thực hành cho researcher dùng Arionear — từ dự án đầu tiên đến Accept/Reject gợi ý AI và biên dịch PDF.",
+    "Hướng dẫn thực hành cho researcher dùng Arionear — dự án, mẫu LaTeX, chat Ario, kiểm tra logic, điểm xuất bản, luyện bảo vệ và biên dịch PDF.",
   tocTitle: "Mục lục",
   samplesTitle: "Thử các prompt sau trong chat",
   shortcutsTitle: "Phím tắt",
   openEditorCta: "Mở dự án của bạn",
   relatedTitle: "Xem thêm",
   relatedLinks: [
+    { label: "Mẫu LaTeX", to: "/templates" },
     { label: "Tổng quan quy trình", to: "/workflow" },
     { label: "Hướng dẫn LaTeX", to: "/latex-guide" },
     { label: "Chính sách toàn vẹn", to: "/integrity" },
@@ -199,34 +254,50 @@ const VI: GuidePageContent = {
       id: "start",
       heading: "1 · Tạo tài khoản & mở dự án",
       paragraphs: [
-        "Đăng ký hoặc đăng nhập, rồi mở Dự án từ masthead hoặc sidebar.",
-        "Bắt đầu bằng bản thảo trống, mẫu có sẵn, hoặc tải LaTeX — một file `.tex`, thư mục, hoặc ZIP xuất từ Overleaf.",
+        "Đăng ký (email + mã xác minh) hoặc đăng nhập — có thêm Google SSO. Mở Dự án từ masthead hoặc sidebar.",
+        "Phiên đăng nhập lưu trên trình duyệt và dùng chung giữa các tab. Mặc định hết hạn sau 3 ngày; tick Ghi nhớ đăng nhập để giữ lâu hơn (30 ngày).",
+        "Bắt đầu bằng bản thảo trống, mẫu có sẵn, duyệt thư viện mẫu LaTeX, hoặc nhập — file `.tex`, thư mục, hoặc ZIP từ Overleaf.",
       ],
       bullets: [
         "Dự án trống — `main.tex` rỗng sẵn sàng gõ",
         "Dự án mẫu — bản IMRAD ngắn để chỉnh sửa",
+        "Thư viện mẫu (`/templates`) — IEEE và mẫu học thuật; mở thành dự án mới",
         "Nhập — `.tex`, hình (`.png`, `.pdf`, …) và file hỗ trợ (`.bib`, `.cls`, `.sty`)",
       ],
     },
     {
-      id: "editor",
-      heading: "2 · Bố cục trình biên tập",
+      id: "templates",
+      heading: "2 · Thư viện mẫu LaTeX",
       paragraphs: [
-        "Bàn biên tập chia thành nguồn, công cụ và xem trước. Bản thảo lưu vào tài khoản khi bạn sửa hoặc rời phiên.",
+        "Mở Mẫu bài từ thanh điều hướng workspace để duyệt layout tạp chí và hội nghị.",
+        "Xem trước PDF mẫu, rồi Mở làm mẫu để tạo dự án với cây file `.tex` sẵn có.",
+      ],
+      bullets: [
+        "Tìm theo từ khóa (VD: IEEE, thesis, conference)",
+        "Mẫu chính thức có badge đánh dấu",
+        "Cần đăng nhập trước khi mở mẫu trong editor",
+      ],
+    },
+    {
+      id: "editor",
+      heading: "3 · Bố cục trình biên tập",
+      paragraphs: [
+        "Bàn biên tập chia thành nguồn, công cụ và xem trước. Bản thảo đồng bộ lên tài khoản khi bạn sửa.",
       ],
       bullets: [
         "Trái — cây file & outline: đổi file, tải asset, nhảy tới section",
         "Giữa — editor LaTeX với undo/redo",
         "Phải — xem trước PDF sau Biên dịch; double-click PDF để nhảy tới nguồn (SyncTeX)",
         "Dưới-phải — chat Ario: hỏi đáp hoặc yêu cầu chỉnh sửa",
+        "Toolbar — Biên dịch, Xuất (điểm xuất bản + PDF), Bảo vệ (mock viva), Share link",
       ],
     },
     {
       id: "chat",
-      heading: "3 · Chat với Ario",
+      heading: "4 · Chat với Ario",
       paragraphs: [
         "Mở chat dock và mô tả nhu cầu. Ario đọc ngữ cảnh bản thảo hiện tại. Chọn task hoặc để intent router tự phân loại.",
-        "Style và template trả về tracked changes (diff). Chat và structure trả về phân tích, không tự sửa.",
+        "Style và template trả về tracked changes (diff). Chat, structure và logic trả về phân tích, không tự sửa.",
       ],
       samples: [
         {
@@ -254,11 +325,16 @@ const VI: GuidePageContent = {
           prompt: "Kiểm tra trích dẫn trong bài",
           expect: "Báo cáo verify từng cite key (arXiv, CrossRef, Semantic Scholar)",
         },
+        {
+          task: "Logic",
+          prompt: "Kiểm tra logic và tính nhất quán giữa các phần",
+          expect: "Góp ý comment-only trong Tools → Logic Audit (không auto-apply)",
+        },
       ],
     },
     {
       id: "diff",
-      heading: "4 · Accept hoặc Refuse gợi ý",
+      heading: "5 · Accept hoặc Refuse gợi ý",
       paragraphs: ["Mọi chỉnh sửa AI đều qua cổng tác giả. Không gì được commit nếu bạn chưa duyệt."],
       bullets: [
         "Xem diff inline trong editor — xóa màu đỏ, thêm được highlight",
@@ -270,7 +346,7 @@ const VI: GuidePageContent = {
     },
     {
       id: "quick-edit",
-      heading: "5 · Quick edit vùng chọn",
+      heading: "6 · Quick edit vùng chọn",
       paragraphs: [
         "Bôi đen đoạn trong editor, dùng Quick Edit (Ctrl+K / Cmd+K) để viết lại chỉ đoạn đó.",
       ],
@@ -282,7 +358,7 @@ const VI: GuidePageContent = {
     },
     {
       id: "compile",
-      heading: "6 · Biên dịch PDF",
+      heading: "7 · Biên dịch PDF",
       paragraphs: [
         "Nhấn Biên dịch trên toolbar để tạo xem trước PDF. Panel log hiện lỗi nếu TeX thất bại.",
         "Backend cần TeX Live. Cài MiKTeX/TeX Live local khi phát triển.",
@@ -294,26 +370,58 @@ const VI: GuidePageContent = {
     },
     {
       id: "tools",
-      heading: "7 · Panel Tools",
-      paragraphs: ["Mở Tools từ sidebar editor để kiểm tra trích dẫn và audit revision."],
+      heading: "8 · Panel Tools",
+      paragraphs: [
+        "Mở Tools từ sidebar editor để xem thông tin dự án, trích dẫn, logic audit và lịch sử revision.",
+      ],
       bullets: [
-        "Citation verify — đối chiếu `\\cite{...}` với `.bib` và cơ sở dữ liệu ngoài",
-        "Logic audit — kiểm tra nhất quán theo section (khi bật)",
-        "Share link — link chỉ đọc cho cộng tác viên (nếu bật cho dự án)",
+        "Info — metadata dự án và cài đặt share link",
+        "Citations — đối chiếu `\\cite{...}` với `.bib` và cơ sở dữ liệu ngoài",
+        "Logic Audit — phản biện đa agent, chỉ comment (Quick hoặc Deep; toàn bộ hoặc chọn section)",
+        "Versions — nhật ký accept/reject gợi ý AI",
+        "Lệnh chat: `/logic`, `/logic full`, `/logic deep`",
+      ],
+    },
+    {
+      id: "score",
+      heading: "9 · Điểm xuất bản & xuất file",
+      paragraphs: [
+        "Nhấn Xuất trên toolbar để mở hộp thoại sẵn sàng xuất bản. Ario có thể chạy logic skim nhanh trước, rồi hiện điểm tổng (0–100) và các chiều đánh giá.",
+      ],
+      bullets: [
+        "Các chiều gồm cấu trúc, độ đầy đủ, trích dẫn, tình trạng biên dịch và tín hiệu phản biện từ logic audit",
+        "Tải PDF đã biên dịch khi compile thành công",
+        "Chạy lại Xuất sau khi sửa lớn — gate tự làm mới khi bản thảo thay đổi",
+      ],
+    },
+    {
+      id: "defense",
+      heading: "10 · Chế độ bảo vệ (mock viva)",
+      paragraphs: [
+        "Từ toolbar editor hoặc menu thẻ dự án, mở Bảo vệ để luyện viva với persona hội đồng của Ario.",
+        "PDF bài báo hiển thị cạnh chat; link trích dẫn trong câu trả lời có thể cuộn và highlight PDF.",
+      ],
+      bullets: [
+        "Proactive review — hội đồng đọc bài và hỏi với độ khó tăng dần",
+        "Open Q&A — bạn nêu lo ngại; hội đồng đào sâu thêm",
+        "Một câu hỏi mỗi lượt; khởi động lại phiên bất cứ lúc nào từ header panel",
+        "Có thể có giới hạn lượt free — xem bộ đếm trên giao diện defense",
       ],
     },
     {
       id: "profile",
-      heading: "8 · Hồ sơ & tùy chọn",
+      heading: "11 · Hồ sơ & tùy chọn",
       paragraphs: [
-        "Mở Hồ sơ từ sidebar workspace để đặt tên, đơn vị, lĩnh vực và tùy chọn AI.",
-        "Ngôn ngữ (EN/VI) và theme theo phiên trình duyệt; mặc định hồ sơ có thể định hướng giọng Ario.",
+        "Mở Hồ sơ từ sidebar workspace để đặt tên, đơn vị, lĩnh vực, LLM mặc định và mức integrity.",
+        "Bật EN/VI và sáng/tối từ footer sidebar — ngôn ngữ áp dụng toàn app (marketing, auth, projects, editor).",
       ],
     },
     {
       id: "shortcuts",
-      heading: "9 · Phím tắt & mẹo",
-      paragraphs: ["Lưu bản thảo thường xuyên; dùng các prompt mẫu trên để khám phá từng task AI an toàn."],
+      heading: "12 · Phím tắt & mẹo",
+      paragraphs: [
+        "Dùng các prompt mẫu trên để khám phá từng task AI an toàn. Mở Hướng dẫn bất cứ lúc nào từ header Projects.",
+      ],
       shortcuts: [
         { keys: "Ctrl+K", description: "Quick edit vùng chọn" },
         { keys: "Ctrl+Z / Ctrl+Y", description: "Undo / redo trong editor" },

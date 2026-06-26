@@ -20,17 +20,27 @@ const USER_KEY = "arionear-session";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-function getStorages(): StorageLike[] {
-  if (typeof window === "undefined") return [];
-  return [sessionStorage, localStorage];
+function authStorage(): StorageLike | null {
+  if (typeof window === "undefined") return null;
+  return localStorage;
+}
+
+/** Legacy sessions lived in sessionStorage (tab-scoped); promote to localStorage once. */
+function migrateSessionStorageToLocal() {
+  if (typeof window === "undefined") return;
+  for (const key of [TOKEN_KEY, USER_KEY] as const) {
+    const legacy = sessionStorage.getItem(key);
+    if (!legacy) continue;
+    if (!localStorage.getItem(key)) localStorage.setItem(key, legacy);
+    sessionStorage.removeItem(key);
+  }
 }
 
 function readFromStorages(key: string): string | null {
-  for (const storage of getStorages()) {
-    const value = storage.getItem(key);
-    if (value) return value;
-  }
-  return null;
+  migrateSessionStorageToLocal();
+  const storage = authStorage();
+  if (!storage) return null;
+  return storage.getItem(key) ?? sessionStorage.getItem(key);
 }
 
 function writeToStorage(storage: StorageLike, key: string, value: string | null) {
@@ -38,8 +48,32 @@ function writeToStorage(storage: StorageLike, key: string, value: string | null)
   else storage.removeItem(key);
 }
 
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const parsed = JSON.parse(json) as { exp?: number };
+    return typeof parsed.exp === "number" ? parsed.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+function isAccessTokenExpired(token: string): boolean {
+  const exp = decodeJwtExp(token);
+  if (exp === null) return false;
+  return Date.now() >= exp * 1000;
+}
+
 function readToken(): string | null {
-  return readFromStorages(TOKEN_KEY);
+  const token = readFromStorages(TOKEN_KEY);
+  if (!token) return null;
+  if (isAccessTokenExpired(token)) {
+    clearSession();
+    return null;
+  }
+  return token;
 }
 
 function readCachedUser(): AuthUser | null {
@@ -52,21 +86,23 @@ function readCachedUser(): AuthUser | null {
   }
 }
 
-function persistSession(user: AuthUser, accessToken: string, remember = false) {
+function persistSession(user: AuthUser, accessToken: string, _remember = false) {
   clearSession();
-  const storage = remember ? localStorage : sessionStorage;
+  const storage = authStorage();
+  if (!storage) return;
   writeToStorage(storage, TOKEN_KEY, accessToken);
   writeToStorage(storage, USER_KEY, JSON.stringify(user));
 }
 
 function writeCachedUser(user: AuthUser) {
-  if (typeof window === "undefined") return;
-  const storage = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+  const storage = authStorage();
+  if (!storage) return;
   writeToStorage(storage, USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession() {
-  for (const storage of getStorages()) {
+  if (typeof window === "undefined") return;
+  for (const storage of [localStorage, sessionStorage]) {
     writeToStorage(storage, TOKEN_KEY, null);
     writeToStorage(storage, USER_KEY, null);
   }
@@ -205,11 +241,16 @@ export async function resetPassword(
   return apiResetPassword(token.trim(), password);
 }
 
+/** JWT expiry (unix seconds) for the cached access token, if decodable. */
+export function getAccessTokenExpiry(): number | null {
+  const token = readFromStorages(TOKEN_KEY);
+  return token ? decodeJwtExp(token) : null;
+}
+
 /** Validate cached session against API (optional on app load). */
 export async function refreshSession(): Promise<AuthUser | null> {
   const token = readToken();
   if (!token) {
-    clearSession();
     return null;
   }
   const user = await fetchDedupe("auth:me", () => apiFetchMe(token));

@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 
     # Auth (JWT)
     auth_secret_key: str = "dev-only-change-in-production"
-    auth_token_expire_hours: int = Field(default=24, ge=1, le=168)
+    auth_token_expire_hours: int = Field(default=72, ge=1, le=168)  # 3 days
     auth_token_remember_days: int = Field(default=30, ge=1, le=90)
     auth_reset_expire_minutes: int = Field(default=30, ge=5, le=120)
     auth_signup_code_expire_minutes: int = Field(default=15, ge=5, le=60)
