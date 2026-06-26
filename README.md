@@ -5,19 +5,32 @@
 
 Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện bản thảo LaTeX bằng trợ lý AI **Ario**. Mọi thay đổi hiển thị dưới dạng **diff** — người dùng **Accept/Reject** trước khi áp dụng; AI không tự publish thay tác giả.
 
-**Luồng MVP chính:** đăng nhập → mở project → soạn LaTeX trong editor → chat Ario (style / structure / citation / template) → xem diff → Accept → compile PDF.
+**Luồng MVP chính:** đăng nhập → mở project → soạn LaTeX trong editor → chat Ario (style / structure / citation / template / logic) → xem diff → Accept → compile PDF → (tùy chọn) defense rehearsal / publication score.
+
+## Live Demo
+
+
+|                           |                                                                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Production (frontend)** | [https://arionear-web-345047770052.asia-east1.run.app/](https://arionear-web-345047770052.asia-east1.run.app/)                                      |
+| **Mô tả**                 | Marketing + workspace trên Google Cloud Run (Nitro node-server). API backend cần cấu hình `VITE_API_URL` / proxy tương ứng trong môi trường deploy. |
+
+
+Đăng ký / đăng nhập trên Live URL để tạo project, mở editor, templates (`/templates`), defense (`/defense`), và user guide (`/guide`).
 
 ---
 
 ## Tech Stack
 
-| Layer | Công nghệ |
-|-------|-----------|
+
+| Layer    | Công nghệ                                              |
+| -------- | ------------------------------------------------------ |
 | Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite |
-| Backend | FastAPI, Python 3.11+, LangGraph |
-| LLM | OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
-| Database | Prisma + PostgreSQL |
-| PDF | pdflatex + PDF.js + SyncTeX |
+| Backend  | FastAPI, Python 3.11+, LangGraph                       |
+| LLM      | OpenRouter · OpenAI · Anthropic · Z.AI (GLM)           |
+| Database | Prisma + PostgreSQL                                    |
+| PDF      | pdflatex + PDF.js + SyncTeX                            |
+
 
 ---
 
@@ -123,11 +136,13 @@ Kỳ vọng: `health` → `"status": "ok"`; `compile/status` → `"available": t
 
 ### 8. PDF Preview — cài TeX (local)
 
-| OS | Lệnh |
-|----|------|
-| **Windows** | `winget install MiKTeX.MiKTeX` |
-| **macOS** | `brew install --cask miktex` |
-| **Linux** | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
+
+| OS          | Lệnh                                                                                |
+| ----------- | ----------------------------------------------------------------------------------- |
+| **Windows** | `winget install MiKTeX.MiKTeX`                                                      |
+| **macOS**   | `brew install --cask miktex`                                                        |
+| **Linux**   | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
+
 
 Sau khi cài, restart terminal và chạy lại backend.
 
@@ -145,69 +160,81 @@ Docker image dùng port **8000** và đã gồm TeX Live. Chi tiết deploy: `do
 
 ## Environment Variables
 
-Copy từ [`.env.example`](./.env.example). **Không commit file `.env`.**
+Copy từ `[.env.example](./.env.example)`. **Không commit file `.env`.**
 
 ### Bắt buộc (tối thiểu để chạy agent)
 
-| Biến | Mô tả | Ví dụ |
-|------|--------|-------|
-| `LLM_PROVIDER` | Provider mặc định: `openrouter`, `openai`, `anthropic`, `zai` | `openrouter` |
-| `OPENROUTER_API_KEY` | Key OpenRouter (nếu dùng OpenRouter) | `sk-or-...` |
-| `OPENAI_API_KEY` | Key OpenAI (nếu dùng OpenAI) | `sk-...` |
-| `ZAI_API_KEY` | Key Z.AI GLM (nếu dùng Z.AI) | `...` |
-| `ANTHROPIC_API_KEY` | Key Anthropic (nếu dùng Claude) | `sk-ant-...` |
-| `DATABASE_URL` | Prisma Accelerate URL (Prisma CLI) | `prisma+postgres://...` |
-| `DIRECT_DATABASE_URL` | PostgreSQL TCP cho FastAPI/SQLAlchemy (**bắt buộc**) | `postgresql://...` |
-| `AUTH_SECRET_KEY` | JWT secret — generate: `openssl rand -hex 32` | `a1b2c3...` |
-| `AI_LOG_API_KEY` | Key BTC cho AI usage logging | *(từ link mời BTC)* |
+
+| Biến                  | Mô tả                                                         | Ví dụ                   |
+| --------------------- | ------------------------------------------------------------- | ----------------------- |
+| `LLM_PROVIDER`        | Provider mặc định: `openrouter`, `openai`, `anthropic`, `zai` | `openrouter`            |
+| `OPENROUTER_API_KEY`  | Key OpenRouter (nếu dùng OpenRouter)                          | `sk-or-...`             |
+| `OPENAI_API_KEY`      | Key OpenAI (nếu dùng OpenAI)                                  | `sk-...`                |
+| `ZAI_API_KEY`         | Key Z.AI GLM (nếu dùng Z.AI)                                  | `...`                   |
+| `ANTHROPIC_API_KEY`   | Key Anthropic (nếu dùng Claude)                               | `sk-ant-...`            |
+| `DATABASE_URL`        | Prisma Accelerate URL (Prisma CLI)                            | `prisma+postgres://...` |
+| `DIRECT_DATABASE_URL` | PostgreSQL TCP cho FastAPI/SQLAlchemy (**bắt buộc**)          | `postgresql://...`      |
+| `AUTH_SECRET_KEY`     | JWT secret — generate: `openssl rand -hex 32`                 | `a1b2c3...`             |
+| `AI_LOG_API_KEY`      | Key BTC cho AI usage logging                                  | *(từ link mời BTC)*     |
+
 
 > Cần **ít nhất một** LLM API key tương ứng với `LLM_PROVIDER`. Có thể đổi provider/model trực tiếp trong editor chat dock.
 
 ### Database (PostgreSQL / Prisma)
 
-| Biến | Mô tả |
-|------|--------|
-| `DATABASE_URL` | URL cho Prisma CLI (có thể là `prisma+postgres://` Accelerate) |
-| `DIRECT_DATABASE_URL` | URL TCP trực tiếp `postgresql://...` cho FastAPI/SQLAlchemy |
+
+| Biến                  | Mô tả                                                          |
+| --------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`        | URL cho Prisma CLI (có thể là `prisma+postgres://` Accelerate) |
+| `DIRECT_DATABASE_URL` | URL TCP trực tiếp `postgresql://...` cho FastAPI/SQLAlchemy    |
+
 
 ### App & CORS
 
-| Biến | Mặc định | Mô tả |
-|------|----------|--------|
-| `APP_ENV` | `development` | `development` \| `production` \| `test` |
-| `APP_PORT` | `8001` | Port backend (khớp lệnh uvicorn) |
-| `APP_HOST` | `127.0.0.1` | Host bind |
-| `CORS_ORIGINS` | `http://localhost:8080,...` | Origins frontend được phép |
-| `FRONTEND_BASE_URL` | `http://localhost:8080` | URL frontend (email/OAuth redirect) |
-| `BACKEND_BASE_URL` | `http://127.0.0.1:8001` | URL backend công khai |
+
+| Biến                | Mặc định                    | Mô tả                                 |
+| ------------------- | --------------------------- | ------------------------------------- |
+| `APP_ENV`           | `development`               | `development` | `production` | `test` |
+| `APP_PORT`          | `8001`                      | Port backend (khớp lệnh uvicorn)      |
+| `APP_HOST`          | `127.0.0.1`                 | Host bind                             |
+| `CORS_ORIGINS`      | `http://localhost:8080,...` | Origins frontend được phép            |
+| `FRONTEND_BASE_URL` | `http://localhost:8080`     | URL frontend (email/OAuth redirect)   |
+| `BACKEND_BASE_URL`  | `http://127.0.0.1:8001`     | URL backend công khai                 |
+
 
 ### Auth & OAuth (tùy chọn)
 
-| Biến | Mô tả |
-|------|--------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth secret |
+
+| Biến                        | Mô tả                                                   |
+| --------------------------- | ------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`          | Google OAuth client ID                                  |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth secret                                     |
 | `GOOGLE_OAUTH_REDIRECT_URI` | VD: `http://127.0.0.1:8001/api/v1/auth/google/callback` |
-| `SMTP_*` | Gửi email xác minh đăng ký (dev: code in ra log) |
+| `SMTP_`*                    | Gửi email xác minh đăng ký (dev: code in ra log)        |
+
 
 ### Observability (tùy chọn)
 
-| Biến | Mô tả |
-|------|--------|
-| `LANGCHAIN_API_KEY` | LangSmith tracing (deliverable AI Logs) |
-| `LANGCHAIN_PROJECT` | Tên project trên LangSmith |
-| `LANGCHAIN_TRACING_V2` | `true` để bật trace |
-| `INNGEST_DEV` | `1` để chạy Inngest dev server local |
-| `AI_LOG_SERVER` | Endpoint submit AI logs (pre-configured BTC) |
+
+| Biến                   | Mô tả                                        |
+| ---------------------- | -------------------------------------------- |
+| `LANGCHAIN_API_KEY`    | LangSmith tracing (deliverable AI Logs)      |
+| `LANGCHAIN_PROJECT`    | Tên project trên LangSmith                   |
+| `LANGCHAIN_TRACING_V2` | `true` để bật trace                          |
+| `INNGEST_DEV`          | `1` để chạy Inngest dev server local         |
+| `AI_LOG_SERVER`        | Endpoint submit AI logs (pre-configured BTC) |
+
 
 ### Frontend build
 
-| Biến | Mô tả |
-|------|--------|
-| `VITE_DEV_API_PROXY` | Target proxy dev (VD: `http://127.0.0.1:8001`) |
-| `VITE_API_URL` | API URL khi build production |
 
-Danh sách đầy đủ và comment: [`.env.example`](./.env.example).
+| Biến                 | Mô tả                                          |
+| -------------------- | ---------------------------------------------- |
+| `VITE_DEV_API_PROXY` | Target proxy dev (VD: `http://127.0.0.1:8001`) |
+| `VITE_API_URL`       | API URL khi build production                   |
+
+
+Danh sách đầy đủ và comment: `[.env.example](./.env.example)`.
 
 ---
 
@@ -230,14 +257,16 @@ Prior work cites \cite{smith2020}.
 
 ### Trong Editor (UI)
 
-| # | Task | Sample query (gửi trong chat) | Kỳ vọng |
-|---|------|------------------------------|---------|
-| 1 | `chat` | Giải thích ngắn gọn abstract của bài này bằng tiếng Việt | Trả lời tiếng Việt, không diff |
-| 2 | `style` | Chỉnh sửa abstract cho văn phong học thuật hơn | Diff đỏ/xanh + Accept/Reject |
-| 3 | `structure` | Phân tích cấu trúc IMRaD của bài này | Gợi ý section thiếu/thừa |
-| 4 | `template` | Thêm các section IMRaD còn thiếu | Gợi ý skeleton IMRaD |
-| 5 | `citation` | Kiểm tra trích dẫn trong bài | Báo cáo verify từng cite key |
-| 6 | compile | Nhấn **Compile** trên toolbar | PDF preview bên phải |
+
+| #   | Task        | Sample query (gửi trong chat)                            | Kỳ vọng                        |
+| --- | ----------- | -------------------------------------------------------- | ------------------------------ |
+| 1   | `chat`      | Giải thích ngắn gọn abstract của bài này bằng tiếng Việt | Trả lời tiếng Việt, không diff |
+| 2   | `style`     | Chỉnh sửa abstract cho văn phong học thuật hơn           | Diff đỏ/xanh + Accept/Reject   |
+| 3   | `structure` | Phân tích cấu trúc IMRaD của bài này                     | Gợi ý section thiếu/thừa       |
+| 4   | `template`  | Thêm các section IMRaD còn thiếu                         | Gợi ý skeleton IMRaD           |
+| 5   | `citation`  | Kiểm tra trích dẫn trong bài                             | Báo cáo verify từng cite key   |
+| 6   | compile     | Nhấn **Compile** trên toolbar                            | PDF preview bên phải           |
+
 
 Bạn cũng có thể **bôi đen** một đoạn trong editor → **Quick Edit** (`Ctrl+K`) với prompt như: *"Viết lại đoạn này trang trọng hơn"*.
 
@@ -300,22 +329,24 @@ curl -s -X POST http://127.0.0.1:8001/api/v1/citations/verify \
   -d "{\"session_id\":\"SESSION_ID\",\"latex_content\":\"\\\\cite{smith2020}\",\"bib_content\":\"@article{smith2020, title={Deep Learning}, year={2020}}\"}"
 ```
 
-Kết quả eval thực tế (6 test cases): [`eval/results/_live_outputs.json`](./eval/results/_live_outputs.json).
+Kết quả eval thực tế (6 test cases): `[eval/results/_live_outputs.json](./eval/results/_live_outputs.json)`.
 
 ### API tham khảo
 
-| Method | Path | Mô tả |
-|--------|------|--------|
-| GET | `/health` | Health + DB status |
-| GET | `/api/v1/status` | Agent name, provider, storage |
-| GET | `/api/v1/providers` | LLM providers khả dụng |
-| POST | `/api/v1/sessions` | Tạo paper session |
-| POST | `/api/v1/chat` | Chat sync (LangGraph) |
-| POST | `/api/v1/chat/stream` | Chat SSE (editor chính) |
-| POST | `/api/v1/citations/verify` | Xác minh trích dẫn |
-| POST | `/api/v1/compile` | Compile LaTeX → PDF |
-| POST | `/api/v1/auth/login` | Đăng nhập JWT |
-| GET/POST | `/api/v1/papers` | CRUD papers (cần auth) |
+
+| Method   | Path                       | Mô tả                         |
+| -------- | -------------------------- | ----------------------------- |
+| GET      | `/health`                  | Health + DB status            |
+| GET      | `/api/v1/status`           | Agent name, provider, storage |
+| GET      | `/api/v1/providers`        | LLM providers khả dụng        |
+| POST     | `/api/v1/sessions`         | Tạo paper session             |
+| POST     | `/api/v1/chat`             | Chat sync (LangGraph)         |
+| POST     | `/api/v1/chat/stream`      | Chat SSE (editor chính)       |
+| POST     | `/api/v1/citations/verify` | Xác minh trích dẫn            |
+| POST     | `/api/v1/compile`          | Compile LaTeX → PDF           |
+| POST     | `/api/v1/auth/login`       | Đăng nhập JWT                 |
+| GET/POST | `/api/v1/papers`           | CRUD papers (cần auth)        |
+
 
 ---
 
@@ -333,13 +364,16 @@ ruff check src tests
 
 ## Documentation
 
-| Tài liệu | Nội dung |
-|----------|----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc 4 tầng, agents, guardrail |
-| [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
-| [ROADMAP.md](./ROADMAP.md) | Lộ trình phase |
-| [eval/results/report.md](./eval/results/report.md) | Báo cáo đánh giá |
-| [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book) | Hướng dẫn Arionear 10 chương |
+
+| Tài liệu                                                                      | Nội dung                                                                          |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Live app**                                                                  | [arionear-web (Cloud Run)](https://arionear-web-345047770052.asia-east1.run.app/) |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)                                          | Kiến trúc 4 tầng, agents, guardrail                                               |
+| [docs/architecture_diagram.md](./docs/architecture_diagram.md)                | Sơ đồ component & data flow                                                       |
+| [ROADMAP.md](./ROADMAP.md)                                                    | Lộ trình phase                                                                    |
+| [eval/results/report.md](./eval/results/report.md)                            | Báo cáo đánh giá                                                                  |
+| [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book) | Hướng dẫn Arionear 10 chương                                                         |
+
 
 ---
 
@@ -356,10 +390,13 @@ bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you a
 
 ## Team
 
-| Thành viên | Vai trò |
-|------------|---------|
-| **Nguyễn Thành Tài** | Dev chính — full-stack, kiến trúc, CI |
-| **Đặng Hải Lộc** | Mentor (Arionear) |
+
+| Thành viên              | Vai trò                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| **Nguyễn Thành Tài**    | Tech lead — full-stack, kiến trúc, DevOps/CI, admin, defense, paper score          |
+| **Nguyễn Trọng Nguyên** | AI & editor — Logic Audit, chat/GLM, SyncTeX, Quick Edit, template gallery backend |
+| **Ngô Thị Ánh**         | Product & UX — marketing, onboarding, User Guide, auth/session UX                  |
+
 
 ---
 

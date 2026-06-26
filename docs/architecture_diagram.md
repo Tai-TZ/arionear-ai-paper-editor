@@ -1,9 +1,10 @@
 # Architecture Diagram — Arionear
 
 **Dự án:** Arionear · *Closer to Publication*  
-**Cập nhật:** 13/06/2026 · Đồng bộ với [ARCHITECTURE.md](../ARCHITECTURE.md) v2.1
+**Cập nhật:** 26/06/2026 · Đồng bộ Phase 2 (`develop` @ defense + templates + paper score)  
+**Live:** [https://arionear-web-345047770052.asia-east1.run.app/](https://arionear-web-345047770052.asia-east1.run.app/)
 
-Sơ đồ bổ sung cho tài liệu kiến trúc chính. ✅ = Phase 1 MVP đã code · *(planned)* = mục tiêu tương lai.
+Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.
 
 ---
 
@@ -11,22 +12,29 @@ Sơ đồ bổ sung cho tài liệu kiến trúc chính. ✅ = Phase 1 MVP đã 
 
 ```mermaid
 flowchart TB
-    subgraph Client["Browser"]
-        FE[TanStack Start / React 19<br/>Editor · Preview · Chat · Tools]
-        LS[(localStorage<br/>projects)]
+    subgraph Users["Users"]
+        R([Researcher])
     end
 
-    subgraph Backend["FastAPI :8000"]
+    subgraph Cloud["Google Cloud Run"]
+        FE[TanStack Start / React 19<br/>Marketing · Projects · Editor · Defense · Templates]
+    end
+
+    subgraph Backend["FastAPI API"]
         API[REST + SSE<br/>/api/v1/*]
-        LG[LangGraph Agent]
-        STREAM[chat_stream.py<br/>SSE orchestration]
-        PSS[In-Memory Session Store]
+        ING[Inngest /api/inngest<br/>chat telemetry ⚠️ optional]
+    end
+
+    subgraph Data["Persistence ✅"]
+        PG[(PostgreSQL<br/>Prisma + SQLAlchemy)]
+        LS[(Browser localStorage<br/>JWT + session)]
     end
 
     subgraph LLM["LLM Providers"]
         OAI[OpenAI]
         ANT[Anthropic]
         OR[OpenRouter]
+        ZAI[Z.AI GLM]
     end
 
     subgraph Scholar["Citation APIs ✅"]
@@ -35,23 +43,20 @@ flowchart TB
         SS[Semantic Scholar]
     end
 
-    subgraph Future["planned"]
-        PG[(PostgreSQL)]
-        OA[OpenAlex]
-    end
-
-    FE <-->|read/write| LS
+    R -->|HTTPS| FE
+    FE <-->|Bearer JWT| LS
     FE -->|REST + SSE| API
-    API --> LG
-    API --> STREAM
-    API --> PSS
-    LG --> OAI & ANT & OR
-    STREAM --> OAI & ANT & OR
-    LG --> Scholar
-    STREAM --> Scholar
-    PSS -.-> PG
-    Scholar -.-> OA
+    API --> PG
+    API --> ING
+    API --> OAI & ANT & OR & ZAI
+    API --> Scholar
 ```
+
+| Surface | URL / host | Ghi chú |
+|---------|------------|---------|
+| Frontend (prod) | `arionear-web-*.asia-east1.run.app` | Nitro `node-server`, Docker |
+| Backend API | Configured `VITE_API_URL` / proxy | FastAPI + TeX compile |
+| Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, templates |
 
 ---
 
@@ -61,74 +66,82 @@ flowchart TB
 flowchart TB
     subgraph UL["USER LAYER"]
         U([Researcher])
-        UP[Upload LaTeX + figures]
-        UF[Chat intent]
+        UP[Upload LaTeX · Overleaf ZIP · templates]
+        UF[Chat / slash commands / defense]
     end
 
-    subgraph PL["PROCESSING LAYER ✅"]
-        DP[LaTeX Parser]
-        RE[Routing Engine]
-        SA[Style Agent]
-        TN[Template Generator]
-        ST[Structure Analyzer]
-        CV[Citation Verifier]
-        AIM[Integrity Monitor]
+    subgraph PL["PROCESSING LAYER"]
+        DP[LaTeX Parser ✅]
+        RE[Intent Router ✅]
+        SA[Style Agent ✅]
+        TN[Template Generator ✅]
+        ST[Structure Analyzer ✅]
+        CV[Citation Verifier ✅]
+        LA[Logic Audit ✅<br/>Quick / Deep debate]
+        DF[Defense Council ✅<br/>mock viva SSE]
+        AIM[Integrity Monitor ✅]
     end
 
     subgraph HGL["HUMAN GATE ✅"]
-        DIFF[Line diff in editor<br/>Accept / Reject]
+        DIFF[Diff in editor<br/>Accept / Reject]
     end
 
-    subgraph OL["OUTPUT"]
+    subgraph OL["OUTPUT LAYER"]
         RD[Revised draft ✅]
         IR[Integrity flags ✅]
-        CR[Citation report ✅]
-        AL[Audit log ⚠️ partial]
+        CRpt[Citation report ✅]
+        LAR[Logic audit report ✅]
+        PS[Publication score ✅<br/>export gate]
+        AL[Revision audit log ✅]
+        PDF[Compiled PDF ✅]
     end
 
     U --> UP --> DP
     UF --> RE
     DP --> RE
-    RE --> SA & TN & ST & CV
-    SA & TN & ST & CV --> AIM
+    RE --> SA & TN & ST & CV & LA
+    UF --> DF
+    SA & TN --> AIM
+    LA --> LAR
+    DF --> LAR
     AIM --> DIFF
-    DIFF --> RD & IR & CR & AL
+    DIFF --> RD & IR & CRpt & AL
+    RD --> PS & PDF
 ```
 
 ---
 
-## 3. Frontend Component Map
+## 3. Frontend Routes & Components
 
 ```mermaid
-flowchart LR
-    subgraph Routes
-        ED["/editor"]
-        PR["/projects"]
+flowchart TB
+    subgraph Public["Marketing / auth"]
+        HOME["/"]
+        SIGN["/signin · /signup"]
+        GUIDE["/guide · /latex-guide"]
     end
 
-    subgraph EditorUI["Editor UI"]
-        LE[LatexEditor]
-        LD[LatexDiffEditor]
-        PP[PreviewPanel]
-        SP[SuggestionPanel]
-        CD[Chat Dock]
-        TP[Tools Panel<br/>Citations · Info]
+    subgraph Workspace["Authenticated"]
+        PRJ["/projects"]
+        ED["/editor?projectId="]
+        DEF["/defense?projectId="]
+        TPL["/templates"]
+        PROF["/profile"]
+        ADM["/admin"]
     end
 
-    subgraph Lib
-        API[lib/api/academic.ts]
-        DIFF[lib/text-diff.ts]
-        PS[lib/project-store.ts]
+    subgraph EditorUI["Editor shell"]
+        LE[LatexEditor + Diff]
+        PP[PdfPreviewPanel + SyncTeX]
+        CD[Chat dock / Ario]
+        TP[Tools: Info · Citations · Logic · Versions]
+        EXP[Export / Paper score dialog]
     end
 
-    ED --> LE & PP & CD & TP
-    LE -->|pendingSuggestion| LD
-    ED --> SP
-    CD -->|streamChat| API
-    TP -->|verifyCitations| API
-    SP --> DIFF
-    ED --> PS
-    PS -->|syncSession| API
+    PRJ --> ED & DEF
+    TPL -->|open template| PRJ
+    ED --> LE & PP & CD & TP & EXP
+    DEF --> DEFCHAT[DefenseChatPanel] & PP
 ```
 
 ---
@@ -137,22 +150,21 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    FE[Frontend] --> H[GET /health]
-    FE --> S[GET /status]
-    FE --> P[GET /providers]
-    FE --> SS[POST/PATCH /sessions]
-    FE --> C[POST /chat]
-    FE --> CS[POST /chat/stream]
-    FE --> ES[POST /edit/style]
-    FE --> CV[POST /citations/verify]
-    FE --> RV[POST /revisions/...]
+    FE[Frontend] --> AUTH["/auth/*<br/>JWT · Google SSO"]
+    FE --> PAPERS["/papers/*<br/>CRUD LaTeX projects"]
+    FE --> CORE["/chat · /chat/stream<br/>/compile · /citations"]
+    FE --> PROF["/users/me/profile"]
+    FE --> SHARE["/papers/{id}/share"]
+    FE --> DEF["/defense/stream · /defense/quota"]
+    FE --> TPL["/templates/*"]
+    FE --> ADM["/admin/*"]
 
-    CS --> STREAM[chat_stream.py]
-    C & ES --> LG[LangGraph agent]
-    SS --> STORE[sessions.py]
-    CV --> VER[citations/verifier.py]
-    ES & LG --> GRD[guardrails/integrity.py]
-    LG & STREAM --> PRS[parser/latex.py]
+    CORE --> STREAM[chat_stream.py]
+    CORE --> LG[LangGraph + logic_audit]
+    DEF --> DSTREAM[defense_stream.py]
+    TPL --> TSTORE[template_store.py]
+    PAPERS --> DB[(PostgreSQL)]
+    AUTH --> DB
 ```
 
 ---
@@ -161,137 +173,172 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    START((Start)) --> ROUTE[route_node<br/>regex intent]
-    ROUTE --> PARSE[parse_node<br/>sections · cites · bib]
-    PARSE -->|style| STYLE[style_node<br/>LLM + L2 retry]
+    START((Start)) --> ROUTE[route_node]
+    ROUTE --> PARSE[parse_node]
+    PARSE -->|style| STYLE[style_node]
     PARSE -->|structure| STRUCT[structure_node]
     PARSE -->|citation| CITE[citation_node]
+    PARSE -->|logic| LOGIC[logic_node<br/>logic_audit runner]
     PARSE -->|chat| CHAT[chat_node]
     STYLE --> AIM[integrity_node]
     AIM --> RESPOND[respond_node]
-    CITE --> RESPOND
-    STRUCT --> RESPOND
-    CHAT --> RESPOND
+    LOGIC --> RESPOND
+    CITE & STRUCT & CHAT --> RESPOND
     RESPOND --> END((End))
 ```
 
 | Node | Module |
 |------|--------|
-| `route_node` | `agents/nodes/academic_nodes.py` |
-| `parse_node` | `services/parser/latex.py` |
-| `style_node` | `prompts.default.yaml` + `guardrails/integrity.py` |
+| `logic_node` | `services/logic_audit/runner.py` + `debate.py` |
+| `style_node` | `guardrails/integrity.py` + LLM |
 | `citation_node` | `services/citations/verifier.py` |
-| `structure_node` | `parser/latex.py` + LLM |
-| `chat_node` | Ario general chat |
+| Stream-only `template` | `chat_stream.py` + `template_latex.py` |
 
 ---
 
-## 6. SSE Stream Flow (`/chat/stream`)
-
-Luồng chính của editor. Task **template** (IMRAD skeleton) chỉ chạy ở đây.
+## 6. SSE — Editor Chat (`/chat/stream`)
 
 ```mermaid
 sequenceDiagram
-    participant FE as Frontend
+    participant FE as Editor
     participant API as chat_stream.py
-    participant LLM as LLM Provider
+    participant LLM as LLM
+    participant LA as logic_audit
     participant AIM as integrity.py
-    participant TPL as template_latex.py
 
-    FE->>API: POST /chat/stream
-    API->>API: _detect_task (style/structure/citation/template/chat)
-    API-->>FE: SSE event: activity
-    alt template
-        API->>TPL: build_imrad_template()
-        API-->>FE: SSE event: done (apply_mode: document)
+    FE->>API: POST /chat/stream {task, latex}
+    API->>API: intent / task detect
+    alt logic
+        API->>LA: multi-agent debate + synthesize
+        API-->>FE: done {logic_audit_report}
     else style
-        API->>LLM: reasoning stream (optional)
-        API->>LLM: style prompt
-        API->>AIM: check_integrity + retry
-        API-->>FE: SSE event: token + done (diff, flags)
+        API->>LLM: style + optional reasoning stream
+        API->>AIM: L2 integrity + retry
+        API-->>FE: done {suggestion, diff, flags}
+    else template
+        API-->>FE: done {apply_mode: document}
     else citation / structure / chat
-        API->>LLM: task-specific handler
-        API-->>FE: SSE event: token + done
+        API->>LLM: handler
+        API-->>FE: done
     end
-    FE->>FE: LatexDiffEditor + Accept/Reject
+    FE->>FE: Diff Accept/Reject or read-only panel
 ```
 
 ---
 
-## 7. Guardrail Layers
+## 7. Defense Mode (`/defense/stream`)
 
 ```mermaid
-flowchart TB
-    L1["L1 Prompt Constraint ✅<br/>prompts.default.yaml"]
-    L2["L2 Output Validation ✅<br/>numeric drift · length · semantic"]
-    L3["L3 Diff Display ✅<br/>latex-diff-editor.tsx"]
-    L4["L4 Audit Log ⚠️<br/>revision_history backend"]
-    L1 --> L2 --> L3 --> L4
+sequenceDiagram
+    participant R as Researcher
+    participant FE as /defense
+    participant API as defense_stream.py
+    participant LLM as LLM persona
+
+    R->>FE: Open defense from project
+    FE->>FE: Compile PDF preview
+    R->>FE: Proactive or Q&A mode
+    FE->>API: POST /defense/stream (Bearer)
+    API->>LLM: council prompt + manuscript context
+    LLM-->>API: streamed tokens
+    API-->>FE: SSE token + done
+    FE->>FE: PDF citation deep-link highlight
 ```
 
 ---
 
-## 8. Citation Verifier (4-layer, layers 1–3 ✅)
+## 8. Publication Score & Export Gate
 
 ```mermaid
 flowchart LR
-    IN[BibTeX + cite keys] --> L1{arXiv ID?}
+    EXP[User clicks Export] --> GATE{Manuscript<br/>changed?}
+    GATE -->|yes| SKIM[Quick logic skim<br/>paper_gate_skim]
+    GATE -->|no| SCORE[computePaperScore]
+    SKIM --> SCORE
+    SCORE --> DIALOG[Score ring + dimensions<br/>+ PDF download]
+```
+
+Dimensions: structure, completeness, citations, compile health, peer-review signals from logic audit.
+
+---
+
+## 9. Template Gallery
+
+```mermaid
+flowchart LR
+    GAL["/templates"] --> API["GET /templates"]
+    API --> STORE[template_store.py<br/>seed + admin CRUD]
+  GAL -->|Open as Template| OPEN["POST /templates/{id}/open"]
+    OPEN --> PAPERS[New paper in PostgreSQL]
+    PAPERS --> ED["/editor"]
+```
+
+---
+
+## 10. Guardrail & Auth
+
+```mermaid
+flowchart TB
+    subgraph Guardrails
+        L1[L1 Prompt constraint ✅]
+        L2[L2 Integrity check ✅]
+        L3[L3 Diff gate UI ✅]
+        L4[L4 Revision history ✅]
+        L1 --> L2 --> L3 --> L4
+    end
+
+    subgraph Auth
+        JWT[JWT access token<br/>default 72h · remember 30d]
+        LS[(localStorage)]
+        JWT --> LS
+    end
+```
+
+---
+
+## 11. Citation Verifier (layers 1–3 ✅)
+
+```mermaid
+flowchart LR
+    IN[BibTeX + cite keys] --> L1{arXiv?}
     L1 -->|yes| ARX[arXiv API]
     L1 -->|no| L2{DOI?}
-    L2 -->|yes| CR[CrossRef API]
+    L2 -->|yes| CR[CrossRef]
     L2 -->|no| L3{Title?}
     L3 -->|yes| SS[Semantic Scholar]
     L3 -->|no| NF[not_found]
-    ARX & CR & SS --> OUT[verified / possible_mismatch / not_found]
-    OUT -.-> L4["L4 LLM relevance<br/>planned P2"]
+    ARX & CR & SS --> OUT[verified / mismatch / not_found]
+    OUT -.-> L4["L4 LLM relevance<br/>(planned)"]
 ```
 
 ---
 
-## 9. Chat → Human Gate (End-to-End)
-
-```mermaid
-sequenceDiagram
-    actor R as Researcher
-    participant FE as Editor
-    participant API as FastAPI
-    participant Ario as Ario (LLM)
-
-    R->>FE: "cải thiện đoạn intro"
-    FE->>API: POST /chat/stream
-    API->>Ario: style task + L1 prompts
-    Ario-->>API: suggestion
-    API->>API: L2 integrity check
-    API-->>FE: done {suggestion, diff, flags}
-    FE->>R: Diff đỏ/xanh trong editor
-    R->>FE: Accept
-    FE->>FE: Apply LaTeX · Ctrl+S lưu
-```
-
----
-
-## 10. Component Reference
+## 12. Component Reference
 
 | Component | Technology | Purpose | Status |
 |-----------|-----------|---------|--------|
-| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4 | Editor, preview, chat, tools | ✅ |
-| API client | `frontend/src/lib/api/academic.ts` | REST + SSE | ✅ |
-| Backend | FastAPI, Pydantic | API server | ✅ |
-| Agent | LangGraph (`src/agents/graph.py`) | Multi-task orchestration | ✅ |
-| Stream service | `src/services/chat_stream.py` | SSE + template path | ✅ |
-| LLM | OpenAI / Anthropic / OpenRouter | Inference | ✅ |
-| Prompts | `src/prompts/prompts.default.yaml` | C9 external prompts | ✅ |
-| Parser | `src/services/parser/latex.py` | Sections, cites, BibTeX | ✅ |
-| Guardrails | `src/services/guardrails/integrity.py` | L2 validation | ✅ |
-| Citations | `src/services/citations/verifier.py` | arXiv → CrossRef → S2 | ✅ |
-| Session store | `sessions.py` + localStorage | Paper state MVP | ✅ |
-| Database | PostgreSQL / SQLite | Persistent storage | *(planned)* |
-| Logic / Review agents | LangGraph nodes | Debate & reply drafts | *(planned P2)* |
-| Vector / RAG store | — | Not used (ARC C1 adapted to verifier only) | — |
+| Frontend | TanStack Start, React 19, Tailwind v4 | Editor, defense, templates, marketing | ✅ |
+| Deploy | Cloud Run + frontend Dockerfile | Live URL | ✅ |
+| Backend | FastAPI, Pydantic | REST + SSE | ✅ |
+| Agent | LangGraph `graph.py` | style, structure, citation, logic, chat | ✅ |
+| Stream | `chat_stream.py`, `defense_stream.py` | Editor + defense SSE | ✅ |
+| Logic audit | `services/logic_audit/*` | Multi-agent comment-only review | ✅ |
+| Paper score | `lib/paper-score.ts` + gate skim | Export readiness dialog | ✅ |
+| Templates | `template_store.py`, `template_routes.py` | Gallery + open as project | ✅ |
+| Defense | `defense_stream.py`, `defense_citations.py` | Mock viva + PDF links | ✅ |
+| LLM | OpenAI / Anthropic / OpenRouter / Z.AI | Inference | ✅ |
+| Database | PostgreSQL, Prisma, SQLAlchemy | Papers, auth, profiles, templates | ✅ |
+| Auth | JWT + Google OAuth | Sign-in, 3-day default session | ✅ |
+| Admin | `admin_routes.py` | Users, LLM policy, quotas | ✅ |
+| Inngest | `inngest/` + hooks | Chat telemetry (optional) | ⚠️ |
+| Citation L4 LLM | — | Relevance layer | *(planned)* |
+| DOCX/PDF import | — | Non-LaTeX ingest | *(planned)* |
 
 ---
 
 ## Tài liệu liên quan
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — mô tả đầy đủ kiến trúc & trạng thái triển khai
-- [AutoResearchReferee.md](../AutoResearchReferee.md) — phân tích ARC adopt/adapt/drop
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — mô tả chi tiết kiến trúc
+- [README.md](../README.md) — setup & Live URL
+- [AutoResearchReferee.md](../AutoResearchReferee.md) — ARC adopt/adapt/drop
+- [pdf-preview-deploy.md](./pdf-preview-deploy.md) — TeX & Docker ops
