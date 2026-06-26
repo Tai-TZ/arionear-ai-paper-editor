@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.admin_routes import router as admin_router
 from src.api.auth_routes import router as auth_router
+from src.api.billing_routes import router as billing_router
 from src.api.defense_routes import router as defense_router
 from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
@@ -92,6 +93,7 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
 app.include_router(defense_router, prefix="/api/v1")
 app.include_router(template_router, prefix="/api/v1")
+app.include_router(billing_router, prefix="/api/v1")
 
 if settings.inngest_serve_enabled():
     inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)

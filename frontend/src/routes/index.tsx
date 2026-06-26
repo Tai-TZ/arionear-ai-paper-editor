@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, BookOpen, Quote, ShieldCheck, GitCompare, ArrowRight, Upload, Eye, Lock, PenLine } from "lucide-react";
+import { FileText, BookOpen, Quote, ShieldCheck, GitCompare, ArrowRight, Upload, Eye, Lock, PenLine, Check, X, Zap } from "lucide-react";
 import { useMemo } from "react";
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { HeroPeerReviewFigure } from "@/components/marketing/hero-figure";
@@ -234,12 +234,149 @@ function Integrity() {
   );
 }
 
+function Plans() {
+  const { locale } = useLocale();
+  const m = useMemo(() => marketingCopy(locale), [locale]);
+  const p = m.plans;
+
+  return (
+    <section id="pricing" className="border-b-4 border-foreground newsprint-texture">
+      <div className="max-w-screen-xl mx-auto px-4 py-16">
+        {/* Section header */}
+        <div className="flex items-end justify-between border-b border-foreground pb-4 mb-0">
+          <div>
+            <span className="font-mono-data uppercase text-xs tracking-widest text-[color:var(--editorial-red)]">
+              {p.sectionLabel}
+            </span>
+            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-1">
+              {p.sectionTitle}
+            </h2>
+          </div>
+          <Link
+            to="/pricing"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]"
+          >
+            {p.sectionLink}
+          </Link>
+        </div>
+
+        {/* Two-column plan grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 border-l border-foreground">
+
+          {/* ── FREE card ── */}
+          <article className="p-8 border-r border-b border-foreground">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+                § {p.free.tier}
+              </span>
+            </div>
+
+            {/* Price */}
+            <div className="border-b border-foreground pb-6 mb-6">
+              <span className="font-serif-display font-black text-5xl tracking-tighter">
+                {p.free.price}
+              </span>
+              <span className="font-mono-data text-sm text-muted-foreground ml-2">
+                {p.free.priceSub}
+              </span>
+              <p className="font-body text-sm text-muted-foreground mt-2">{p.free.tagline}</p>
+            </div>
+
+            {/* Included features */}
+            <ul className="flex flex-col gap-3 mb-6">
+              {p.free.features.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-foreground flex items-center justify-center">
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug">{f}</span>
+                </li>
+              ))}
+              {p.free.locked.map((f) => (
+                <li key={f} className="flex items-start gap-3 opacity-40">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-foreground flex items-center justify-center">
+                    <X className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug line-through">{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+              to={editorEntryPath()}
+              className="inline-flex items-center gap-2 border border-foreground px-5 py-2.5 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[40px]"
+            >
+              {p.free.cta}
+            </Link>
+          </article>
+
+          {/* ── PRO card (editorial inverse) ── */}
+          <article className="relative p-8 border-r border-b border-foreground bg-foreground text-background">
+            {/* "Most popular" ribbon */}
+            <div className="absolute top-0 right-0 bg-[color:var(--editorial-red)] px-3 py-1">
+              <span className="font-mono-data text-[10px] uppercase tracking-widest text-background">
+                {p.pro.badge}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+                § {p.pro.tier}
+              </span>
+              <Zap className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+            </div>
+
+            {/* Price */}
+            <div className="border-b border-background/30 pb-6 mb-6">
+              <span className="font-serif-display font-black text-5xl tracking-tighter">
+                {p.pro.price}
+              </span>
+              <span className="font-mono-data text-sm text-background/60 ml-2">
+                {p.pro.priceSub}
+              </span>
+              <p className="font-body text-sm text-background/60 mt-2">{p.pro.tagline}</p>
+            </div>
+
+            {/* Features */}
+            <ul className="flex flex-col gap-3 mb-6">
+              {p.pro.features.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-background/40 flex items-center justify-center">
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug">{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+              to="/pricing"
+              className="inline-flex items-center gap-2 border border-background bg-background text-foreground px-5 py-2.5 font-sans-ui uppercase text-xs tracking-widest hover:bg-transparent hover:text-background transition-colors min-h-[40px]"
+            >
+              <Zap className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {p.pro.cta}
+            </Link>
+          </article>
+        </div>
+
+        {/* Editorial footnote */}
+        <p className="font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground mt-4 text-center">
+          {p.footnote}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function Index() {
   return (
     <MarketingLayout showTicker>
       <Hero />
       <Features />
       <WorkflowTeaser />
+      <Plans />
       <Integrity />
     </MarketingLayout>
   );
