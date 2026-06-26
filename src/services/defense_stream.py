@@ -214,7 +214,7 @@ async def stream_defense(
             with get_db() as db:
                 user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
                 if user:
-                    assert_defense_allowed(user)
+                    assert_defense_allowed(db, user)
         except QuotaExceededError as exc:
             yield _sse("error", {"message": str(exc)})
             return
