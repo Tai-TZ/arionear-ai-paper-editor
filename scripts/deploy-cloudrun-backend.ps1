@@ -158,8 +158,8 @@ if ($aiLogKey) {
 $envVars = @(
     "APP_ENV=production",
     "LLM_PROVIDER=$llmProvider",
-    # Allow requests from both the custom domain and the raw Cloud Run URL
-    "CORS_ORIGINS=$FrontendUrl,$BackendUrl",
+    # Allow requests from frontend + API custom domain + raw Cloud Run URL
+    "CORS_ORIGINS=$FrontendUrl,$BackendCustomDomain,$BackendUrl",
     "FRONTEND_BASE_URL=$FrontendUrl",
     "BACKEND_BASE_URL=$BackendBaseUrl",
     "GOOGLE_CLIENT_ID=$googleClientId",
@@ -181,6 +181,9 @@ if ($langchainTracing) { $envVars += "LANGCHAIN_TRACING_V2=$langchainTracing" }
 if ($aiLogServer) { $envVars += "AI_LOG_SERVER=$aiLogServer" }
 
 Write-Host "`n=== Step 3: Deploy Cloud Run ===" -ForegroundColor Cyan
+# gcloud treats commas in --set-env-vars as key separators. Use ^|^ so values like
+# CORS_ORIGINS=https://a.com,https://b.com are not split incorrectly (Windows-safe).
+$envVarsArg = "^|" + ($envVars -join "|")
 gcloud run deploy $ServiceName `
     --image $image `
     --region $Region `
@@ -192,7 +195,7 @@ gcloud run deploy $ServiceName `
     --timeout 300 `
     --max-instances 5 `
     --set-secrets ($secretBindings -join ",") `
-    --set-env-vars ($envVars -join ",")
+    --set-env-vars $envVarsArg
 
 $BackendUrl = gcloud run services describe $ServiceName --region $Region --format="value(status.url)"
 Write-Host "`nBackend Cloud Run URL : $BackendUrl" -ForegroundColor Green
