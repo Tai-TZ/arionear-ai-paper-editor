@@ -15,6 +15,7 @@ from src.api.routes import router
 from src.api.share_routes import router as share_router
 from src.api.template_routes import router as template_router
 from src.config import get_settings
+from src.cors_config import build_cors_middleware_kwargs
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
@@ -70,20 +71,7 @@ app = FastAPI(
 )
 
 settings = get_settings()
-_cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
-_cors_kwargs: dict = {
-    "allow_credentials": True,
-    "allow_methods": ["*"],
-    "allow_headers": ["*"],
-}
-if settings.app_env == "development":
-    # Vite may bind to 8080/8081/etc. when default ports are busy.
-    _cors_kwargs["allow_origins"] = _cors_origins
-    _cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
-else:
-    _cors_kwargs["allow_origins"] = _cors_origins
-
-app.add_middleware(CORSMiddleware, **_cors_kwargs)
+app.add_middleware(CORSMiddleware, **build_cors_middleware_kwargs(settings))
 
 app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
