@@ -14,13 +14,13 @@ from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.api.share_routes import router as share_router
 from src.api.template_routes import router as template_router
-from src.services.template_store import ensure_template_seed
 from src.config import get_settings
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
 from src.services.auth_service import ensure_god_admin
 from src.services.sessions import refresh_session_store
+from src.services.template_store import ensure_template_seed
 
 
 def _provision_god_admin() -> None:

@@ -19,7 +19,9 @@ from src.agents.nodes.academic_nodes import (
 from src.agents.state import AgentState
 from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
+from src.services.chat_context import build_chat_user_content, task_needs_manuscript
 from src.services.chat_telemetry import ChatRunTracker
+from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
 from src.services.intent_router import classify_intent
 from src.services.llm import REASONING_MODEL_TEMPERATURE, get_llm, is_reasoning_model
 from src.services.llm_errors import friendly_llm_error
@@ -28,8 +30,6 @@ from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
 )
-from src.services.chat_context import build_chat_user_content, task_needs_manuscript
-from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
 from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store

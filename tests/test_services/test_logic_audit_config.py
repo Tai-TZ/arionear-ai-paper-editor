@@ -1,8 +1,8 @@
+from src.services.llm import OPENROUTER_NEMOTRON_MODEL
 from src.services.logic_audit.config import (
     resolve_logic_audit_llm,
     select_logic_targets,
 )
-from src.services.llm import OPENROUTER_NEMOTRON_MODEL
 
 
 def test_resolve_logic_audit_quick_prefers_openrouter(monkeypatch):

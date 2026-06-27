@@ -19,11 +19,11 @@ from src.db.models import User
 from src.models.billing_schemas import BillingStatusResponse, CheckoutResponse, UpgradeRequest, UpgradeResponse
 from src.services.billing_service import (
     CHECKOUT_TTL_MINUTES,
+    _generate_qr_png_b64,
     confirm_checkout,
     create_checkout_session,
     get_billing_status,
     upgrade_to_pro,
-    _generate_qr_png_b64,
 )
 
 logger = logging.getLogger(__name__)

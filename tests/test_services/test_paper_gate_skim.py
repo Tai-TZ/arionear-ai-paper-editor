@@ -1,11 +1,9 @@
 """Tests for paper_gate_skim — lightweight pre-publication gate scan."""
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # _pick_gate_sections
 # ---------------------------------------------------------------------------
-
 from src.services.logic_audit.paper_gate_skim import (
     _extract_json,
     _normalise_section,

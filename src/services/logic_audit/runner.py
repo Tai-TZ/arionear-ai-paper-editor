@@ -6,7 +6,7 @@ import re
 import uuid
 from typing import Any
 
-from src.services.llm import OPENROUTER_NEMOTRON_MODEL, is_reasoning_model
+from src.services.llm import is_reasoning_model
 from src.services.logic_audit.config import (
     logic_audit_runtime_flags,
     resolve_logic_audit_llm,

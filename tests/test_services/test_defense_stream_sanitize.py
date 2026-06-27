@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from src.models.schemas import DefenseConversationTurn
 from src.services.defense_stream import (
-    _OpeningStripper,
     _build_turn_directive,
+    _OpeningStripper,
     strip_defense_boilerplate_opening,
 )
 

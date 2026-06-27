@@ -9,7 +9,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.services.edit_planner import EditPlan, infer_edit_plan_rules
 from src.services.guardrails.output_sanitize import clamp_selection_replacement
 from src.services.latex_outline import (
-    ManuscriptOutline,
     build_manuscript_outline,
     find_latex_command_block,
     find_section_span,

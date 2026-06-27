@@ -7,7 +7,6 @@ from typing import Literal
 
 from src.config import LLMProvider, get_settings, normalize_llm_provider
 from src.services.intent_rules import (
-    IntentResult,
     _CITATION_RE,
     _LOGIC_RE,
     _RENAME_EDIT_RE,
@@ -15,6 +14,7 @@ from src.services.intent_rules import (
     _STYLE_RE,
     _TEMPLATE_RE,
     _TITLE_EDIT_RE,
+    IntentResult,
     fallback_intent,
     is_casual_chat,
 )

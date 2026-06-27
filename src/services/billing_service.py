@@ -17,7 +17,6 @@ from typing import Any, Literal
 
 import qrcode
 import qrcode.image.pil
-
 from sqlalchemy.orm import Session
 
 from src.db.models import User, UserSubscription, UserTier
