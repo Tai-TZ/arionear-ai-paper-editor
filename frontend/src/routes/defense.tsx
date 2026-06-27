@@ -24,6 +24,8 @@ import {
   type DefenseMode,
   type DefenseQuota,
 } from "@/lib/api/defense-api";
+import type { DefensePdfCitation, DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
+import { prepareDefenseCouncilMarkdown } from "@/lib/defense-pdf-autolink";
 
 type DefenseSearch = { projectId?: string };
 
@@ -67,6 +69,13 @@ function DefensePage() {
   const [quota, setQuota] = useState<DefenseQuota | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const pdfCitationKeyRef = useRef(0);
+  const [pdfCitationFocus, setPdfCitationFocus] = useState<DefensePdfCitationFocus | null>(null);
+
+  const handlePdfCitation = useCallback((citation: DefensePdfCitation) => {
+    pdfCitationKeyRef.current += 1;
+    setPdfCitationFocus({ ...citation, key: pdfCitationKeyRef.current });
+  }, []);
 
   const refreshQuota = useCallback(() => {
     fetchDefenseQuota()
@@ -197,7 +206,7 @@ function DefensePage() {
             cancelAnimationFrame(rafId);
             rafId = null;
           }
-          const finalText = response || assembled;
+          const finalText = prepareDefenseCouncilMarkdown(response || assembled, latexContent);
           setMessages((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
@@ -260,6 +269,7 @@ function DefensePage() {
     setInput("");
     setHasStarted(false);
     setActivityText("");
+    setPdfCitationFocus(null);
   }, [handleStop]);
 
   const handleModeChange = useCallback(
@@ -337,6 +347,8 @@ function DefensePage() {
               onReset={handleReset}
               hasStarted={hasStarted}
               paperName={paperName}
+              latexContent={latexContent}
+              onPdfCitation={handlePdfCitation}
             />
           }
           right={
@@ -350,6 +362,8 @@ function DefensePage() {
               projectName={paperName}
               onCompile={() => {}}
               readOnly
+              latexSource={latexContent}
+              citationFocus={pdfCitationFocus}
             />
           }
         />

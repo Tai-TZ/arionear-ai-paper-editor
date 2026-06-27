@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { useLocale } from "@/components/locale-provider";
 import { commonCopy } from "@/lib/common-i18n";
+import type { UiLanguage } from "@/lib/researcher-profile";
 import { cn } from "@/lib/utils";
 
 type AppLoadingScreenProps = {
@@ -11,6 +12,8 @@ type AppLoadingScreenProps = {
   variant?: "fullscreen" | "inline" | "overlay";
   exiting?: boolean;
   className?: string;
+  /** Bypass LocaleProvider — used during shell bootstrap. */
+  locale?: UiLanguage;
 };
 
 function AppLoadingCard({
@@ -49,15 +52,15 @@ function AppLoadingCard({
   );
 }
 
-export function AppLoadingScreen({
+export function AppLoadingScreenInner({
   label,
   detail,
   eyebrow,
   variant = "inline",
   exiting = false,
   className,
-}: AppLoadingScreenProps) {
-  const { locale } = useLocale();
+  locale,
+}: AppLoadingScreenProps & { locale: UiLanguage }) {
   const t = useMemo(() => commonCopy(locale).shell, [locale]);
   const text = label ?? t.loading;
   const tag = eyebrow ?? t.loadingEyebrow;
@@ -74,7 +77,7 @@ export function AppLoadingScreen({
         )}
         role="status"
         aria-live="polite"
-        aria-busy="true"
+        aria-busy={!exiting}
         aria-label={text}
       >
         {variant === "fullscreen" ? (
@@ -100,7 +103,7 @@ export function AppLoadingScreen({
       className={cn("app-loading-screen app-loading-screen--inline", className)}
       role="status"
       aria-live="polite"
-      aria-busy="true"
+      aria-busy={!exiting}
       aria-label={text}
     >
       <AppLoadingCard
@@ -111,6 +114,29 @@ export function AppLoadingScreen({
         compact
       />
     </div>
+  );
+}
+
+export function AppLoadingScreen({
+  label,
+  detail,
+  eyebrow,
+  variant = "inline",
+  exiting = false,
+  className,
+  locale: localeProp,
+}: AppLoadingScreenProps) {
+  const { locale: contextLocale } = useLocale();
+  return (
+    <AppLoadingScreenInner
+      locale={localeProp ?? contextLocale}
+      label={label}
+      detail={detail}
+      eyebrow={eyebrow}
+      variant={variant}
+      exiting={exiting}
+      className={className}
+    />
   );
 }
 

@@ -1,34 +1,73 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { applyLocale, getStoredLocale, type UiLanguage } from "@/lib/locale-store";
+import { AppLoadingScreenInner } from "@/components/app-loading-screen";
+import { applyLocale, getStoredLocale, readBootstrapLocale, type UiLanguage } from "@/lib/locale-store";
+import { applyTheme, getStoredTheme } from "@/lib/theme-store";
+import { commonCopy } from "@/lib/common-i18n";
+
+type BootstrapPhase = "booting" | "exiting" | "ready";
 
 type LocaleContextValue = {
   locale: UiLanguage;
   setLocale: (locale: UiLanguage) => void;
+  ready: boolean;
 };
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
+const BOOTSTRAP_EXIT_MS = 280;
+
+function ShellBootstrapScreen({ exiting }: { exiting: boolean }) {
+  const locale = readBootstrapLocale();
+  const t = commonCopy(locale).shell;
+  return (
+    <AppLoadingScreenInner
+      locale={locale}
+      label={t.loadingRoute}
+      eyebrow={t.loadingEyebrow}
+      variant="fullscreen"
+      exiting={exiting}
+    />
+  );
+}
+
 export function LocaleProvider({ children }: { children: ReactNode }) {
+  const [phase, setPhase] = useState<BootstrapPhase>("booting");
   const [locale, setLocaleState] = useState<UiLanguage>("en");
 
   useEffect(() => {
-    setLocaleState(getStoredLocale());
+    const storedLocale = getStoredLocale();
+    const storedTheme = getStoredTheme();
+    setLocaleState(storedLocale);
+    applyLocale(storedLocale);
+    applyTheme(storedTheme);
+    setPhase("exiting");
+    const timer = window.setTimeout(() => setPhase("ready"), BOOTSTRAP_EXIT_MS);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
+    if (phase === "booting") return;
     applyLocale(locale);
-  }, [locale]);
+  }, [locale, phase]);
+
+  const ready = phase === "ready";
 
   const value = useMemo<LocaleContextValue>(
     () => ({
       locale,
       setLocale: (next) => setLocaleState(next),
+      ready,
     }),
-    [locale],
+    [locale, ready],
   );
 
-  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+  return (
+    <LocaleContext.Provider value={value}>
+      {phase !== "booting" ? children : null}
+      {phase !== "ready" ? <ShellBootstrapScreen exiting={phase === "exiting"} /> : null}
+    </LocaleContext.Provider>
+  );
 }
 
 export function useLocale() {

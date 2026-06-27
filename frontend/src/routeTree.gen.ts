@@ -18,6 +18,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LatexGuideRouteImport } from './routes/latex-guide'
 import { Route as IntegrityRouteImport } from './routes/integrity'
@@ -81,6 +82,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/integrity'
     | '/latex-guide'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/profile'
     | '/projects'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/integrity'
     | '/latex-guide'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/profile'
     | '/projects'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/integrity'
     | '/latex-guide'
     | '/login'
+    | '/pricing'
     | '/privacy'
     | '/profile'
     | '/projects'
@@ -379,6 +391,7 @@ export interface RootRouteChildren {
   IntegrityRoute: typeof IntegrityRoute
   LatexGuideRoute: typeof LatexGuideRoute
   LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -458,6 +471,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -611,6 +631,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntegrityRoute: IntegrityRoute,
   LatexGuideRoute: LatexGuideRoute,
   LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   ProjectsRoute: ProjectsRoute,

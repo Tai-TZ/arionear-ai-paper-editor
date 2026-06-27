@@ -12,7 +12,8 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 from src.config import get_settings
 from src.db.engine import db_is_ready, get_db
 from src.db.models import User
-from src.models.schemas import DefenseRequest
+from src.models.schemas import DefenseConversationTurn, DefenseRequest
+from src.services.defense_citations import prepare_defense_council_markdown
 from src.services.defense_quota import assert_defense_allowed, record_defense_turn
 from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
@@ -42,7 +43,104 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def _build_system_message(latex_content: str, mode: str, turn_count: int) -> str:
+_BOILERPLATE_OPENERS = (
+    "tôi ghi nhận điều đó",
+    "i acknowledge that",
+    "i note that",
+    "cảm ơn bạn",
+    "thank you",
+)
+
+
+def strip_defense_boilerplate_opening(text: str) -> str:
+    """Remove generic acknowledgment openers models overuse in follow-up turns."""
+    stripped = text.lstrip()
+    lower = stripped.lower()
+    for opener in _BOILERPLATE_OPENERS:
+        if lower.startswith(opener):
+            stripped = stripped[len(opener) :].lstrip(" .,;:-—")
+            if stripped and stripped[0].islower():
+                stripped = stripped[0].upper() + stripped[1:]
+            break
+    return stripped
+
+
+def _might_be_boilerplate(text: str) -> bool:
+    sample = text.lower().lstrip()
+    if not sample:
+        return False
+    return any(opener.startswith(sample) or sample.startswith(opener) for opener in _BOILERPLATE_OPENERS)
+
+
+class _OpeningStripper:
+    """Hold the first phrase briefly so boilerplate openers can be stripped before display."""
+
+    def __init__(self, *, max_hold: int = 60) -> None:
+        self._buf = ""
+        self._done = False
+        self._max_hold = max_hold
+
+    def feed(self, chunk: str) -> str:
+        if self._done:
+            return chunk
+        self._buf += chunk
+        if not _might_be_boilerplate(self._buf) and len(self._buf.strip()) > 3:
+            self._done = True
+            return self._buf
+        if ". " in self._buf or "?" in self._buf or "!" in self._buf or len(self._buf) >= self._max_hold:
+            cleaned = strip_defense_boilerplate_opening(self._buf)
+            self._done = True
+            return cleaned
+        return ""
+
+    def flush(self) -> str:
+        if self._done or not self._buf:
+            return ""
+        cleaned = strip_defense_boilerplate_opening(self._buf)
+        self._done = True
+        return cleaned
+
+
+def _assistant_opening_snippet(content: str, *, max_len: int = 48) -> str:
+    snippet = content.strip().split("\n", 1)[0].strip()
+    for sep in (". ", "? ", "! ", "。"):
+        if sep in snippet:
+            snippet = snippet.split(sep, 1)[0].strip()
+            break
+    if len(snippet) > max_len:
+        snippet = snippet[: max_len - 1].rstrip() + "…"
+    return snippet
+
+
+def _build_turn_directive(history: list[DefenseConversationTurn]) -> str:
+    if not history:
+        return "Đây là lượt mở đầu phiên — giới thiệu ngắn và đặt câu hỏi đầu tiên."
+
+    if history[-1].role != "user":
+        return "Tiếp tục phiên phản biện."
+
+    recent_openers = [
+        _assistant_opening_snippet(turn.content)
+        for turn in history
+        if turn.role == "assistant" and turn.content.strip()
+    ][-3:]
+
+    lines = [
+        "Đây là lượt hỏi tiếp theo sau câu trả lời của tác giả.",
+        "CẤM mở đầu bằng: \"Tôi ghi nhận điều đó\", \"Cảm ơn bạn\", \"I acknowledge that\", hoặc bất kỳ câu ghi nhận chung nào.",
+        "Bắt đầu trực tiếp bằng câu hỏi hoặc một nhận xét cụ thể về nội dung bài/câu trả lời vừa rồi.",
+    ]
+    if recent_openers:
+        lines.append("Các mở đầu bạn đã dùng — không lặp lại: " + " | ".join(recent_openers))
+    return "\n".join(lines)
+
+
+def _build_system_message(
+    latex_content: str,
+    mode: str,
+    turn_count: int,
+    history: list[DefenseConversationTurn],
+) -> str:
     """Render the defense council system prompt with paper context."""
     system_template = get_prompt("defense_council_member", "system")
     user_template = get_prompt("defense_council_member", "user")
@@ -57,9 +155,22 @@ def _build_system_message(latex_content: str, mode: str, turn_count: int) -> str
         latex_content=truncated,
         turn_count=str(turn_count),
         mode=mode,
+        turn_directive=_build_turn_directive(history),
     )
 
     return f"{system_template.strip()}\n\n{user_section.strip()}"
+
+
+async def _stream_tokens_sanitized(llm: Any, messages: list) -> AsyncIterator[str]:
+    """Stream council output, stripping overused acknowledgment openers on follow-ups."""
+    stripper = _OpeningStripper()
+    async for delta in _stream_tokens(llm, messages):
+        out = stripper.feed(delta)
+        if out:
+            yield out
+    tail = stripper.flush()
+    if tail:
+        yield tail
 
 
 async def _stream_tokens(llm: Any, messages: list) -> AsyncIterator[str]:
@@ -103,7 +214,7 @@ async def stream_defense(
             with get_db() as db:
                 user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
                 if user:
-                    assert_defense_allowed(user)
+                    assert_defense_allowed(db, user)
         except QuotaExceededError as exc:
             yield _sse("error", {"message": str(exc)})
             return
@@ -120,7 +231,12 @@ async def stream_defense(
 
     # Build conversation messages
     turn_count = len(request.conversation_history)
-    system_content = _build_system_message(request.latex_content, request.mode, turn_count)
+    system_content = _build_system_message(
+        request.latex_content,
+        request.mode,
+        turn_count,
+        request.conversation_history,
+    )
 
     messages: list = [SystemMessage(content=system_content)]
 
@@ -149,10 +265,13 @@ async def stream_defense(
     )
     yield _sse("activity", {"text": activity_text})
 
+    use_stripper = any(t.role == "user" for t in request.conversation_history)
+    stream_fn = _stream_tokens_sanitized if use_stripper else _stream_tokens
+
     # Stream tokens
     assembled: list[str] = []
     try:
-        async for delta in _stream_tokens(llm, messages):
+        async for delta in stream_fn(llm, messages):
             assembled.append(delta)
             yield _sse("token", {"delta": delta})
             # keepalive every ~50 tokens to prevent proxy timeouts
@@ -163,7 +282,8 @@ async def stream_defense(
         yield _sse("error", {"message": err_msg})
         return
 
-    full_response = "".join(assembled)
+    full_response = strip_defense_boilerplate_opening("".join(assembled)) if use_stripper else "".join(assembled)
+    full_response = prepare_defense_council_markdown(full_response, request.latex_content)
     yield _sse("done", {"response": full_response})
 
     if user_id is not None and full_response.strip() and db_is_ready():

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   GraduationCap,
   ArrowUp,
@@ -17,6 +17,8 @@ import {
 import type { DefenseCopy } from "@/lib/defense-i18n";
 import type { DefenseMode, DefenseQuota } from "@/lib/api/defense-api";
 import { DEFENSE_QUOTA_ENABLED } from "@/lib/api/defense-api";
+import type { DefensePdfCitation } from "@/lib/defense-pdf-links";
+import { DefenseCouncilMarkdown } from "@/components/defense/defense-council-markdown";
 
 export type DefenseMessage = {
   role: "user" | "assistant";
@@ -45,6 +47,8 @@ type Props = {
   onReset: () => void;
   hasStarted: boolean;
   paperName?: string;
+  latexContent?: string;
+  onPdfCitation?: (citation: DefensePdfCitation) => void;
 };
 
 function MessageRow({
@@ -54,6 +58,8 @@ function MessageRow({
   userLabel,
   activityText,
   thinkingDefault,
+  latexContent,
+  onPdfCitation,
 }: {
   message: DefenseMessage;
   turnIndex: number;
@@ -61,6 +67,8 @@ function MessageRow({
   userLabel: string;
   activityText?: string;
   thinkingDefault: string;
+  latexContent?: string;
+  onPdfCitation?: (citation: DefensePdfCitation) => void;
 }) {
   if (message.role === "user") {
     return (
@@ -91,10 +99,12 @@ function MessageRow({
           </span>
         </p>
       ) : (
-        <p className="defense-msg-council-body">
-          {message.content}
-          {message.isStreaming && <span className="chat-stream-cursor" aria-hidden />}
-        </p>
+        <DefenseCouncilMarkdown
+          content={message.content}
+          latexContent={latexContent}
+          isStreaming={message.isStreaming}
+          onPdfCitation={onPdfCitation}
+        />
       )}
     </article>
   );
@@ -157,7 +167,7 @@ function WelcomeScreen({
   ];
 
   return (
-    <div className="defense-setup soft-scrollbar">
+    <div className="defense-setup">
       <div className="defense-setup-inner">
         {paperName && (
           <div className="defense-setup-paper">
@@ -189,17 +199,19 @@ function WelcomeScreen({
           </div>
         </div>
 
-        {mode === "proactive" && (
-          <button
-            type="button"
-            className="defense-setup-start"
-            onClick={onSend}
-            disabled={isStreaming || quotaExhausted}
-          >
-            {copy.startButton}
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        )}
+        <div className="defense-setup-start-slot">
+          {mode === "proactive" && (
+            <button
+              type="button"
+              className="defense-setup-start"
+              onClick={onSend}
+              disabled={isStreaming || quotaExhausted}
+            >
+              {copy.startButton}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         <p className="defense-setup-footnote">
           {copy.footnoteLine1} {copy.footnoteLine2}
@@ -224,24 +236,28 @@ export function DefenseChatPanel({
   onReset,
   hasStarted,
   paperName,
+  latexContent,
+  onPdfCitation,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const prevShowComposerRef = useRef(false);
+  const [composeAnimKey, setComposeAnimKey] = useState(0);
 
+  const COMPOSER_LINE_HEIGHT = 22;
   const COMPOSER_MAX_HEIGHT = 160;
 
   const syncComposerHeight = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
-    const next = Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT);
+    const next = Math.min(
+      Math.max(el.scrollHeight, COMPOSER_LINE_HEIGHT),
+      COMPOSER_MAX_HEIGHT,
+    );
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
   }, []);
-
-  useLayoutEffect(() => {
-    syncComposerHeight();
-  }, [input, syncComposerHeight]);
 
   const completedCouncilTurns = countCompletedCouncilTurns(messages);
   const displayUsed = quota ? Math.max(quota.used, completedCouncilTurns) : completedCouncilTurns;
@@ -255,6 +271,17 @@ export function DefenseChatPanel({
   const showMessages = messages.length > 0 || isStreaming;
   const showComposer =
     (hasStarted || (mode === "responsive" && showWelcomeContent)) && !quotaExhausted;
+
+  useLayoutEffect(() => {
+    if (showComposer) syncComposerHeight();
+  }, [input, showComposer, syncComposerHeight]);
+
+  useEffect(() => {
+    if (showComposer && !prevShowComposerRef.current) {
+      setComposeAnimKey((k) => k + 1);
+    }
+    prevShowComposerRef.current = showComposer;
+  }, [showComposer]);
 
   let councilTurnIdx = 0;
   const lastMessage = messages[messages.length - 1];
@@ -351,6 +378,8 @@ export function DefenseChatPanel({
                   userLabel={copy.userLabel}
                   activityText={isActiveStream ? activityText : undefined}
                   thinkingDefault={copy.thinkingDefault}
+                  latexContent={latexContent}
+                  onPdfCitation={onPdfCitation}
                 />
               );
             })}
@@ -369,8 +398,8 @@ export function DefenseChatPanel({
         )}
 
         {showComposer && (
-          <footer className="defense-compose">
-            <div className="defense-compose-shell">
+          <footer key={composeAnimKey} className="defense-compose defense-compose--appear">
+            <div className="defense-compose-row">
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -381,24 +410,26 @@ export function DefenseChatPanel({
                 disabled={isStreaming}
                 className="defense-compose-input"
               />
-              <div className="defense-compose-actions">
-                <button
-                  type="button"
-                  className={`defense-compose-send${isStreaming ? " is-stop" : ""}`}
-                  onClick={isStreaming ? onStop : onSend}
-                  disabled={!isStreaming && !canSend}
-                  aria-label={isStreaming ? copy.stop : copy.send}
-                >
-                  {isStreaming ? (
-                    <Square className="h-3 w-3 fill-current" />
-                  ) : (
-                    <ArrowUp className="h-4 w-4" strokeWidth={2} />
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                className={`defense-compose-send${isStreaming ? " is-stop" : ""}`}
+                onClick={isStreaming ? onStop : onSend}
+                disabled={!isStreaming && !canSend}
+                aria-label={isStreaming ? copy.stop : copy.send}
+              >
+                {isStreaming ? (
+                  <Square className="h-3 w-3 fill-current" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                )}
+              </button>
             </div>
             <p className="defense-compose-hint">{copy.composerHint}</p>
           </footer>
+        )}
+
+        {showWelcomeContent && mode === "proactive" && (
+          <div className="defense-compose-reserve" aria-hidden />
         )}
       </div>
     </TooltipProvider>

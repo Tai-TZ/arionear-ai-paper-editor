@@ -32,6 +32,8 @@ import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
+import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
+import { clearPdfHighlights, highlightPdfTextLayer } from "@/lib/pdf-text-highlight";
 
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
 type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
@@ -62,6 +64,8 @@ type PdfPreviewPanelProps = {
   latexSource?: string;
   /** Hide compile/tools; show PDF with zoom/navigation only (shared view). */
   readOnly?: boolean;
+  /** Scroll to and highlight a citation from defense chat links. */
+  citationFocus?: DefensePdfCitationFocus | null;
 };
 
 function IconBtn({
@@ -242,6 +246,7 @@ export function PdfPreviewPanel({
   projectName = "document",
   latexSource = "",
   readOnly = false,
+  citationFocus = null,
 }: PdfPreviewPanelProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
@@ -402,6 +407,43 @@ export function PdfPreviewPanel({
       setSearchStatus("No matches");
     }
   };
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!citationFocus || !pdf || !viewport) return;
+
+    const query = citationFocus.search.trim();
+    if (!query) return;
+
+    let cancelled = false;
+
+    (async () => {
+      clearPdfHighlights(viewport);
+      const page = citationFocus.page ?? (await findPageForQuery(pdf, query, 1));
+      if (!page || cancelled) return;
+
+      scrollToPage(page);
+
+      // Wait for the text layer to render then highlight.
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (cancelled) return;
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        const layer = viewport.querySelector(
+          `[data-page="${page}"] .pdf-preview-text-layer`,
+        );
+        if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
+        const mark = highlightPdfTextLayer(layer, query);
+        if (mark) {
+          mark.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [citationFocus, pdf, latexSource, scrollToPage]);
 
   const pageNumbers = useMemo(
     () => (pdf ? Array.from({ length: numPages }, (_, index) => index + 1) : []),
