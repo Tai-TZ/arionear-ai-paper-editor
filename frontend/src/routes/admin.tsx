@@ -8,8 +8,10 @@ import {
   Gauge,
   Loader2,
   Save,
+  Search,
   Shield,
   Sparkles,
+  TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
@@ -140,6 +142,12 @@ function AdminPage() {
   const [costMonth, setCostMonth] = useState(currentMonthValue);
   const [costReport, setCostReport] = useState<AdminCostReport | null>(null);
   const [costLoading, setCostLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [hideCostZero, setHideCostZero] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    user: AdminUserRow;
+    kind: "disable" | "enable" | "promote" | "demote";
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -203,27 +211,30 @@ function AdminPage() {
   };
 
   const handleToggleActive = async (user: AdminUserRow) => {
+    setConfirmAction(null);
     setSavingUserId(user.id);
     try {
       const updated = await patchAdminUser(user.id, { is_active: !user.is_active });
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      toast.success(updated.is_active ? "User activated" : "User deactivated");
+      toast.success(updated.is_active ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hoá tài khoản");
+      void fetchAdminUsageSummary().then(setSummary).catch(() => null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Cập nhật thất bại");
     } finally {
       setSavingUserId(null);
     }
   };
 
   const handleToggleRole = async (user: AdminUserRow) => {
+    setConfirmAction(null);
     const nextRole = user.role === "ADMIN" ? "RESEARCHER" : "ADMIN";
     setSavingUserId(user.id);
     try {
       const updated = await patchAdminUser(user.id, { role: nextRole });
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      toast.success(`Role set to ${nextRole}`);
+      toast.success(`Đã đổi role thành ${nextRole}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Cập nhật thất bại");
     } finally {
       setSavingUserId(null);
     }
@@ -242,13 +253,25 @@ function AdminPage() {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUserId(null);
       setLimitsDraft(null);
-      toast.success("LLM limits updated");
+      toast.success("Đã lưu LLM limits");
+      void fetchAdminUsageSummary().then(setSummary).catch(() => null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Cập nhật thất bại");
     } finally {
       setSavingUserId(null);
     }
   };
+
+  const filteredUsers = useMemo(() => {
+    if (!userSearch.trim()) return users;
+    const q = userSearch.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q),
+    );
+  }, [users, userSearch]);
 
   const saveDefaults = async () => {
     if (!defaultsDraft) return;
@@ -314,39 +337,42 @@ function AdminPage() {
             {tab === "overview" && summary ? (
               <section className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Monitor platform usage, token consumption, and estimated LLM spend across all researchers.
-                  Metrics come from the <code className="font-mono-data text-xs">ai_sessions</code> table — not
-                  simulated.
+                  Theo dõi usage token và chi phí LLM của toàn nền tảng.
+                  Dữ liệu từ bảng <code className="font-mono-data text-xs">ai_sessions</code> — không mô phỏng.
                 </p>
                 {summary.total_sessions === 0 ? (
-                  <p className="admin-data-note">
-                    No AI sessions recorded yet. Usage and cost will populate after researchers use the editor chat.
-                  </p>
+                  <div className="admin-empty-state">
+                    <Zap className="h-8 w-8 opacity-30" strokeWidth={1.5} />
+                    <p className="font-medium">Chưa có AI session nào</p>
+                    <p className="text-sm text-muted-foreground">
+                      Usage và cost sẽ xuất hiện sau khi researcher dùng chat trong editor.
+                    </p>
+                  </div>
                 ) : null}
                 <div className="admin-stat-grid">
                   <StatCard
-                    label="Total users"
+                    label="Tổng users"
                     value={formatNumber(summary.total_users)}
                     hint={`${summary.active_users} active · ${summary.admin_users} admins`}
                     icon={Users}
                   />
                   <StatCard
-                    label="Tokens consumed"
-                    value={formatNumber(summary.total_tokens)}
-                    hint={`${formatNumber(summary.total_sessions)} AI sessions`}
+                    label="Tokens hôm nay"
+                    value={formatNumber(summary.today_tokens)}
+                    hint={`All-time: ${formatNumber(summary.total_tokens)} tok · ${formatNumber(summary.total_sessions)} sessions`}
                     icon={Zap}
                     accent
                   />
                   <StatCard
-                    label="Estimated cost"
-                    value={formatUsd(summary.estimated_total_cost_usd)}
-                    hint="Based on configured per-1k token rate"
-                    icon={Coins}
+                    label="Chi phí tháng này"
+                    value={formatUsd(summary.month_cost_usd)}
+                    hint={`All-time: ${formatUsd(summary.estimated_total_cost_usd)}`}
+                    icon={TrendingUp}
                   />
                   <StatCard
-                    label="Quota alerts"
+                    label="Cảnh báo quota"
                     value={formatNumber(summary.users_over_token_cap + summary.users_over_cost_cap)}
-                    hint={`${summary.users_over_token_cap} over token cap · ${summary.users_over_cost_cap} over cost cap`}
+                    hint={`${summary.users_over_token_cap} vượt daily token · ${summary.users_over_cost_cap} vượt monthly cost`}
                     icon={Shield}
                   />
                 </div>
@@ -383,236 +409,293 @@ function AdminPage() {
             {tab === "users" ? (
               <section className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Manage researcher accounts, roles, and per-user LLM quotas. Usage totals aggregate{" "}
-                  <code className="font-mono-data text-xs">ai_sessions</code>; limits come from each user&apos;s
-                  profile settings (defaults: 100k tokens/day, $25/month).
+                  Quản lý tài khoản researcher, role và LLM quota.{" "}
+                  Cột <strong>Hôm nay</strong> = token trong ngày (so với daily cap);{" "}
+                  <strong>Tháng này</strong> = cost tháng hiện tại (so với monthly cap) — khớp với logic chặn chat thật.
                 </p>
-                <div className="admin-table-wrap">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="admin-table-head-row">
-                        <TableHead>Researcher</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Usage</TableHead>
-                        <TableHead>Limits</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user) => {
-                        const overTokens = user.usage.total_tokens > user.llm_limits.daily_token_max;
-                        const overCost =
-                          user.usage.estimated_cost_usd > user.llm_limits.monthly_cost_cap_usd;
-                        const isEditing = editingUserId === user.id;
-                        const busy = savingUserId === user.id;
 
-                        return (
-                          <Fragment key={user.id}>
-                            <TableRow className="admin-table-row">
-                              <TableCell>
-                                <div className="min-w-0">
-                                  <p className="truncate font-medium">{user.name}</p>
-                                  <p className="truncate font-mono-data text-[10px] text-muted-foreground">
-                                    {user.email}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={`admin-badge ${user.is_god_admin ? "admin-badge-god" : `admin-badge-${user.role.toLowerCase()}`}`}
-                                >
-                                  {user.is_god_admin ? "GOD ADMIN" : user.role}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <p className="font-mono-data text-xs">
-                                  {formatNumber(user.usage.total_tokens)} tok
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {formatUsd(user.usage.estimated_cost_usd)} est.
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-xs">
-                                  {formatNumber(user.llm_limits.daily_token_max)} / day
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {formatUsd(user.llm_limits.monthly_cost_cap_usd)} cap
-                                </p>
-                                {(overTokens || overCost) && (
-                                  <span className="admin-badge admin-badge-warn mt-1">Over quota</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={`admin-badge ${user.is_active ? "admin-badge-active" : "admin-badge-inactive"}`}
-                                >
-                                  {user.is_active ? "Active" : "Inactive"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="admin-row-actions">
-                                  <button
-                                    type="button"
-                                    className="admin-link-btn"
-                                    disabled={busy}
-                                    onClick={() => openLimitsEditor(user)}
-                                  >
-                                    Limits
-                                  </button>
-                                  {!user.is_god_admin ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="admin-link-btn"
-                                        disabled={busy}
-                                        onClick={() => void handleToggleRole(user)}
-                                      >
-                                        {user.role === "ADMIN" ? "Demote" : "Promote"}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="admin-link-btn"
-                                        disabled={busy}
-                                        onClick={() => void handleToggleActive(user)}
-                                      >
-                                        {user.is_active ? "Disable" : "Enable"}
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span className="admin-protected-label">Protected</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                            {isEditing && limitsDraft ? (
-                              <TableRow className="admin-limits-edit-row">
-                                <TableCell colSpan={6}>
-                                  <div className="admin-limits-editor">
-                                    <p className="admin-limits-title">
-                                      LLM limits — {user.name}
-                                    </p>
-                                    <div className="admin-limits-grid">
-                                      <label className="admin-field">
-                                        <span className="admin-field-label">Daily token max</span>
-                                        <input
-                                          type="number"
-                                          className="profile-input"
-                                          min={0}
-                                          value={limitsDraft.daily_token_max}
-                                          onChange={(e) =>
-                                            setLimitsDraft((d) =>
-                                              d
-                                                ? {
-                                                    ...d,
-                                                    daily_token_max: Number(e.target.value),
-                                                  }
-                                                : d,
-                                            )
-                                          }
-                                        />
-                                      </label>
-                                      <label className="admin-field">
-                                        <span className="admin-field-label">Monthly cost cap (USD)</span>
-                                        <input
-                                          type="number"
-                                          className="profile-input"
-                                          min={0}
-                                          step={0.01}
-                                          value={limitsDraft.monthly_cost_cap_usd}
-                                          onChange={(e) =>
-                                            setLimitsDraft((d) =>
-                                              d
-                                                ? {
-                                                    ...d,
-                                                    monthly_cost_cap_usd: Number(e.target.value),
-                                                  }
-                                                : d,
-                                            )
-                                          }
-                                        />
-                                      </label>
-                                      <label className="admin-field">
-                                        <span className="admin-field-label">Requests / minute max</span>
-                                        <input
-                                          type="number"
-                                          className="profile-input"
-                                          min={1}
-                                          value={limitsDraft.rate_limit_per_min}
-                                          onChange={(e) =>
-                                            setLimitsDraft((d) =>
-                                              d
-                                                ? {
-                                                    ...d,
-                                                    rate_limit_per_min: Number(e.target.value),
-                                                  }
-                                                : d,
-                                            )
-                                          }
-                                        />
-                                      </label>
-                                      <label className="admin-field admin-field-switch">
-                                        <span className="admin-field-label">LLM access enabled</span>
-                                        <Switch
-                                          checked={limitsDraft.llm_enabled}
-                                          onCheckedChange={(checked) =>
-                                            setLimitsDraft((d) => (d ? { ...d, llm_enabled: checked } : d))
-                                          }
-                                        />
-                                      </label>
-                                    </div>
-                                    <div className="admin-limits-actions">
-                                      <button
-                                        type="button"
-                                        className="admin-secondary-btn"
-                                        onClick={() => {
-                                          setEditingUserId(null);
-                                          setLimitsDraft(null);
-                                        }}
-                                      >
-                                        Cancel
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="admin-primary-btn"
-                                        disabled={busy}
-                                        onClick={() => void saveUserLimits()}
-                                      >
-                                        {busy ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Save className="h-4 w-4" />
-                                        )}
-                                        Save limits
-                                      </button>
-                                    </div>
-                                    <p className="admin-field-hint">
-                                      Last active {formatDate(user.last_active_at)} · Joined{" "}
-                                      {formatDate(user.created_at)}
+                {/* Search & confirm dialog */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="search"
+                      placeholder="Tìm theo tên, email, role…"
+                      className="profile-input pl-8 text-sm"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {filteredUsers.length}/{users.length} users
+                  </span>
+                </div>
+
+                {confirmAction ? (
+                  <div className="admin-confirm-bar">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                    <span className="text-sm">
+                      {confirmAction.kind === "disable"
+                        ? `Vô hiệu hoá tài khoản "${confirmAction.user.name}"?`
+                        : confirmAction.kind === "enable"
+                          ? `Kích hoạt lại "${confirmAction.user.name}"?`
+                          : confirmAction.kind === "demote"
+                            ? `Đổi "${confirmAction.user.name}" về RESEARCHER?`
+                            : `Promote "${confirmAction.user.name}" lên ADMIN?`}
+                    </span>
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        type="button"
+                        className="admin-secondary-btn"
+                        onClick={() => setConfirmAction(null)}
+                      >
+                        Huỷ
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-primary-btn"
+                        onClick={() => {
+                          if (confirmAction.kind === "disable" || confirmAction.kind === "enable") {
+                            void handleToggleActive(confirmAction.user);
+                          } else {
+                            void handleToggleRole(confirmAction.user);
+                          }
+                        }}
+                      >
+                        Xác nhận
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {filteredUsers.length === 0 ? (
+                  <div className="admin-empty-state">
+                    <Users className="h-8 w-8 opacity-30" strokeWidth={1.5} />
+                    <p className="font-medium">Không tìm thấy user nào</p>
+                    <p className="text-sm text-muted-foreground">Thử tìm bằng email hoặc tên khác.</p>
+                  </div>
+                ) : (
+                  <div className="admin-table-wrap">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="admin-table-head-row">
+                          <TableHead>Researcher</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Hôm nay / Daily cap</TableHead>
+                          <TableHead>Tháng này / Monthly cap</TableHead>
+                          <TableHead>Trạng thái</TableHead>
+                          <TableHead className="text-right">Thao tác</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => {
+                          const overTokens = (user.usage.today_tokens ?? 0) >= user.llm_limits.daily_token_max;
+                          const overCost = (user.usage.month_cost_usd ?? 0) >= user.llm_limits.monthly_cost_cap_usd;
+                          const isEditing = editingUserId === user.id;
+                          const busy = savingUserId === user.id;
+
+                          return (
+                            <Fragment key={user.id}>
+                              <TableRow className="admin-table-row">
+                                <TableCell>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium">{user.name}</p>
+                                    <p className="truncate font-mono-data text-[10px] text-muted-foreground">
+                                      {user.email}
                                     </p>
                                   </div>
                                 </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`admin-badge ${user.is_god_admin ? "admin-badge-god" : `admin-badge-${user.role.toLowerCase()}`}`}
+                                  >
+                                    {user.is_god_admin ? "GOD ADMIN" : user.role}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <p className={`font-mono-data text-xs${overTokens ? " text-amber-600 dark:text-amber-400 font-semibold" : ""}`}>
+                                    {formatNumber(user.usage.today_tokens ?? 0)} tok
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    cap: {formatNumber(user.llm_limits.daily_token_max)} / ngày
+                                  </p>
+                                  {overTokens && (
+                                    <span className="admin-badge admin-badge-warn mt-1">Vượt daily cap</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <p className={`font-mono-data text-xs${overCost ? " text-amber-600 dark:text-amber-400 font-semibold" : ""}`}>
+                                    {formatUsd(user.usage.month_cost_usd ?? 0)}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    cap: {formatUsd(user.llm_limits.monthly_cost_cap_usd)} / tháng
+                                  </p>
+                                  {overCost && (
+                                    <span className="admin-badge admin-badge-warn mt-1">Vượt monthly cap</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`admin-badge ${user.is_active ? "admin-badge-active" : "admin-badge-inactive"}`}
+                                  >
+                                    {user.is_active ? "Active" : "Inactive"}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="admin-row-actions">
+                                    <button
+                                      type="button"
+                                      className="admin-link-btn"
+                                      disabled={busy}
+                                      onClick={() => openLimitsEditor(user)}
+                                    >
+                                      Limits
+                                    </button>
+                                    {!user.is_god_admin ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="admin-link-btn"
+                                          disabled={busy}
+                                          onClick={() =>
+                                            setConfirmAction({
+                                              user,
+                                              kind: user.role === "ADMIN" ? "demote" : "promote",
+                                            })
+                                          }
+                                        >
+                                          {user.role === "ADMIN" ? "Demote" : "Promote"}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="admin-link-btn"
+                                          disabled={busy}
+                                          onClick={() =>
+                                            setConfirmAction({
+                                              user,
+                                              kind: user.is_active ? "disable" : "enable",
+                                            })
+                                          }
+                                        >
+                                          {user.is_active ? "Disable" : "Enable"}
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span className="admin-protected-label">Protected</span>
+                                    )}
+                                  </div>
+                                </TableCell>
                               </TableRow>
-                            ) : null}
-                          </Fragment>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                              {isEditing && limitsDraft ? (
+                                <TableRow className="admin-limits-edit-row">
+                                  <TableCell colSpan={6}>
+                                    <div className="admin-limits-editor">
+                                      <p className="admin-limits-title">LLM limits — {user.name}</p>
+                                      <div className="admin-limits-grid">
+                                        <label className="admin-field">
+                                          <span className="admin-field-label">Daily token max</span>
+                                          <input
+                                            type="number"
+                                            className="profile-input"
+                                            min={0}
+                                            value={limitsDraft.daily_token_max}
+                                            onChange={(e) =>
+                                              setLimitsDraft((d) =>
+                                                d ? { ...d, daily_token_max: Number(e.target.value) } : d,
+                                              )
+                                            }
+                                          />
+                                        </label>
+                                        <label className="admin-field">
+                                          <span className="admin-field-label">Monthly cost cap (USD)</span>
+                                          <input
+                                            type="number"
+                                            className="profile-input"
+                                            min={0}
+                                            step={0.01}
+                                            value={limitsDraft.monthly_cost_cap_usd}
+                                            onChange={(e) =>
+                                              setLimitsDraft((d) =>
+                                                d ? { ...d, monthly_cost_cap_usd: Number(e.target.value) } : d,
+                                              )
+                                            }
+                                          />
+                                        </label>
+                                        <label className="admin-field">
+                                          <span className="admin-field-label">Requests / minute max</span>
+                                          <input
+                                            type="number"
+                                            className="profile-input"
+                                            min={1}
+                                            value={limitsDraft.rate_limit_per_min}
+                                            onChange={(e) =>
+                                              setLimitsDraft((d) =>
+                                                d ? { ...d, rate_limit_per_min: Number(e.target.value) } : d,
+                                              )
+                                            }
+                                          />
+                                        </label>
+                                        <label className="admin-field admin-field-switch">
+                                          <span className="admin-field-label">LLM access enabled</span>
+                                          <Switch
+                                            checked={limitsDraft.llm_enabled}
+                                            onCheckedChange={(checked) =>
+                                              setLimitsDraft((d) => (d ? { ...d, llm_enabled: checked } : d))
+                                            }
+                                          />
+                                        </label>
+                                      </div>
+                                      <div className="admin-limits-actions">
+                                        <button
+                                          type="button"
+                                          className="admin-secondary-btn"
+                                          onClick={() => {
+                                            setEditingUserId(null);
+                                            setLimitsDraft(null);
+                                          }}
+                                        >
+                                          Huỷ
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="admin-primary-btn"
+                                          disabled={busy}
+                                          onClick={() => void saveUserLimits()}
+                                        >
+                                          {busy ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Save className="h-4 w-4" />
+                                          )}
+                                          Lưu limits
+                                        </button>
+                                      </div>
+                                      <p className="admin-field-hint">
+                                        Hoạt động cuối: {formatDate(user.last_active_at)} · Tham gia:{" "}
+                                        {formatDate(user.created_at)}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ) : null}
+                            </Fragment>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </section>
             ) : null}
 
             {tab === "cost" ? (
               <section className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Monthly estimated LLM spend per researcher. Cost = tokens × configured rate per 1k tokens (LLM
-                  Policy tab).
+                  Chi phí LLM ước tính theo tháng. Cost = tokens × rate per 1k tokens (tab LLM Policy).
                 </p>
                 <div className="admin-cost-toolbar">
                   <label className="admin-field admin-cost-month-field">
-                    <span className="admin-field-label">Report month</span>
+                    <span className="admin-field-label">Tháng báo cáo</span>
                     <input
                       type="month"
                       className="profile-input admin-month-input"
@@ -620,17 +703,15 @@ function AdminPage() {
                       onChange={(e) => setCostMonth(e.target.value)}
                     />
                   </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch checked={hideCostZero} onCheckedChange={setHideCostZero} />
+                    <span className="text-muted-foreground">Ẩn user chưa dùng</span>
+                  </label>
                   {costReport ? (
                     <div className="admin-cost-summary-pills">
-                      <span className="admin-cost-pill">
-                        Total: {formatUsd(costReport.total_cost_usd)}
-                      </span>
-                      <span className="admin-cost-pill">
-                        {formatNumber(costReport.total_tokens)} tokens
-                      </span>
-                      <span className="admin-cost-pill">
-                        {costReport.active_users_with_usage} users with usage
-                      </span>
+                      <span className="admin-cost-pill">Tổng: {formatUsd(costReport.total_cost_usd)}</span>
+                      <span className="admin-cost-pill">{formatNumber(costReport.total_tokens)} tokens</span>
+                      <span className="admin-cost-pill">{costReport.active_users_with_usage} users có usage</span>
                       <span className="admin-cost-pill admin-cost-pill-muted">
                         ${costReport.rate_per_1k_tokens_usd}/1k tok
                       </span>
@@ -639,48 +720,64 @@ function AdminPage() {
                 </div>
 
                 {costLoading ? (
-                  <WorkspacePanelSkeleton className="py-4" rows={4} label="Loading cost report…" />
-                ) : costReport ? (
-                  <div className="admin-table-wrap">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="admin-table-head-row">
-                          <TableHead>Researcher</TableHead>
-                          <TableHead>Sessions</TableHead>
-                          <TableHead>Tokens</TableHead>
-                          <TableHead>Est. cost</TableHead>
-                          <TableHead>Monthly cap</TableHead>
-                          <TableHead>% of cap</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {costReport.rows.map((row) => (
-                          <TableRow key={row.user_id} className="admin-table-row">
-                            <TableCell>
-                              <div className="min-w-0">
-                                <p className="truncate font-medium">{row.name}</p>
-                                <p className="truncate font-mono-data text-[10px] text-muted-foreground">
-                                  {row.email}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-mono-data text-sm">{formatNumber(row.sessions)}</TableCell>
-                            <TableCell className="font-mono-data text-sm">{formatNumber(row.tokens)}</TableCell>
-                            <TableCell className="font-medium">{formatUsd(row.estimated_cost_usd)}</TableCell>
-                            <TableCell>{formatUsd(row.monthly_cost_cap_usd)}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`admin-badge ${row.pct_of_cap >= 100 ? "admin-badge-warn" : row.pct_of_cap >= 75 ? "admin-badge-admin" : ""}`}
-                              >
-                                {row.pct_of_cap.toFixed(1)}%
-                              </span>
-                            </TableCell>
+                  <WorkspacePanelSkeleton className="py-4" rows={4} label="Đang tải cost report…" />
+                ) : costReport ? (() => {
+                  const rows = hideCostZero
+                    ? costReport.rows.filter((r) => r.tokens > 0)
+                    : costReport.rows;
+                  return rows.length === 0 ? (
+                    <div className="admin-empty-state">
+                      <Coins className="h-8 w-8 opacity-30" strokeWidth={1.5} />
+                      <p className="font-medium">Chưa có usage trong tháng này</p>
+                      <p className="text-sm text-muted-foreground">
+                        {hideCostZero ? "Bỏ chọn 'Ẩn user chưa dùng' để xem toàn bộ danh sách." : "Researcher chưa dùng chat trong tháng đã chọn."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="admin-table-wrap">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="admin-table-head-row">
+                            <TableHead>Researcher</TableHead>
+                            <TableHead>Sessions</TableHead>
+                            <TableHead>Tokens</TableHead>
+                            <TableHead>Chi phí est.</TableHead>
+                            <TableHead>Monthly cap</TableHead>
+                            <TableHead>% of cap</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : null}
+                        </TableHeader>
+                        <TableBody>
+                          {rows.map((row) => (
+                            <TableRow
+                              key={row.user_id}
+                              className={`admin-table-row${row.pct_of_cap >= 100 ? " admin-table-row-warn" : ""}`}
+                            >
+                              <TableCell>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{row.name}</p>
+                                  <p className="truncate font-mono-data text-[10px] text-muted-foreground">
+                                    {row.email}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-mono-data text-sm">{formatNumber(row.sessions)}</TableCell>
+                              <TableCell className="font-mono-data text-sm">{formatNumber(row.tokens)}</TableCell>
+                              <TableCell className="font-medium">{formatUsd(row.estimated_cost_usd)}</TableCell>
+                              <TableCell>{formatUsd(row.monthly_cost_cap_usd)}</TableCell>
+                              <TableCell>
+                                <span
+                                  className={`admin-badge ${row.pct_of_cap >= 100 ? "admin-badge-warn" : row.pct_of_cap >= 75 ? "admin-badge-admin" : ""}`}
+                                >
+                                  {row.pct_of_cap.toFixed(1)}%
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                })() : null}
               </section>
             ) : null}
 

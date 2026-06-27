@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -54,7 +54,39 @@ def _meaningful_session_filter():
     )
 
 
+def _today_month_windows() -> tuple[datetime, datetime, datetime, datetime]:
+    now = datetime.now(UTC)
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start + timedelta(days=1)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = (
+        datetime(now.year + 1, 1, 1, tzinfo=UTC)
+        if now.month == 12
+        else datetime(now.year, now.month + 1, 1, tzinfo=UTC)
+    )
+    return day_start, day_end, month_start, month_end
+
+
+def _tokens_by_user_window(db: Session, start: datetime, end: datetime) -> dict[str, int]:
+    """Return {user_id: token_count} for sessions within [start, end)."""
+    token_expr = effective_tokens_expr()
+    rows = (
+        db.query(
+            resolved_user_id_expr().label("uid"),
+            func.coalesce(func.sum(token_expr), 0),
+        )
+        .outerjoin(Paper, AiSession.paper_id == Paper.id)
+        .filter(resolved_user_id_expr().isnot(None))
+        .filter(_meaningful_session_filter())
+        .filter(AiSession.created_at >= start, AiSession.created_at < end)
+        .group_by(resolved_user_id_expr())
+        .all()
+    )
+    return {str(uid): int(tok or 0) for uid, tok in rows if uid}
+
+
 def _usage_by_user(db: Session, *, month_start=None, month_end=None) -> dict[str, AdminUserUsage]:
+    """All-time (or bounded) usage — for cost report and overview totals."""
     token_expr = effective_tokens_expr()
     query = (
         db.query(
@@ -87,13 +119,26 @@ def _usage_by_user(db: Session, *, month_start=None, month_end=None) -> dict[str
 
 
 def list_admin_users(db: Session) -> list[AdminUserRow]:
+    day_start, day_end, month_start, month_end = _today_month_windows()
     usage_map = _usage_by_user(db)
+    today_map = _tokens_by_user_window(db, day_start, day_end)
+    month_map = _tokens_by_user_window(db, month_start, month_end)
+    rate = cost_rate_per_token()
     users = db.query(User).order_by(User.created_at.desc()).all()
     rows: list[AdminUserRow] = []
     for user in users:
         base = user_to_dict(user)
         uid = str(user.id)
-        usage = usage_map.get(uid, AdminUserUsage())
+        alltime = usage_map.get(uid, AdminUserUsage())
+        month_tok = month_map.get(uid, 0)
+        usage = AdminUserUsage(
+            total_tokens=alltime.total_tokens,
+            session_count=alltime.session_count,
+            estimated_cost_usd=alltime.estimated_cost_usd,
+            today_tokens=today_map.get(uid, 0),
+            month_tokens=month_tok,
+            month_cost_usd=round(month_tok * rate, 4),
+        )
         rows.append(
             AdminUserRow(
                 id=uid,
@@ -148,9 +193,23 @@ def update_admin_user(
 
 
 def _user_row(db: Session, user: User) -> AdminUserRow:
+    day_start, day_end, month_start, month_end = _today_month_windows()
     usage_map = _usage_by_user(db)
+    today_map = _tokens_by_user_window(db, day_start, day_end)
+    month_map = _tokens_by_user_window(db, month_start, month_end)
+    rate = cost_rate_per_token()
     base = user_to_dict(user)
     uid = str(user.id)
+    alltime = usage_map.get(uid, AdminUserUsage())
+    month_tok = month_map.get(uid, 0)
+    usage = AdminUserUsage(
+        total_tokens=alltime.total_tokens,
+        session_count=alltime.session_count,
+        estimated_cost_usd=alltime.estimated_cost_usd,
+        today_tokens=today_map.get(uid, 0),
+        month_tokens=month_tok,
+        month_cost_usd=round(month_tok * rate, 4),
+    )
     return AdminUserRow(
         id=uid,
         email=user.email,
@@ -163,25 +222,34 @@ def _user_row(db: Session, user: User) -> AdminUserRow:
         created_at=_iso(user.created_at),
         last_active_at=_iso(user.last_active_at),
         llm_limits=get_llm_limits_from_profile(user.profile_settings),
-        usage=usage_map.get(uid, AdminUserUsage()),
+        usage=usage,
     )
 
 
 def get_usage_summary(db: Session) -> AdminUsageSummary:
+    day_start, day_end, month_start, month_end = _today_month_windows()
     users = db.query(User).all()
     usage_map = _usage_by_user(db)
+    today_map = _tokens_by_user_window(db, day_start, day_end)
+    month_map = _tokens_by_user_window(db, month_start, month_end)
+    rate = cost_rate_per_token()
+
     total_tokens = sum(u.total_tokens for u in usage_map.values())
     total_sessions = sum(u.session_count for u in usage_map.values())
     total_cost = sum(u.estimated_cost_usd for u in usage_map.values())
+    today_total = sum(today_map.values())
+    month_total = sum(month_map.values())
+    month_cost = round(month_total * rate, 4)
 
-    over_token = 0
-    over_cost = 0
+    # Quota alerts — compare correct windows against limits
+    over_token = 0  # today's tokens > daily cap
+    over_cost = 0   # this month's cost > monthly cap
     for user in users:
         limits = get_llm_limits_from_profile(user.profile_settings)
-        usage = usage_map.get(str(user.id), AdminUserUsage())
-        if usage.total_tokens > limits.daily_token_max:
+        uid = str(user.id)
+        if today_map.get(uid, 0) >= limits.daily_token_max:
             over_token += 1
-        if usage.estimated_cost_usd > limits.monthly_cost_cap_usd:
+        if round(month_map.get(uid, 0) * rate, 4) >= limits.monthly_cost_cap_usd:
             over_cost += 1
 
     return AdminUsageSummary(
@@ -193,6 +261,8 @@ def get_usage_summary(db: Session) -> AdminUsageSummary:
         total_tokens=total_tokens,
         total_sessions=total_sessions,
         estimated_total_cost_usd=round(total_cost, 4),
+        today_tokens=today_total,
+        month_cost_usd=month_cost,
         users_over_token_cap=over_token,
         users_over_cost_cap=over_cost,
     )

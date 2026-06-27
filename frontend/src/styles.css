@@ -7509,6 +7509,43 @@ html[lang="vi"] .hero-headline {
   color: var(--admin-text-muted);
 }
 
+.admin-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  border: 1px dashed var(--admin-border);
+  border-radius: var(--admin-radius);
+  text-align: center;
+  color: var(--admin-text-muted);
+}
+
+.admin-confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid oklch(0.75 0.12 75);
+  border-radius: var(--admin-radius-sm);
+  background: oklch(0.97 0.04 75 / 0.5);
+  color: var(--admin-text);
+}
+
+.dark .admin-confirm-bar {
+  background: oklch(0.22 0.06 75 / 0.4);
+  border-color: oklch(0.55 0.12 75);
+}
+
+.admin-table-row-warn {
+  background: oklch(0.97 0.04 75 / 0.35);
+}
+
+.dark .admin-table-row-warn {
+  background: oklch(0.22 0.06 75 / 0.25);
+}
+
 .admin-cost-toolbar {
   display: flex;
   flex-wrap: wrap;

@@ -24,6 +24,10 @@ class AdminUserUsage(BaseModel):
     total_tokens: int = 0
     session_count: int = 0
     estimated_cost_usd: float = 0.0
+    # Windowed — used for accurate quota comparison
+    today_tokens: int = 0
+    month_tokens: int = 0
+    month_cost_usd: float = 0.0
 
 
 class AdminUserRow(BaseModel):
@@ -59,6 +63,10 @@ class AdminUsageSummary(BaseModel):
     total_tokens: int
     total_sessions: int
     estimated_total_cost_usd: float
+    # Windowed aggregates for dashboard cards
+    today_tokens: int = 0
+    month_cost_usd: float = 0.0
+    # Quota alerts — counted against correct windows (today vs daily cap, month vs monthly cap)
     users_over_token_cap: int
     users_over_cost_cap: int
 

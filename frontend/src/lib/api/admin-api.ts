@@ -16,6 +16,9 @@ export type AdminUserUsage = {
   total_tokens: number;
   session_count: number;
   estimated_cost_usd: number;
+  today_tokens: number;
+  month_tokens: number;
+  month_cost_usd: number;
 };
 
 export type AdminUserRow = {
@@ -40,6 +43,8 @@ export type AdminUsageSummary = {
   total_tokens: number;
   total_sessions: number;
   estimated_total_cost_usd: number;
+  today_tokens: number;
+  month_cost_usd: number;
   users_over_token_cap: number;
   users_over_cost_cap: number;
 };
