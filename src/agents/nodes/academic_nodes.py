@@ -7,10 +7,9 @@ import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-logger = logging.getLogger(__name__)
-
 from src.agents.state import AgentState
 from src.config import get_settings
+from src.services.chat_context import build_chat_user_content
 from src.services.citations.verifier import verify_citations
 from src.services.edit_executor import (
     build_edit_payload,
@@ -20,7 +19,6 @@ from src.services.edit_executor import (
     validate_proposed_edit,
 )
 from src.services.edit_planner import infer_edit_plan_rules, plan_edit
-from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
 from src.services.guardrails.integrity import (
     build_diff,
     check_integrity,
@@ -31,6 +29,7 @@ from src.services.guardrails.output_sanitize import (
     looks_like_chatty_output,
     sanitize_style_output,
 )
+from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
 from src.services.llm import get_llm, resolve_heavy_edit_model
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
@@ -41,13 +40,14 @@ from src.services.parser.latex import (
     parse_bib_entries,
     parse_latex_sections,
 )
-from src.services.chat_context import build_chat_user_content
 from src.services.prompts import (
     build_system_prompt,
     format_sections_summary,
     render_user_prompt,
 )
 from src.services.sessions import session_store
+
+logger = logging.getLogger(__name__)
 
 # Kept for prepare_style_target fallback when router scope is missing
 _FILE_SCOPE_RE = re.compile(

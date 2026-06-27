@@ -3,17 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-import logging
-
 from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 
-from src.config import get_settings
-
-logger = logging.getLogger(__name__)
 from src.db.engine import db_is_ready, get_db
 from src.db.models import User
 from src.models.schemas import DefenseConversationTurn, DefenseRequest
@@ -23,6 +19,8 @@ from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
 from src.services.prompts import get_prompt, render_template
 from src.services.quota_policy import QuotaExceededError
+
+logger = logging.getLogger(__name__)
 
 # Proxy/ASGI buffering workaround — same as chat_stream.py
 _SSE_FLUSH_PAD = ": " + (" " * 2048) + "\n\n"
@@ -211,8 +209,6 @@ async def stream_defense(
       done      → {"response": "<full assembled text>"}
       error     → {"message": "..."}
     """
-    settings = get_settings()
-
     if user_id is not None and db_is_ready():
         try:
             with get_db() as db:

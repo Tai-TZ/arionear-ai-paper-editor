@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from src.services.latex_outline import find_latex_command_block as _find_latex_command_block
+
 _RENAME_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"đổi\s+(?:đề\s+tài\s+)?từ\s+(.+?)\s+sang\s+(.+)", re.IGNORECASE),
     re.compile(r"đổi\s+(.+?)\s+sang\s+(.+)", re.IGNORECASE),
@@ -50,8 +52,6 @@ _TITLE_QUERY_RE = re.compile(
     r"tiêu đề|title|đề\s*tài|tên\s*(?:đề\s*)?tài",
     re.IGNORECASE,
 )
-
-from src.services.latex_outline import find_latex_command_block as _find_latex_command_block
 
 
 def find_latex_command_block(latex: str, command: str) -> tuple[str, str, int, int] | None:
