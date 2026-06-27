@@ -139,6 +139,8 @@ export type ChatResult = {
     original_text: string;
     replacement_text: string;
     description?: string;
+    selection_start?: number;
+    selection_end?: number;
   }[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];

@@ -88,7 +88,7 @@ function TreeRow({
       onToggleFolder(node.id);
       return;
     }
-    if (node.editable) onSelectFile(node.path);
+    if (node.editable || node.kind === "image") onSelectFile(node.path);
   };
 
   return (
@@ -114,7 +114,7 @@ function TreeRow({
         {node.path === mainFile && node.kind === "tex" ? (
           <span className="project-file-tree-badge">{mainBadge}</span>
         ) : null}
-        {isActive && isDirty ? <span className="file-dirty-mark">*</span> : null}
+        {isActive && isDirty && node.editable ? <span className="file-dirty-mark">*</span> : null}
       </button>
       {isFolder && isOpen
         ? (node.children ?? []).map((child) => (

@@ -144,13 +144,12 @@ export function buildInlineSuggestionView(
   const originalLines = splitLinesKeepEmpty(range.matched);
   const suggestionLines = splitLinesKeepEmpty(suggestionScoped);
 
-  // Cursor-like view: keep file context, but show original (red) then suggestion (green).
+  // Stacked diff: original (red) then suggestion (green). Offsets drive apply on Accept.
   const displayLatex = before + range.matched + "\n" + suggestionScoped + after;
   const displayLines = displayLatex.split("\n");
 
   const startLine = offsetToLine(displayLatex, range.start);
 
-  // Change block occupies: originalLines + suggestionLines (+ maybe join newline)
   const changeStartLine = startLine;
   const changeEndLine =
     changeStartLine + Math.max(1, originalLines.length + suggestionLines.length) - 1;

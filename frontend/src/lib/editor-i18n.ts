@@ -25,6 +25,10 @@ export type EditorCopy = {
     emptyTree: string;
     fileActions: string;
   };
+  assetPreview: {
+    download: string;
+    missing: string;
+  };
   toolbar: {
     share: string;
     export: string;
@@ -172,6 +176,10 @@ const EN: EditorCopy = {
     importZip: "Import Overleaf ZIP",
     emptyTree: "No files yet. Import a ZIP or upload files.",
     fileActions: "File actions",
+  },
+  assetPreview: {
+    download: "Download",
+    missing: "Could not load this file.",
   },
   toolbar: {
     share: "Share",
@@ -328,6 +336,10 @@ const VI: EditorCopy = {
     importZip: "Nhập ZIP Overleaf",
     emptyTree: "Chưa có tệp. Nhập ZIP Overleaf hoặc tải tệp lên.",
     fileActions: "Thao tác tệp",
+  },
+  assetPreview: {
+    download: "Tải xuống",
+    missing: "Không tải được tệp này.",
   },
   toolbar: {
     share: "Chia sẻ",

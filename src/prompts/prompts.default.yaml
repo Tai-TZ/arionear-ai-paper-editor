@@ -106,6 +106,42 @@ router:
     - Prefer style/edit over chat when the manuscript is open and the request implies changing text.
     - Use chat only for pure questions.
 
+edit_planner:
+  system: |
+    You are the EDIT SCOPE PLANNER for ARIONEAR Paper IDE.
+    Given a user request and a manuscript OUTLINE (not full LaTeX), decide WHERE to edit.
+    Return ONLY valid JSON:
+    {
+      "target_type": "latex_command | section | selection | substring | document",
+      "target_id": "title | author | abstract | section name | empty",
+      "operation": "replace_body | replace_substring | replace_snippet",
+      "find": "text to find (substring ops only)",
+      "replace": "replacement text (substring ops only)",
+      "new_body": "new inner body (replace_body only)",
+      "confidence": 0.0-1.0,
+      "label": "short human label in Vietnamese"
+    }
+
+    Rules:
+    - "đề tài", "tiêu đề", "title", "tên bài" → target_type=latex_command, target_id=title (NOT document).
+    - "tác giả", "author" → target_type=latex_command, target_id=author.
+    - "abstract", "tóm tắt" → target_type=section, target_id=Abstract.
+    - Section names in outline → target_type=section.
+    - "EfficientNetV2" → "EfficientNetV3" in title only → latex_command title + replace_substring.
+    - Use target_type=document ONLY when user explicitly asks for whole file / toàn bộ bài / everywhere.
+    - Never choose document when user mentions a single field (title, author, abstract, one section).
+    - If text_selected is true → target_type=selection.
+    - Prefer replace_substring for model/version swaps; replace_snippet for rewrites.
+
+  user: |
+    User request:
+    {query}
+
+    text_selected: {has_selection}
+
+    Manuscript outline:
+    {outline}
+
 citation_relevance:
   system: |
     Evaluate whether the cited work is relevant to the claim context.

@@ -29,6 +29,7 @@ from src.services.parser.latex import (
     parse_latex_sections,
 )
 from src.services.chat_context import build_chat_user_content, task_needs_manuscript
+from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
 from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
@@ -131,6 +132,19 @@ def _task_label(task: str) -> str:
 def _scope_detail(prepared: dict[str, Any]) -> tuple[str, str]:
     """Return (section_name, human detail) for the editing scope."""
     section = str(prepared.get("section") or "").strip()
+    scope_label = str(prepared.get("scope_label") or "").strip()
+    if scope_label:
+        return section, scope_label
+
+    section_key = section.lower()
+    metadata_labels = {
+        "title": "Tiêu đề · \\title{...}",
+        "author": "Tác giả · \\author{...}",
+        "abstract": "Abstract · \\begin{abstract}",
+    }
+    if section_key in metadata_labels:
+        return section, metadata_labels[section_key]
+
     text = str(prepared.get("original_text") or "")
     word_count = len(text.split())
     apply_mode = prepared.get("apply_mode", "document")
@@ -139,6 +153,11 @@ def _scope_detail(prepared: dict[str, Any]) -> tuple[str, str]:
     if apply_mode == "document":
         return "", f"Toàn bộ main.tex · ~{word_count:,} từ".replace(",", ".")
     return "", f"Đoạn đã chọn · ~{word_count:,} từ".replace(",", ".")
+
+
+def _preview_edit_scope(query: str, latex: str, selection: str = "") -> tuple[str, str]:
+    """Resolve human scope label before running the full edit pipeline."""
+    return resolve_preview_edit_scope(query, latex, selection=selection)
 
 
 async def _monitor_long_task(
@@ -367,7 +386,15 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         trace = await tracker.stage("intent_classified", intent=task, scope=intent.scope)
         yield _sse("trace", trace)
 
-        intent_detail = f"{_task_label(task)} · phạm vi {intent.scope}"
+        if task == "edit":
+            _, scope_preview = _preview_edit_scope(
+                effective_message,
+                raw_latex,
+                request.selection or "",
+            )
+            intent_detail = f"{_task_label(task)} · {scope_preview}"
+        else:
+            intent_detail = f"{_task_label(task)} · phạm vi {intent.scope}"
         state_evt, act_evt = _emit_state(
             "intent",
             "Đã xác định ý định",
@@ -412,6 +439,20 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         apply_mode: str = intent.scope
         if has_selection:
             apply_mode = "selection"
+        elif task == "edit" and raw_latex.strip():
+            preview_prepared = prepare_edit_target(
+                {
+                    "query": effective_message,
+                    "latex": raw_latex,
+                    "selection": request.selection or "",
+                    "parsed_sections": [],
+                    "apply_mode": intent.scope,
+                },
+                effective_message,
+            )
+            preview_mode = preview_prepared.get("apply_mode")
+            if preview_mode == "selection":
+                apply_mode = "selection"
 
         state: AgentState = {
             "query": effective_message,
