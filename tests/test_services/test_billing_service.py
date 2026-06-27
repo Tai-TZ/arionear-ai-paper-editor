@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,6 +26,7 @@ def _mock_db_with_subscription(*, tier: UserTier = UserTier.FREE, turns_used: in
     sub.tier = tier
     sub.defense_turns_used = turns_used
     sub.upgraded_at = None
+    sub.turns_reset_at = datetime.now(UTC)
     sub.created_at = MagicMock()
     sub.created_at.isoformat.return_value = "2026-06-26T00:00:00+00:00"
 
@@ -62,6 +64,9 @@ def test_defense_quota_status_adapter():
     assert status["limit"] == PRO_DEFENSE_TURNS
     assert status["used"] == 10
     assert status["remaining"] == PRO_DEFENSE_TURNS - 10
+    assert status["period"] == "day"
+    assert status["period_type"] == "daily"
+    assert status["resets_at"] is not None
 
 
 def test_assert_blocks_when_exhausted():
@@ -107,3 +112,27 @@ def test_upgrade_to_pro():
     assert sub.upgraded_at is not None
     assert status["tier"] == "pro"
     assert status["defense_turns_limit"] == PRO_DEFENSE_TURNS
+
+
+def test_free_quota_resets_after_period_end():
+    user = MagicMock(id=uuid.uuid4())
+    db, sub = _mock_db_with_subscription(tier=UserTier.FREE, turns_used=FREE_DEFENSE_TURNS)
+    sub.turns_reset_at = datetime.now(UTC) - timedelta(days=1)
+
+    status = get_billing_status(db, user)
+
+    assert sub.defense_turns_used == 0
+    assert status["defense_turns_used"] == 0
+    assert status["defense_turns_remaining"] == FREE_DEFENSE_TURNS
+
+
+def test_pro_quota_resets_after_period_end():
+    user = MagicMock(id=uuid.uuid4())
+    db, sub = _mock_db_with_subscription(tier=UserTier.PRO, turns_used=PRO_DEFENSE_TURNS)
+    sub.turns_reset_at = datetime.now(UTC) - timedelta(days=1)
+
+    status = get_billing_status(db, user)
+
+    assert sub.defense_turns_used == 0
+    assert status["defense_turns_used"] == 0
+    assert status["defense_turns_remaining"] == PRO_DEFENSE_TURNS

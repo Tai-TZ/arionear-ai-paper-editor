@@ -1,5 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/require-auth";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   User,
@@ -14,9 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { getSession, signOut } from "@/lib/auth-store";
-import { authToast } from "@/lib/auth-toast";
-import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
+import { getSession } from "@/lib/auth-store";
 import { ProfileContentSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { fetchResearcherProfile, updateResearcherProfile } from "@/lib/api/profile-api";
 import {
@@ -33,11 +30,8 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/profile")({
+export const Route = createFileRoute("/_workspace/profile")({
   ssr: false,
-  beforeLoad: () => {
-    requireAuth();
-  },
   head: () => ({
     meta: [
       { title: "Researcher Profile — Arionear" },
@@ -53,7 +47,6 @@ export const Route = createFileRoute("/profile")({
 type SectionId = "identity" | "research" | "writing" | "ai" | "workflow" | "privacy";
 
 function ProfilePage() {
-  const navigate = useNavigate();
   const sessionUser = getSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -133,19 +126,7 @@ function ProfilePage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  const handleSignOut = () => {
-    signOut();
-    authToast.signOutSuccess();
-    navigate({ to: "/signin" });
-  };
-
   return (
-    <WorkspaceLayout
-      active="profile"
-      user={sessionUser}
-      profile={form}
-      onSignOut={handleSignOut}
-    >
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="workspace-main-header profile-sticky-header profile-page-header flex shrink-0 items-center justify-between gap-3 border-b border-border/50 bg-background/90 px-4 backdrop-blur-md md:px-8">
           <div className="profile-page-header-text min-w-0">
@@ -519,7 +500,6 @@ function ProfilePage() {
           </div>
         )}
       </main>
-    </WorkspaceLayout>
   );
 }
 

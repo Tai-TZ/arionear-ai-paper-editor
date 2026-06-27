@@ -114,11 +114,15 @@ def _assistant_opening_snippet(content: str, *, max_len: int = 48) -> str:
     return snippet
 
 
-def _build_turn_directive(history: list[DefenseConversationTurn]) -> str:
+def _build_turn_directive(history: list[DefenseConversationTurn], *, locale: str = "vi") -> str:
     if not history:
+        if locale == "en":
+            return "This is the opening turn — brief introduction, then ask the first question."
         return "Đây là lượt mở đầu phiên — giới thiệu ngắn và đặt câu hỏi đầu tiên."
 
     if history[-1].role != "user":
+        if locale == "en":
+            return "Continue the defense session."
         return "Tiếp tục phiên phản biện."
 
     recent_openers = [
@@ -127,21 +131,32 @@ def _build_turn_directive(history: list[DefenseConversationTurn]) -> str:
         if turn.role == "assistant" and turn.content.strip()
     ][-3:]
 
-    lines = [
-        "Đây là lượt hỏi tiếp theo sau câu trả lời của tác giả.",
-        "CẤM mở đầu bằng: \"Tôi ghi nhận điều đó\", \"Cảm ơn bạn\", \"I acknowledge that\", hoặc bất kỳ câu ghi nhận chung nào.",
-        "Bắt đầu trực tiếp bằng câu hỏi hoặc một nhận xét cụ thể về nội dung bài/câu trả lời vừa rồi.",
-    ]
-    if recent_openers:
-        lines.append("Các mở đầu bạn đã dùng — không lặp lại: " + " | ".join(recent_openers))
+    if locale == "en":
+        lines = [
+            "This is the next question after the author's reply.",
+            'FORBIDDEN openers: "I acknowledge that", "Thank you", "I note that", or any generic acknowledgment.',
+            "Start directly with the question or a specific observation about the paper/answer.",
+        ]
+        if recent_openers:
+            lines.append("Openers you have already used — do not repeat: " + " | ".join(recent_openers))
+    else:
+        lines = [
+            "Đây là lượt hỏi tiếp theo sau câu trả lời của tác giả.",
+            "CẤM mở đầu bằng: \"Tôi ghi nhận điều đó\", \"Cảm ơn bạn\", \"I acknowledge that\", hoặc bất kỳ câu ghi nhận chung nào.",
+            "Bắt đầu trực tiếp bằng câu hỏi hoặc một nhận xét cụ thể về nội dung bài/câu trả lời vừa rồi.",
+        ]
+        if recent_openers:
+            lines.append("Các mở đầu bạn đã dùng — không lặp lại: " + " | ".join(recent_openers))
     return "\n".join(lines)
 
 
 def _build_system_message(
     latex_content: str,
-    mode: str,
     turn_count: int,
     history: list[DefenseConversationTurn],
+    *,
+    user_name: str = "bạn",
+    locale: str = "vi",
 ) -> str:
     """Render the defense council system prompt with paper context."""
     system_template = get_prompt("defense_council_member", "system")
@@ -156,8 +171,9 @@ def _build_system_message(
         user_template,
         latex_content=truncated,
         turn_count=str(turn_count),
-        mode=mode,
-        turn_directive=_build_turn_directive(history),
+        turn_directive=_build_turn_directive(history, locale=locale),
+        user_name=user_name,
+        locale=locale,
     )
 
     return f"{system_template.strip()}\n\n{user_section.strip()}"
@@ -231,11 +247,14 @@ async def stream_defense(
 
     # Build conversation messages
     turn_count = len(request.conversation_history)
+    locale = request.locale or "vi"
+    user_name = (request.user_name or "").strip() or ("bạn" if locale == "vi" else "there")
     system_content = _build_system_message(
         request.latex_content,
-        request.mode,
         turn_count,
         request.conversation_history,
+        user_name=user_name,
+        locale=locale,
     )
 
     messages: list = [SystemMessage(content=system_content)]
@@ -253,16 +272,22 @@ async def stream_defense(
     # If it's a follow-up, the last human message from history drives the next turn.
     # If history is empty (first call), add a trigger so the LLM starts the session.
     if not request.conversation_history:
-        messages.append(
-            HumanMessage(content="[Bắt đầu phiên phản biện]")
-        )
+        trigger = "[Start defense session]" if locale == "en" else "[Bắt đầu phiên phản biện]"
+        messages.append(HumanMessage(content=trigger))
 
-    # Emit initial activity
-    activity_text = (
-        "Đang phân tích bản thảo nghiên cứu..."
-        if turn_count == 0
-        else "Đang soạn câu hỏi tiếp theo..."
-    )
+    # Emit initial activity (localized; UI also maps to its own copy)
+    if locale == "en":
+        activity_text = (
+            "Analyzing the research paper..."
+            if turn_count == 0
+            else "Preparing the next question..."
+        )
+    else:
+        activity_text = (
+            "Đang phân tích bài nghiên cứu..."
+            if turn_count == 0
+            else "Đang soạn câu hỏi tiếp theo..."
+        )
     yield _sse("activity", {"text": activity_text})
 
     use_stripper = any(t.role == "user" for t in request.conversation_history)

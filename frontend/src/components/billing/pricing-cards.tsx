@@ -1,16 +1,15 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Check, Zap, BookOpen, Shield, Loader2, Crown } from "lucide-react";
+import { BookOpen, Check, Zap, Loader2, X, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/components/locale-provider";
 import { marketingCopy } from "@/lib/marketing-i18n";
 import type { UiLanguage } from "@/lib/researcher-profile";
 import { type BillingStatus, type UserTier, createCheckout } from "@/lib/api/billing-api";
+import { editorEntryPath } from "@/lib/require-auth";
 import { QrCheckoutDialog } from "@/components/billing/qr-checkout-dialog";
-
-// ─── Plan definitions ────────────────────────────────────────────────────
 
 type PlanFeature = { text: string; included: boolean };
 
@@ -54,37 +53,154 @@ function buildPlans(locale: UiLanguage): PlanConfig[] {
   ];
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────
-
 function FeatureRow({ text, included }: PlanFeature) {
   return (
-    <li className="flex items-start gap-3">
-      <span
-        className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-          included
-            ? "bg-emerald-500/15 text-emerald-500"
-            : "bg-muted text-muted-foreground/40",
-        )}
-      >
-        <Check className="h-3 w-3" strokeWidth={3} />
-      </span>
-      <span className={cn("text-sm", !included && "text-muted-foreground/50 line-through")}>
+    <li className={cn("flex items-start gap-2.5", !included && "opacity-45")}>
+      {included ? (
+        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--editorial-red)]" strokeWidth={2.5} />
+      ) : (
+        <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
+      )}
+      <span className={cn("font-body text-sm leading-snug", !included && "line-through text-muted-foreground")}>
         {text}
       </span>
     </li>
   );
 }
 
-// ─── Main component ──────────────────────────────────────────────────────
+function PlanCta({
+  isCurrentPlan,
+  isUpgradeable,
+  isGuestUpgrade,
+  isFreeEntry,
+  upgrading,
+  cta,
+  currentPlanCta,
+  upgradingLabel,
+  onUpgrade,
+}: {
+  isCurrentPlan: boolean;
+  isUpgradeable: boolean;
+  isGuestUpgrade: boolean;
+  isFreeEntry: boolean;
+  upgrading: boolean;
+  cta: string;
+  currentPlanCta: string;
+  upgradingLabel: string;
+  onUpgrade: () => void;
+}) {
+  const base =
+    "inline-flex w-full items-center justify-center gap-2 px-4 py-2.5 font-sans-ui text-[11px] uppercase tracking-widest transition-all min-h-[42px]";
+
+  if (isCurrentPlan) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-current="true"
+        className={cn(base, "border border-foreground bg-foreground/5 text-foreground cursor-default")}
+      >
+        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+        {currentPlanCta}
+      </button>
+    );
+  }
+
+  if (isUpgradeable) {
+    return (
+      <button
+        type="button"
+        onClick={onUpgrade}
+        disabled={upgrading}
+        className={cn(
+          base,
+          "border border-foreground bg-foreground text-background hover:bg-background hover:text-foreground disabled:opacity-60",
+        )}
+      >
+        {upgrading ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            {upgradingLabel}
+          </>
+        ) : (
+          <>
+            <Zap className="h-3.5 w-3.5" strokeWidth={1.5} />
+            {cta}
+          </>
+        )}
+      </button>
+    );
+  }
+
+  if (isGuestUpgrade) {
+    return (
+      <Link
+        to="/signin"
+        className={cn(
+          base,
+          "border border-foreground bg-foreground text-background hover:bg-background hover:text-foreground",
+        )}
+      >
+        <Zap className="h-3.5 w-3.5" strokeWidth={1.5} />
+        {cta}
+      </Link>
+    );
+  }
+
+  if (isFreeEntry) {
+    return (
+      <Link
+        to={editorEntryPath()}
+        className={cn(
+          base,
+          "border border-foreground/60 bg-transparent hover:border-foreground hover:bg-foreground hover:text-background",
+        )}
+      >
+        {cta}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled
+      className={cn(base, "border border-foreground/25 text-muted-foreground cursor-default")}
+    >
+      {cta}
+    </button>
+  );
+}
+
+function QuotaUsageBarSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-4 border border-foreground/30 bg-foreground/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+      aria-hidden
+    >
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-3 w-36" />
+        <Skeleton className="h-7 w-24" />
+      </div>
+      <div className="w-full space-y-2 sm:max-w-[200px] sm:flex-1">
+        <div className="flex justify-between">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <Skeleton className="h-1.5 w-full rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 type Props = {
-  /** Pass null while loading, pass status once fetched, or pass undefined to hide quota bar. */
   billingStatus: BillingStatus | null | undefined;
+  billingLoading?: boolean;
+  billingError?: boolean;
   onUpgradeSuccess?: (updated: BillingStatus) => void;
 };
 
-export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
+export function PricingCards({ billingStatus, billingLoading = false, billingError = false, onUpgradeSuccess }: Props) {
   const { locale } = useLocale();
   const plans = useMemo(() => buildPlans(locale), [locale]);
   const planCopy = useMemo(() => marketingCopy(locale).plans, [locale]);
@@ -95,7 +211,8 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
     qrPngB64: string;
     expiresInMinutes: number;
   } | null>(null);
-  const currentTier: UserTier = billingStatus?.tier ?? "free";
+  const currentTier = billingStatus?.tier ?? null;
+  const showQuota = billingLoading || billingStatus != null;
 
   const handleUpgrade = async () => {
     setUpgrading(true);
@@ -116,117 +233,100 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      {/* Quota usage bar — only shown when billing data is loaded */}
-      {billingStatus && (
-        <QuotaUsageBar status={billingStatus} />
-      )}
+    <div className="flex flex-col gap-8">
+      {showQuota &&
+        (billingLoading ? (
+          <QuotaUsageBarSkeleton />
+        ) : (
+          billingStatus && <QuotaUsageBar status={billingStatus} copy={planCopy} locale={locale} />
+        ))}
 
-      {/* Pricing cards */}
-      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
+      <div className="mx-auto grid w-full max-w-2xl grid-cols-1 items-stretch gap-5 sm:grid-cols-2">
         {plans.map((plan) => {
-          const isCurrentPlan = plan.tier === currentTier;
-          const isUpgradeable = plan.tier === "pro" && currentTier === "free";
+          const isCurrentPlan = currentTier !== null && plan.tier === currentTier;
+          // When billing errored but user is authenticated, allow upgrade attempt
+          // (server will reject if already Pro); never show "sign in" to a logged-in user.
+          const isUpgradeable =
+            plan.tier === "pro" &&
+            (currentTier === "free" || (billingError && currentTier === null));
+          const isGuestUpgrade = plan.tier === "pro" && currentTier === null && !billingError;
+          // Pro users can still open the editor — show the link, not a disabled button.
+          const isFreeEntry = plan.tier === "free" && !isCurrentPlan;
+          const TierIcon = plan.highlight ? Zap : BookOpen;
 
           return (
-            <div
+            <article
               key={plan.tier}
               className={cn(
-                "relative flex flex-col rounded-2xl border bg-card p-8 shadow-sm transition-shadow",
+                "relative flex flex-col rounded-sm border bg-background p-5 sm:p-6",
                 plan.highlight
-                  ? "border-primary/50 shadow-primary/10 shadow-lg ring-1 ring-primary/20"
-                  : "border-border",
+                  ? "border-foreground shadow-[3px_3px_0_0_var(--foreground)]"
+                  : "border-foreground/40",
+                isCurrentPlan && "border-foreground",
               )}
             >
               {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="gap-1 bg-primary px-3 py-1 text-primary-foreground shadow">
-                    <Crown className="h-3 w-3" />
+                <div className="absolute top-0 right-0 bg-[color:var(--editorial-red)] px-2.5 py-1">
+                  <span className="font-mono-data text-[10px] uppercase tracking-widest text-background">
                     {planCopy.pro.badge}
-                  </Badge>
+                  </span>
                 </div>
               )}
 
-              {/* Plan header */}
-              <div className="mb-6">
-                <div className="mb-1 flex items-center gap-2">
-                  {plan.tier === "pro" ? (
-                    <Zap className="h-5 w-5 text-primary" />
-                  ) : (
-                    <BookOpen className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <span className="text-lg font-semibold">{plan.name}</span>
-                  {isCurrentPlan && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      Đang dùng
-                    </Badge>
-                  )}
+              <div className="mb-5">
+                <div className={cn("flex items-center gap-2.5", plan.highlight && "pr-16")}>
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center border",
+                      plan.highlight ? "border-foreground bg-foreground text-background" : "border-foreground/60",
+                    )}
+                  >
+                    <TierIcon className="h-4 w-4" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                    <span className="font-serif-display text-3xl font-black tracking-tighter leading-none">
+                      {plan.price}
+                    </span>
+                    <span className="font-mono-data text-xs text-muted-foreground">{plan.priceSub}</span>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{plan.tagline}</p>
+                <p className="mt-2 font-body text-sm leading-snug text-muted-foreground">{plan.tagline}</p>
               </div>
 
-              {/* Price */}
-              <div className="mb-8">
-                <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
-                <span className="ml-1 text-muted-foreground">{plan.priceSub}</span>
+              <div className="mb-5 border-t border-foreground/15 pt-5">
+                <p className="mb-3 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {locale === "vi" ? "Bao gồm" : "Includes"}
+                </p>
+                <ul className="flex flex-col gap-2.5">
+                  {plan.features.map((f) => (
+                    <FeatureRow key={f.text} {...f} />
+                  ))}
+                </ul>
               </div>
 
-              {/* CTA button */}
-              {isUpgradeable ? (
-                <Button
-                  onClick={handleUpgrade}
-                  disabled={upgrading}
-                  className="mb-8 w-full gap-2"
-                  size="lg"
-                >
-                  {upgrading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4" />
-                      {plan.cta}
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  variant={isCurrentPlan ? "secondary" : "outline"}
-                  className="mb-8 w-full"
-                  size="lg"
-                  disabled={isCurrentPlan}
-                >
-                  {isCurrentPlan ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      {plan.cta}
-                    </>
-                  ) : (
-                    plan.cta
-                  )}
-                </Button>
-              )}
-
-              {/* Feature list */}
-              <ul className="flex flex-col gap-3">
-                {plan.features.map((f) => (
-                  <FeatureRow key={f.text} {...f} />
-                ))}
-              </ul>
-            </div>
+              <div className="mt-auto">
+                <PlanCta
+                  isCurrentPlan={isCurrentPlan}
+                  isUpgradeable={isUpgradeable}
+                  isGuestUpgrade={isGuestUpgrade}
+                  isFreeEntry={isFreeEntry}
+                  upgrading={upgrading}
+                  cta={plan.cta}
+                  currentPlanCta={planCopy.currentPlanCta}
+                  upgradingLabel={planCopy.upgrading}
+                  onUpgrade={handleUpgrade}
+                />
+              </div>
+            </article>
           );
         })}
       </div>
 
-      {/* Trust note */}
-      <p className="flex items-center gap-2 text-center text-sm text-muted-foreground">
-        <Shield className="h-4 w-4 shrink-0" />
+      <p className="flex items-center justify-center gap-2 text-center font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+        <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
         {planCopy.footnote}
       </p>
 
-      {/* QR checkout dialog */}
       {qrData && (
         <QrCheckoutDialog
           open={qrOpen}
@@ -249,36 +349,65 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
   );
 }
 
-// ─── Quota bar ────────────────────────────────────────────────────────────
-
-function QuotaUsageBar({ status }: { status: BillingStatus }) {
-  const pct = status.defense_turns_limit > 0
-    ? Math.min(100, (status.defense_turns_used / status.defense_turns_limit) * 100)
-    : 0;
+function QuotaUsageBar({
+  status,
+  copy,
+  locale,
+}: {
+  status: BillingStatus;
+  copy: ReturnType<typeof marketingCopy>["plans"];
+  locale: UiLanguage;
+}) {
+  const pct =
+    status.defense_turns_limit > 0
+      ? Math.min(100, (status.defense_turns_used / status.defense_turns_limit) * 100)
+      : 0;
   const isFull = status.defense_turns_remaining === 0;
+  const remaining = status.defense_turns_limit - status.defense_turns_used;
 
   return (
-    <div className="w-full max-w-md rounded-xl border bg-card p-4">
-      <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-medium">Defense turns đã dùng</span>
-        <span className={cn("font-mono text-xs", isFull ? "text-destructive" : "text-muted-foreground")}>
-          {status.defense_turns_used} / {status.defense_turns_limit}
-        </span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-500",
-            isFull ? "bg-destructive" : pct > 80 ? "bg-amber-500" : "bg-primary",
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {isFull && (
-        <p className="mt-2 text-xs text-destructive">
-          Bạn đã hết lượt. Nâng cấp Pro để có thêm 50 lượt mỗi tháng.
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 border border-foreground/30 bg-foreground/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="min-w-0 flex-1">
+        <p className="font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+          {copy.quotaLabel}
         </p>
-      )}
+        <p className="mt-1 font-serif-display text-xl font-bold tracking-tight">
+          {status.defense_turns_used}
+          <span className="font-mono-data text-sm font-normal text-muted-foreground">
+            {" "}/ {status.defense_turns_limit}
+            <span className="ml-1.5 text-[11px] uppercase tracking-widest">
+              {copy.quotaPeriodDaily}
+            </span>
+          </span>
+        </p>
+      </div>
+
+      <div className="w-full sm:max-w-[200px] sm:flex-1">
+        <div className="mb-2 flex justify-between font-mono-data text-[10px] uppercase tracking-widest">
+          <span className="text-muted-foreground">{locale === "vi" ? "Đã dùng" : "Used"}</span>
+          <span className={cn(isFull ? "text-destructive" : "text-muted-foreground")}>
+            {isFull
+              ? locale === "vi"
+                ? "Hết lượt"
+                : "Limit reached"
+              : locale === "vi"
+                ? `Còn ${remaining}`
+                : `${remaining} left`}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              isFull ? "bg-destructive" : pct > 80 ? "bg-amber-500" : "bg-foreground",
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {isFull && (
+          <p className="mt-2 font-body text-xs text-destructive">{copy.quotaFull}</p>
+        )}
+      </div>
     </div>
   );
 }

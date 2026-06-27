@@ -61,9 +61,8 @@ export function MarketingMasthead() {
   const navLinks = [
     { label: t.nav.features, to: "/features" },
     { label: t.nav.workflow, to: "/workflow" },
-    { label: t.nav.guide, to: "/guide" },
     { label: t.nav.templates, to: "/templates" },
-    { label: t.nav.integrity, to: "/integrity" },
+    { label: t.nav.pricing, to: "/pricing" },
   ] as const;
 
   return (
@@ -128,7 +127,6 @@ export function MarketingColophon() {
       links: [
         { label: f.links.features, to: "/features" },
         { label: f.links.workflow, to: "/workflow" },
-        { label: f.links.guide, to: "/guide" },
         { label: f.links.templates, to: "/templates" },
         { label: f.links.integrity, to: "/integrity" },
       ],
@@ -137,7 +135,6 @@ export function MarketingColophon() {
       heading: f.sections.authors,
       links: [
         { label: f.links.openEditor, to: "/projects" },
-        { label: f.links.guide, to: "/guide" },
         { label: f.links.templates, to: "/templates" },
         { label: f.links.latexGuide, to: "/latex-guide" },
       ],

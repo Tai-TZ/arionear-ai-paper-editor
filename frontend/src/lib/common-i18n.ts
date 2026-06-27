@@ -13,8 +13,8 @@ type CommonCopy = {
     features: string;
     workflow: string;
     guide: string;
-    integrity: string;
     templates: string;
+    pricing: string;
   };
   footer: {
     tagline: string;
@@ -47,6 +47,9 @@ type CommonCopy = {
   workspace: {
     projects: string;
     profile: string;
+    plan: string;
+    planFree: string;
+    planPro: string;
     admin: string;
     userGuide: string;
     signOut: string;
@@ -97,8 +100,8 @@ const EN: CommonCopy = {
     features: "Features",
     workflow: "Workflow",
     guide: "User Guide",
-    integrity: "Integrity",
     templates: "Templates",
+    pricing: "Pricing",
   },
   footer: {
     tagline: "AI Academic Writing & Editing Assistant.",
@@ -132,6 +135,9 @@ const EN: CommonCopy = {
   workspace: {
     projects: "Projects",
     profile: "Profile",
+    plan: "Plan",
+    planFree: "Free",
+    planPro: "Pro",
     admin: "Admin",
     userGuide: "User Guide",
     signOut: "Sign out",
@@ -182,8 +188,8 @@ const VI: CommonCopy = {
     features: "Tính năng",
     workflow: "Quy trình",
     guide: "Hướng dẫn",
-    integrity: "Toàn vẹn",
     templates: "Mẫu bài",
+    pricing: "Bảng giá",
   },
   footer: {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
@@ -217,6 +223,9 @@ const VI: CommonCopy = {
   workspace: {
     projects: "Dự án",
     profile: "Hồ sơ",
+    plan: "Gói",
+    planFree: "Miễn phí",
+    planPro: "Pro",
     admin: "Quản trị",
     userGuide: "Hướng dẫn",
     signOut: "Đăng xuất",

@@ -1,19 +1,24 @@
 import { Link } from "@tanstack/react-router";
-import { FolderOpen, Shield, UserCircle, BookOpen } from "lucide-react";
+import { FolderOpen, Shield, UserCircle, BookOpen, Zap } from "lucide-react";
 import { useMemo } from "react";
 import { useLocale } from "@/components/locale-provider";
 import { WorkspaceSidebarFooter } from "@/components/workspace/workspace-sidebar-footer";
+import { useWorkspaceBilling } from "@/components/workspace/workspace-context";
 import { commonCopy } from "@/lib/common-i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName, type ResearcherProfile } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";
 import { isAdminUser } from "@/lib/require-auth";
+import type { UserTier } from "@/lib/api/billing-api";
 
-export type WorkspaceNav = "projects" | "profile" | "admin";
+export type WorkspaceNav = "projects" | "profile" | "plan" | "guide" | "admin";
 
 type WorkspaceSidebarLabels = {
   projects: string;
   profile: string;
+  plan?: string;
+  planFree?: string;
+  planPro?: string;
   admin?: string;
   userGuide?: string;
   signOut: string;
@@ -29,50 +34,122 @@ type WorkspaceSidebarProps = {
   className?: string;
 };
 
+function planLabel(tier: UserTier, labels: WorkspaceSidebarLabels) {
+  return tier === "pro" ? (labels.planPro ?? "Pro") : (labels.planFree ?? "Free");
+}
+
 function ProfileCard({
   user,
   profile,
   active,
+  tier,
+  tierLoading,
+  planNavLabel,
+  tierLabel,
   onNavigate,
 }: {
   user: AuthUser;
   profile?: ResearcherProfile | null;
   active: WorkspaceNav;
+  tier: UserTier | null;
+  tierLoading: boolean;
+  planNavLabel: string;
+  tierLabel: string;
   onNavigate?: () => void;
 }) {
   const className = `workspace-profile-card${active === "profile" ? " is-active" : ""}`;
+  const badgeText = tierLoading && !tier ? "…" : tier ? tierLabel : "…";
 
-  const content = (
-    <>
-      <div className="flex items-center gap-2.5">
-        <Avatar className="h-9 w-9">
-          {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={user.name} /> : null}
-          <AvatarFallback className="avatar-fallback">
-            {initialsFromName(user.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{profile?.name ?? user.name}</p>
-          <p className="truncate font-mono-data text-[10px] tracking-wide text-muted-foreground">
-            {user.email}
-          </p>
-        </div>
-      </div>
-      {(profile?.affiliation ?? user.affiliation) && (
-        <p className="mt-2 truncate font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
-          {profile?.affiliation ?? user.affiliation}
+  const identity = (
+    <div className="flex items-center gap-2.5">
+      <Avatar className="h-9 w-9">
+        {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={user.name} /> : null}
+        <AvatarFallback className="avatar-fallback">{initialsFromName(user.name)}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{profile?.name ?? user.name}</p>
+        <p className="truncate font-mono-data text-[10px] tracking-wide text-muted-foreground">
+          {user.email}
         </p>
-      )}
-    </>
+      </div>
+    </div>
+  );
+
+  const affiliation = (profile?.affiliation ?? user.affiliation) ? (
+    <p className="mt-2 truncate font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
+      {profile?.affiliation ?? user.affiliation}
+    </p>
+  ) : null;
+
+  const planRow = (
+    <Link
+      to="/plan"
+      className={`workspace-plan-row${tier === "pro" ? " is-pro" : ""}`}
+      onClick={onNavigate}
+      title={planNavLabel}
+    >
+      <span className="workspace-plan-row-label">{planNavLabel}</span>
+      <span className="workspace-plan-badge">{badgeText}</span>
+    </Link>
   );
 
   if (active === "profile") {
-    return <div className={className}>{content}</div>;
+    return (
+      <div className={className}>
+        {identity}
+        {planRow}
+        {affiliation}
+      </div>
+    );
   }
 
   return (
-    <Link to="/profile" className={className} onClick={onNavigate}>
-      {content}
+    <div className={className}>
+      <Link to="/profile" className="block" onClick={onNavigate}>
+        {identity}
+        {affiliation}
+      </Link>
+      {planRow}
+    </div>
+  );
+}
+
+function NavItem({
+  active,
+  current,
+  to,
+  icon: Icon,
+  label,
+  badge,
+  className,
+  onNavigate,
+}: {
+  active: boolean;
+  current: boolean;
+  to?: string;
+  icon: typeof FolderOpen;
+  label: string;
+  badge?: string;
+  className?: string;
+  onNavigate?: () => void;
+}) {
+  const itemClass = `workspace-nav-item${className ? ` ${className}` : ""}${current ? " is-active" : ""}`;
+
+  if (active) {
+    return (
+      <div className={itemClass} title={label}>
+        <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+        <span className="workspace-nav-label">{label}</span>
+        {badge ? <span className="workspace-nav-tier is-pro">{badge}</span> : null}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={to!} className={itemClass} onClick={onNavigate} title={label}>
+      <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+      <span className="workspace-nav-label">{label}</span>
+      {badge ? <span className={`workspace-nav-tier${badge === "Pro" ? " is-pro" : ""}`}>{badge}</span> : null}
     </Link>
   );
 }
@@ -89,6 +166,9 @@ export function WorkspaceSidebar({
   const { locale } = useLocale();
   const i18nLabels = useMemo(() => commonCopy(locale).workspace, [locale]);
   const mergedLabels = { ...i18nLabels, ...labels };
+  const { billing, tierLoading } = useWorkspaceBilling();
+  const tier = billing?.tier ?? null;
+  const tierLabel = tier ? planLabel(tier, mergedLabels) : "";
 
   return (
     <aside
@@ -102,65 +182,70 @@ export function WorkspaceSidebar({
 
       <div className="p-3">
         {user ? (
-          <ProfileCard user={user} profile={profile} active={active} onNavigate={onNavigate} />
+          <ProfileCard
+            user={user}
+            profile={profile}
+            active={active}
+            tier={tier}
+            tierLoading={tierLoading}
+            planNavLabel={mergedLabels.plan ?? "Plan"}
+            tierLabel={tierLabel}
+            onNavigate={onNavigate}
+          />
         ) : (
           <div className="workspace-profile-card text-xs text-muted-foreground">{mergedLabels.loadingAccount}</div>
         )}
       </div>
 
       <nav className="space-y-1 px-3">
-        {active === "projects" ? (
-          <div className="workspace-nav-item is-active" title={mergedLabels.projects}>
-            <FolderOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="workspace-nav-label">{mergedLabels.projects}</span>
-          </div>
-        ) : (
-          <Link to="/projects" className="workspace-nav-item" onClick={onNavigate} title={mergedLabels.projects}>
-            <FolderOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="workspace-nav-label">{mergedLabels.projects}</span>
-          </Link>
-        )}
-
-        {active === "profile" ? (
-          <div className="workspace-nav-item is-active" title={mergedLabels.profile}>
-            <UserCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="workspace-nav-label">{mergedLabels.profile}</span>
-          </div>
-        ) : (
-          <Link to="/profile" className="workspace-nav-item" onClick={onNavigate} title={mergedLabels.profile}>
-            <UserCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="workspace-nav-label">{mergedLabels.profile}</span>
-          </Link>
-        )}
+        <NavItem
+          active={active === "projects"}
+          current={active === "projects"}
+          to="/projects"
+          icon={FolderOpen}
+          label={mergedLabels.projects}
+          onNavigate={onNavigate}
+        />
+        <NavItem
+          active={active === "profile"}
+          current={active === "profile"}
+          to="/profile"
+          icon={UserCircle}
+          label={mergedLabels.profile}
+          onNavigate={onNavigate}
+        />
+        <NavItem
+          active={active === "plan"}
+          current={active === "plan"}
+          to="/plan"
+          icon={Zap}
+          label={mergedLabels.plan ?? "Plan"}
+          badge={tier ? tierLabel : undefined}
+          className="workspace-nav-item-plan"
+          onNavigate={onNavigate}
+        />
 
         {isAdminUser() ? (
-          active === "admin" ? (
-            <div className="workspace-nav-item is-active workspace-nav-item-admin" title={mergedLabels.admin ?? "Admin"}>
-              <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-              <span className="workspace-nav-label">{mergedLabels.admin ?? "Admin"}</span>
-            </div>
-          ) : (
-            <Link
-              to="/admin"
-              className="workspace-nav-item workspace-nav-item-admin"
-              onClick={onNavigate}
-              title={mergedLabels.admin ?? "Admin"}
-            >
-              <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-              <span className="workspace-nav-label">{mergedLabels.admin ?? "Admin"}</span>
-            </Link>
-          )
+          <NavItem
+            active={active === "admin"}
+            current={active === "admin"}
+            to="/admin"
+            icon={Shield}
+            label={mergedLabels.admin ?? "Admin"}
+            className="workspace-nav-item-admin"
+            onNavigate={onNavigate}
+          />
         ) : null}
 
-        <Link
+        <NavItem
+          active={active === "guide"}
+          current={active === "guide"}
           to="/guide"
-          className="workspace-nav-item workspace-nav-item-guide"
-          onClick={onNavigate}
-          title={mergedLabels.userGuide ?? "User Guide"}
-        >
-          <BookOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
-          <span className="workspace-nav-label">{mergedLabels.userGuide ?? "User Guide"}</span>
-        </Link>
+          icon={BookOpen}
+          label={mergedLabels.userGuide ?? "User Guide"}
+          className="workspace-nav-item-guide"
+          onNavigate={onNavigate}
+        />
       </nav>
 
       <WorkspaceSidebarFooter signOutLabel={mergedLabels.signOut} onSignOut={onSignOut} />

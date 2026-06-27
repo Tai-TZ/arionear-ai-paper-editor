@@ -15,6 +15,11 @@ type MarketingCopy = {
     sectionTitle: string;
     sectionLink: string;
     footnote: string;
+    currentPlanCta: string;
+    upgrading: string;
+    quotaLabel: string;
+    quotaPeriodDaily: string;
+    quotaFull: string;
     free: {
       tier: string;
       price: string;
@@ -102,6 +107,11 @@ const EN: MarketingCopy = {
     sectionTitle: "Choose Your Plan",
     sectionLink: "Section C · Pricing →",
     footnote: "No credit card required for Free · Cancel Pro anytime · 256-bit SSL",
+    currentPlanCta: "Your current plan",
+    upgrading: "Processing…",
+    quotaLabel: "Defense turns used",
+    quotaPeriodDaily: "today",
+    quotaFull: "You've used all your turns. Upgrade to Pro for 50 turns per day.",
     free: {
       tier: "FREE",
       price: "Free",
@@ -281,6 +291,11 @@ const VI: MarketingCopy = {
     sectionTitle: "Chọn Gói Phù Hợp",
     sectionLink: "Mục C · Bảng giá →",
     footnote: "Không cần thẻ tín dụng cho Free · Huỷ Pro bất cứ lúc nào · Bảo mật SSL 256-bit",
+    currentPlanCta: "Gói hiện tại của bạn",
+    upgrading: "Đang xử lý…",
+    quotaLabel: "Lượt phản biện đã dùng",
+    quotaPeriodDaily: "hôm nay",
+    quotaFull: "Bạn đã hết lượt. Nâng cấp Pro để có thêm 50 lượt phản biện mỗi ngày.",
     free: {
       tier: "MIỄN PHÍ",
       price: "Free",
@@ -288,12 +303,12 @@ const VI: MarketingCopy = {
       tagline: "Bắt đầu biên tập ngay lập tức",
       cta: "Mở bàn biên tập →",
       features: [
-        "5 lượt Defense Phản Biện / ngày",
+        "5 lượt phản biện / ngày",
         "Biên tập LaTeX AI không giới hạn",
         "Thư viện template học thuật",
       ],
       locked: [
-        "50 lượt Defense Phản Biện / ngày",
+        "50 lượt phản biện / ngày",
         "Ưu tiên model AI tốc độ cao",
         "Xuất PDF không watermark",
       ],
@@ -306,7 +321,7 @@ const VI: MarketingCopy = {
       tagline: "Dành cho nhà nghiên cứu nghiêm túc",
       cta: "Nâng cấp ngay →",
       features: [
-        "50 lượt Defense Phản Biện / ngày",
+        "50 lượt phản biện / ngày",
         "Biên tập LaTeX AI không giới hạn",
         "Thư viện template học thuật",
         "Ưu tiên model AI tốc độ cao",

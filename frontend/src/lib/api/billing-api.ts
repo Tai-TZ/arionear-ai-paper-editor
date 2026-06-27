@@ -77,7 +77,12 @@ export async function createCheckout(): Promise<CheckoutResult> {
       confirm_url: string;
       qr_png_b64: string;
       expires_in_minutes: number;
-    }>("/billing/checkout", { method: "POST" });
+    }>("/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify({
+        client_origin: typeof window !== "undefined" ? window.location.origin : undefined,
+      }),
+    });
     return {
       ok: true,
       checkoutId: data.checkout_id,

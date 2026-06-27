@@ -26,6 +26,12 @@ class UpgradeRequest(BaseModel):
     plan: Literal["pro"] = "pro"
 
 
+class CheckoutRequest(BaseModel):
+    """Optional client origin so QR links use the browser host, not the API proxy host."""
+
+    client_origin: str | None = None
+
+
 class UpgradeResponse(BaseModel):
     """Returned after a successful (mock) upgrade."""
 

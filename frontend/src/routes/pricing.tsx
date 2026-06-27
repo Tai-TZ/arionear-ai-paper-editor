@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useMemo, useState } from "react";
 import { PricingCards } from "@/components/billing/pricing-cards";
+import { syncWorkspaceBillingCache } from "@/components/workspace/workspace-context";
+import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { type BillingStatus, fetchBillingStatus } from "@/lib/api/billing-api";
 import { getAccessToken } from "@/lib/auth-store";
 import { useLocale } from "@/components/locale-provider";
@@ -25,13 +24,10 @@ export const Route = createFileRoute("/pricing")({
 
 const pageCopy = {
   vi: {
-    back: "Quay lại",
-    badge: "Gói dịch vụ Arionear",
-    heading: "Chọn gói phù hợp với bạn",
     lede: (
       <>
-        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm lượt
-        &nbsp;<strong>Defense Phản Biện</strong>&nbsp;AI và các tính năng cao cấp.
+        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm
+        &nbsp;<strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
       </>
     ),
     signupLink: "Đăng ký miễn phí",
@@ -41,9 +37,6 @@ const pageCopy = {
     ),
   },
   en: {
-    back: "Go back",
-    badge: "Arionear Plans",
-    heading: "Choose your plan",
     lede: (
       <>
         Use Ario without limits for LaTeX editing. Upgrade to Pro to unlock more&nbsp;
@@ -61,70 +54,68 @@ const pageCopy = {
 function PricingPage() {
   const { locale } = useLocale();
   const t = locale === "vi" ? pageCopy.vi : pageCopy.en;
+  const plans = useMemo(() => marketingCopy(locale).plans, [locale]);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [billingLoadFailed, setBillingLoadFailed] = useState(false);
   const isLoggedIn = Boolean(getAccessToken());
 
   useEffect(() => {
     if (!isLoggedIn) return;
     setLoading(true);
+    setBillingLoadFailed(false);
     fetchBillingStatus()
       .then(setBilling)
-      .catch(() => {/* silently ignore — cards still render without quota bar */})
+      .catch(() => setBillingLoadFailed(true))
       .finally(() => setLoading(false));
   }, [isLoggedIn]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 flex items-center border-b bg-background/80 px-6 py-3 backdrop-blur">
-        <Button variant="ghost" size="sm" asChild className="gap-2">
-          <Link to="/projects">
-            <ArrowLeft className="h-4 w-4" />
-            {t.back}
-          </Link>
-        </Button>
-      </header>
+    <MarketingLayout>
+      <article className="border-b-4 border-foreground newsprint-texture">
+        <div className="max-w-4xl mx-auto px-4 py-16 lg:py-24">
+          <header className="text-center">
+            <h1 className="marketing-page-title font-serif-display font-black text-4xl sm:text-5xl lg:text-[3.5rem] tracking-tighter leading-[0.95]">
+              {plans.sectionTitle}
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl font-body text-lg leading-relaxed text-muted-foreground">
+              {t.lede}
+            </p>
+          </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-16">
-        <div className="mb-12 text-center">
-          <div className="mb-4 flex justify-center">
-            <span className="inline-flex items-center gap-2 rounded-full border bg-muted px-4 py-1.5 text-sm text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              {t.badge}
-            </span>
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            {t.heading}
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            {t.lede}
-          </p>
-        </div>
+          <div className="mt-14 lg:mt-16">
+            <PricingCards
+              billingStatus={isLoggedIn ? billing : undefined}
+              billingLoading={isLoggedIn && loading}
+              billingError={isLoggedIn && billingLoadFailed}
+              onUpgradeSuccess={(updated) => {
+                syncWorkspaceBillingCache(updated);
+                setBillingLoadFailed(false);
+                setBilling(updated);
+              }}
+            />
 
-        {loading && (
-          <div className="mx-auto mb-8 w-full max-w-md">
-            <Skeleton className="h-16 w-full rounded-xl" />
-          </div>
-        )}
-
-        <PricingCards
-          billingStatus={isLoggedIn ? billing : undefined}
-          onUpgradeSuccess={(updated) => setBilling(updated)}
-        />
-
-        {!isLoggedIn && (
-          <p className="mt-10 text-center text-sm text-muted-foreground">
-            {t.authNote(
-              <Link to="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
-                {t.signupLink}
-              </Link>,
-              <Link to="/signin" className="font-medium text-primary underline-offset-4 hover:underline">
-                {t.loginLink}
-              </Link>,
+            {!isLoggedIn && (
+              <p className="mt-12 text-center font-body text-sm text-muted-foreground">
+                {t.authNote(
+                  <Link
+                    to="/signup"
+                    className="font-medium text-foreground underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+                  >
+                    {t.signupLink}
+                  </Link>,
+                  <Link
+                    to="/signin"
+                    className="font-medium text-foreground underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+                  >
+                    {t.loginLink}
+                  </Link>,
+                )}
+              </p>
             )}
-          </p>
-        )}
-      </main>
-    </div>
+          </div>
+        </div>
+      </article>
+    </MarketingLayout>
   );
 }
