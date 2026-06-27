@@ -67,7 +67,7 @@ def build_google_authorization_url(*, return_to: str, remember: bool) -> str:
 
     state = create_oauth_state(return_to=return_to, remember=remember)
     params = {
-        "client_id": settings.google_client_id,
+        "client_id": settings.google_client_id.strip(),
         "redirect_uri": google_redirect_uri(),
         "response_type": "code",
         "scope": "openid email profile",
@@ -85,14 +85,23 @@ async def exchange_google_code(code: str) -> dict:
 
     payload = {
         "code": code,
-        "client_id": settings.google_client_id,
-        "client_secret": settings.google_client_secret,
+        "client_id": settings.google_client_id.strip(),
+        "client_secret": settings.google_client_secret.strip(),
         "redirect_uri": google_redirect_uri(),
         "grant_type": "authorization_code",
     }
     async with httpx.AsyncClient(timeout=20.0) as client:
         token_res = await client.post(GOOGLE_TOKEN_URL, data=payload)
         if token_res.status_code != 200:
+            detail = ""
+            try:
+                body = token_res.json()
+                if isinstance(body, dict):
+                    detail = str(body.get("error_description") or body.get("error") or "").strip()
+            except Exception:
+                detail = ""
+            if detail:
+                raise GoogleOAuthError(f"Could not complete Google sign-in ({detail}).")
             raise GoogleOAuthError("Could not complete Google sign-in.")
         token_data = token_res.json()
         access_token = token_data.get("access_token")

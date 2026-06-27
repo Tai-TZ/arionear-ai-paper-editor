@@ -49,17 +49,26 @@ function Get-DotEnvValue {
 
 function Set-GcpSecret {
     param([string]$Name, [string]$Value)
+    $Value = $Value.Trim()
     if (-not $Value) {
-        Write-Warning "Skip secret '$Name' — empty value in .env"
+        Write-Warning "Skip secret '$Name' - empty value in .env"
         return
     }
     $exists = gcloud secrets describe $Name --project $ProjectId 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $Value | gcloud secrets versions add $Name --project $ProjectId --data-file=-
-        Write-Host "[secret] updated $Name"
-    } else {
-        $Value | gcloud secrets create $Name --project $ProjectId --replication-policy=automatic --data-file=-
-        Write-Host "[secret] created $Name"
+    if ($LASTEXITCODE -ne 0) { $exists = $false } else { $exists = $true }
+    $secretFile = Join-Path $env:TEMP "gcp-secret-$Name.txt"
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+        [System.IO.File]::WriteAllBytes($secretFile, $bytes)
+        if ($exists) {
+            gcloud secrets versions add $Name --project $ProjectId --data-file=$secretFile
+            Write-Host "[secret] updated $Name"
+        } else {
+            gcloud secrets create $Name --project $ProjectId --replication-policy=automatic --data-file=$secretFile
+            Write-Host "[secret] created $Name"
+        }
+    } finally {
+        if (Test-Path $secretFile) { Remove-Item $secretFile -Force -ErrorAction SilentlyContinue }
     }
 }
 
@@ -74,7 +83,7 @@ $langchainKey = Get-DotEnvValue "LANGCHAIN_API_KEY"
 
 if (-not $authSecret -or $authSecret -eq "change-me-generate-with-openssl-rand-hex-32" -or $authSecret -eq "dev-only-change-in-production") {
     $authSecret = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Maximum 256) })
-    Write-Host "[auth] AUTH_SECRET_KEY missing in .env — generated a new random secret for deploy."
+    Write-Host "[auth] AUTH_SECRET_KEY missing in .env - generated a new random secret for deploy."
     Write-Host "       Add to .env if you want local + prod to match:"
     Write-Host "       AUTH_SECRET_KEY=$authSecret"
 }
@@ -96,14 +105,14 @@ if ($aiLogKey) {
 }
 
 if ($SecretsOnly) {
-    Write-Host "SecretsOnly — done."
+    Write-Host "SecretsOnly - done."
     exit 0
 }
 
 $image = "$Region-docker.pkg.dev/$ProjectId/arionear/backend:latest"
 
 if (-not $SkipBuild) {
-    Write-Host "`n=== Step 2: Build image (10-20 min) ===" -ForegroundColor Cyan
+    Write-Host "`n=== Step 2: Build image (10-20 minutes) ===" -ForegroundColor Cyan
     Push-Location $RepoRoot
     try {
         gcloud builds submit --tag $image . --timeout=2400
@@ -158,8 +167,8 @@ if ($aiLogKey) {
 $envVars = @(
     "APP_ENV=production",
     "LLM_PROVIDER=$llmProvider",
-    # Allow requests from both the custom domain and the raw Cloud Run URL
-    "CORS_ORIGINS=$FrontendUrl,$BackendUrl",
+    # Allow requests from frontend + API custom domain + raw Cloud Run URL
+    "CORS_ORIGINS=$FrontendUrl,$BackendCustomDomain,$BackendUrl",
     "FRONTEND_BASE_URL=$FrontendUrl",
     "BACKEND_BASE_URL=$BackendBaseUrl",
     "GOOGLE_CLIENT_ID=$googleClientId",
@@ -181,18 +190,35 @@ if ($langchainTracing) { $envVars += "LANGCHAIN_TRACING_V2=$langchainTracing" }
 if ($aiLogServer) { $envVars += "AI_LOG_SERVER=$aiLogServer" }
 
 Write-Host "`n=== Step 3: Deploy Cloud Run ===" -ForegroundColor Cyan
-gcloud run deploy $ServiceName `
-    --image $image `
-    --region $Region `
-    --platform managed `
-    --allow-unauthenticated `
-    --port 8000 `
-    --memory 2Gi `
-    --cpu 2 `
-    --timeout 300 `
-    --max-instances 5 `
-    --set-secrets ($secretBindings -join ",") `
-    --set-env-vars ($envVars -join ",")
+# Write env vars to YAML to avoid gcloud comma/colon escaping issues on Windows.
+$envVarsFile = Join-Path $env:TEMP "arionear-api-env-$([Guid]::NewGuid().ToString('N')).yaml"
+try {
+    $yamlLines = @("---")
+    foreach ($entry in $envVars) {
+        $eq = $entry.IndexOf("=")
+        if ($eq -lt 1) { continue }
+        $key = $entry.Substring(0, $eq)
+        $value = $entry.Substring($eq + 1)
+        $escaped = $value.Replace("'", "''")
+        $yamlLines += "${key}: '${escaped}'"
+    }
+    Set-Content -Path $envVarsFile -Value ($yamlLines -join "`n") -Encoding utf8
+
+    gcloud run deploy $ServiceName `
+        --image $image `
+        --region $Region `
+        --platform managed `
+        --allow-unauthenticated `
+        --port 8000 `
+        --memory 2Gi `
+        --cpu 2 `
+        --timeout 300 `
+        --max-instances 5 `
+        --set-secrets ($secretBindings -join ",") `
+        --env-vars-file $envVarsFile
+} finally {
+    if (Test-Path $envVarsFile) { Remove-Item $envVarsFile -Force }
+}
 
 $BackendUrl = gcloud run services describe $ServiceName --region $Region --format="value(status.url)"
 Write-Host "`nBackend Cloud Run URL : $BackendUrl" -ForegroundColor Green
