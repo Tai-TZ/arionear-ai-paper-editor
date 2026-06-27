@@ -32,3 +32,16 @@ class UpgradeResponse(BaseModel):
     ok: bool = True
     message: str
     billing: BillingStatusResponse
+
+
+class CheckoutResponse(BaseModel):
+    """QR checkout session created for Pro upgrade.
+
+    V2 path: replace confirm_url with a Stripe Checkout Session URL and
+    track the session ID instead of our own checkout_id.
+    """
+
+    checkout_id: str
+    confirm_url: str
+    qr_png_b64: str
+    expires_in_minutes: int = 15

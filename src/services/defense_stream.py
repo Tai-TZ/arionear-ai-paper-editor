@@ -1,4 +1,4 @@
-"""SSE streaming service for the defense / mock-viva agent."""
+"""SSE streaming service for the defense viva agent."""
 from __future__ import annotations
 
 import asyncio
@@ -7,9 +7,13 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+import logging
+
 from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 
 from src.config import get_settings
+
+logger = logging.getLogger(__name__)
 from src.db.engine import db_is_ready, get_db
 from src.db.models import User
 from src.models.schemas import DefenseConversationTurn, DefenseRequest
@@ -292,5 +296,6 @@ async def stream_defense(
                 user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
                 if user:
                     record_defense_turn(db, user)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Non-fatal: the response was already sent. Log so ops can detect DB issues.
+            logger.warning("Failed to record defense turn for user %s: %s", user_id, exc)

@@ -27,6 +27,10 @@ export type UpgradeResult =
   | { ok: true; message: string; billing: BillingStatus }
   | { ok: false; error: string };
 
+export type CheckoutResult =
+  | { ok: true; checkoutId: string; confirmUrl: string; qrPngB64: string; expiresInMinutes: number }
+  | { ok: false; error: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -59,7 +63,34 @@ export async function fetchBillingStatus(): Promise<BillingStatus> {
   return billingFetch<BillingStatus>("/billing/status");
 }
 
-/** Mock-upgrade the authenticated user to Pro (V1 — no real payment). */
+/**
+ * Create a QR checkout session. Returns the confirm URL and a base-64 PNG
+ * that the client renders as a QR code. The user scans with their phone;
+ * the backend upgrades the account and the client polls /billing/status.
+ *
+ * V2: will return a Stripe Checkout URL instead.
+ */
+export async function createCheckout(): Promise<CheckoutResult> {
+  try {
+    const data = await billingFetch<{
+      checkout_id: string;
+      confirm_url: string;
+      qr_png_b64: string;
+      expires_in_minutes: number;
+    }>("/billing/checkout", { method: "POST" });
+    return {
+      ok: true,
+      checkoutId: data.checkout_id,
+      confirmUrl: data.confirm_url,
+      qrPngB64: data.qr_png_b64,
+      expiresInMinutes: data.expires_in_minutes,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to create checkout." };
+  }
+}
+
+/** Direct upgrade — for admin/testing only. Normal flow: createCheckout() → QR scan. */
 export async function upgradeToPro(): Promise<UpgradeResult> {
   try {
     const data = await billingFetch<{ ok: boolean; message: string; billing: BillingStatus }>(

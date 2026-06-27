@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
+
+logger = logging.getLogger(__name__)
 
 from src.agents.state import AgentState
 from src.config import get_settings
@@ -605,8 +608,8 @@ async def structure_node(state: AgentState) -> dict:
             content = (response.content or "").strip()
             if content.startswith("["):
                 llm_suggestions = json.loads(content)
-        except (json.JSONDecodeError, Exception):
-            pass
+        except Exception as exc:
+            logger.debug("structure_node: LLM JSON parse skipped (%s)", exc)
 
     all_suggestions = rule_suggestions + llm_suggestions
     lines = [

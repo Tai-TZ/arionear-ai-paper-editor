@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/components/locale-provider";
 import { marketingCopy } from "@/lib/marketing-i18n";
 import type { UiLanguage } from "@/lib/researcher-profile";
-import { type BillingStatus, type UserTier, upgradeToPro } from "@/lib/api/billing-api";
+import { type BillingStatus, type UserTier, createCheckout } from "@/lib/api/billing-api";
+import { QrCheckoutDialog } from "@/components/billing/qr-checkout-dialog";
 
 // ─── Plan definitions ────────────────────────────────────────────────────
 
@@ -88,11 +89,17 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
   const plans = useMemo(() => buildPlans(locale), [locale]);
   const planCopy = useMemo(() => marketingCopy(locale).plans, [locale]);
   const [upgrading, setUpgrading] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrData, setQrData] = useState<{
+    confirmUrl: string;
+    qrPngB64: string;
+    expiresInMinutes: number;
+  } | null>(null);
   const currentTier: UserTier = billingStatus?.tier ?? "free";
 
   const handleUpgrade = async () => {
     setUpgrading(true);
-    const result = await upgradeToPro();
+    const result = await createCheckout();
     setUpgrading(false);
 
     if (!result.ok) {
@@ -100,8 +107,12 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
       return;
     }
 
-    toast.success(result.message);
-    onUpgradeSuccess?.(result.billing);
+    setQrData({
+      confirmUrl: result.confirmUrl,
+      qrPngB64: result.qrPngB64,
+      expiresInMinutes: result.expiresInMinutes,
+    });
+    setQrOpen(true);
   };
 
   return (
@@ -214,6 +225,26 @@ export function PricingCards({ billingStatus, onUpgradeSuccess }: Props) {
         <Shield className="h-4 w-4 shrink-0" />
         {planCopy.footnote}
       </p>
+
+      {/* QR checkout dialog */}
+      {qrData && (
+        <QrCheckoutDialog
+          open={qrOpen}
+          confirmUrl={qrData.confirmUrl}
+          qrPngB64={qrData.qrPngB64}
+          expiresInMinutes={qrData.expiresInMinutes}
+          onSuccess={(billing) => {
+            setQrOpen(false);
+            toast.success(
+              locale === "vi"
+                ? "Tài khoản đã được nâng cấp lên Pro!"
+                : "Account upgraded to Pro!",
+            );
+            onUpgradeSuccess?.(billing);
+          }}
+          onClose={() => setQrOpen(false)}
+        />
+      )}
     </div>
   );
 }

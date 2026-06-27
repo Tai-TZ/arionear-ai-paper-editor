@@ -6,22 +6,61 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PricingCards } from "@/components/billing/pricing-cards";
 import { type BillingStatus, fetchBillingStatus } from "@/lib/api/billing-api";
 import { getAccessToken } from "@/lib/auth-store";
+import { useLocale } from "@/components/locale-provider";
+import { marketingCopy } from "@/lib/marketing-i18n";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Chọn gói dịch vụ — Arionear" },
+      { title: "Pricing — Arionear" },
       {
         name: "description",
         content:
-          "Chọn gói Free hoặc Pro để mở khoá thêm lượt Defense Phản Biện và các tính năng nâng cao.",
+          "Choose Free or Pro to unlock more Defense Rehearsal turns and advanced features.",
       },
     ],
   }),
   component: PricingPage,
 });
 
+const pageCopy = {
+  vi: {
+    back: "Quay lại",
+    badge: "Gói dịch vụ Arionear",
+    heading: "Chọn gói phù hợp với bạn",
+    lede: (
+      <>
+        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm lượt
+        &nbsp;<strong>Defense Phản Biện</strong>&nbsp;AI và các tính năng cao cấp.
+      </>
+    ),
+    signupLink: "Đăng ký miễn phí",
+    loginLink: "đăng nhập",
+    authNote: (signup: React.ReactNode, login: React.ReactNode) => (
+      <>{signup}&nbsp;hoặc&nbsp;{login}&nbsp;để quản lý gói dịch vụ.</>
+    ),
+  },
+  en: {
+    back: "Go back",
+    badge: "Arionear Plans",
+    heading: "Choose your plan",
+    lede: (
+      <>
+        Use Ario without limits for LaTeX editing. Upgrade to Pro to unlock more&nbsp;
+        <strong>Defense Rehearsal</strong>&nbsp;turns and premium features.
+      </>
+    ),
+    signupLink: "Sign up for free",
+    loginLink: "sign in",
+    authNote: (signup: React.ReactNode, login: React.ReactNode) => (
+      <>{signup}&nbsp;or&nbsp;{login}&nbsp;to manage your plan.</>
+    ),
+  },
+};
+
 function PricingPage() {
+  const { locale } = useLocale();
+  const t = locale === "vi" ? pageCopy.vi : pageCopy.en;
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const isLoggedIn = Boolean(getAccessToken());
@@ -37,58 +76,52 @@ function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top navigation strip */}
       <header className="sticky top-0 z-10 flex items-center border-b bg-background/80 px-6 py-3 backdrop-blur">
         <Button variant="ghost" size="sm" asChild className="gap-2">
           <Link to="/projects">
             <ArrowLeft className="h-4 w-4" />
-            Quay lại
+            {t.back}
           </Link>
         </Button>
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-16">
-        {/* Hero copy */}
         <div className="mb-12 text-center">
           <div className="mb-4 flex justify-center">
             <span className="inline-flex items-center gap-2 rounded-full border bg-muted px-4 py-1.5 text-sm text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Gói dịch vụ Arionear
+              {t.badge}
             </span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Chọn gói phù hợp với bạn
+            {t.heading}
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm lượt
-            &nbsp;<strong>Defense Phản Biện</strong>&nbsp;AI và các tính năng cao cấp.
+            {t.lede}
           </p>
         </div>
 
-        {/* Quota skeleton while loading */}
         {loading && (
           <div className="mx-auto mb-8 w-full max-w-md">
             <Skeleton className="h-16 w-full rounded-xl" />
           </div>
         )}
 
-        {/* Pricing cards — pass `undefined` when not logged in so quota bar is hidden */}
         <PricingCards
           billingStatus={isLoggedIn ? billing : undefined}
           onUpgradeSuccess={(updated) => setBilling(updated)}
         />
 
-        {/* Footer note for unauthenticated visitors */}
         {!isLoggedIn && (
           <p className="mt-10 text-center text-sm text-muted-foreground">
-            <Link to="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
-              Đăng ký miễn phí
-            </Link>
-            &nbsp;hoặc&nbsp;
-            <Link to="/signin" className="font-medium text-primary underline-offset-4 hover:underline">
-              đăng nhập
-            </Link>
-            &nbsp;để quản lý gói dịch vụ.
+            {t.authNote(
+              <Link to="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+                {t.signupLink}
+              </Link>,
+              <Link to="/signin" className="font-medium text-primary underline-offset-4 hover:underline">
+                {t.loginLink}
+              </Link>,
+            )}
           </p>
         )}
       </main>
