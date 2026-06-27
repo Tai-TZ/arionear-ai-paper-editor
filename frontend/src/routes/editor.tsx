@@ -34,6 +34,7 @@ import { editorCopy, formatMastheadDate, revisionActionLabel, translateCitationS
 import { commonCopy } from "@/lib/common-i18n";
 import {
   formatTimeAgo,
+  findProjectAsset,
   getCompilePayload,
   isImageAssetFile,
   isProjectAssetFile,
@@ -122,6 +123,7 @@ import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
+import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
 import { mergeLogicSectionReport } from "@/lib/logic-audit";
@@ -556,15 +558,43 @@ function EditorPage() {
   const switchActiveFile = useCallback(
     (nextPath: string) => {
       if (nextPath === activeFile) return;
-      const updatedFiles = persistActiveFile(latex, projectFiles, activeFile);
-      const nextFile = updatedFiles.find((f) => f.path === nextPath);
-      setProjectFiles(updatedFiles);
+
+      const nextIsAsset = isImageAssetFile(nextPath);
+      const currentIsTex = projectFiles.some((f) => f.path === activeFile);
+
+      let files = projectFiles;
+      if (currentIsTex) {
+        files = persistActiveFile(latex, projectFiles, activeFile);
+        setProjectFiles(files);
+      }
+
       setActiveFile(nextPath);
-      resetHistory(nextFile?.content ?? "");
-      setSavedLatex(nextFile?.content ?? "");
+
+      if (nextIsAsset) return;
+
+      const nextFile = files.find((f) => f.path === nextPath);
+      const content = nextFile?.content ?? "";
+      resetHistory(content);
+      setSavedLatex(content);
     },
     [activeFile, latex, persistActiveFile, projectFiles, resetHistory],
   );
+
+  const openProjectFile = useCallback(
+    (path: string) => {
+      switchActiveFile(path);
+      if (isImageAssetFile(path)) {
+        setMobileTab("editor");
+      }
+    },
+    [switchActiveFile],
+  );
+
+  const activeAsset = useMemo(
+    () => (isImageAssetFile(activeFile) ? findProjectAsset(activeFile, assets) : null),
+    [activeFile, assets],
+  );
+  const viewingAsset = isImageAssetFile(activeFile);
 
   useEffect(() => {
     if (bootState !== "ready") return;
@@ -579,8 +609,18 @@ function EditorPage() {
   const showSplash = splashPhase !== "hidden";
   const showEditor = bootState === "ready";
 
+  const persistableFile = useCallback(
+    (files: ProjectFile[], currentActive: string) =>
+      files.some((f) => f.path === currentActive) ? currentActive : mainFile,
+    [mainFile],
+  );
+
   const handleCompile = useCallback(async (latexOverride?: string) => {
-    const filesWithActive = persistActiveFile(latexOverride ?? latex, projectFiles, activeFile);
+    const filesWithActive = persistActiveFile(
+      latexOverride ?? latex,
+      projectFiles,
+      persistableFile(projectFiles, activeFile),
+    );
     setIsCompiling(true);
     setCompileError(null);
     setCompileWarning(null);
@@ -621,11 +661,15 @@ function EditorPage() {
     } finally {
       setIsCompiling(false);
     }
-  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile]);
+  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile, persistableFile]);
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
-    const files = persistActiveFile(latex, projectFiles, activeFile);
+    const files = persistActiveFile(
+      latex,
+      projectFiles,
+      persistableFile(projectFiles, activeFile),
+    );
     setProjectFiles(files);
     const mainContent = files.find((f) => f.path === mainFile)?.content ?? latex;
     updatePaper(projectId, {
@@ -656,6 +700,7 @@ function EditorPage() {
     autoCompile,
     handleCompile,
     persistActiveFile,
+    persistableFile,
   ]);
 
   useEffect(() => {
@@ -1179,26 +1224,36 @@ function EditorPage() {
                 ? sentSelection
                 : null;
             if (edits.length > 0) {
-              const mapped: PendingEdit[] = edits.map((e) => ({
-                id: e.id,
-                file: e.file || "main.tex",
-                section: e.section,
-                applyMode: selectionAnchor
-                  ? "selection"
-                  : ((e.apply_mode ?? result.apply_mode ?? "selection") as
-                      | "selection"
-                      | "document"),
-                originalText: selectionAnchor?.text ?? e.original_text,
-                replacementText: selectionAnchor
-                  ? clampSelectionReplacement(selectionAnchor.text, e.replacement_text)
-                  : e.replacement_text,
-                description: e.description,
-                flags: result.integrity_flags ?? [],
-                revisionId: result.revision_id || undefined,
-                accepted: false,
-                selectionStart: selectionAnchor?.start,
-                selectionEnd: selectionAnchor?.end,
-              }));
+              const mapped: PendingEdit[] = edits.map((e) => {
+                const hasBackendAnchor =
+                  e.selection_start != null &&
+                  e.selection_end != null &&
+                  e.selection_end > e.selection_start;
+                const anchor = hasBackendAnchor
+                  ? { start: e.selection_start!, end: e.selection_end! }
+                  : selectionAnchor;
+                return {
+                  id: e.id,
+                  file: e.file || "main.tex",
+                  section: e.section,
+                  applyMode: (e.apply_mode ?? result.apply_mode ?? "selection") as
+                    | "selection"
+                    | "document",
+                  originalText: anchor ? latex.slice(anchor.start, anchor.end) : e.original_text,
+                  replacementText: anchor
+                    ? clampSelectionReplacement(
+                        latex.slice(anchor.start, anchor.end),
+                        e.replacement_text,
+                      )
+                    : e.replacement_text,
+                  description: e.description,
+                  flags: result.integrity_flags ?? [],
+                  revisionId: result.revision_id || undefined,
+                  accepted: false,
+                  selectionStart: anchor?.start,
+                  selectionEnd: anchor?.end,
+                };
+              });
               setPendingEdits(mapped);
               setActiveEditId(mapped[0]?.id ?? null);
               setChatOpen(false);
@@ -1707,7 +1762,7 @@ function EditorPage() {
               next ? "expanded" : "collapsed",
             );
           }}
-          onSelectFile={switchActiveFile}
+          onSelectFile={openProjectFile}
           onUpload={() => fileInputRef.current?.click()}
           onUploadFolder={() => folderInputRef.current?.click()}
           onUploadZip={() => zipInputRef.current?.click()}
@@ -1719,6 +1774,8 @@ function EditorPage() {
             <CenterPanel
               latex={latex}
               activeFile={activeFile}
+              activeAsset={activeAsset}
+              viewingAsset={viewingAsset}
               highlightLine={highlightLine}
               synctexHighlight={synctexHighlight}
               editorRef={latexEditorRef}
@@ -1808,7 +1865,7 @@ function EditorPage() {
             activeFile={activeFile}
             mainFile={mainFile}
             assets={assets}
-            onSelectFile={switchActiveFile}
+            onSelectFile={openProjectFile}
             onUpload={() => fileInputRef.current?.click()}
             onUploadFolder={() => folderInputRef.current?.click()}
             onUploadZip={() => zipInputRef.current?.click()}
@@ -1817,6 +1874,16 @@ function EditorPage() {
         )}
         {mobileTab === "editor" && (
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            {viewingAsset ? (
+              activeAsset ? (
+                <ProjectAssetPreview path={activeFile} asset={activeAsset} />
+              ) : (
+                <div className="project-asset-preview-missing p-6 text-sm text-muted-foreground">
+                  {editorCopy(locale).assetPreview.missing}
+                </div>
+              )
+            ) : (
+              <>
             <LatexEditor
               editorRef={latexEditorRef}
               latex={latex}
@@ -1837,6 +1904,8 @@ function EditorPage() {
                 onQuickEdit={handleQuickEditSelection}
                 onDismiss={() => setSelectionPick(null)}
               />
+            )}
+              </>
             )}
           </div>
         )}
@@ -2498,6 +2567,8 @@ function LatexEditor({
 function CenterPanel({
   latex,
   activeFile,
+  activeAsset = null,
+  viewingAsset = false,
   highlightLine = null,
   synctexHighlight = null,
   editorRef,
@@ -2554,6 +2625,8 @@ function CenterPanel({
 }: {
   latex: string;
   activeFile: string;
+  activeAsset?: ProjectAsset | null;
+  viewingAsset?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
   editorRef?: React.Ref<LatexCodeEditorHandle>;
@@ -2625,8 +2698,9 @@ function CenterPanel({
               <AvatarFallback className="rounded-md text-[9px]">A</AvatarFallback>
             </Avatar>
             <span>{activeFile}</span>
-            {isDirty && <span className="file-dirty-mark">*</span>}
+            {isDirty && !viewingAsset ? <span className="file-dirty-mark">*</span> : null}
           </div>
+          {!viewingAsset ? (
           <div className="flex items-center gap-0.5">
             <button
               type="button"
@@ -2649,6 +2723,7 @@ function CenterPanel({
               <Redo2 className="h-3.5 w-3.5" />
             </button>
           </div>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           {onDefense ? (
@@ -2704,6 +2779,14 @@ function CenterPanel({
 
       <div className="editor-workspace flex min-h-0 flex-1 flex-col overflow-hidden w-full">
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden w-full min-w-0">
+          {viewingAsset ? (
+            activeAsset ? (
+              <ProjectAssetPreview path={activeFile} asset={activeAsset} />
+            ) : (
+              <div className="project-asset-preview-missing">{t.assetPreview.missing}</div>
+            )
+          ) : (
+            <>
           <LatexEditor
             editorRef={editorRef}
             latex={latex}
@@ -2724,6 +2807,8 @@ function CenterPanel({
               onQuickEdit={onQuickEditSelection}
               onDismiss={onDismissSelectionToolbar}
             />
+          )}
+            </>
           )}
         </div>
 

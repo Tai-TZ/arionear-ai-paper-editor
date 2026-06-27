@@ -95,6 +95,8 @@ class ProposedEditSchema(BaseModel):
     original_text: str = ""
     replacement_text: str = ""
     description: str = ""
+    selection_start: int | None = None
+    selection_end: int | None = None
 
 
 class ChatResponse(BaseModel):

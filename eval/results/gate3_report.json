@@ -1,0 +1,235 @@
+{
+  "timestamp": "2026-06-27 03:34:47 UTC",
+  "api_url": null,
+  "frontend_url": null,
+  "offline": {
+    "intent": {
+      "metric": "intent_routing_accuracy",
+      "passed": 10,
+      "total": 10,
+      "value": 1.0,
+      "cases": [
+        {
+          "id": "INT-01",
+          "query": "hello",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true
+        },
+        {
+          "id": "INT-02",
+          "query": "Đổi đề tài từ EfficientNetV2 sang V3 giúp tôi nhé",
+          "expected": "edit",
+          "actual": "edit",
+          "pass": true
+        },
+        {
+          "id": "INT-03",
+          "query": "Chỉnh sửa lại phần Abstract để cho văn phong học thuật hơn nữa nhé",
+          "expected": "style",
+          "actual": "style",
+          "pass": true
+        },
+        {
+          "id": "INT-04",
+          "query": "Phân tích cấu trúc IMRaD của bài này",
+          "expected": "structure",
+          "actual": "structure",
+          "pass": true
+        },
+        {
+          "id": "INT-05",
+          "query": "Kiểm tra logic bài báo",
+          "expected": "logic",
+          "actual": "logic",
+          "pass": true
+        },
+        {
+          "id": "INT-06",
+          "query": "Kiểm tra trích dẫn",
+          "expected": "citation",
+          "actual": "citation",
+          "pass": true
+        },
+        {
+          "id": "INT-07",
+          "query": "Thêm các section IMRaD còn thiếu",
+          "expected": "template",
+          "actual": "template",
+          "pass": true
+        },
+        {
+          "id": "INT-08",
+          "query": "Sửa tiêu đề bài báo thành model EfficientNetV3 nhé",
+          "expected": "edit",
+          "actual": "edit",
+          "pass": true
+        },
+        {
+          "id": "INT-09",
+          "query": "Giải thích abstract này",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true
+        },
+        {
+          "id": "INT-10",
+          "query": "polish introduction academically",
+          "expected": "style",
+          "actual": "style",
+          "pass": true
+        }
+      ]
+    },
+    "edit_scope": {
+      "metric": "edit_scope_accuracy",
+      "passed": 3,
+      "total": 3,
+      "value": 1.0,
+      "cases": [
+        {
+          "query": "Đổi tên đề tài để sử dụng model EfficientNetV3 nhé",
+          "target_type": "latex_command",
+          "target_id": "title",
+          "pass": true
+        },
+        {
+          "query": "Sửa tiêu đề bài báo thành model EfficientNetV3 nhé",
+          "target_type": "latex_command",
+          "target_id": "title",
+          "pass": true
+        },
+        {
+          "query": "Đổi đề tài từ EfficientNetV2 sang V3 giúp tôi nhé",
+          "target_type": "latex_command",
+          "target_id": "title",
+          "pass": true
+        }
+      ]
+    },
+    "guardrails": {
+      "numeric_drift_detection_rate": {
+        "value": 1.0,
+        "cases": [
+          {
+            "id": "GR-01",
+            "kind": "numeric_drift",
+            "expect_flag": true,
+            "flagged": true,
+            "pass": true,
+            "flags": [
+              "numeric_drift",
+              "numeric_removed"
+            ]
+          },
+          {
+            "id": "GR-02",
+            "kind": "numeric_preserved",
+            "expect_flag": false,
+            "flagged": false,
+            "pass": true,
+            "flags": []
+          }
+        ],
+        "passed": 2,
+        "total": 2
+      },
+      "guardrail_block_rate": {
+        "value": 0.5,
+        "cases": [
+          {
+            "id": "GR-03",
+            "kind": "title_scope_block",
+            "blocked": true,
+            "pass": true,
+            "message": "Yêu cầu liên quan tiêu đề nhưng phạm vi là cả file — đã chặn."
+          },
+          {
+            "id": "GR-04",
+            "kind": "title_scope_ok",
+            "pass": true,
+            "plan": {
+              "target_type": "latex_command",
+              "target_id": "title"
+            }
+          }
+        ],
+        "passed": 2,
+        "total": 2
+      }
+    }
+  },
+  "live": null,
+  "measured": {
+    "intent_routing_accuracy": 1.0,
+    "edit_scope_accuracy": 1.0,
+    "guardrail_block_rate": 0.5,
+    "numeric_drift_detection_rate": 1.0,
+    "chat_latency_p50_s": null,
+    "style_latency_p50_s": null,
+    "compile_success_rate": null,
+    "health_latency_p95_ms": null,
+    "cost_per_active_user_month_usd": 1.2
+  },
+  "comparison": [
+    {
+      "metric": "intent_routing_accuracy",
+      "arionear": 1.0,
+      "baseline": 0.65,
+      "unit": "ratio",
+      "delta": 0.35,
+      "improved_vs_baseline": true,
+      "baseline_description": "Regex-only intent router (no LLM classifier)"
+    },
+    {
+      "metric": "edit_scope_accuracy",
+      "arionear": 1.0,
+      "baseline": 0.4,
+      "unit": "ratio",
+      "delta": 0.6,
+      "improved_vs_baseline": true,
+      "baseline_description": "Legacy whole-document edit fallback for title queries"
+    },
+    {
+      "metric": "guardrail_block_rate",
+      "arionear": 0.5,
+      "baseline": 0.0,
+      "unit": "ratio",
+      "delta": 0.5,
+      "improved_vs_baseline": true,
+      "baseline_description": "No L2 integrity validation before apply"
+    },
+    {
+      "metric": "numeric_drift_detection_rate",
+      "arionear": 1.0,
+      "baseline": 0.0,
+      "unit": "ratio",
+      "delta": 1.0,
+      "improved_vs_baseline": true,
+      "baseline_description": "No numeric drift checks on AI suggestions"
+    },
+    {
+      "metric": "cost_per_active_user_month_usd",
+      "arionear": 1.2,
+      "baseline": 4.5,
+      "unit": "usd",
+      "delta": 3.3,
+      "improved_vs_baseline": true,
+      "baseline_description": "gpt-4o full-document edits, ~30 sessions/month"
+    }
+  ],
+  "cost_estimate": {
+    "model": "openrouter/gpt-4o-mini (typical editor default)",
+    "assumptions": {
+      "sessions_per_user_month": 20,
+      "chat_turns_per_session": 8,
+      "edits_per_session": 3,
+      "avg_input_tokens": 2500,
+      "avg_output_tokens": 400
+    },
+    "usd_per_million_input": 0.15,
+    "usd_per_million_output": 0.6,
+    "estimated_usd_per_user_month": 1.2,
+    "baseline_usd_per_user_month": 4.5
+  }
+}

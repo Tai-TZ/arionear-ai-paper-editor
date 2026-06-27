@@ -1,0 +1,32 @@
+[
+  {
+    "id": "GR-01",
+    "kind": "numeric_drift",
+    "original": "F1 score is 92.4.",
+    "suggestion": "F1 score is 95.0.",
+    "scope": "selection",
+    "expect_flag": true
+  },
+  {
+    "id": "GR-02",
+    "kind": "numeric_preserved",
+    "original": "Accuracy reached 92.4% on the test set.",
+    "suggestion": "Accuracy reached 92.4% on the held-out test set.",
+    "scope": "selection",
+    "expect_flag": false
+  },
+  {
+    "id": "GR-03",
+    "kind": "title_scope_block",
+    "query": "sửa tiêu đề thành V3",
+    "plan_target_type": "document",
+    "expect_block": true
+  },
+  {
+    "id": "GR-04",
+    "kind": "title_scope_ok",
+    "query": "Đổi tên đề tài để sử dụng model EfficientNetV3 nhé",
+    "expect_target": "latex_command",
+    "expect_target_id": "title"
+  }
+]

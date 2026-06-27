@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from src.services.direct_edit import parse_rename_instruction, try_direct_text_edit
+from src.services.direct_edit import (
+    parse_rename_instruction,
+    try_direct_text_edit,
+    try_metadata_scoped_edit,
+)
 from src.services.intent_router import classify_intent
 
 
@@ -18,6 +22,27 @@ def test_parse_rename_tu_sang():
         "EfficientNetV2",
         "V3",
     )
+
+
+def test_title_edit_scoped():
+    latex = (
+        "\\documentclass{article}\n"
+        "\\title{Vietnamese herbariums Species Classification with EfficientNetV2}\n"
+        "\\begin{document}\n"
+        "Body\n"
+        "\\end{document}\n"
+    )
+    result = try_metadata_scoped_edit(
+        "Sửa tiêu đề bài báo thành model EfficietNetV3 nhé",
+        latex,
+    )
+    assert result is not None
+    original, replacement, full = result
+    assert "EfficientNetV2" in original
+    assert "EfficientNetV3" in replacement
+    assert "EfficientNetV3" in full
+    assert "EfficientNetV2" not in full
+    assert "\\begin{document}" in full
 
 
 def test_direct_edit_name_permutation():

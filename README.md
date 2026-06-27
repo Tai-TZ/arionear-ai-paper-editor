@@ -339,6 +339,8 @@ ruff check src tests
 | [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
 | [ROADMAP.md](./ROADMAP.md) | Lộ trình phase |
 | [eval/results/report.md](./eval/results/report.md) | Báo cáo đánh giá |
+| [REPORT_GATE3.md](./REPORT_GATE3.md) | Gate 3 — production, eval, guardrails |
+| [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) | Guardrail 4 lớp |
 | [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book) | Hướng dẫn Arionear 10 chương |
 
 ---

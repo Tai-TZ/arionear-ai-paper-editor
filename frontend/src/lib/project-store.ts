@@ -219,6 +219,18 @@ export function normalizeAssetName(name: string) {
   return name.replace(/\\/g, "/").replace(/^\.\//, "").trim();
 }
 
+export function findProjectAsset(path: string, assets: ProjectAsset[] = []): ProjectAsset | null {
+  const key = normalizeAssetName(path);
+  const lower = key.toLowerCase();
+  const basename = key.split("/").pop()?.toLowerCase() ?? lower;
+  return (
+    assets.find((asset) => {
+      const name = normalizeAssetName(asset.name).toLowerCase();
+      return name === lower || name.endsWith(`/${basename}`);
+    }) ?? null
+  );
+}
+
 export function resolveProjectAsset(src: string, assets: ProjectAsset[] = []): string | null {
   const key = normalizeAssetName(src);
   const basename = key.split("/").pop() ?? key;
