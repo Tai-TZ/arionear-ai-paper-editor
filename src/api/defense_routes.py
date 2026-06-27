@@ -19,7 +19,7 @@ def defense_quota_endpoint(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> DefenseQuotaResponse:
-    """Monthly defense turn allowance for the authenticated user."""
+    """Daily defense turn allowance for the authenticated user."""
     return DefenseQuotaResponse.model_validate(defense_quota_status(db, user))
 
 

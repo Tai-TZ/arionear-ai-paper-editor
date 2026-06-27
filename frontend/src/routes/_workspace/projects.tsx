@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
@@ -17,12 +16,10 @@ import {
   BookOpen,
   GraduationCap,
 } from "lucide-react";
-import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
-import { authToast } from "@/lib/auth-toast";
+import { refreshSession } from "@/lib/auth-store";
 import {
   SHOW_PROJECTS_IMPORT,
   SHOW_PROJECTS_UPLOAD,
-  WorkspaceLayout,
 } from "@/components/workspace/workspace-layout";
 import {
   createPaper,
@@ -44,8 +41,6 @@ import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { ProjectsListSkeleton } from "@/components/workspace/workspace-content-skeleton";
-import { fetchResearcherProfile } from "@/lib/api/profile-api";
-import { type ResearcherProfile } from "@/lib/researcher-profile";
 import { useLocale } from "@/components/locale-provider";
 import { commonCopy } from "@/lib/common-i18n";
 import { projectsCopy } from "@/lib/projects-i18n";
@@ -55,11 +50,8 @@ import {
 } from "@/components/editable-project-name";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/projects")({
+export const Route = createFileRoute("/_workspace/projects")({
   ssr: false,
-  beforeLoad: () => {
-    requireAuth();
-  },
   head: () => ({
     meta: [
       { title: "Your Projects — Arionear" },
@@ -90,9 +82,6 @@ function ProjectsPage() {
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(() => getSession());
-  const [profile, setProfile] = useState<ResearcherProfile | null>(null);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -100,18 +89,9 @@ function ProjectsPage() {
       setLoading(true);
       setLoadError(null);
 
-      const cached = getSession();
-      if (cached && !cancelled) setUser(cached);
-
       try {
-        const [sessionUser, list, researcherProfile] = await Promise.all([
-          refreshSession(),
-          fetchPapers(),
-          fetchResearcherProfile().catch(() => null),
-        ]);
+        const [, list] = await Promise.all([refreshSession(), fetchPapers()]);
         if (cancelled) return;
-        if (sessionUser) setUser(sessionUser);
-        if (researcherProfile) setProfile(researcherProfile);
         setProjects(list);
       } catch (error) {
         if (!cancelled) {
@@ -261,17 +241,7 @@ function ProjectsPage() {
   };
 
   return (
-    <WorkspaceLayout
-      active="projects"
-      user={user}
-      profile={profile}
-      onSignOut={() => {
-        signOut();
-        setUser(null);
-        authToast.signOutSuccess();
-        navigate({ to: "/signin" });
-      }}
-    >
+    <>
       {creatingLabel ? (
         <AppLoadingScreen
           variant="overlay"
@@ -509,7 +479,7 @@ function ProjectsPage() {
           </div>
         </div>
       </main>
-    </WorkspaceLayout>
+    </>
   );
 }
 

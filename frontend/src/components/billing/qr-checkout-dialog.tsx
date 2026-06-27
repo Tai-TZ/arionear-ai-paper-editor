@@ -1,23 +1,16 @@
 /**
  * QR Checkout Dialog — shown when a user initiates a Pro upgrade.
- *
- * Flow:
- *  1. Parent calls createCheckout() and passes the result here.
- *  2. Dialog renders the base-64 QR PNG and a direct test link.
- *  3. Every 3 s we poll /billing/status; when tier flips to "pro" we call onSuccess.
- *
- * V2 (Stripe): the confirm_url will point to a Stripe-hosted page.
- *  The polling approach still works unchanged.
  */
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Clock, ExternalLink, Loader2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Clock, ExternalLink, Loader2, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { useLocale } from "@/components/locale-provider";
 import { fetchBillingStatus, type BillingStatus } from "@/lib/api/billing-api";
 
@@ -34,22 +27,28 @@ type Props = {
 
 const copy = {
   vi: {
-    title: "Quét QR để nâng cấp Pro",
-    scan: "Dùng camera điện thoại để quét mã QR bên dưới.",
-    devLink: "Đang test trên máy tính? Nhấn vào đây để mở trực tiếp",
-    waiting: "Đang chờ xác nhận…",
-    expired: "Mã QR đã hết hạn. Vui lòng đóng và thử lại.",
-    success: "Tài khoản đã được nâng cấp lên Pro! ⚡",
+    title: "Nâng cấp Pro",
+    subtitle: "Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử.",
+    stepScan: "Bước 1 · Quét mã",
+    stepWait: "Bước 2 · Xác nhận",
+    devLink: "Đang dùng máy tính? Mở liên kết thanh toán",
+    waiting: "Đang chờ xác nhận thanh toán",
+    expired: "Mã QR đã hết hạn. Đóng và thử lại.",
+    success: "Nâng cấp Pro thành công",
+    successBody: "Tài khoản của bạn đã được kích hoạt gói Pro.",
     close: "Đóng",
-    timerLabel: "Còn lại",
+    timerLabel: "Hết hạn sau",
   },
   en: {
-    title: "Scan QR to upgrade to Pro",
-    scan: "Use your phone camera to scan the QR code below.",
-    devLink: "Testing on desktop? Click here to open directly",
-    waiting: "Waiting for payment confirmation…",
-    expired: "QR code expired. Please close and try again.",
-    success: "Account upgraded to Pro! ⚡",
+    title: "Upgrade to Pro",
+    subtitle: "Scan the QR code with your banking or e-wallet app.",
+    stepScan: "Step 1 · Scan",
+    stepWait: "Step 2 · Confirm",
+    devLink: "On desktop? Open payment link",
+    waiting: "Waiting for payment confirmation",
+    expired: "QR code expired. Close and try again.",
+    success: "Pro upgrade complete",
+    successBody: "Your account is now on the Pro plan.",
     close: "Close",
     timerLabel: "Expires in",
   },
@@ -70,22 +69,31 @@ export function QrCheckoutDialog({
   const [secondsLeft, setSecondsLeft] = useState(expiresInMinutes * 60);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+  // Guard against duplicate success calls when two overlapping poll intervals
+  // both observe tier === "pro" before the first one clears the interval.
+  const successFiredRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
       setConfirmed(false);
       setSecondsLeft(expiresInMinutes * 60);
+      successFiredRef.current = false;
       return;
     }
+
+    successFiredRef.current = false;
 
     pollingRef.current = setInterval(async () => {
       try {
         const status = await fetchBillingStatus();
-        if (status.tier === "pro") {
+        if (status.tier === "pro" && !successFiredRef.current) {
+          successFiredRef.current = true;
           clearInterval(pollingRef.current!);
           clearInterval(countdownRef.current!);
           setConfirmed(true);
-          onSuccess(status);
+          onSuccessRef.current(status);
         }
       } catch {
         /* network error — keep polling */
@@ -107,79 +115,129 @@ export function QrCheckoutDialog({
       clearInterval(pollingRef.current!);
       clearInterval(countdownRef.current!);
     };
-  }, [open, expiresInMinutes, onSuccess]);
+  }, [open, expiresInMinutes]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const isExpired = secondsLeft === 0 && !confirmed;
+  const timer = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            ⚡ {t.title}
-          </DialogTitle>
+      <DialogContent className="gap-0 overflow-hidden border-foreground p-0 sm:max-w-[400px] sm:rounded-sm">
+        <DialogHeader className="space-y-3 border-b border-foreground/20 px-6 pb-5 pt-6 text-left">
+          <div className="flex items-start gap-3 pr-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-foreground bg-foreground text-background">
+              <Zap className="h-4 w-4" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="font-serif-display text-2xl font-black tracking-tight">
+                {t.title}
+              </DialogTitle>
+              <DialogDescription className="mt-1.5 font-body text-sm leading-relaxed">
+                {t.subtitle}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-5 pb-2">
+        <div className="px-6 py-6">
           {confirmed ? (
-            /* ── Success state ── */
-            <div className="flex flex-col items-center gap-4 py-6">
-              <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-              <p className="text-center font-semibold text-emerald-600">{t.success}</p>
-              <Button onClick={onClose}>{t.close}</Button>
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <div className="flex h-14 w-14 items-center justify-center border border-foreground bg-foreground/[0.04]">
+                <Check className="h-7 w-7 text-[color:var(--editorial-red)]" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="font-serif-display text-xl font-bold tracking-tight">{t.success}</p>
+                <p className="mt-1 font-body text-sm text-muted-foreground">{t.successBody}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-2 inline-flex w-full items-center justify-center border border-foreground bg-foreground px-4 py-2.5 font-sans-ui text-[11px] uppercase tracking-widest text-background transition-colors hover:bg-background hover:text-foreground"
+              >
+                {t.close}
+              </button>
             </div>
           ) : isExpired ? (
-            /* ── Expired state ── */
-            <div className="flex flex-col items-center gap-4 py-6 text-center">
-              <Clock className="h-12 w-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t.expired}</p>
-              <Button variant="outline" onClick={onClose}>{t.close}</Button>
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <div className="flex h-14 w-14 items-center justify-center border border-foreground/40">
+                <Clock className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <p className="font-body text-sm text-muted-foreground">{t.expired}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex w-full items-center justify-center border border-foreground px-4 py-2.5 font-sans-ui text-[11px] uppercase tracking-widest transition-colors hover:bg-foreground hover:text-background"
+              >
+                {t.close}
+              </button>
             </div>
           ) : (
-            /* ── Scanning state ── */
-            <>
-              {/* QR image from backend-generated base64 PNG */}
-              <div className="rounded-2xl border-4 border-primary/20 bg-white p-3 shadow-inner">
-                <img
-                  src={`data:image/png;base64,${qrPngB64}`}
-                  alt="QR code for Pro upgrade"
-                  width={200}
-                  height={200}
-                  className="block"
-                />
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="mb-3 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {t.stepScan}
+                </p>
+                <div className="flex justify-center border border-foreground/30 bg-white p-4">
+                  <img
+                    src={`data:image/png;base64,${qrPngB64}`}
+                    alt="QR code for Pro upgrade"
+                    width={192}
+                    height={192}
+                    className="block h-48 w-48"
+                  />
+                </div>
               </div>
 
-              <p className="text-center text-sm text-muted-foreground">{t.scan}</p>
-
-              {/* Direct link for desktop testing */}
               <a
                 href={confirmUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-primary underline-offset-4 hover:underline"
+                className="inline-flex items-center justify-center gap-1.5 font-sans-ui text-[11px] uppercase tracking-widest text-muted-foreground underline-offset-4 transition-colors hover:text-[color:var(--editorial-red)] hover:underline"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {t.devLink}
               </a>
 
-              {/* Polling indicator + countdown */}
-              <div className="flex w-full items-center justify-between rounded-lg border bg-muted/50 px-4 py-2.5 text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {t.waiting}
-                </span>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {t.timerLabel} {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-                </span>
+              <div>
+                <p className="mb-3 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {t.stepWait}
+                </p>
+                <div className="border border-foreground/30 bg-foreground/[0.02] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2 font-body text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" strokeWidth={1.5} />
+                      <span className="truncate">{t.waiting}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 font-mono-data text-xs tabular-nums",
+                        secondsLeft <= 60 ? "text-[color:var(--editorial-red)]" : "text-muted-foreground",
+                      )}
+                    >
+                      {t.timerLabel} {timer}
+                    </span>
+                  </div>
+                  <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-foreground/10">
+                    <div
+                      className="h-full rounded-full bg-foreground transition-all duration-1000 ease-linear"
+                      style={{
+                        width: `${Math.max(0, (secondsLeft / (expiresInMinutes * 60)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <Button variant="ghost" size="sm" className="gap-1.5" onClick={onClose}>
-                <X className="h-3.5 w-3.5" />
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex w-full items-center justify-center border border-foreground/40 px-4 py-2.5 font-sans-ui text-[11px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+              >
                 {t.close}
-              </Button>
-            </>
+              </button>
+            </div>
           )}
         </div>
       </DialogContent>

@@ -10,7 +10,7 @@ export type DefenseConversationTurn = {
   content: string;
 };
 
-export type DefenseMode = "proactive" | "responsive";
+export type DefenseMode = "proactive";
 
 export type DefenseQuota = {
   plan: "free" | "pro";
@@ -19,10 +19,11 @@ export type DefenseQuota = {
   remaining: number;
   period: string;
   period_type: "daily" | "monthly";
+  resets_at?: string | null;
 };
 
-/** Set to true when re-enabling per-plan defense turn limits. */
-export const DEFENSE_QUOTA_ENABLED = false;
+/** When true, block sends after quota is exhausted. Display is always shown when quota is loaded. */
+export const DEFENSE_QUOTA_ENABLED = true;
 
 export type DefenseStreamRequest = {
   latex_content: string;
@@ -31,6 +32,8 @@ export type DefenseStreamRequest = {
   paper_id?: string;
   llm_provider?: LLMProvider;
   llm_model?: string;
+  locale?: "en" | "vi";
+  user_name?: string;
 };
 
 export type DefenseStreamCallbacks = {
@@ -130,7 +133,8 @@ function streamDefenseWithXhr(
   body: string,
   authToken: string | null,
   callbacks: DefenseStreamCallbacks,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  interruptedMsg: string,
 ): Promise<void> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
@@ -142,9 +146,7 @@ function streamDefenseWithXhr(
     const finish = () => {
       buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
       if (!failed && !isFinished() && !signal?.aborted) {
-        callbacks.onError(
-          streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
-        );
+        callbacks.onError(streamErrorMessage(interruptedMsg));
       }
       resolve();
     };
@@ -197,7 +199,8 @@ async function streamDefenseWithFetch(
   body: string,
   authToken: string | null,
   callbacks: DefenseStreamCallbacks,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  interruptedMsg: string,
 ): Promise<void> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -249,9 +252,7 @@ async function streamDefenseWithFetch(
   }
   if (buffer.trim()) dispatchBlock(buffer);
   if (!isFinished() && !signal?.aborted) {
-    callbacks.onError(
-      streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
-    );
+    callbacks.onError(streamErrorMessage(interruptedMsg));
   }
   signal?.removeEventListener("abort", onAbort);
 }
@@ -293,10 +294,14 @@ export async function streamDefense(
   const url = `${API_BASE}/defense/stream`;
   const authToken = getAccessToken();
   const body = JSON.stringify(request);
+  const interruptedMsg =
+    request.locale === "en"
+      ? "Stream interrupted. Please try again."
+      : "Kết nối stream bị gián đoạn. Vui lòng thử lại.";
 
   if (typeof XMLHttpRequest !== "undefined") {
-    await streamDefenseWithXhr(url, body, authToken, callbacks, signal);
+    await streamDefenseWithXhr(url, body, authToken, callbacks, signal, interruptedMsg);
     return;
   }
-  await streamDefenseWithFetch(url, body, authToken, callbacks, signal);
+  await streamDefenseWithFetch(url, body, authToken, callbacks, signal, interruptedMsg);
 }

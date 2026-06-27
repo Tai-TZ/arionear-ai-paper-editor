@@ -266,10 +266,12 @@ class DefenseConversationTurn(BaseModel):
 class DefenseRequest(BaseModel):
     latex_content: str = Field(..., max_length=500_000)
     conversation_history: list[DefenseConversationTurn] = Field(default_factory=list)
-    mode: Literal["proactive", "responsive"] = "proactive"
+    mode: Literal["proactive"] = "proactive"
     paper_id: str | None = None
     llm_provider: LLMProvider | None = None
     llm_model: str | None = None
+    locale: Literal["en", "vi"] = "vi"
+    user_name: str | None = Field(default=None, max_length=128)
 
     @field_validator("llm_provider", mode="before")
     @classmethod
@@ -295,6 +297,7 @@ class DefenseQuotaResponse(BaseModel):
     remaining: int
     period: str
     period_type: Literal["daily", "monthly"] = "daily"
+    resets_at: str | None = None
 
 
 class PaperCreate(BaseModel):

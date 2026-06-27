@@ -12,8 +12,9 @@ import base64
 import io
 import logging
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import qrcode
 import qrcode.image.pil
@@ -33,6 +34,11 @@ PLAN_LIMITS: dict[str, int] = {
     UserTier.FREE: FREE_DEFENSE_TURNS,
     UserTier.PRO: PRO_DEFENSE_TURNS,
 }
+
+try:
+    QUOTA_RESET_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+except ZoneInfoNotFoundError:
+    QUOTA_RESET_TZ = timezone(timedelta(hours=7))
 
 # ─── QR Checkout sessions ─────────────────────────────────────────────────────
 # In-memory store: {checkout_id → session_data}
@@ -68,6 +74,35 @@ def get_or_create_subscription(db: Session, user_id: object) -> UserSubscription
     return sub
 
 
+def _maybe_reset_daily_quota(sub: UserSubscription) -> None:
+    """Reset defense turns after 23:59:59 local (Asia/Ho_Chi_Minh) for the active period."""
+    now_local = datetime.now(QUOTA_RESET_TZ)
+    reset_at = sub.turns_reset_at
+    if reset_at.tzinfo is None:
+        reset_at = reset_at.replace(tzinfo=UTC)
+    period_start = reset_at.astimezone(QUOTA_RESET_TZ)
+    period_end = period_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if now_local <= period_end:
+        return
+    sub.defense_turns_used = 0
+    sub.turns_reset_at = datetime.now(UTC)
+
+
+def daily_quota_resets_at_iso() -> str:
+    """Next 23:59:59 in QUOTA_RESET_TZ, serialised as UTC ISO-8601."""
+    now_local = datetime.now(QUOTA_RESET_TZ)
+    end = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if now_local >= end:
+        end += timedelta(days=1)
+    return end.astimezone(UTC).isoformat()
+
+
+def _subscription_for_user(db: Session, user_id: object) -> UserSubscription:
+    sub = get_or_create_subscription(db, user_id)
+    _maybe_reset_daily_quota(sub)
+    return sub
+
+
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 
@@ -76,7 +111,7 @@ def get_billing_status(db: Session, user: User) -> dict:
 
     Shape mirrors BillingStatusResponse pydantic model.
     """
-    sub = get_or_create_subscription(db, user.id)
+    sub = _subscription_for_user(db, user.id)
     limit = PLAN_LIMITS[sub.tier]
     used = sub.defense_turns_used
     remaining = max(0, limit - used)
@@ -156,7 +191,7 @@ def upgrade_to_pro(db: Session, user: User) -> dict:
     Called internally by confirm_checkout() after payment verification.
     V2: only call this from the Stripe webhook handler, never directly.
     """
-    sub = get_or_create_subscription(db, user.id)
+    sub = _subscription_for_user(db, user.id)
     sub.tier = UserTier.PRO
     sub.upgraded_at = datetime.now(UTC)
     db.flush()
@@ -165,23 +200,23 @@ def upgrade_to_pro(db: Session, user: User) -> dict:
 
 def assert_defense_allowed(db: Session, user: User) -> None:
     """Raise QuotaExceededError when user has exhausted their defense turns."""
-    sub = get_or_create_subscription(db, user.id)
+    sub = _subscription_for_user(db, user.id)
     limit = PLAN_LIMITS[sub.tier]
     if sub.defense_turns_used >= limit:
         tier_label = sub.tier.lower()
         if tier_label == "pro":
             raise QuotaExceededError(
-                f"PRO_QUOTA_EXCEEDED:You have used all {limit} Pro defense turns. "
-                "Contact support to reset your quota."
+                f"PRO_QUOTA_EXCEEDED:You have used all {limit} Pro defense turns for today. "
+                "Your quota resets at 23:59:59."
             )
         raise QuotaExceededError(
-            f"FREE_QUOTA_EXCEEDED:You have used all {FREE_DEFENSE_TURNS} free defense turns. "
-            "Upgrade to Pro for 50 turns per month."
+            f"FREE_QUOTA_EXCEEDED:You have used all {FREE_DEFENSE_TURNS} free defense turns for today. "
+            "Upgrade to Pro for 50 turns per day."
         )
 
 
 def record_defense_turn(db: Session, user: User) -> None:
     """Increment the defense turn counter for the given user."""
-    sub = get_or_create_subscription(db, user.id)
+    sub = _subscription_for_user(db, user.id)
     sub.defense_turns_used += 1
     db.flush()

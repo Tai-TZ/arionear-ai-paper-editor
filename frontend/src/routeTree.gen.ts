@@ -15,14 +15,11 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as ProjectsRouteImport } from './routes/projects'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LatexGuideRouteImport } from './routes/latex-guide'
 import { Route as IntegrityRouteImport } from './routes/integrity'
-import { Route as GuideRouteImport } from './routes/guide'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as EthicsRouteImport } from './routes/ethics'
@@ -32,11 +29,17 @@ import { Route as DataUseRouteImport } from './routes/data-use'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as WorkspaceRouteRouteImport } from './routes/_workspace/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates/index'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
+import { Route as WorkspaceProjectsRouteImport } from './routes/_workspace/projects'
+import { Route as WorkspaceProfileRouteImport } from './routes/_workspace/profile'
+import { Route as WorkspacePlanRouteImport } from './routes/_workspace/plan'
+import { Route as WorkspaceGuideRouteImport } from './routes/_workspace/guide'
 import { Route as TemplatesTemplateIdIndexRouteImport } from './routes/templates/$templateId/index'
 import { Route as TemplatesTemplateIdPdfRouteImport } from './routes/templates/$templateId/pdf'
+import { Route as BillingConfirmCheckoutIdRouteImport } from './routes/billing/confirm.$checkoutId'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const WorkflowRoute = WorkflowRouteImport.update({
@@ -69,16 +72,6 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectsRoute = ProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -102,11 +95,6 @@ const LatexGuideRoute = LatexGuideRouteImport.update({
 const IntegrityRoute = IntegrityRouteImport.update({
   id: '/integrity',
   path: '/integrity',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -154,6 +142,10 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceRouteRoute = WorkspaceRouteRouteImport.update({
+  id: '/_workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -169,6 +161,26 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceProjectsRoute = WorkspaceProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => WorkspaceRouteRoute,
+} as any)
+const WorkspaceProfileRoute = WorkspaceProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => WorkspaceRouteRoute,
+} as any)
+const WorkspacePlanRoute = WorkspacePlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => WorkspaceRouteRoute,
+} as any)
+const WorkspaceGuideRoute = WorkspaceGuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => WorkspaceRouteRoute,
+} as any)
 const TemplatesTemplateIdIndexRoute =
   TemplatesTemplateIdIndexRouteImport.update({
     id: '/templates/$templateId/',
@@ -180,6 +192,12 @@ const TemplatesTemplateIdPdfRoute = TemplatesTemplateIdPdfRouteImport.update({
   path: '/templates/$templateId/pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingConfirmCheckoutIdRoute =
+  BillingConfirmCheckoutIdRouteImport.update({
+    id: '/billing/confirm/$checkoutId',
+    path: '/billing/confirm/$checkoutId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google/callback',
   path: '/auth/google/callback',
@@ -197,23 +215,25 @@ export interface FileRoutesByFullPath {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/guide': typeof WorkspaceGuideRoute
+  '/plan': typeof WorkspacePlanRoute
+  '/profile': typeof WorkspaceProfileRoute
+  '/projects': typeof WorkspaceProjectsRoute
   '/share/$token': typeof ShareTokenRoute
   '/templates/': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/billing/confirm/$checkoutId': typeof BillingConfirmCheckoutIdRoute
   '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
   '/templates/$templateId/': typeof TemplatesTemplateIdIndexRoute
 }
@@ -228,29 +248,32 @@ export interface FileRoutesByTo {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/guide': typeof WorkspaceGuideRoute
+  '/plan': typeof WorkspacePlanRoute
+  '/profile': typeof WorkspaceProfileRoute
+  '/projects': typeof WorkspaceProjectsRoute
   '/share/$token': typeof ShareTokenRoute
   '/templates': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/billing/confirm/$checkoutId': typeof BillingConfirmCheckoutIdRoute
   '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
   '/templates/$templateId': typeof TemplatesTemplateIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_workspace': typeof WorkspaceRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
@@ -260,23 +283,25 @@ export interface FileRoutesById {
   '/ethics': typeof EthicsRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guide': typeof GuideRoute
   '/integrity': typeof IntegrityRoute
   '/latex-guide': typeof LatexGuideRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/projects': typeof ProjectsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/workflow': typeof WorkflowRoute
+  '/_workspace/guide': typeof WorkspaceGuideRoute
+  '/_workspace/plan': typeof WorkspacePlanRoute
+  '/_workspace/profile': typeof WorkspaceProfileRoute
+  '/_workspace/projects': typeof WorkspaceProjectsRoute
   '/share/$token': typeof ShareTokenRoute
   '/templates/': typeof TemplatesIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/billing/confirm/$checkoutId': typeof BillingConfirmCheckoutIdRoute
   '/templates/$templateId/pdf': typeof TemplatesTemplateIdPdfRoute
   '/templates/$templateId/': typeof TemplatesTemplateIdIndexRoute
 }
@@ -293,23 +318,25 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
-    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
     | '/pricing'
     | '/privacy'
-    | '/profile'
-    | '/projects'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/guide'
+    | '/plan'
+    | '/profile'
+    | '/projects'
     | '/share/$token'
     | '/templates/'
     | '/auth/google/callback'
+    | '/billing/confirm/$checkoutId'
     | '/templates/$templateId/pdf'
     | '/templates/$templateId/'
   fileRoutesByTo: FileRoutesByTo
@@ -324,28 +351,31 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
-    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
     | '/pricing'
     | '/privacy'
-    | '/profile'
-    | '/projects'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/guide'
+    | '/plan'
+    | '/profile'
+    | '/projects'
     | '/share/$token'
     | '/templates'
     | '/auth/google/callback'
+    | '/billing/confirm/$checkoutId'
     | '/templates/$templateId/pdf'
     | '/templates/$templateId'
   id:
     | '__root__'
     | '/'
+    | '/_workspace'
     | '/about'
     | '/admin'
     | '/contact'
@@ -355,29 +385,32 @@ export interface FileRouteTypes {
     | '/ethics'
     | '/features'
     | '/forgot-password'
-    | '/guide'
     | '/integrity'
     | '/latex-guide'
     | '/login'
     | '/pricing'
     | '/privacy'
-    | '/profile'
-    | '/projects'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/signup'
     | '/terms'
     | '/workflow'
+    | '/_workspace/guide'
+    | '/_workspace/plan'
+    | '/_workspace/profile'
+    | '/_workspace/projects'
     | '/share/$token'
     | '/templates/'
     | '/auth/google/callback'
+    | '/billing/confirm/$checkoutId'
     | '/templates/$templateId/pdf'
     | '/templates/$templateId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  WorkspaceRouteRoute: typeof WorkspaceRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
@@ -387,14 +420,11 @@ export interface RootRouteChildren {
   EthicsRoute: typeof EthicsRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  GuideRoute: typeof GuideRoute
   IntegrityRoute: typeof IntegrityRoute
   LatexGuideRoute: typeof LatexGuideRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
-  ProfileRoute: typeof ProfileRoute
-  ProjectsRoute: typeof ProjectsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
@@ -404,6 +434,7 @@ export interface RootRouteChildren {
   ShareTokenRoute: typeof ShareTokenRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
+  BillingConfirmCheckoutIdRoute: typeof BillingConfirmCheckoutIdRoute
   TemplatesTemplateIdPdfRoute: typeof TemplatesTemplateIdPdfRoute
   TemplatesTemplateIdIndexRoute: typeof TemplatesTemplateIdIndexRoute
 }
@@ -452,20 +483,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/projects': {
-      id: '/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof ProjectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -499,13 +516,6 @@ declare module '@tanstack/react-router' {
       path: '/integrity'
       fullPath: '/integrity'
       preLoaderRoute: typeof IntegrityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -571,6 +581,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace': {
+      id: '/_workspace'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof WorkspaceRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -592,6 +609,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace/projects': {
+      id: '/_workspace/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof WorkspaceProjectsRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/profile': {
+      id: '/_workspace/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof WorkspaceProfileRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/plan': {
+      id: '/_workspace/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof WorkspacePlanRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/_workspace/guide': {
+      id: '/_workspace/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof WorkspaceGuideRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
     '/templates/$templateId/': {
       id: '/templates/$templateId/'
       path: '/templates/$templateId'
@@ -606,6 +651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesTemplateIdPdfRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/confirm/$checkoutId': {
+      id: '/billing/confirm/$checkoutId'
+      path: '/billing/confirm/$checkoutId'
+      fullPath: '/billing/confirm/$checkoutId'
+      preLoaderRoute: typeof BillingConfirmCheckoutIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/google/callback': {
       id: '/auth/google/callback'
       path: '/auth/google/callback'
@@ -616,8 +668,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface WorkspaceRouteRouteChildren {
+  WorkspaceGuideRoute: typeof WorkspaceGuideRoute
+  WorkspacePlanRoute: typeof WorkspacePlanRoute
+  WorkspaceProfileRoute: typeof WorkspaceProfileRoute
+  WorkspaceProjectsRoute: typeof WorkspaceProjectsRoute
+}
+
+const WorkspaceRouteRouteChildren: WorkspaceRouteRouteChildren = {
+  WorkspaceGuideRoute: WorkspaceGuideRoute,
+  WorkspacePlanRoute: WorkspacePlanRoute,
+  WorkspaceProfileRoute: WorkspaceProfileRoute,
+  WorkspaceProjectsRoute: WorkspaceProjectsRoute,
+}
+
+const WorkspaceRouteRouteWithChildren = WorkspaceRouteRoute._addFileChildren(
+  WorkspaceRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  WorkspaceRouteRoute: WorkspaceRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
@@ -627,14 +698,11 @@ const rootRouteChildren: RootRouteChildren = {
   EthicsRoute: EthicsRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  GuideRoute: GuideRoute,
   IntegrityRoute: IntegrityRoute,
   LatexGuideRoute: LatexGuideRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
-  ProfileRoute: ProfileRoute,
-  ProjectsRoute: ProjectsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
@@ -644,6 +712,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareTokenRoute: ShareTokenRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
+  BillingConfirmCheckoutIdRoute: BillingConfirmCheckoutIdRoute,
   TemplatesTemplateIdPdfRoute: TemplatesTemplateIdPdfRoute,
   TemplatesTemplateIdIndexRoute: TemplatesTemplateIdIndexRoute,
 }

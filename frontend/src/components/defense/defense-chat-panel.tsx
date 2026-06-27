@@ -6,6 +6,8 @@ import {
   RotateCcw,
   ArrowRight,
   Clock,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -15,40 +17,47 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { DefenseCopy } from "@/lib/defense-i18n";
-import type { DefenseMode, DefenseQuota } from "@/lib/api/defense-api";
+import type { DefenseQuota } from "@/lib/api/defense-api";
 import { DEFENSE_QUOTA_ENABLED } from "@/lib/api/defense-api";
 import type { DefensePdfCitation } from "@/lib/defense-pdf-links";
 import { DefenseCouncilMarkdown } from "@/components/defense/defense-council-markdown";
+import { DefenseQuotaResetTimer } from "@/components/defense/defense-quota-reset-timer";
+import type { UiLanguage } from "@/lib/locale-store";
 
 export type DefenseMessage = {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  isCancelled?: boolean;
 };
 
 export function countCompletedCouncilTurns(messages: DefenseMessage[]): number {
   return messages.filter(
-    (m) => m.role === "assistant" && !m.isStreaming && m.content.trim().length > 0,
+    (m) => m.role === "assistant" && !m.isStreaming && !m.isCancelled && m.content.trim().length > 0,
   ).length;
 }
 
 type Props = {
   copy: DefenseCopy["chat"];
   quota: DefenseQuota | null;
+  quotaLoadFailed?: boolean;
   messages: DefenseMessage[];
   input: string;
-  mode: DefenseMode;
   isStreaming: boolean;
   activityText: string;
   onInputChange: (v: string) => void;
   onSend: () => void;
   onStop: () => void;
-  onModeChange: (m: DefenseMode) => void;
   onReset: () => void;
+  onResume?: () => void;
+  onQuotaRetry?: () => void;
+  savedMessages?: DefenseMessage[];
   hasStarted: boolean;
   paperName?: string;
   latexContent?: string;
   onPdfCitation?: (citation: DefensePdfCitation) => void;
+  locale: UiLanguage;
+  onQuotaRefresh?: () => void;
 };
 
 function MessageRow({
@@ -58,6 +67,7 @@ function MessageRow({
   userLabel,
   activityText,
   thinkingDefault,
+  stopCancelledLabel,
   latexContent,
   onPdfCitation,
 }: {
@@ -67,6 +77,7 @@ function MessageRow({
   userLabel: string;
   activityText?: string;
   thinkingDefault: string;
+  stopCancelledLabel: string;
   latexContent?: string;
   onPdfCitation?: (citation: DefensePdfCitation) => void;
 }) {
@@ -82,7 +93,7 @@ function MessageRow({
   }
 
   return (
-    <article className="defense-msg defense-msg--council">
+    <article className={`defense-msg defense-msg--council${message.isCancelled ? " defense-msg--cancelled" : ""}`}>
       <header className="defense-msg-council-head">
         <GraduationCap className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
         {turnIndex >= 0 && <span className="defense-msg-council-tag">{turnLabel(turnIndex + 1)}</span>}
@@ -99,25 +110,69 @@ function MessageRow({
           </span>
         </p>
       ) : (
-        <DefenseCouncilMarkdown
-          content={message.content}
-          latexContent={latexContent}
-          isStreaming={message.isStreaming}
-          onPdfCitation={onPdfCitation}
-        />
+        <>
+          {message.content && (
+            <DefenseCouncilMarkdown
+              content={message.content}
+              latexContent={latexContent}
+              isStreaming={message.isStreaming}
+              onPdfCitation={onPdfCitation}
+            />
+          )}
+          {message.isCancelled && (
+            <p className="defense-msg-cancelled-label">{stopCancelledLabel}</p>
+          )}
+        </>
       )}
     </article>
+  );
+}
+
+export function DefenseQuotaBadge({
+  copy,
+  quota,
+  displayUsed,
+  exhausted = false,
+  showPeriod = false,
+  className,
+}: {
+  copy: DefenseCopy["chat"];
+  quota: DefenseQuota;
+  displayUsed: number;
+  exhausted?: boolean;
+  showPeriod?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`defense-quota-pill${exhausted ? " defense-quota-pill--full" : ""}${quota.plan === "pro" ? " defense-quota-pill--pro" : ""}${className ? ` ${className}` : ""}`}
+      title={copy.turnsUsed(displayUsed, quota.limit)}
+    >
+      <span className="defense-quota-pill-plan">
+        {quota.plan === "pro" ? copy.quotaPro : copy.quotaFree}
+      </span>
+      <span className="defense-quota-pill-count">
+        {displayUsed}/{quota.limit}
+      </span>
+      {showPeriod ? (
+        <span className="defense-quota-pill-period">{copy.quotaPeriodDaily}</span>
+      ) : null}
+    </span>
   );
 }
 
 function QuotaEmptyState({
   copy,
   quota,
+  locale,
+  onQuotaRefresh,
 }: {
   copy: DefenseCopy["chat"];
   quota: DefenseQuota;
+  locale: UiLanguage;
+  onQuotaRefresh?: () => void;
 }) {
-  const isDaily = quota.period_type === "daily";
+  const isFree = quota.plan === "free";
   return (
     <div className="defense-empty">
       <div className="defense-empty-card">
@@ -125,16 +180,23 @@ function QuotaEmptyState({
           <Clock className="h-5 w-5" strokeWidth={1.5} />
         </div>
         <h2 className="defense-empty-title">
-          {isDaily ? copy.quotaExceededDaily : copy.quotaExceededMonthly}
+          {isFree ? copy.quotaExceededDaily : copy.quotaExceededPro}
         </h2>
         <p className="defense-empty-desc">
-          {isDaily ? copy.quotaWaitTomorrow : copy.upgradeHint}
+          {isFree ? copy.quotaWaitTomorrow : copy.quotaWaitReset}
         </p>
+        <DefenseQuotaResetTimer
+          locale={locale}
+          resetTimeLabel={copy.quotaResetAt("23:59:59")}
+          countdownLabel={copy.quotaResetCountdown}
+          onElapsed={onQuotaRefresh}
+          className="defense-empty-reset-timer"
+        />
         <p className="defense-empty-meta font-mono-data">
-          {copy.turnsUsed(quota.limit, quota.limit, quota.period_type)}
+          {copy.turnsUsed(quota.limit, quota.limit)}
         </p>
-        {quota.plan === "free" && (
-          <Link to="/profile" className="defense-empty-cta">
+        {isFree && (
+          <Link to="/plan" className="defense-empty-cta">
             {copy.quotaUpgradeCta}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -144,27 +206,35 @@ function QuotaEmptyState({
   );
 }
 
+function truncatePreview(text: string, max = 72): string {
+  const first = text.split("\n")[0].trim();
+  return first.length > max ? first.slice(0, max - 1) + "…" : first;
+}
+
 function WelcomeScreen({
   copy,
   paperName,
-  mode,
   quotaExhausted,
+  quotaLoadFailed,
   isStreaming,
-  onModeChange,
+  savedMessages,
   onSend,
+  onResume,
 }: {
   copy: DefenseCopy["chat"];
   paperName?: string;
-  mode: DefenseMode;
   quotaExhausted: boolean;
+  quotaLoadFailed: boolean;
   isStreaming: boolean;
-  onModeChange: (m: DefenseMode) => void;
+  savedMessages?: DefenseMessage[];
   onSend: () => void;
+  onResume?: () => void;
 }) {
-  const modes: { id: DefenseMode; label: string; desc: string }[] = [
-    { id: "proactive", label: copy.proactiveTitle, desc: copy.proactiveDesc },
-    { id: "responsive", label: copy.responsiveTitle, desc: copy.responsiveDesc },
-  ];
+  const councilTurns = savedMessages
+    ? savedMessages.filter((m) => m.role === "assistant" && !m.isCancelled && m.content.trim())
+    : [];
+  const hasHistory = councilTurns.length > 0;
+  const SHOW_MAX = 5;
 
   return (
     <div className="defense-setup">
@@ -176,45 +246,77 @@ function WelcomeScreen({
           </div>
         )}
 
-        <div className="defense-setup-section">
-          <span className="defense-setup-eyebrow">{copy.modeSection}</span>
-          <div className="defense-setup-modes" role="radiogroup" aria-label={copy.modeSection}>
-            {modes.map(({ id, label, desc }) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={mode === id}
-                className="defense-setup-mode"
-                data-selected={mode === id}
-                onClick={() => onModeChange(id)}
-              >
-                <span className="defense-setup-mode-radio" aria-hidden />
-                <span className="defense-setup-mode-text">
-                  <span className="defense-setup-mode-title">{label}</span>
-                  <span className="defense-setup-mode-desc">{desc}</span>
+        {hasHistory ? (
+          <>
+            <div className="defense-history">
+              <div className="defense-history-header">
+                <span className="defense-setup-eyebrow">{copy.previousSession}</span>
+                <span className="defense-history-count">
+                  {copy.previousSessionTurns(councilTurns.length)}
                 </span>
-              </button>
-            ))}
-          </div>
-        </div>
+              </div>
+              <ul className="defense-history-list">
+                {councilTurns.slice(0, SHOW_MAX).map((msg, i) => (
+                  <li key={i} className="defense-history-item">
+                    <span className="defense-history-turn">{copy.turnLabel(i + 1)}</span>
+                    <span className="defense-history-preview">
+                      {truncatePreview(msg.content)}
+                    </span>
+                  </li>
+                ))}
+                {councilTurns.length > SHOW_MAX && (
+                  <li className="defense-history-item defense-history-more">
+                    +{councilTurns.length - SHOW_MAX}
+                  </li>
+                )}
+              </ul>
+            </div>
 
-        <div className="defense-setup-start-slot">
-          {mode === "proactive" && (
-            <button
-              type="button"
-              className="defense-setup-start"
-              onClick={onSend}
-              disabled={isStreaming || quotaExhausted}
-            >
-              {copy.startButton}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+            <div className="defense-setup-actions">
+              <button
+                type="button"
+                className="defense-setup-start"
+                onClick={onResume}
+                disabled={isStreaming || quotaExhausted || quotaLoadFailed}
+              >
+                {copy.resumeSession}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="defense-setup-start-secondary"
+                onClick={onSend}
+                disabled={isStreaming || quotaLoadFailed}
+              >
+                {copy.newSession}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="defense-setup-section">
+              <div className="defense-setup-mode-info">
+                <p className="defense-setup-mode-title">{copy.proactiveTitle}</p>
+                <p className="defense-setup-mode-desc">{copy.proactiveDesc}</p>
+              </div>
+            </div>
+
+            <div className="defense-setup-start-slot">
+              <button
+                type="button"
+                className="defense-setup-start"
+                onClick={onSend}
+                disabled={isStreaming || quotaExhausted || quotaLoadFailed}
+              >
+                {copy.startButton}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </>
+        )}
 
         <p className="defense-setup-footnote">
-          {copy.footnoteLine1} {copy.footnoteLine2}
+          {copy.footnoteLine1}<br />{copy.footnoteLine2}
         </p>
       </div>
     </div>
@@ -224,20 +326,24 @@ function WelcomeScreen({
 export function DefenseChatPanel({
   copy,
   quota,
+  quotaLoadFailed = false,
   messages,
   input,
-  mode,
   isStreaming,
   activityText,
   onInputChange,
   onSend,
   onStop,
-  onModeChange,
   onReset,
+  onResume,
+  onQuotaRetry,
+  savedMessages,
   hasStarted,
   paperName,
   latexContent,
   onPdfCitation,
+  locale,
+  onQuotaRefresh,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -269,8 +375,7 @@ export function DefenseChatPanel({
   const showQuotaEmpty = showWelcome && quotaExhausted && quota !== null;
   const showWelcomeContent = showWelcome && !quotaExhausted;
   const showMessages = messages.length > 0 || isStreaming;
-  const showComposer =
-    (hasStarted || (mode === "responsive" && showWelcomeContent)) && !quotaExhausted;
+  const showComposer = hasStarted && !quotaExhausted;
 
   useLayoutEffect(() => {
     if (showComposer) syncComposerHeight();
@@ -301,9 +406,7 @@ export function DefenseChatPanel({
     }
   };
 
-  const canSend = !isStreaming && !quotaExhausted && input.trim().length > 0;
-  const composerPlaceholder =
-    mode === "proactive" ? copy.composerProactive : copy.composerResponsive;
+  const canSend = !isStreaming && !quotaExhausted && !quotaLoadFailed && input.trim().length > 0;
 
   return (
     <TooltipProvider>
@@ -317,18 +420,13 @@ export function DefenseChatPanel({
             <p className="defense-panel-head-sub">{copy.councilSubtitle}</p>
           </div>
           <div className="defense-panel-head-actions">
-            {DEFENSE_QUOTA_ENABLED && quota && (
-              <span
-                className={`defense-quota-pill${quotaExhausted ? " defense-quota-pill--full" : ""}`}
-                title={copy.turnsUsed(displayUsed, quota.limit, quota.period_type)}
-              >
-                <span className="defense-quota-pill-plan">
-                  {quota.plan === "pro" ? copy.quotaPro : copy.quotaFree}
-                </span>
-                <span className="defense-quota-pill-count">
-                  {displayUsed}/{quota.limit}
-                </span>
-              </span>
+            {quota && (
+              <DefenseQuotaBadge
+                copy={copy}
+                quota={quota}
+                displayUsed={displayUsed}
+                exhausted={quotaExhausted}
+              />
             )}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -349,17 +447,42 @@ export function DefenseChatPanel({
           </div>
         </header>
 
-        {showQuotaEmpty && quota && <QuotaEmptyState copy={copy} quota={quota} />}
+        {quotaLoadFailed && (
+          <div className="defense-quota-error-banner">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>{copy.quotaLoadError}</span>
+            {onQuotaRetry && (
+              <button
+                type="button"
+                onClick={onQuotaRetry}
+                className="defense-quota-error-retry"
+              >
+                <RefreshCw className="h-3 w-3" />
+                {copy.quotaLoadRetry}
+              </button>
+            )}
+          </div>
+        )}
+
+        {showQuotaEmpty && quota && (
+          <QuotaEmptyState
+            copy={copy}
+            quota={quota}
+            locale={locale}
+            onQuotaRefresh={onQuotaRefresh}
+          />
+        )}
 
         {showWelcomeContent && (
           <WelcomeScreen
             copy={copy}
             paperName={paperName}
-            mode={mode}
             quotaExhausted={quotaExhausted}
+            quotaLoadFailed={quotaLoadFailed}
             isStreaming={isStreaming}
-            onModeChange={onModeChange}
+            savedMessages={savedMessages}
             onSend={onSend}
+            onResume={onResume}
           />
         )}
 
@@ -378,6 +501,7 @@ export function DefenseChatPanel({
                   userLabel={copy.userLabel}
                   activityText={isActiveStream ? activityText : undefined}
                   thinkingDefault={copy.thinkingDefault}
+                  stopCancelledLabel={copy.stopCancelled}
                   latexContent={latexContent}
                   onPdfCitation={onPdfCitation}
                 />
@@ -390,10 +514,14 @@ export function DefenseChatPanel({
         {quotaExhausted && showMessages && quota && (
           <div className="defense-thread-limit">
             <p>
-              {quota.period_type === "daily"
-                ? copy.quotaExceededDaily
-                : copy.quotaExceededMonthly}
+              {quota.plan === "free" ? copy.quotaExceededDaily : copy.quotaExceededPro}
             </p>
+            <DefenseQuotaResetTimer
+              locale={locale}
+              resetTimeLabel={copy.quotaResetAt("23:59:59")}
+              countdownLabel={copy.quotaResetCountdown}
+              onElapsed={onQuotaRefresh}
+            />
           </div>
         )}
 
@@ -406,7 +534,7 @@ export function DefenseChatPanel({
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                placeholder={composerPlaceholder}
+                placeholder={copy.composerPlaceholder}
                 disabled={isStreaming}
                 className="defense-compose-input"
               />
@@ -428,7 +556,7 @@ export function DefenseChatPanel({
           </footer>
         )}
 
-        {showWelcomeContent && mode === "proactive" && (
+        {showWelcomeContent && (
           <div className="defense-compose-reserve" aria-hidden />
         )}
       </div>

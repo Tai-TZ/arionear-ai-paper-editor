@@ -15,7 +15,7 @@ export default defineConfig({
       allowedHosts: ["localhost", "127.0.0.1"],
     },
     server: {
-      allowedHosts: ["localhost", "127.0.0.1"],
+      allowedHosts: true,
       proxy: {
         "/api/v1": {
           target: DEV_API_PROXY,
@@ -25,6 +25,10 @@ export default defineConfig({
           proxyTimeout: 0,
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq, req) => {
+              const host = req.headers.host;
+              if (host) {
+                proxyReq.setHeader("X-Forwarded-Host", host);
+              }
               if (req.url?.includes("/chat/stream")) {
                 proxyReq.setHeader("Accept", "text/event-stream");
                 proxyReq.setHeader("Cache-Control", "no-cache");
