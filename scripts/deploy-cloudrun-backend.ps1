@@ -49,17 +49,26 @@ function Get-DotEnvValue {
 
 function Set-GcpSecret {
     param([string]$Name, [string]$Value)
+    $Value = $Value.Trim()
     if (-not $Value) {
         Write-Warning "Skip secret '$Name' - empty value in .env"
         return
     }
     $exists = gcloud secrets describe $Name --project $ProjectId 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $Value | gcloud secrets versions add $Name --project $ProjectId --data-file=-
-        Write-Host "[secret] updated $Name"
-    } else {
-        $Value | gcloud secrets create $Name --project $ProjectId --replication-policy=automatic --data-file=-
-        Write-Host "[secret] created $Name"
+    if ($LASTEXITCODE -ne 0) { $exists = $false } else { $exists = $true }
+    $secretFile = Join-Path $env:TEMP "gcp-secret-$Name.txt"
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+        [System.IO.File]::WriteAllBytes($secretFile, $bytes)
+        if ($exists) {
+            gcloud secrets versions add $Name --project $ProjectId --data-file=$secretFile
+            Write-Host "[secret] updated $Name"
+        } else {
+            gcloud secrets create $Name --project $ProjectId --replication-policy=automatic --data-file=$secretFile
+            Write-Host "[secret] created $Name"
+        }
+    } finally {
+        if (Test-Path $secretFile) { Remove-Item $secretFile -Force -ErrorAction SilentlyContinue }
     }
 }
 
