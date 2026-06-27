@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from src.config import LLMProvider, normalize_llm_provider
 
 ChatTask = Literal["style", "structure", "logic", "citation", "chat", "edit", "template"]
-LogicAuditMode = Literal["quick", "deep"]
+LogicAuditMode = Literal["quick", "deep", "gate"]
 LogicAuditScope = Literal["selected", "full"]
 
 
@@ -32,7 +32,7 @@ class ChatRequest(BaseModel):
             return None
         if isinstance(value, str):
             normalized = value.strip().lower()
-            if normalized in {"quick", "deep"}:
+            if normalized in {"quick", "deep", "gate"}:
                 return normalized
         return value
 
@@ -95,6 +95,8 @@ class ProposedEditSchema(BaseModel):
     original_text: str = ""
     replacement_text: str = ""
     description: str = ""
+    selection_start: int | None = None
+    selection_end: int | None = None
 
 
 class ChatResponse(BaseModel):
@@ -254,6 +256,45 @@ class SyncTeXLookupResponse(BaseModel):
     column: int = -1
     page: int = 0
     found: bool = False
+
+
+class DefenseConversationTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class DefenseRequest(BaseModel):
+    latex_content: str = Field(..., max_length=500_000)
+    conversation_history: list[DefenseConversationTurn] = Field(default_factory=list)
+    mode: Literal["proactive", "responsive"] = "proactive"
+    paper_id: str | None = None
+    llm_provider: LLMProvider | None = None
+    llm_model: str | None = None
+
+    @field_validator("llm_provider", mode="before")
+    @classmethod
+    def _normalize_provider(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        if isinstance(value, str):
+            return normalize_llm_provider(value)
+        return value
+
+    @field_validator("llm_model", "paper_id", mode="before")
+    @classmethod
+    def _empty_str_to_none(cls, value: object) -> object | None:
+        if value == "":
+            return None
+        return value
+
+
+class DefenseQuotaResponse(BaseModel):
+    plan: Literal["free", "pro"]
+    limit: int
+    used: int
+    remaining: int
+    period: str
+    period_type: Literal["daily", "monthly"] = "daily"
 
 
 class PaperCreate(BaseModel):

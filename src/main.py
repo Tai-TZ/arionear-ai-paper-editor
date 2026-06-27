@@ -7,16 +7,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.admin_routes import router as admin_router
 from src.api.auth_routes import router as auth_router
+from src.api.billing_routes import router as billing_router
+from src.api.defense_routes import router as defense_router
 from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
 from src.api.routes import router
 from src.api.share_routes import router as share_router
+from src.api.template_routes import router as template_router
 from src.config import get_settings
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
 from src.services.auth_service import ensure_god_admin
 from src.services.sessions import refresh_session_store
+from src.services.template_store import ensure_template_seed
 
 
 def _provision_god_admin() -> None:
@@ -48,6 +52,10 @@ async def lifespan(app: FastAPI):
             print(f"Database init failed, using in-memory store: {exc}")
     else:
         print("DATABASE_URL not set — using in-memory session store")
+    try:
+        await asyncio.to_thread(ensure_template_seed)
+    except Exception as exc:
+        print(f"Template gallery seed skipped: {exc}")
     if settings.inngest_serve_enabled():
         print("Inngest sync endpoint: /api/inngest")
     yield
@@ -83,6 +91,9 @@ app.include_router(papers_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
+app.include_router(defense_router, prefix="/api/v1")
+app.include_router(template_router, prefix="/api/v1")
+app.include_router(billing_router, prefix="/api/v1")
 
 if settings.inngest_serve_enabled():
     inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)

@@ -2,56 +2,146 @@ import { useMemo } from "react";
 
 import { useLocale } from "@/components/locale-provider";
 import { commonCopy } from "@/lib/common-i18n";
+import type { UiLanguage } from "@/lib/researcher-profile";
 import { cn } from "@/lib/utils";
-import arioAvatar from "../../assets/avatar/avatar-chat.png";
 
 type AppLoadingScreenProps = {
   label?: string;
+  detail?: string;
+  eyebrow?: string;
   variant?: "fullscreen" | "inline" | "overlay";
   exiting?: boolean;
   className?: string;
+  /** Bypass LocaleProvider — used during shell bootstrap. */
+  locale?: UiLanguage;
 };
 
-export function AppLoadingScreen({
+function AppLoadingCard({
   label,
-  variant = "inline",
-  exiting = false,
-  className,
-}: AppLoadingScreenProps) {
-  const { locale } = useLocale();
-  const t = useMemo(() => commonCopy(locale).shell, [locale]);
-  const text = label ?? t.loading;
-
+  detail,
+  eyebrow,
+  subline,
+  compact = false,
+}: {
+  label: string;
+  detail?: string;
+  eyebrow: string;
+  subline: string;
+  compact?: boolean;
+}) {
   return (
     <div
       className={cn(
-        "app-loading-screen editor-entry-splash",
-        variant === "inline" && "app-loading-screen--inline",
-        variant === "overlay" && "app-loading-screen--overlay",
-        exiting && "editor-entry-splash-exit",
-        className,
+        "app-loading-card border border-foreground bg-background",
+        compact ? "app-loading-card--compact" : "app-loading-card--full",
       )}
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label={text}
     >
-      <div className="editor-entry-splash-inner">
-        <div className="editor-entry-splash-icon-wrap">
-          <div className="editor-entry-splash-icon-glow" aria-hidden />
-          <img src={arioAvatar} alt="" className="editor-entry-splash-icon" />
+      <div className="app-loading-card-chrome">
+        <span className="app-loading-live-dot" aria-hidden />
+        <span>{eyebrow}</span>
+      </div>
+      <div className="app-loading-card-main">
+        <p className="app-loading-card-label">{label}</p>
+        {detail ? <p className="app-loading-card-detail">{detail}</p> : null}
+        <div className="app-loading-progress-track" role="presentation" aria-hidden>
+          <div className="app-loading-progress-fill" />
         </div>
-        <div className="editor-entry-splash-bar" aria-hidden>
-          <div className="editor-entry-splash-bar-fill" />
-        </div>
-        <p className="editor-entry-splash-label">{text}</p>
+        <p className="app-loading-card-subline">{subline}</p>
       </div>
     </div>
   );
 }
 
+export function AppLoadingScreenInner({
+  label,
+  detail,
+  eyebrow,
+  variant = "inline",
+  exiting = false,
+  className,
+  locale,
+}: AppLoadingScreenProps & { locale: UiLanguage }) {
+  const t = useMemo(() => commonCopy(locale).shell, [locale]);
+  const text = label ?? t.loading;
+  const tag = eyebrow ?? t.loadingEyebrow;
+
+  if (variant === "fullscreen" || variant === "overlay") {
+    return (
+      <div
+        className={cn(
+          "app-loading-screen",
+          variant === "fullscreen" && "app-loading-screen--fullscreen newsprint-texture",
+          variant === "overlay" && "app-loading-screen--overlay newsprint-texture",
+          exiting && "app-loading-screen--exit",
+          className,
+        )}
+        role="status"
+        aria-live="polite"
+        aria-busy={!exiting}
+        aria-label={text}
+      >
+        {variant === "fullscreen" ? (
+          <header className="app-loading-masthead">
+            <span className="app-loading-brand">Arionear</span>
+            <span className="app-loading-masthead-meta">{t.loadingMasthead}</span>
+          </header>
+        ) : null}
+
+        <div className="app-loading-body">
+          <AppLoadingCard label={text} detail={detail} eyebrow={tag} subline={t.loadingSubline} />
+        </div>
+
+        {variant === "fullscreen" ? (
+          <footer className="app-loading-footer">{t.loadingFooter}</footer>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn("app-loading-screen app-loading-screen--inline", className)}
+      role="status"
+      aria-live="polite"
+      aria-busy={!exiting}
+      aria-label={text}
+    >
+      <AppLoadingCard
+        label={text}
+        detail={detail}
+        eyebrow={tag}
+        subline={t.loadingSubline}
+        compact
+      />
+    </div>
+  );
+}
+
+export function AppLoadingScreen({
+  label,
+  detail,
+  eyebrow,
+  variant = "inline",
+  exiting = false,
+  className,
+  locale: localeProp,
+}: AppLoadingScreenProps) {
+  const { locale: contextLocale } = useLocale();
+  return (
+    <AppLoadingScreenInner
+      locale={localeProp ?? contextLocale}
+      label={label}
+      detail={detail}
+      eyebrow={eyebrow}
+      variant={variant}
+      exiting={exiting}
+      className={className}
+    />
+  );
+}
+
 export function AppRoutePending() {
   const { locale } = useLocale();
-  const label = useMemo(() => commonCopy(locale).shell.loadingRoute, [locale]);
-  return <AppLoadingScreen label={label} variant="fullscreen" />;
+  const t = useMemo(() => commonCopy(locale).shell, [locale]);
+  return <AppLoadingScreen label={t.loadingRoute} variant="fullscreen" />;
 }

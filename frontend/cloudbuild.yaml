@@ -1,8 +1,17 @@
-# Cloud Build config for frontend (passes VITE_API_URL into Docker build).
+# Cloud Build config for the Arionear frontend.
+# VITE_API_URL is baked into the client bundle at build time — it must match the
+# backend custom domain so the browser hits the correct API origin.
 #
-# Usage (from frontend/):
-#   gcloud builds submit --config=cloudbuild.yaml \
-#     --substitutions=_VITE_API_URL=https://YOUR-API.run.app/api/v1,_IMAGE=asia-east1-docker.pkg.dev/PROJECT/arionear/frontend:latest
+# Usage (from repo root or frontend/):
+#   gcloud builds submit --config=frontend/cloudbuild.yaml \
+#     --substitutions=_VITE_API_URL=https://api.arionear.id.vn/api/v1,_IMAGE=asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/arionear/frontend:latest
+#
+# Default substitution value covers the production custom domain — override only
+# when targeting a different environment (staging, local Cloud Run URL, etc.).
+
+substitutions:
+  _VITE_API_URL: https://api.arionear.id.vn/api/v1
+  _IMAGE: asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/arionear/frontend:latest
 
 steps:
   - name: gcr.io/cloud-builders/docker

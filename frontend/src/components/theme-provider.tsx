@@ -11,11 +11,9 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
-
-  useEffect(() => {
-    setThemeState(getStoredTheme());
-  }, []);
+  const [theme, setThemeState] = useState<Theme>(() =>
+    typeof window === "undefined" ? "light" : getStoredTheme(),
+  );
 
   useEffect(() => {
     applyTheme(theme);

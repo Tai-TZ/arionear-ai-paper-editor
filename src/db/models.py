@@ -36,6 +36,11 @@ class UserRole(enum.StrEnum):
     ADMIN = "ADMIN"
 
 
+class UserTier(enum.StrEnum):
+    FREE = "FREE"
+    PRO = "PRO"
+
+
 class PaperStatus(enum.StrEnum):
     DRAFT = "DRAFT"
     IN_REVIEW = "IN_REVIEW"
@@ -166,6 +171,32 @@ class User(Base):
     password_reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    subscription: Mapped[UserSubscription | None] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class UserSubscription(Base):
+    __tablename__ = "user_subscriptions"
+    __table_args__ = (Index("ix_user_subscriptions_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    tier: Mapped[UserTier] = mapped_column(
+        Enum(UserTier, name="user_tier", native_enum=False),
+        default=UserTier.FREE,
+    )
+    defense_turns_used: Mapped[int] = mapped_column(Integer, default=0)
+    turns_reset_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    upgraded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    user: Mapped[User] = relationship(back_populates="subscription")
 
 
 class PasswordResetToken(Base):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import uuid
 
@@ -8,8 +9,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agents.state import AgentState
 from src.config import get_settings
+from src.services.chat_context import build_chat_user_content
 from src.services.citations.verifier import verify_citations
-from src.services.direct_edit import try_direct_text_edit
+from src.services.edit_executor import (
+    build_edit_payload,
+    execute_edit_plan,
+    preview_edit_scope,
+    resolve_edit_plan,
+    validate_proposed_edit,
+)
+from src.services.edit_planner import infer_edit_plan_rules, plan_edit
 from src.services.guardrails.integrity import (
     build_diff,
     check_integrity,
@@ -20,7 +29,8 @@ from src.services.guardrails.output_sanitize import (
     looks_like_chatty_output,
     sanitize_style_output,
 )
-from src.services.llm import get_llm
+from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
+from src.services.llm import get_llm, resolve_heavy_edit_model
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     analyze_structure,
@@ -37,9 +47,15 @@ from src.services.prompts import (
 )
 from src.services.sessions import session_store
 
+logger = logging.getLogger(__name__)
+
 # Kept for prepare_style_target fallback when router scope is missing
 _FILE_SCOPE_RE = re.compile(
     r"(toàn\s*bộ|cả\s*bài|main\.tex|whole\s*document|entire\s*(file|document|manuscript))",
+    re.IGNORECASE,
+)
+_TITLE_SCOPE_RE = re.compile(
+    r"tiêu đề|title|đề\s*tài|tên\s*(?:đề\s*)?tài|paper\s*title|project\s*title",
     re.IGNORECASE,
 )
 
@@ -188,212 +204,184 @@ def _normalize_suggestion(
 
 
 def prepare_edit_target(state: AgentState, query: str = "") -> dict:
-    """Target for explicit edits — prefer editor selection, then section, then document."""
+    """Resolve edit scope from manuscript outline (rule-based preview)."""
     selection = (state.get("selection") or "").strip()
+    query = query or state.get("query", "")
+    latex = (state.get("latex") or "").strip()
+
     if selection:
         return {
             **state,
             "original_text": selection,
             "apply_mode": "selection",
+            "section": "selection",
         }
 
-    query = query or state.get("query", "")
-    latex = (state.get("latex") or "").strip()
-    sections = state.get("parsed_sections") or []
-
-    if _FILE_SCOPE_RE.search(query):
-        if latex:
-            return {**state, "original_text": latex, "apply_mode": "document"}
+    if not latex:
         return prepare_style_target(state, query)
 
-    matched = find_section_for_query(query, sections)
-    if matched and (matched.get("content") or "").strip():
-        return {
-            **state,
-            "original_text": matched["content"].strip(),
-            "apply_mode": "selection",
-            "section": matched.get("name", ""),
-        }
-
-    if latex:
-        return {**state, "original_text": latex, "apply_mode": "document"}
-    return prepare_style_target(state, query)
-
-
-async def edit_node(state: AgentState) -> dict:
-    query = state.get("query", "").strip()
-    prepared = prepare_edit_target(state, query)
-    original = (prepared.get("original_text") or "").strip()
-    if not original:
-        return {"error": "No LaTeX source available to edit."}
-    if not query:
-        return {"error": "No edit instruction provided."}
-
-    direct = try_direct_text_edit(query, original)
-    if direct is not None and direct != original:
-        suggestion = direct
-        flags = check_integrity(
-            original,
-            suggestion,
-            **_integrity_opts(prepared),
-        )
-        diff = build_diff(original, suggestion)
-        metadata: dict = {}
-        session_id = prepared.get("session_id", "")
-        if session_id and not has_blocking_flags(flags):
-            record = session_store.add_revision(
-                session_id,
-                prepared.get("section", ""),
-                original,
-                suggestion,
-            )
-            if record:
-                metadata["revision_id"] = record.id
-        if has_blocking_flags(flags):
+    outline = build_manuscript_outline(latex)
+    plan = infer_edit_plan_rules(query, outline, has_selection=False)
+    if plan:
+        resolved = resolve_edit_plan(latex, plan, selection="")
+        if resolved:
             return {
-                "original_text": original,
-                "suggestion": suggestion,
-                "diff": diff,
-                "integrity_flags": flags,
-                "edits": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "file": "main.tex",
-                        "section": prepared.get("section", ""),
-                        "apply_mode": prepared.get("apply_mode", "document"),
-                        "original_text": original,
-                        "replacement_text": suggestion,
-                        "description": "Proposed edit (review required)",
-                    }
-                ],
-                "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
-                "apply_mode": prepared.get("apply_mode", "document"),
-                "metadata": metadata,
+                **state,
+                "original_text": resolved.original_text,
+                "apply_mode": resolved.apply_mode,
+                "section": resolved.section,
+                "selection_start": resolved.start,
+                "selection_end": resolved.end,
+                "scope_label": resolved.label,
             }
-        return {
-            "original_text": original,
-            "suggestion": suggestion,
-            "diff": diff,
-            "integrity_flags": flags,
-            "edits": [
-                {
-                    "id": str(uuid.uuid4()),
-                    "file": "main.tex",
-                    "section": prepared.get("section", ""),
-                    "apply_mode": prepared.get("apply_mode", "document"),
-                    "original_text": original,
-                    "replacement_text": suggestion,
-                    "description": "Proposed edit",
-                }
-            ],
-            "analysis": "Direct text replace (no LLM).",
-            "apply_mode": prepared.get("apply_mode", "document"),
-            "metadata": metadata,
-        }
 
-    system = build_system_prompt("edit")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.1))
+    section, label = preview_edit_scope(query, latex, selection="")
+    if _TITLE_SCOPE_RE.search(query):
+        title_block = find_latex_command_block(latex, "title")
+        if title_block:
+            full, _, start, end = title_block
+            return {
+                **state,
+                "original_text": full,
+                "apply_mode": "selection",
+                "section": "title",
+                "selection_start": start,
+                "selection_end": end,
+                "scope_label": label or "Tiêu đề · \\title{...}",
+            }
+    return {
+        **state,
+        "original_text": latex,
+        "apply_mode": "document",
+        "section": section,
+        "scope_label": label,
+    }
 
-    user_content = render_user_prompt(
-        "edit",
-        query=query,
-        original_text=original,
-    ) or (
-        f"Edit request: {query}\n\n"
-        f"Replace ONLY this LaTeX snippet (return the revised snippet only):\n---\n{original}\n---"
-    )
 
-    messages = [
-        SystemMessage(content=system),
-        HumanMessage(content=user_content),
-    ]
-    response = await llm.ainvoke(messages)
-    suggestion = _normalize_suggestion(
-        original,
-        (response.content or "").strip(),
-        section=str(prepared.get("section", "")),
-        apply_mode=str(prepared.get("apply_mode", "document")),
-    )
-    suggestion = clamp_selection_replacement(
-        original,
-        suggestion,
-        apply_mode=str(prepared.get("apply_mode", "selection")),
-        query=query,
-    )
-
+def _finalize_edit_result(
+    prepared: dict,
+    resolved,
+    replacement: str,
+    *,
+    analysis: str,
+) -> dict:
     flags = check_integrity(
-        original,
-        suggestion,
-        **_integrity_opts(prepared),
+        resolved.original_text,
+        replacement,
+        **_integrity_opts({**prepared, "apply_mode": resolved.apply_mode}),
     )
-    diff = build_diff(original, suggestion) if suggestion else ""
+    diff = build_diff(resolved.original_text, replacement)
     metadata: dict = {}
-
     session_id = prepared.get("session_id", "")
-    if session_id and suggestion and not has_blocking_flags(flags):
+    if session_id and not has_blocking_flags(flags):
         record = session_store.add_revision(
             session_id,
-            prepared.get("section", ""),
-            original,
-            suggestion,
+            resolved.section,
+            resolved.original_text,
+            replacement,
         )
         if record:
             metadata["revision_id"] = record.id
 
-    if has_blocking_flags(flags):
+    edit_payload = build_edit_payload(
+        resolved,
+        replacement,
+        description=resolved.label,
+    )
+    blocked = has_blocking_flags(flags)
+    response = (
+        "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject."
+        if blocked
+        else "Đã cập nhật — xem diff và Accept/Reject."
+    )
+    return {
+        "original_text": resolved.original_text,
+        "suggestion": replacement,
+        "diff": diff,
+        "integrity_flags": flags,
+        "edits": [edit_payload],
+        "response": response,
+        "analysis": analysis,
+        "apply_mode": resolved.apply_mode,
+        "metadata": metadata,
+    }
+
+
+async def edit_node(state: AgentState) -> dict:
+    query = state.get("query", "").strip()
+    latex_full = (state.get("latex") or "").strip()
+    if not latex_full:
+        return {"error": "No LaTeX source available to edit."}
+    if not query:
+        return {"error": "No edit instruction provided."}
+
+    selection = (state.get("selection") or "").strip()
+    prepared = prepare_edit_target(state, query)
+    outline = build_manuscript_outline(latex_full)
+    plan = await plan_edit(
+        query,
+        outline,
+        has_selection=bool(selection),
+        provider=_provider(state),
+        model=_model(state),
+    )
+    resolved = resolve_edit_plan(
+        latex_full,
+        plan,
+        selection=selection,
+        selection_start=prepared.get("selection_start"),
+        selection_end=prepared.get("selection_end"),
+    )
+    if not resolved:
         return {
-            "original_text": original,
-            "suggestion": suggestion,
-            "diff": diff,
-            "integrity_flags": flags,
-            "edits": [
-                {
-                    "id": str(uuid.uuid4()),
-                    "file": "main.tex",
-                    "section": prepared.get("section", ""),
-                    "apply_mode": prepared.get("apply_mode", "document"),
-                    "original_text": original,
-                    "replacement_text": suggestion,
-                    "description": "Proposed edit (review required)",
-                }
-            ],
-            "response": "Có cảnh báo integrity nghiêm trọng — xem diff và quyết định Accept/Reject.",
-            "apply_mode": prepared.get("apply_mode", "document"),
-            "metadata": metadata,
+            "error": "Could not resolve edit scope.",
+            "response": "Không xác định được phạm vi chỉnh sửa trong bản thảo.",
+            "edits": [],
         }
 
-    if not suggestion or suggestion == original:
+    replacement = await execute_edit_plan(
+        query,
+        latex_full,
+        plan,
+        resolved,
+        provider=_provider(state),
+        model=_model(state),
+    )
+    validation_error = validate_proposed_edit(
+        latex_full,
+        plan,
+        resolved,
+        replacement,
+        query=query,
+    )
+    if validation_error:
         return {
-            "original_text": original,
+            "original_text": resolved.original_text,
             "suggestion": "",
             "diff": "",
-            "integrity_flags": flags,
+            "integrity_flags": [],
+            "edits": [],
+            "response": validation_error,
+            "analysis": "Edit blocked by scope validator.",
+        }
+
+    if not replacement or replacement == resolved.original_text:
+        return {
+            "original_text": resolved.original_text,
+            "suggestion": "",
+            "diff": "",
+            "integrity_flags": [],
             "edits": [],
             "response": "Không phát hiện thay đổi nào trong bản thảo.",
             "analysis": "No edit applied.",
-            "metadata": metadata,
         }
 
-    return {
-        "original_text": original,
-        "suggestion": suggestion,
-        "diff": diff,
-        "integrity_flags": flags,
-        "edits": [
-            {
-                "id": str(uuid.uuid4()),
-                "file": "main.tex",
-                "section": prepared.get("section", ""),
-                "apply_mode": prepared.get("apply_mode", "document"),
-                "original_text": original,
-                "replacement_text": suggestion,
-                "description": "Proposed edit",
-            }
-        ],
-        "analysis": "LaTeX edit completed.",
-        "apply_mode": prepared.get("apply_mode", "document"),
-        "metadata": metadata,
-    }
+    return _finalize_edit_result(
+        prepared,
+        resolved,
+        replacement,
+        analysis="Edit plan executed.",
+    )
 
 
 async def style_node(state: AgentState) -> dict:
@@ -407,7 +395,12 @@ async def style_node(state: AgentState) -> dict:
     settings = get_settings()
     section_label = prepared.get("section", "")
     system = build_system_prompt("style")
-    llm = get_llm(provider=_provider(prepared), model=_model(prepared), temperature=resolve_llm_temperature(0.2))
+    style_model = resolve_heavy_edit_model(
+        _model(prepared),
+        text_chars=len(original),
+        apply_mode=str(apply_mode),
+    )
+    llm = get_llm(provider=_provider(prepared), model=style_model, temperature=resolve_llm_temperature(0.2))
 
     suggestion = ""
     flags: list[dict] = []
@@ -615,8 +608,8 @@ async def structure_node(state: AgentState) -> dict:
             content = (response.content or "").strip()
             if content.startswith("["):
                 llm_suggestions = json.loads(content)
-        except (json.JSONDecodeError, Exception):
-            pass
+        except Exception as exc:
+            logger.debug("structure_node: LLM JSON parse skipped (%s)", exc)
 
     all_suggestions = rule_suggestions + llm_suggestions
     lines = [
@@ -664,18 +657,12 @@ async def chat_node(state: AgentState) -> dict:
     latex = state.get("latex", "")
     system = build_system_prompt("chat")
 
-    context_parts: list[str] = []
-    if selection:
-        context_parts.append(f"Selected text:\n{selection[:4000]}")
-    elif latex:
-        context_parts.append(f"Manuscript excerpt:\n{latex[:4000]}")
-    context_block = "\n\n".join(context_parts)
-
-    user_content = render_user_prompt("chat", context_block=context_block, query=query)
-    if not user_content:
-        user_content = query
-        if context_block:
-            user_content = f"{context_block}\n\nUser request: {query}"
+    user_content = build_chat_user_content(
+        query,
+        selection=selection,
+        latex=latex,
+        include_manuscript=False,
+    )
 
     llm = get_llm(provider=_provider(state), model=_model(state))
     response = await llm.ainvoke(

@@ -23,13 +23,17 @@ import {
   loadPdfDocument,
   pdfPointFromClick,
   refineSynctexPoint,
+  renderPageAnnotationLayer,
   renderPageTextLayer,
   renderPageToCanvas,
   type PdfPageRenderResult,
 } from "@/lib/pdf-renderer";
+import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
+import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
+import { clearPdfHighlights, highlightPdfTextLayer } from "@/lib/pdf-text-highlight";
 
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
 type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
@@ -60,6 +64,8 @@ type PdfPreviewPanelProps = {
   latexSource?: string;
   /** Hide compile/tools; show PDF with zoom/navigation only (shared view). */
   readOnly?: boolean;
+  /** Scroll to and highlight a citation from defense chat links. */
+  citationFocus?: DefensePdfCitationFocus | null;
 };
 
 function IconBtn({
@@ -79,7 +85,7 @@ function IconBtn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="pdf-preview-icon-btn inline-flex h-7 w-7 items-center justify-center rounded transition hover:bg-black/5 disabled:opacity-40"
+      className="pdf-preview-icon-btn inline-flex h-7 w-7 items-center justify-center rounded transition disabled:opacity-40"
     >
       {children}
     </button>
@@ -90,6 +96,7 @@ function PdfPageView({
   pdf,
   pageNumber,
   scale,
+  linkService,
   onVisible,
   onPageClick,
   onPageNotReady,
@@ -97,6 +104,7 @@ function PdfPageView({
   pdf: PDFDocumentProxy;
   pageNumber: number;
   scale: number;
+  linkService: PdfLinkService;
   onVisible: (pageNumber: number) => void;
   onPageClick?: (
     pageNumber: number,
@@ -110,6 +118,7 @@ function PdfPageView({
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
+  const annotationLayerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [pageViewport, setPageViewport] = useState<PageViewport | null>(null);
   const pageRef = useRef<PDFPageProxy | null>(null);
@@ -137,7 +146,8 @@ function PdfPageView({
   useEffect(() => {
     const canvas = canvasRef.current;
     const textLayer = textLayerRef.current;
-    if (!canvas || !textLayer) return;
+    const annotationLayer = annotationLayerRef.current;
+    if (!canvas || !textLayer || !annotationLayer) return;
 
     const token = ++renderTokenRef.current;
     let cancelled = false;
@@ -153,6 +163,7 @@ function PdfPageView({
       setDimensions({ width: rendered.width, height: rendered.height });
       setPageViewport(rendered.viewport);
       await renderPageTextLayer(page, textLayer, rendered.viewport);
+      await renderPageAnnotationLayer(page, annotationLayer, rendered.viewport, linkService);
     })().catch(() => {
       if (!cancelled) {
         setDimensions(null);
@@ -163,7 +174,7 @@ function PdfPageView({
     return () => {
       cancelled = true;
     };
-  }, [pdf, pageNumber, scale]);
+  }, [pdf, pageNumber, scale, linkService]);
 
   return (
     <div
@@ -210,6 +221,7 @@ function PdfPageView({
       >
         <canvas ref={canvasRef} className="pdf-preview-canvas" />
         <div ref={textLayerRef} className="textLayer pdf-preview-text-layer" />
+        <div ref={annotationLayerRef} className="pdf-preview-annotation-layer" />
       </div>
     </div>
   );
@@ -234,10 +246,16 @@ export function PdfPreviewPanel({
   projectName = "document",
   latexSource = "",
   readOnly = false,
+  citationFocus = null,
 }: PdfPreviewPanelProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollToPageRef = useRef<(page: number) => void>(() => {});
+  const linkService = useMemo(
+    () => new PdfLinkService((page) => scrollToPageRef.current(page)),
+    [],
+  );
 
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -343,9 +361,26 @@ export function PdfPreviewPanel({
       const clamped = Math.max(1, Math.min(pageNumber, numPages || 1));
       const node = viewportRef.current?.querySelector(`[data-page="${clamped}"]`);
       node?.scrollIntoView({ behavior: "smooth", block: "start" });
+      linkService.setCurrentPage(clamped);
       setCurrentPage(clamped);
     },
-    [numPages],
+    [linkService, numPages],
+  );
+
+  useEffect(() => {
+    scrollToPageRef.current = scrollToPage;
+  }, [scrollToPage]);
+
+  useEffect(() => {
+    linkService.setDocument(pdf);
+  }, [linkService, pdf]);
+
+  const handlePageVisible = useCallback(
+    (pageNumber: number) => {
+      linkService.setCurrentPage(pageNumber);
+      setCurrentPage(pageNumber);
+    },
+    [linkService],
   );
 
   const handlePrevPage = () => scrollToPage(currentPage - 1);
@@ -372,6 +407,43 @@ export function PdfPreviewPanel({
       setSearchStatus("No matches");
     }
   };
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!citationFocus || !pdf || !viewport) return;
+
+    const query = citationFocus.search.trim();
+    if (!query) return;
+
+    let cancelled = false;
+
+    (async () => {
+      clearPdfHighlights(viewport);
+      const page = citationFocus.page ?? (await findPageForQuery(pdf, query, 1));
+      if (!page || cancelled) return;
+
+      scrollToPage(page);
+
+      // Wait for the text layer to render then highlight.
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (cancelled) return;
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        const layer = viewport.querySelector(
+          `[data-page="${page}"] .pdf-preview-text-layer`,
+        );
+        if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
+        const mark = highlightPdfTextLayer(layer, query);
+        if (mark) {
+          mark.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [citationFocus, pdf, latexSource, scrollToPage]);
 
   const pageNumbers = useMemo(
     () => (pdf ? Array.from({ length: numPages }, (_, index) => index + 1) : []),
@@ -459,24 +531,21 @@ export function PdfPreviewPanel({
         mobile ? "flex-1 w-full" : "h-full w-full"
       }`}
     >
-      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between border-b border-[#D3D3D3] bg-white px-3 md:px-4">
+      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between px-3 md:px-4">
         <div className="flex items-center gap-2.5">
           {readOnly ? (
-            <>
-              <span className="inline-flex items-center gap-1.5 rounded bg-[#133a5d]/10 px-2.5 py-1 text-[11px] font-semibold text-[#133a5d]">
-                {isCompiling ? (
-                  <>
-                    <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                    Updating preview…
-                  </>
-                ) : (
-                  "Live preview"
-                )}
-              </span>
-              <span className="font-mono text-[11px] text-[#666]">
-                {numPages > 0 ? `${currentPage} of ${numPages} pages` : "Waiting for PDF…"}
-              </span>
-            </>
+            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
+              {isCompiling ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
+                  {t.pdf.compiling}
+                </span>
+              ) : numPages > 0 ? (
+                t.pdf.pagesOf(currentPage, numPages)
+              ) : (
+                t.pdf.noPdfYet
+              )}
+            </span>
           ) : (
             <>
               <button
@@ -488,14 +557,14 @@ export function PdfPreviewPanel({
                 <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
                 {isCompiling ? t.pdf.compiling : t.pdf.compile}
               </button>
-              <span className="font-mono text-[11px] text-[#666]">
+              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
                 {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
               </span>
               {onCompilerChange && (
                 <select
                   value={compiler}
                   onChange={(e) => onCompilerChange(e.target.value as LatexCompiler)}
-                  className="rounded border border-[#D3D3D3] bg-[#FAFAFA] px-1.5 py-0.5 font-mono text-[10px] text-[#555] outline-none"
+                  className="pdf-preview-toolbar-select rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
                   title="LaTeX compiler (Overleaf-style)"
                 >
                   {availableCompilerOptions.map((opt) => (
@@ -514,13 +583,13 @@ export function PdfPreviewPanel({
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
-              className="rounded px-2 py-1 font-mono text-[10px] text-[#555] transition hover:bg-black/5"
+              className="pdf-preview-toolbar-btn rounded px-2 py-1 font-mono text-[10px]"
             >
               {t.pdf.log}
             </button>
           )}
           {!readOnly && searchOpen ? (
-            <div className="mr-1 flex items-center gap-1 rounded border border-[#D3D3D3] bg-[#FAFAFA] px-2 py-0.5">
+            <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-1 rounded px-2 py-0.5">
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -531,31 +600,35 @@ export function PdfPreviewPanel({
                 placeholder="Find in PDF…"
                 className="w-28 bg-transparent text-[11px] outline-none md:w-40"
               />
-              <button type="button" onClick={() => setSearchOpen(false)} className="text-[#777]">
+              <button type="button" onClick={() => setSearchOpen(false)} className="pdf-preview-toolbar-muted">
                 <X className="h-3 w-3" />
               </button>
             </div>
           ) : !readOnly ? (
             <IconBtn title="Search" onClick={() => setSearchOpen(true)}>
-              <Search className="h-3.5 w-3.5 text-[#555]" />
+              <Search className="pdf-preview-toolbar-muted h-3.5 w-3.5" />
             </IconBtn>
           ) : null}
 
-          <select
-            value={zoomMode === "fit" ? 100 : zoomMode}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
-            }}
-            className="rounded px-1 py-1 font-mono text-[11px] text-[#666] outline-none hover:bg-black/5"
-          >
-            <option value={100}>{t.pdf.fit}</option>
-            {ZOOM_PRESETS.map((preset) => (
-              <option key={preset} value={preset}>
-                {preset}%
-              </option>
-            ))}
-          </select>
+          {readOnly ? (
+            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">{displayZoom}%</span>
+          ) : (
+            <select
+              value={zoomMode === "fit" ? 100 : zoomMode}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
+              }}
+              className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
+            >
+              <option value={100}>{t.pdf.fit}</option>
+              {ZOOM_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}%
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </header>
 
@@ -565,10 +638,8 @@ export function PdfPreviewPanel({
       >
         {!pdf && !isCompiling && (
           <div className="flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center">
-            <p className="max-w-sm text-sm text-[#666]">
-              {readOnly
-                ? "PDF preview will appear here when the manuscript finishes compiling."
-                : t.pdf.emptyHint}
+            <p className="pdf-preview-toolbar-muted max-w-sm text-sm">
+              {readOnly ? t.pdf.readOnlyEmptyHint : t.pdf.emptyHint}
             </p>
             {engineReady === false && !compileError && (
               <p className="mt-3 max-w-md text-xs text-amber-800">
@@ -601,7 +672,7 @@ export function PdfPreviewPanel({
         )}
 
         {isCompiling && !pdf && (
-          <div className="flex h-full min-h-[24rem] items-center justify-center text-sm text-[#666]">
+          <div className="pdf-preview-toolbar-muted flex h-full min-h-[24rem] items-center justify-center text-sm">
             Compiling LaTeX…
           </div>
         )}
@@ -620,7 +691,8 @@ export function PdfPreviewPanel({
                 pdf={pdf}
                 pageNumber={pageNumber}
                 scale={effectiveScale}
-                onVisible={setCurrentPage}
+                linkService={linkService}
+                onVisible={handlePageVisible}
                 onPageClick={synctexBase64 ? handleSynctexClick : undefined}
                 onPageNotReady={synctexBase64 ? handlePageNotReady : undefined}
               />

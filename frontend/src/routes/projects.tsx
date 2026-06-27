@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,6 +14,8 @@ import {
   Sparkles,
   Trash2,
   Loader2,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { getSession, refreshSession, signOut, type AuthUser } from "@/lib/auth-store";
 import { authToast } from "@/lib/auth-toast";
@@ -40,9 +42,12 @@ import {
 import { importLatexFileList, type LatexImportResult } from "@/lib/latex-import";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { ProjectsListSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { type ResearcherProfile } from "@/lib/researcher-profile";
 import { useLocale } from "@/components/locale-provider";
+import { commonCopy } from "@/lib/common-i18n";
 import { projectsCopy } from "@/lib/projects-i18n";
 import {
   EditableProjectName,
@@ -71,6 +76,7 @@ function ProjectsPage() {
   const navigate = useNavigate();
   const { locale } = useLocale();
   const t = useMemo(() => projectsCopy(locale), [locale]);
+  const workspace = useMemo(() => commonCopy(locale).workspace, [locale]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +137,14 @@ function ProjectsPage() {
     markEditorEntryTransition();
     void navigate({
       to: "/editor",
+      search: { projectId: projectId.trim() },
+    });
+  };
+
+  const openDefense = (projectId: string) => {
+    if (!projectId.trim()) return;
+    void navigate({
+      to: "/defense",
       search: { projectId: projectId.trim() },
     });
   };
@@ -258,15 +272,13 @@ function ProjectsPage() {
         navigate({ to: "/signin" });
       }}
     >
-      {creatingLabel && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-medium text-foreground">{creatingLabel}</p>
-          {creatingDetail ? (
-            <p className="max-w-sm px-6 text-center text-xs text-muted-foreground">{creatingDetail}</p>
-          ) : null}
-        </div>
-      )}
+      {creatingLabel ? (
+        <AppLoadingScreen
+          variant="overlay"
+          label={creatingLabel}
+          detail={creatingDetail ?? undefined}
+        />
+      ) : null}
       <input
         ref={fileInputRef}
         type="file"
@@ -298,6 +310,15 @@ function ProjectsPage() {
           </div>
 
           <div className="projects-header-toolbar">
+            <Link
+              to="/guide"
+              className="projects-header-btn projects-header-btn-guide hidden sm:inline-flex"
+              title={workspace.userGuide}
+            >
+              <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>{workspace.userGuide}</span>
+            </Link>
+
             <div className="projects-header-search">
               <Search strokeWidth={1.5} />
               <input
@@ -431,10 +452,7 @@ function ProjectsPage() {
             </div>
           )}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{t.loading}</p>
-            </div>
+            <ProjectsListSkeleton className="flex-1 overflow-y-auto px-4 py-5 md:px-6" />
           ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}
@@ -460,6 +478,7 @@ function ProjectsPage() {
                   onOpen={() => openEditor(project.id)}
                   onRename={(name) => handleRename(project.id, name)}
                   onDelete={() => handleDelete(project.id)}
+                  onDefense={() => openDefense(project.id)}
                 />
               ))}
             </div>
@@ -568,12 +587,14 @@ function ProjectRow({
   onOpen,
   onRename,
   onDelete,
+  onDefense,
 }: {
   project: StoredProject;
   deleting: boolean;
   onOpen: () => void;
   onRename: (name: string) => void | Promise<void>;
   onDelete: () => void;
+  onDefense: () => void;
 }) {
   const { locale } = useLocale();
   const nameRef = useRef<EditableProjectNameHandle>(null);
@@ -629,6 +650,19 @@ function ProjectRow({
         {formatTimeAgo(project.updatedAt, locale)}
       </span>
       <div className="projects-col-actions flex justify-end gap-1">
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDefense();
+          }}
+          className="projects-row-menu"
+          aria-label="Phản biện"
+          title="Chuẩn bị bảo vệ (Defense Mode)"
+        >
+          <GraduationCap className="h-4 w-4" />
+        </button>
         <button
           type="button"
           disabled={deleting}

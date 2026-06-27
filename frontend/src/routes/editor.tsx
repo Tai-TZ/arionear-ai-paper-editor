@@ -6,6 +6,7 @@ import {
   FileText,
   Search,
   ChevronLeft,
+  ChevronRight,
   ShieldCheck,
   ArrowLeft,
   Plus,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
+  Folder,
   FolderOpen,
   Settings,
   X,
@@ -24,12 +26,15 @@ import {
   Sparkles,
   Share2,
   FileOutput,
+  GraduationCap,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy, formatMastheadDate, revisionActionLabel, translateCitationSummary } from "@/lib/editor-i18n";
+import { commonCopy } from "@/lib/common-i18n";
 import {
   formatTimeAgo,
+  findProjectAsset,
   getCompilePayload,
   isImageAssetFile,
   isProjectAssetFile,
@@ -118,11 +123,18 @@ import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
+import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
 import { mergeLogicSectionReport } from "@/lib/logic-audit";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
 import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
+import {
+  formatPaperScoreGateError,
+  logicAuditFingerprint,
+  needsScoreGateAudit,
+  runQuickLogicAuditForScore,
+} from "@/lib/paper-score-audit";
 import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 
@@ -314,11 +326,20 @@ function computeProjectStats(latex: string): ProjectStats {
   };
 }
 
+const EDITOR_SIDEBAR_STORAGE_KEY = "arionear-editor-sidebar-expanded";
+
+function readSidebarExpanded(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(EDITOR_SIDEBAR_STORAGE_KEY) !== "collapsed";
+}
+
 function EditorPage() {
   const navigate = useNavigate();
   const { locale } = useLocale();
+  const shell = useMemo(() => commonCopy(locale).shell, [locale]);
   const { projectId } = Route.useSearch();
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
+  const [sidebarExpanded, setSidebarExpanded] = useState(readSidebarExpanded);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
@@ -389,6 +410,12 @@ function EditorPage() {
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [logicAuditReport, setLogicAuditReport] = useState<LogicAuditReport | null>(null);
+  const [scoreAuditLoading, setScoreAuditLoading] = useState(false);
+  const [scoreAuditProgress, setScoreAuditProgress] = useState<string | null>(null);
+  const [scoreAuditError, setScoreAuditError] = useState<string | null>(null);
+  const scoreAuditAbortRef = useRef<AbortController | null>(null);
+  const lastAuditFingerprintRef = useRef<string | null>(null);
+  const scoreAuditAttemptedForRef = useRef<string | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
   const [llmModel, setLlmModel] = useState("");
@@ -489,6 +516,7 @@ function EditorPage() {
         setAssets(project.assets ?? []);
         if (project.logicAuditReport?.sections?.length) {
           setLogicAuditReport(project.logicAuditReport);
+          lastAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
         }
         setBootState("ready");
         void loadSessionAudit(projectId);
@@ -530,15 +558,43 @@ function EditorPage() {
   const switchActiveFile = useCallback(
     (nextPath: string) => {
       if (nextPath === activeFile) return;
-      const updatedFiles = persistActiveFile(latex, projectFiles, activeFile);
-      const nextFile = updatedFiles.find((f) => f.path === nextPath);
-      setProjectFiles(updatedFiles);
+
+      const nextIsAsset = isImageAssetFile(nextPath);
+      const currentIsTex = projectFiles.some((f) => f.path === activeFile);
+
+      let files = projectFiles;
+      if (currentIsTex) {
+        files = persistActiveFile(latex, projectFiles, activeFile);
+        setProjectFiles(files);
+      }
+
       setActiveFile(nextPath);
-      resetHistory(nextFile?.content ?? "");
-      setSavedLatex(nextFile?.content ?? "");
+
+      if (nextIsAsset) return;
+
+      const nextFile = files.find((f) => f.path === nextPath);
+      const content = nextFile?.content ?? "";
+      resetHistory(content);
+      setSavedLatex(content);
     },
     [activeFile, latex, persistActiveFile, projectFiles, resetHistory],
   );
+
+  const openProjectFile = useCallback(
+    (path: string) => {
+      switchActiveFile(path);
+      if (isImageAssetFile(path)) {
+        setMobileTab("editor");
+      }
+    },
+    [switchActiveFile],
+  );
+
+  const activeAsset = useMemo(
+    () => (isImageAssetFile(activeFile) ? findProjectAsset(activeFile, assets) : null),
+    [activeFile, assets],
+  );
+  const viewingAsset = isImageAssetFile(activeFile);
 
   useEffect(() => {
     if (bootState !== "ready") return;
@@ -553,8 +609,18 @@ function EditorPage() {
   const showSplash = splashPhase !== "hidden";
   const showEditor = bootState === "ready";
 
+  const persistableFile = useCallback(
+    (files: ProjectFile[], currentActive: string) =>
+      files.some((f) => f.path === currentActive) ? currentActive : mainFile,
+    [mainFile],
+  );
+
   const handleCompile = useCallback(async (latexOverride?: string) => {
-    const filesWithActive = persistActiveFile(latexOverride ?? latex, projectFiles, activeFile);
+    const filesWithActive = persistActiveFile(
+      latexOverride ?? latex,
+      projectFiles,
+      persistableFile(projectFiles, activeFile),
+    );
     setIsCompiling(true);
     setCompileError(null);
     setCompileWarning(null);
@@ -595,11 +661,15 @@ function EditorPage() {
     } finally {
       setIsCompiling(false);
     }
-  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile]);
+  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile, persistableFile]);
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
-    const files = persistActiveFile(latex, projectFiles, activeFile);
+    const files = persistActiveFile(
+      latex,
+      projectFiles,
+      persistableFile(projectFiles, activeFile),
+    );
     setProjectFiles(files);
     const mainContent = files.find((f) => f.path === mainFile)?.content ?? latex;
     updatePaper(projectId, {
@@ -630,6 +700,7 @@ function EditorPage() {
     autoCompile,
     handleCompile,
     persistActiveFile,
+    persistableFile,
   ]);
 
   useEffect(() => {
@@ -1153,26 +1224,36 @@ function EditorPage() {
                 ? sentSelection
                 : null;
             if (edits.length > 0) {
-              const mapped: PendingEdit[] = edits.map((e) => ({
-                id: e.id,
-                file: e.file || "main.tex",
-                section: e.section,
-                applyMode: selectionAnchor
-                  ? "selection"
-                  : ((e.apply_mode ?? result.apply_mode ?? "selection") as
-                      | "selection"
-                      | "document"),
-                originalText: selectionAnchor?.text ?? e.original_text,
-                replacementText: selectionAnchor
-                  ? clampSelectionReplacement(selectionAnchor.text, e.replacement_text)
-                  : e.replacement_text,
-                description: e.description,
-                flags: result.integrity_flags ?? [],
-                revisionId: result.revision_id || undefined,
-                accepted: false,
-                selectionStart: selectionAnchor?.start,
-                selectionEnd: selectionAnchor?.end,
-              }));
+              const mapped: PendingEdit[] = edits.map((e) => {
+                const hasBackendAnchor =
+                  e.selection_start != null &&
+                  e.selection_end != null &&
+                  e.selection_end > e.selection_start;
+                const anchor = hasBackendAnchor
+                  ? { start: e.selection_start!, end: e.selection_end! }
+                  : selectionAnchor;
+                return {
+                  id: e.id,
+                  file: e.file || "main.tex",
+                  section: e.section,
+                  applyMode: (e.apply_mode ?? result.apply_mode ?? "selection") as
+                    | "selection"
+                    | "document",
+                  originalText: anchor ? latex.slice(anchor.start, anchor.end) : e.original_text,
+                  replacementText: anchor
+                    ? clampSelectionReplacement(
+                        latex.slice(anchor.start, anchor.end),
+                        e.replacement_text,
+                      )
+                    : e.replacement_text,
+                  description: e.description,
+                  flags: result.integrity_flags ?? [],
+                  revisionId: result.revision_id || undefined,
+                  accepted: false,
+                  selectionStart: anchor?.start,
+                  selectionEnd: anchor?.end,
+                };
+              });
               setPendingEdits(mapped);
               setActiveEditId(mapped[0]?.id ?? null);
               setChatOpen(false);
@@ -1199,6 +1280,7 @@ function EditorPage() {
             }
             if (result.logic_audit_report?.sections?.length) {
               setLogicAuditReport(result.logic_audit_report);
+              lastAuditFingerprintRef.current = logicAuditFingerprint(latex);
               setToolsOpen(true);
             }
             if (result.revision_id) {
@@ -1274,6 +1356,101 @@ function EditorPage() {
     openChatPanel();
     void handleSend();
   };
+
+  const runScoreGateAudit = useCallback(async () => {
+    if (!projectId || scoreAuditLoading) return;
+
+    scoreAuditAbortRef.current?.abort();
+    const abort = new AbortController();
+    scoreAuditAbortRef.current = abort;
+
+    setScoreAuditLoading(true);
+    setScoreAuditError(null);
+    setScoreAuditProgress("Ario đang đọc lướt toàn bộ bài…");
+
+    try {
+      const report = await runQuickLogicAuditForScore({
+        latex: mainLatexSource,
+        sessionId: projectId,
+        integrityStrictness,
+        llmProvider,
+        llmModel,
+        signal: abort.signal,
+        onProgress: (label) => setScoreAuditProgress(label),
+      });
+      if (abort.signal.aborted) return;
+      scoreAuditAttemptedForRef.current = logicAuditFingerprint(mainLatexSource);
+      if (report?.sections?.length) {
+        setLogicAuditReport(report);
+        lastAuditFingerprintRef.current = logicAuditFingerprint(mainLatexSource);
+      } else {
+        // Gate returned empty — clear any stale gate report so score shows
+        // heuristic-only rather than outdated agent result.
+        setLogicAuditReport((prev) => {
+          const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
+          return prevMeta?.audit_mode === "gate" ? null : prev;
+        });
+        setScoreAuditError("Không nhận được báo cáo phản biện — điểm dựa trên tiêu chí kỹ thuật.");
+      }
+    } catch (error) {
+      if (abort.signal.aborted) return;
+      const message =
+        error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
+      // Also clear stale gate report on hard error.
+      setLogicAuditReport((prev) => {
+        const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
+        return prevMeta?.audit_mode === "gate" ? null : prev;
+      });
+      setScoreAuditError(formatPaperScoreGateError(message));
+    } finally {
+      if (!abort.signal.aborted) {
+        // Only mark as attempted when we got a result (success or empty).
+        // On hard error, leave ref unset so the dialog can retry on reopen.
+        setScoreAuditLoading(false);
+        setScoreAuditProgress(null);
+      }
+      scoreAuditAbortRef.current = null;
+    }
+  }, [
+    projectId,
+    scoreAuditLoading,
+    mainLatexSource,
+    integrityStrictness,
+    llmProvider,
+    llmModel,
+  ]);
+
+  useEffect(() => {
+    if (!exportOpen) {
+      scoreAuditAbortRef.current?.abort();
+      scoreAuditAbortRef.current = null;
+      scoreAuditAttemptedForRef.current = null;
+      setScoreAuditLoading(false);
+      setScoreAuditProgress(null);
+      return;
+    }
+    if (!projectId || scoreAuditLoading) return;
+
+    const fingerprint = logicAuditFingerprint(mainLatexSource);
+    if (scoreAuditAttemptedForRef.current === fingerprint) return;
+    if (
+      !needsScoreGateAudit(
+        mainLatexSource,
+        logicAuditReport,
+        lastAuditFingerprintRef.current,
+      )
+    ) {
+      return;
+    }
+    void runScoreGateAudit();
+  }, [
+    exportOpen,
+    projectId,
+    mainLatexSource,
+    logicAuditReport,
+    scoreAuditLoading,
+    runScoreGateAudit,
+  ]);
 
   const handleAcceptSuggestion = () => {
     if (!pendingSuggestion) return;
@@ -1513,7 +1690,7 @@ function EditorPage() {
       {bootState !== "error" && showSplash && (
         <EditorEntrySplash
           exiting={splashPhase === "exiting"}
-          label={bootState === "loading" ? "Loading project…" : "Opening editor…"}
+          label={bootState === "loading" ? shell.loadingProject : shell.openingEditor}
         />
       )}
       {bootState !== "error" && showEditor && (
@@ -1577,7 +1754,15 @@ function EditorPage() {
           assets={assets}
           tab={sidebarTab}
           onTabChange={setSidebarTab}
-          onSelectFile={switchActiveFile}
+          expanded={sidebarExpanded}
+          onExpandedChange={(next) => {
+            setSidebarExpanded(next);
+            window.localStorage.setItem(
+              EDITOR_SIDEBAR_STORAGE_KEY,
+              next ? "expanded" : "collapsed",
+            );
+          }}
+          onSelectFile={openProjectFile}
           onUpload={() => fileInputRef.current?.click()}
           onUploadFolder={() => folderInputRef.current?.click()}
           onUploadZip={() => zipInputRef.current?.click()}
@@ -1589,6 +1774,8 @@ function EditorPage() {
             <CenterPanel
               latex={latex}
               activeFile={activeFile}
+              activeAsset={activeAsset}
+              viewingAsset={viewingAsset}
               highlightLine={highlightLine}
               synctexHighlight={synctexHighlight}
               editorRef={latexEditorRef}
@@ -1605,6 +1792,7 @@ function EditorPage() {
               onToggleTools={() => setToolsOpen((v) => !v)}
               onShare={() => setShareOpen(true)}
               onExport={() => setExportOpen(true)}
+              onDefense={projectId ? () => void navigate({ to: "/defense", search: { projectId } }) : undefined}
               exportEnabled={Boolean(pdfData)}
               shareEnabled={Boolean(shareStatus?.enabled)}
               pendingEdits={pendingEdits}
@@ -1677,7 +1865,7 @@ function EditorPage() {
             activeFile={activeFile}
             mainFile={mainFile}
             assets={assets}
-            onSelectFile={switchActiveFile}
+            onSelectFile={openProjectFile}
             onUpload={() => fileInputRef.current?.click()}
             onUploadFolder={() => folderInputRef.current?.click()}
             onUploadZip={() => zipInputRef.current?.click()}
@@ -1686,6 +1874,16 @@ function EditorPage() {
         )}
         {mobileTab === "editor" && (
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            {viewingAsset ? (
+              activeAsset ? (
+                <ProjectAssetPreview path={activeFile} asset={activeAsset} />
+              ) : (
+                <div className="project-asset-preview-missing p-6 text-sm text-muted-foreground">
+                  {editorCopy(locale).assetPreview.missing}
+                </div>
+              )
+            ) : (
+              <>
             <LatexEditor
               editorRef={latexEditorRef}
               latex={latex}
@@ -1706,6 +1904,8 @@ function EditorPage() {
                 onQuickEdit={handleQuickEditSelection}
                 onDismiss={() => setSelectionPick(null)}
               />
+            )}
+              </>
             )}
           </div>
         )}
@@ -1754,6 +1954,9 @@ function EditorPage() {
         compileError={compileError}
         citationResults={citationResults}
         logicAuditReport={logicAuditReport}
+        auditLoading={scoreAuditLoading}
+        auditProgress={scoreAuditProgress}
+        auditError={scoreAuditError}
       />
         </div>
       )}
@@ -1780,7 +1983,7 @@ function ArionearMasthead({
 
   return (
     <div
-      className={`editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background ${className}`}
+      className={`editor-masthead flex shrink-0 items-center justify-between border-b px-4 py-1.5 text-[10px] font-mono-data uppercase tracking-widest ${className}`}
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
@@ -2151,6 +2354,8 @@ function LeftSidebar({
   assets,
   tab,
   onTabChange,
+  expanded,
+  onExpandedChange,
   onSelectFile,
   onUpload,
   onUploadFolder,
@@ -2169,6 +2374,8 @@ function LeftSidebar({
   assets: ProjectAsset[];
   tab: "files" | "chats";
   onTabChange: (t: "files" | "chats") => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   onSelectFile: (path: string) => void;
   onUpload: () => void;
   onUploadFolder: () => void;
@@ -2178,76 +2385,129 @@ function LeftSidebar({
 }) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
+  const selectTab = (next: "files" | "chats") => {
+    onTabChange(next);
+    onExpandedChange(true);
+  };
 
   return (
-    <aside className="flex min-h-0 w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/90 lg:w-60">
-      <div className="border-b border-border p-3">
-        <EditableProjectName name={projectName} onRename={onRenameProject} />
-      </div>
+    <div className="editor-left-sidebar">
+      <nav className="editor-sidebar-rail" aria-label="Editor sidebar">
+        <button
+          type="button"
+          className={`editor-sidebar-rail-btn${tab === "files" ? " is-active" : ""}`}
+          title={t.sidebar.files}
+          aria-label={t.sidebar.files}
+          aria-pressed={tab === "files"}
+          onClick={() => selectTab("files")}
+        >
+          <Folder className="h-4 w-4" strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          className={`editor-sidebar-rail-btn${tab === "chats" ? " is-active" : ""}`}
+          title={t.sidebar.chats}
+          aria-label={t.sidebar.chats}
+          aria-pressed={tab === "chats"}
+          onClick={() => selectTab("chats")}
+        >
+          <MessageSquare className="h-4 w-4" strokeWidth={1.75} />
+        </button>
+      </nav>
 
-      <div className="flex border-b border-border">
-        {(
-          [
-            { id: "files" as const, label: t.sidebar.files },
-            { id: "chats" as const, label: t.sidebar.chats },
-          ] as const
-        ).map(({ id, label }) => (
+      {expanded ? (
+        <aside className="editor-sidebar-panel relative flex min-h-0 flex-col">
           <button
-            key={id}
-            onClick={() => onTabChange(id)}
-            className={`flex-1 py-2 text-xs font-medium transition ${
-              tab === id
-                ? "border-b-2 border-primary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            type="button"
+            className="editor-sidebar-toggle editor-sidebar-toggle--collapse"
+            title={locale === "vi" ? "Thu gọn sidebar" : "Collapse sidebar"}
+            aria-label={locale === "vi" ? "Thu gọn sidebar" : "Collapse sidebar"}
+            onClick={() => onExpandedChange(false)}
           >
-            {label}
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-        ))}
-      </div>
 
-      {tab === "files" ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <SidebarFileOutlineSplit
-            files={files}
-            assets={assets}
-            activeFile={activeFile}
-            mainFile={mainFile}
-            isDirty={isDirty}
-            onSelectFile={onSelectFile}
-            onUpload={onUpload}
-            onUploadFolder={onUploadFolder}
-            onUploadZip={onUploadZip}
-            outlineLatex={outlineLatex}
-            highlightLine={highlightLine}
-            onOutlineJump={onOutlineJump}
-          />
-        </div>
+          <div className="border-b border-border p-3">
+            <EditableProjectName name={projectName} onRename={onRenameProject} />
+          </div>
+
+          <div className="flex border-b border-border">
+            {(
+              [
+                { id: "files" as const, label: t.sidebar.files },
+                { id: "chats" as const, label: t.sidebar.chats },
+              ] as const
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => onTabChange(id)}
+                className={`flex-1 py-2 text-xs font-medium transition ${
+                  tab === id
+                    ? "border-b-2 border-primary text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "files" ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <SidebarFileOutlineSplit
+                files={files}
+                assets={assets}
+                activeFile={activeFile}
+                mainFile={mainFile}
+                isDirty={isDirty}
+                onSelectFile={onSelectFile}
+                onUpload={onUpload}
+                onUploadFolder={onUploadFolder}
+                onUploadZip={onUploadZip}
+                outlineLatex={outlineLatex}
+                highlightLine={highlightLine}
+                onOutlineJump={onOutlineJump}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-3">
+              {["Edit Introduction", "Citation format APA", "Improve abstract"].map((label, i) => (
+                <button
+                  key={label}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition ${
+                    i === 0
+                      ? "bg-sidebar-accent font-medium"
+                      : "text-foreground/70 hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t border-border p-3">
+            <div className="flex items-start gap-2 rounded-md bg-secondary/60 p-2.5">
+              <ShieldCheck className="h-3.5 w-3.5 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                {t.sidebar.aiDisclaimer}
+              </p>
+            </div>
+          </div>
+        </aside>
       ) : (
-        <div className="flex-1 overflow-y-auto p-3">
-          {["Edit Introduction", "Citation format APA", "Improve abstract"].map((label, i) => (
-            <button
-              key={label}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition ${
-                i === 0 ? "bg-sidebar-accent font-medium" : "text-foreground/70 hover:bg-sidebar-accent/50"
-              }`}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          className="editor-sidebar-toggle editor-sidebar-toggle--expand"
+          title={locale === "vi" ? "Mở sidebar" : "Expand sidebar"}
+          aria-label={locale === "vi" ? "Mở sidebar" : "Expand sidebar"}
+          onClick={() => onExpandedChange(true)}
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
       )}
-
-      <div className="border-t border-border p-3">
-        <div className="flex items-start gap-2 rounded-md bg-secondary/60 p-2.5">
-          <ShieldCheck className="h-3.5 w-3.5 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
-          <p className="text-[10px] leading-snug text-muted-foreground">
-            {t.sidebar.aiDisclaimer}
-          </p>
-        </div>
-      </div>
-    </aside>
+    </div>
   );
 }
 
@@ -2307,6 +2567,8 @@ function LatexEditor({
 function CenterPanel({
   latex,
   activeFile,
+  activeAsset = null,
+  viewingAsset = false,
   highlightLine = null,
   synctexHighlight = null,
   editorRef,
@@ -2330,6 +2592,7 @@ function CenterPanel({
   onToggleTools,
   onShare,
   onExport,
+  onDefense,
   exportEnabled = false,
   shareEnabled = false,
   chatEndRef,
@@ -2362,6 +2625,8 @@ function CenterPanel({
 }: {
   latex: string;
   activeFile: string;
+  activeAsset?: ProjectAsset | null;
+  viewingAsset?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;
   editorRef?: React.Ref<LatexCodeEditorHandle>;
@@ -2389,6 +2654,7 @@ function CenterPanel({
   onToggleTools: () => void;
   onShare?: () => void;
   onExport?: () => void;
+  onDefense?: () => void;
   exportEnabled?: boolean;
   shareEnabled?: boolean;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
@@ -2432,8 +2698,9 @@ function CenterPanel({
               <AvatarFallback className="rounded-md text-[9px]">A</AvatarFallback>
             </Avatar>
             <span>{activeFile}</span>
-            {isDirty && <span className="file-dirty-mark">*</span>}
+            {isDirty && !viewingAsset ? <span className="file-dirty-mark">*</span> : null}
           </div>
+          {!viewingAsset ? (
           <div className="flex items-center gap-0.5">
             <button
               type="button"
@@ -2456,8 +2723,20 @@ function CenterPanel({
               <Redo2 className="h-3.5 w-3.5" />
             </button>
           </div>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
+          {onDefense ? (
+            <button
+              type="button"
+              onClick={onDefense}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted hidden md:inline-flex"
+              title="Chuẩn bị bảo vệ luận văn (Defense Mode)"
+            >
+              <GraduationCap className="h-3 w-3" />
+              Bảo vệ
+            </button>
+          ) : null}
           {onShare ? (
             <button
               type="button"
@@ -2500,6 +2779,14 @@ function CenterPanel({
 
       <div className="editor-workspace flex min-h-0 flex-1 flex-col overflow-hidden w-full">
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden w-full min-w-0">
+          {viewingAsset ? (
+            activeAsset ? (
+              <ProjectAssetPreview path={activeFile} asset={activeAsset} />
+            ) : (
+              <div className="project-asset-preview-missing">{t.assetPreview.missing}</div>
+            )
+          ) : (
+            <>
           <LatexEditor
             editorRef={editorRef}
             latex={latex}
@@ -2520,6 +2807,8 @@ function CenterPanel({
               onQuickEdit={onQuickEditSelection}
               onDismiss={onDismissSelectionToolbar}
             />
+          )}
+            </>
           )}
         </div>
 
@@ -2723,8 +3012,8 @@ function ToolsPanel({
 
   return (
     <section className="tools-panel flex h-full min-h-0 flex-col bg-secondary/20">
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-3 backdrop-blur-sm">
-        <nav className="tools-tab-nav flex items-center gap-1">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 bg-card/80 px-3 backdrop-blur-sm min-w-0">
+        <nav className="tools-tab-nav flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {(
             [
               { id: "info" as const, label: t.tools.projectInfo },
@@ -2744,7 +3033,7 @@ function ToolsPanel({
         </nav>
         <button
           onClick={onClose}
-          className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
+          className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           <X className="h-3 w-3" />
           {t.tools.close}

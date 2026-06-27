@@ -100,7 +100,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
   },
   integrity: {
     slug: "integrity",
-    title: "AI là biên tập viên. Bạn là tác giả.",
+    title: "AI là biên tập viên. Bạn là tác\u00A0giả.",
     eyebrow: "Chính sách biên tập",
     lede: "Arionear cải thiện cách trình bày — không thay đổi nội dung khoa học cốt lõi.",
     sections: [
@@ -252,7 +252,7 @@ export type FeaturesPageCopy = {
   hubCenterLatex: string;
   hubCenterSource: string;
   noLabel: string;
-  features: { n: string; title: string; body: string; angle: number }[];
+  features: { n: string; title: string; hubLabel: string; body: string; angle: number }[];
 };
 
 export type WorkflowPageCopy = {
@@ -308,11 +308,11 @@ const EN_FEATURES: FeaturesPageCopy = {
   hubCenterSource: ".tex source",
   noLabel: "No.",
   features: [
-    { n: "01", title: "Academic Voice", body: "Improve academic English while preserving meaning.", angle: 0 },
-    { n: "02", title: "Structure Guide", body: "IMRAD sections — abstract through discussion.", angle: 72 },
-    { n: "03", title: "Logic & Consistency", body: "Cross-section argument coherence checks.", angle: 144 },
-    { n: "04", title: "Citation Format", body: "APA, IEEE, Vancouver, BibTeX support.", angle: 216 },
-    { n: "05", title: "Integrity Guard", body: "No fabricated data, results, or citations.", angle: 288 },
+    { n: "01", title: "Academic Voice", hubLabel: "Voice", body: "Improve academic English while preserving meaning.", angle: 0 },
+    { n: "02", title: "Structure Guide", hubLabel: "Structure", body: "IMRAD sections — abstract through discussion.", angle: 72 },
+    { n: "03", title: "Logic & Consistency", hubLabel: "Logic", body: "Cross-section argument coherence checks.", angle: 144 },
+    { n: "04", title: "Citation Format", hubLabel: "Citations", body: "APA, IEEE, Vancouver, BibTeX support.", angle: 216 },
+    { n: "05", title: "Integrity Guard", hubLabel: "Integrity", body: "No fabricated data, results, or citations.", angle: 288 },
   ],
 };
 
@@ -325,11 +325,11 @@ const VI_FEATURES: FeaturesPageCopy = {
   hubCenterSource: "nguồn .tex",
   noLabel: "Số",
   features: [
-    { n: "01", title: "Giọng văn học thuật", body: "Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa.", angle: 0 },
-    { n: "02", title: "Hướng dẫn cấu trúc", body: "Các phần IMRAD — từ abstract đến discussion.", angle: 72 },
-    { n: "03", title: "Logic & Nhất quán", body: "Kiểm tra mạch lập luận xuyên suốt các phần.", angle: 144 },
-    { n: "04", title: "Định dạng trích dẫn", body: "Hỗ trợ APA, IEEE, Vancouver, BibTeX.", angle: 216 },
-    { n: "05", title: "Integrity Guard", body: "Không bịa dữ liệu, kết quả hay trích dẫn.", angle: 288 },
+    { n: "01", title: "Giọng văn học thuật", hubLabel: "Giọng", body: "Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa.", angle: 0 },
+    { n: "02", title: "Hướng dẫn cấu trúc", hubLabel: "Cấu trúc", body: "Các phần IMRAD — từ abstract đến discussion.", angle: 72 },
+    { n: "03", title: "Logic & Nhất quán", hubLabel: "Logic", body: "Kiểm tra mạch lập luận xuyên suốt các phần.", angle: 144 },
+    { n: "04", title: "Định dạng trích dẫn", hubLabel: "Trích dẫn", body: "Hỗ trợ APA, IEEE, Vancouver, BibTeX.", angle: 216 },
+    { n: "05", title: "Integrity Guard", hubLabel: "Toàn vẹn", body: "Không bịa dữ liệu, kết quả hay trích dẫn.", angle: 288 },
   ],
 };
 

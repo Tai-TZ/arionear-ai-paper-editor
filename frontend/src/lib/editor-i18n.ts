@@ -19,6 +19,15 @@ export type EditorCopy = {
     outline: string;
     mainBadge: string;
     aiDisclaimer: string;
+    uploadFiles: string;
+    uploadFolder: string;
+    importZip: string;
+    emptyTree: string;
+    fileActions: string;
+  };
+  assetPreview: {
+    download: string;
+    missing: string;
   };
   toolbar: {
     share: string;
@@ -39,6 +48,7 @@ export type EditorCopy = {
     compiling: string;
     noPdfYet: string;
     pagesOf: (current: number, total: number) => string;
+    readOnlyEmptyHint: string;
     fit: string;
     emptyHint: string;
     compilerAuto: string;
@@ -161,6 +171,15 @@ const EN: EditorCopy = {
     outline: "Outline",
     mainBadge: "Main",
     aiDisclaimer: "AI assists with expression — never invents data or results.",
+    uploadFiles: "Upload files",
+    uploadFolder: "Upload folder",
+    importZip: "Import Overleaf ZIP",
+    emptyTree: "No files yet. Import a ZIP or upload files.",
+    fileActions: "File actions",
+  },
+  assetPreview: {
+    download: "Download",
+    missing: "Could not load this file.",
   },
   toolbar: {
     share: "Share",
@@ -181,6 +200,7 @@ const EN: EditorCopy = {
     compiling: "Compiling…",
     noPdfYet: "No PDF yet",
     pagesOf: (current, total) => `${current} of ${total} pages`,
+    readOnlyEmptyHint: "PDF preview will appear here when the manuscript finishes compiling.",
     fit: "Fit",
     emptyHint: "Press Compile to generate a PDF preview with PDF.js.",
     compilerAuto: "Auto",
@@ -255,20 +275,20 @@ const EN: EditorCopy = {
     intro:
       "Comment-only — does not auto-edit the manuscript. Audit modes use a dedicated engine, independent of the chat provider.",
     modeQuick: "Quick (OpenRouter)",
-    modeDeep: "Deep (MiniMax M3)",
+    modeDeep: "Deep (Nemotron 3 Ultra)",
     scanFull: "Scan entire manuscript",
     scanFullHintQuick: (count) =>
       `All sections in the manuscript (max 20 parts, currently ${count}).`,
     scanFullHintDeep: (count) =>
-      `All sections — deep MiniMax pass (max 8 parts, currently ${count}).`,
+      `All sections — deep Nemotron pass (max 8 parts, currently ${count}).`,
     hintQuickSelected:
       "Quick scan of 2–3 sections via OpenRouter — ~2–3 min. Independent of chat provider.",
     hintDeepSelected:
-      "Deep scan of 1 section via MiniMax M3 — ~3–5 min. Independent of chat provider.",
+      "Deep scan of 1 section via Nemotron 3 Ultra — ~3–5 min. Independent of chat provider.",
     hintQuickFull:
       "Full-manuscript scan (max 20 sections) via OpenRouter — usually ~5–10 min.",
     hintDeepFull:
-      "Full-manuscript deep scan (max 8 sections) via MiniMax M3 — may take 10–20 min.",
+      "Full-manuscript deep scan (max 8 sections) via Nemotron 3 Ultra — may take 10–20 min.",
     pickOneSection: "Pick 1 section",
     pickSections: "Pick sections to scan",
     selectAll: "Select all",
@@ -311,6 +331,15 @@ const VI: EditorCopy = {
     outline: "Dàn ý",
     mainBadge: "Chính",
     aiDisclaimer: "AI hỗ trợ diễn đạt — không bịa dữ liệu hay kết quả.",
+    uploadFiles: "Tải tệp lên",
+    uploadFolder: "Tải thư mục lên",
+    importZip: "Nhập ZIP Overleaf",
+    emptyTree: "Chưa có tệp. Nhập ZIP Overleaf hoặc tải tệp lên.",
+    fileActions: "Thao tác tệp",
+  },
+  assetPreview: {
+    download: "Tải xuống",
+    missing: "Không tải được tệp này.",
   },
   toolbar: {
     share: "Chia sẻ",
@@ -331,6 +360,7 @@ const VI: EditorCopy = {
     compiling: "Đang biên dịch…",
     noPdfYet: "Chưa có PDF",
     pagesOf: (current, total) => `Trang ${current}/${total}`,
+    readOnlyEmptyHint: "Bản xem PDF sẽ hiện ở đây sau khi biên dịch xong bài nghiên cứu.",
     fit: "Vừa khung",
     emptyHint: "Nhấn Biên dịch để tạo bản xem trước PDF với PDF.js.",
     compilerAuto: "Tự động",
@@ -406,20 +436,20 @@ const VI: EditorCopy = {
     intro:
       "Chỉ nhận xét — không tự sửa bản thảo. Chế độ audit dùng engine riêng, không phụ thuộc provider trong chat.",
     modeQuick: "Nhanh (OpenRouter)",
-    modeDeep: "Sâu (MiniMax M3)",
+    modeDeep: "Sâu (Nemotron 3 Ultra)",
     scanFull: "Quét toàn bộ bài",
     scanFullHintQuick: (count) =>
       `Tất cả section trong bản thảo (tối đa 20 phần, hiện có ${count}).`,
     scanFullHintDeep: (count) =>
-      `Tất cả section — MiniMax sâu (tối đa 8 phần, hiện có ${count}).`,
+      `Tất cả section — Nemotron sâu (tối đa 8 phần, hiện có ${count}).`,
     hintQuickSelected:
       "Quét nhanh 2–3 phần bằng OpenRouter — ~2–3 phút. Không phụ thuộc provider chat.",
     hintDeepSelected:
-      "Soi sâu 1 phần bằng MiniMax M3 — ~3–5 phút. Không phụ thuộc provider chat.",
+      "Soi sâu 1 phần bằng Nemotron 3 Ultra — ~3–5 phút. Không phụ thuộc provider chat.",
     hintQuickFull:
       "Quét toàn bộ bài (tối đa 20 phần) bằng OpenRouter — thường ~5–10 phút.",
     hintDeepFull:
-      "Quét toàn bộ bài (tối đa 8 phần) bằng MiniMax M3 — có thể mất 10–20 phút.",
+      "Quét toàn bộ bài (tối đa 8 phần) bằng Nemotron 3 Ultra — có thể mất 10–20 phút.",
     pickOneSection: "Chọn 1 phần",
     pickSections: "Chọn phần quét",
     selectAll: "Chọn tất cả",

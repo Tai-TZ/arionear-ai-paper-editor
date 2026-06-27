@@ -4,10 +4,10 @@ import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "tokenrouter";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai";
 
 export function normalizeLlmProvider(provider: string): LLMProvider {
-  if (provider === "nvidia") return "tokenrouter";
+  if (provider === "nvidia" || provider === "tokenrouter") return "openrouter";
   return provider as LLMProvider;
 }
 
@@ -139,6 +139,8 @@ export type ChatResult = {
     original_text: string;
     replacement_text: string;
     description?: string;
+    selection_start?: number;
+    selection_end?: number;
   }[];
   citation_results?: Record<string, unknown>[];
   structure_suggestions?: Record<string, unknown>[];
@@ -193,7 +195,7 @@ function buildChatRequestBody(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,
@@ -575,7 +577,7 @@ export async function streamChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,
@@ -601,7 +603,7 @@ export async function sendChat(
     selection?: string;
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep";
+    logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
   } & LlmOptions,

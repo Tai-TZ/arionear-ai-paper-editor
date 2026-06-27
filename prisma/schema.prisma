@@ -18,6 +18,11 @@ enum UserRole {
   ADMIN
 }
 
+enum UserTier {
+  FREE
+  PRO
+}
+
 enum PaperStatus {
   DRAFT
   IN_REVIEW
@@ -133,8 +138,25 @@ model User {
   aiSessions          AiSession[]
   auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
+  subscription        UserSubscription?
 
   @@map("users")
+}
+
+model UserSubscription {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @unique @map("user_id") @db.Uuid
+  tier              UserTier  @default(FREE)
+  defenseTurnsUsed  Int       @default(0) @map("defense_turns_used")
+  turnsResetAt      DateTime  @default(now()) @map("turns_reset_at")
+  upgradedAt        DateTime? @map("upgraded_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_subscriptions")
 }
 
 model PasswordResetToken {

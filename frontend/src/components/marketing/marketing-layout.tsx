@@ -61,6 +61,8 @@ export function MarketingMasthead() {
   const navLinks = [
     { label: t.nav.features, to: "/features" },
     { label: t.nav.workflow, to: "/workflow" },
+    { label: t.nav.guide, to: "/guide" },
+    { label: t.nav.templates, to: "/templates" },
     { label: t.nav.integrity, to: "/integrity" },
   ] as const;
 
@@ -126,6 +128,8 @@ export function MarketingColophon() {
       links: [
         { label: f.links.features, to: "/features" },
         { label: f.links.workflow, to: "/workflow" },
+        { label: f.links.guide, to: "/guide" },
+        { label: f.links.templates, to: "/templates" },
         { label: f.links.integrity, to: "/integrity" },
       ],
     },
@@ -133,6 +137,8 @@ export function MarketingColophon() {
       heading: f.sections.authors,
       links: [
         { label: f.links.openEditor, to: "/projects" },
+        { label: f.links.guide, to: "/guide" },
+        { label: f.links.templates, to: "/templates" },
         { label: f.links.latexGuide, to: "/latex-guide" },
       ],
     },
@@ -162,7 +168,7 @@ export function MarketingColophon() {
             Arionear
           </Link>
           <p className="mt-2 font-body italic text-sm">{f.tagline}</p>
-          <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-neutral-600">
+          <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
             {f.edition} {new Date().getFullYear()}
           </p>
         </div>

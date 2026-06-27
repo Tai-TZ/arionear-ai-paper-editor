@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { FolderOpen, Shield, UserCircle } from "lucide-react";
+import { FolderOpen, Shield, UserCircle, BookOpen } from "lucide-react";
 import { useMemo } from "react";
 import { useLocale } from "@/components/locale-provider";
 import { WorkspaceSidebarFooter } from "@/components/workspace/workspace-sidebar-footer";
@@ -15,6 +15,7 @@ type WorkspaceSidebarLabels = {
   projects: string;
   profile: string;
   admin?: string;
+  userGuide?: string;
   signOut: string;
 };
 
@@ -150,6 +151,16 @@ export function WorkspaceSidebar({
             </Link>
           )
         ) : null}
+
+        <Link
+          to="/guide"
+          className="workspace-nav-item workspace-nav-item-guide"
+          onClick={onNavigate}
+          title={mergedLabels.userGuide ?? "User Guide"}
+        >
+          <BookOpen className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+          <span className="workspace-nav-label">{mergedLabels.userGuide ?? "User Guide"}</span>
+        </Link>
       </nav>
 
       <WorkspaceSidebarFooter signOutLabel={mergedLabels.signOut} onSignOut={onSignOut} />

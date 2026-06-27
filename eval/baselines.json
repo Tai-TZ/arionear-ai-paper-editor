@@ -1,0 +1,47 @@
+{
+  "intent_routing_accuracy": {
+    "baseline": 0.65,
+    "unit": "ratio",
+    "description": "Regex-only intent router (no LLM classifier)"
+  },
+  "edit_scope_accuracy": {
+    "baseline": 0.4,
+    "unit": "ratio",
+    "description": "Legacy whole-document edit fallback for title queries"
+  },
+  "guardrail_block_rate": {
+    "baseline": 0.0,
+    "unit": "ratio",
+    "description": "No L2 integrity validation before apply"
+  },
+  "numeric_drift_detection_rate": {
+    "baseline": 0.0,
+    "unit": "ratio",
+    "description": "No numeric drift checks on AI suggestions"
+  },
+  "chat_latency_p50_s": {
+    "baseline": 8.0,
+    "unit": "seconds",
+    "description": "Unscoped chat with full manuscript injected every turn"
+  },
+  "style_latency_p50_s": {
+    "baseline": 6.0,
+    "unit": "seconds",
+    "description": "Style edit on full document without selection scoping"
+  },
+  "compile_success_rate": {
+    "baseline": 0.7,
+    "unit": "ratio",
+    "description": "Local MiKTeX without Docker TeX Live (Windows dev)"
+  },
+  "health_latency_p95_ms": {
+    "baseline": 800,
+    "unit": "milliseconds",
+    "description": "Cold-start serverless without warm instance"
+  },
+  "cost_per_active_user_month_usd": {
+    "baseline": 4.5,
+    "unit": "usd",
+    "description": "gpt-4o full-document edits, ~30 sessions/month"
+  }
+}

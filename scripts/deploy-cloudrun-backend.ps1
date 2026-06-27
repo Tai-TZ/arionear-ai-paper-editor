@@ -1,15 +1,24 @@
 # Deploy arionear-api to Google Cloud Run (reads repo-root .env).
-# Usage:
+#
+# Usage (first deploy or full rebuild):
 #   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1
-# Optional (after frontend is deployed):
-#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1 -FrontendUrl "https://arionear-web-xxx.run.app"
+#
+# Update env vars only (CORS / domain change, no rebuild):
+#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1 -SkipBuild
+#
+# Custom domains are set via -FrontendUrl / -BackendCustomDomain.
+# Defaults below match the production custom domains on arionear.id.vn.
 
 param(
-    [string]$ProjectId = "project-f8474886-b777-42fc-88c",
-    [string]$Region = "asia-east1",
-    [string]$ServiceName = "arionear-api",
-    [string]$FrontendUrl = "https://placeholder.run.app",
-    [string]$BackendUrl = "",
+    [string]$ProjectId    = "project-f8474886-b777-42fc-88c",
+    [string]$Region       = "asia-east1",
+    [string]$ServiceName  = "arionear-api",
+    # Custom-domain URL of the frontend (used for CORS + OPENROUTER_SITE_URL)
+    [string]$FrontendUrl  = "https://arionear.id.vn",
+    # Custom-domain URL of the backend (used for BACKEND_BASE_URL + OAuth redirect)
+    [string]$BackendCustomDomain = "https://api.arionear.id.vn",
+    # Cloud Run service URL — auto-detected if empty (used as BACKEND_BASE_URL fallback)
+    [string]$BackendUrl   = "",
     [switch]$SkipBuild,
     [switch]$SecretsOnly
 )
@@ -106,14 +115,18 @@ if (-not $SkipBuild) {
 if (-not $BackendUrl) {
     $BackendUrl = gcloud run services describe $ServiceName --region $Region --format="value(status.url)" 2>$null
     if (-not $BackendUrl) {
-        $BackendUrl = "https://placeholder.run.app"
+        $BackendUrl = $BackendCustomDomain
     }
 }
+# Prefer the custom domain for BACKEND_BASE_URL (QR confirm URL, OAuth redirect, etc.)
+# Fall back to the Cloud Run .run.app URL if no custom domain is set.
+$BackendBaseUrl = if ($BackendCustomDomain) { $BackendCustomDomain } else { $BackendUrl }
 
 $llmProvider = Get-DotEnvValue "LLM_PROVIDER"
 if (-not $llmProvider) { $llmProvider = "openrouter" }
 
-$googleClientId = Get-DotEnvValue "GOOGLE_CLIENT_ID"
+$googleClientId      = Get-DotEnvValue "GOOGLE_CLIENT_ID"
+$googleOauthRedirect = "$BackendBaseUrl/api/v1/auth/google/callback"
 $smtpHost = Get-DotEnvValue "SMTP_HOST"
 $smtpPort = Get-DotEnvValue "SMTP_PORT"
 $smtpUser = Get-DotEnvValue "SMTP_USER"
@@ -145,10 +158,12 @@ if ($aiLogKey) {
 $envVars = @(
     "APP_ENV=production",
     "LLM_PROVIDER=$llmProvider",
-    "CORS_ORIGINS=$FrontendUrl",
+    # Allow requests from both the custom domain and the raw Cloud Run URL
+    "CORS_ORIGINS=$FrontendUrl,$BackendUrl",
     "FRONTEND_BASE_URL=$FrontendUrl",
-    "BACKEND_BASE_URL=$BackendUrl",
+    "BACKEND_BASE_URL=$BackendBaseUrl",
     "GOOGLE_CLIENT_ID=$googleClientId",
+    "GOOGLE_OAUTH_REDIRECT_URI=$googleOauthRedirect",
     "SMTP_HOST=$smtpHost",
     "SMTP_PORT=$smtpPort",
     "SMTP_USER=$smtpUser",
@@ -180,7 +195,9 @@ gcloud run deploy $ServiceName `
     --set-env-vars ($envVars -join ",")
 
 $BackendUrl = gcloud run services describe $ServiceName --region $Region --format="value(status.url)"
-Write-Host "`nBackend URL: $BackendUrl" -ForegroundColor Green
-Write-Host "Health:  $BackendUrl/health"
-Write-Host "Compile: $BackendUrl/api/v1/compile/status"
-Write-Host "`nAfter frontend deploy, re-run with -FrontendUrl and -SkipBuild to update CORS."
+Write-Host "`nBackend Cloud Run URL : $BackendUrl" -ForegroundColor Green
+Write-Host "Backend custom domain : $BackendBaseUrl" -ForegroundColor Green
+Write-Host "Health  : $BackendBaseUrl/health"
+Write-Host "API docs: $BackendBaseUrl/docs"
+Write-Host "`nNow rebuild the frontend with VITE_API_URL=$BackendBaseUrl/api/v1"
+Write-Host "(see frontend/cloudbuild.yaml)"

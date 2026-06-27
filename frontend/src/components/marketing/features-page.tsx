@@ -77,7 +77,7 @@ function FeaturesHubDiagram({
                     style={{ fontFamily: "'Playfair Display', serif", fontSize: "8px", fontWeight: 700 }}
                     className="fill-current"
                   >
-                    {f.title.split(" ")[0]}
+                    {f.hubLabel}
                   </text>
                 </g>
               );
@@ -120,7 +120,7 @@ function FeaturesHubDiagram({
             return (
               <article
                 key={n}
-                className="border border-foreground p-5 hover:bg-neutral-100/80 transition-colors group"
+                className="border border-foreground p-5 transition-colors hover:bg-foreground/[0.04] group"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
@@ -131,17 +131,11 @@ function FeaturesHubDiagram({
                   </span>
                 </div>
                 <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-                <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link
-                    to={editorEntryPath()}
-                    className="inline-flex items-center gap-1 border border-foreground px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors"
-                  >
-                    {ui.tryIt}
-                  </Link>
+                <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
+                <div className="mt-4">
                   <Link
                     to={featureLearnMore[n] ?? "/workflow"}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-neutral-600 hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
                   >
                     {ui.learnMore}
                   </Link>
@@ -165,12 +159,12 @@ export function FeaturesPage() {
     <MarketingLayout>
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
-          <div className="max-w-3xl">
-            <p className="font-mono-data uppercase text-xs tracking-widest text-neutral-600">{content.eyebrow}</p>
-            <h1 className="mt-3 font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+          <div>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
               {content.title}
             </h1>
-            <p className="mt-6 font-body text-lg leading-relaxed text-neutral-700">{content.lede}</p>
+            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">{content.lede}</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 to={editorEntryPath()}
@@ -190,7 +184,7 @@ export function FeaturesPage() {
           <div className="mt-12">
             <div className="flex items-center justify-between border-b border-foreground pb-3 mb-6">
               <span className="font-mono-data uppercase text-xs tracking-widest">{copy.figCaption}</span>
-              <span className="font-mono-data uppercase text-[10px] tracking-widest text-neutral-500 hidden sm:inline">
+              <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {copy.figNote}
               </span>
             </div>

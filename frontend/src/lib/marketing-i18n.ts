@@ -10,6 +10,30 @@ export type HeroSuggestionCopy = {
 };
 
 type MarketingCopy = {
+  plans: {
+    sectionLabel: string;
+    sectionTitle: string;
+    sectionLink: string;
+    footnote: string;
+    free: {
+      tier: string;
+      price: string;
+      priceSub: string;
+      tagline: string;
+      cta: string;
+      features: string[];
+      locked: string[];
+    };
+    pro: {
+      tier: string;
+      badge: string;
+      price: string;
+      priceSub: string;
+      tagline: string;
+      cta: string;
+      features: string[];
+    };
+  };
   hero: {
     breaking: string;
     deskEdition: string;
@@ -73,6 +97,44 @@ type MarketingCopy = {
 };
 
 const EN: MarketingCopy = {
+  plans: {
+    sectionLabel: "Subscription Plans",
+    sectionTitle: "Choose Your Plan",
+    sectionLink: "Section C · Pricing →",
+    footnote: "No credit card required for Free · Cancel Pro anytime · 256-bit SSL",
+    free: {
+      tier: "FREE",
+      price: "Free",
+      priceSub: "forever",
+      tagline: "Start editing immediately",
+      cta: "Open the Desk →",
+      features: [
+        "5 Defense Rehearsal turns / day",
+        "Unlimited LaTeX AI editing",
+        "Academic template gallery",
+      ],
+      locked: [
+        "50 Defense turns / day",
+        "Priority AI model",
+        "Export without watermark",
+      ],
+    },
+    pro: {
+      tier: "PRO",
+      badge: "Most Popular",
+      price: "$2",
+      priceSub: "/ month",
+      tagline: "For the serious researcher",
+      cta: "Upgrade Now →",
+      features: [
+        "50 Defense Rehearsal turns / day",
+        "Unlimited LaTeX AI editing",
+        "Academic template gallery",
+        "Priority AI model",
+        "Export without watermark",
+      ],
+    },
+  },
   hero: {
     breaking: "Breaking",
     deskEdition: "Manuscript Desk · LaTeX Edition",
@@ -214,9 +276,47 @@ const EN: MarketingCopy = {
 };
 
 const VI: MarketingCopy = {
+  plans: {
+    sectionLabel: "Gói Dịch Vụ",
+    sectionTitle: "Chọn Gói Phù Hợp",
+    sectionLink: "Mục C · Bảng giá →",
+    footnote: "Không cần thẻ tín dụng cho Free · Huỷ Pro bất cứ lúc nào · Bảo mật SSL 256-bit",
+    free: {
+      tier: "MIỄN PHÍ",
+      price: "Free",
+      priceSub: "mãi mãi",
+      tagline: "Bắt đầu biên tập ngay lập tức",
+      cta: "Mở bàn biên tập →",
+      features: [
+        "5 lượt Defense Phản Biện / ngày",
+        "Biên tập LaTeX AI không giới hạn",
+        "Thư viện template học thuật",
+      ],
+      locked: [
+        "50 lượt Defense Phản Biện / ngày",
+        "Ưu tiên model AI tốc độ cao",
+        "Xuất PDF không watermark",
+      ],
+    },
+    pro: {
+      tier: "PRO",
+      badge: "Phổ biến nhất",
+      price: "49.000 ₫",
+      priceSub: "/ tháng",
+      tagline: "Dành cho nhà nghiên cứu nghiêm túc",
+      cta: "Nâng cấp ngay →",
+      features: [
+        "50 lượt Defense Phản Biện / ngày",
+        "Biên tập LaTeX AI không giới hạn",
+        "Thư viện template học thuật",
+        "Ưu tiên model AI tốc độ cao",
+        "Xuất PDF không watermark",
+      ],
+    },
+  },
   hero: {
     breaking: "Tin nóng",
-    deskEdition: "Ban Thảo · Phiên bản LaTeX",
+    deskEdition: "Bản Thảo · Phiên bản LaTeX",
     headline: "Nghiên cứu ",
     headlineEm: "Xứng đáng",
     headlineEnd: " được đọc công bằng.",

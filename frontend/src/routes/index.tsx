@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, BookOpen, Quote, ShieldCheck, GitCompare, ArrowRight, Upload, Eye, Lock, PenLine } from "lucide-react";
+import { FileText, BookOpen, Quote, ShieldCheck, GitCompare, ArrowRight, Upload, Eye, Lock, PenLine, Check, X, Zap } from "lucide-react";
 import { useMemo } from "react";
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { HeroPeerReviewFigure } from "@/components/marketing/hero-figure";
@@ -28,16 +28,30 @@ function Hero() {
 
   return (
     <section className="border-b-4 border-foreground newsprint-texture">
-      <div className="hero-split max-w-screen-xl mx-auto px-4 grid grid-cols-1 gap-0">
-        <div className="hero-split-copy lg:border-r border-foreground p-6 lg:p-10 xl:p-12">
+      <div className="hero-split max-w-screen-2xl mx-auto px-4 sm:px-6 grid grid-cols-1 gap-0">
+        <div className="hero-split-copy lg:border-r border-foreground p-6 lg:p-8 xl:p-10">
           <div className="flex items-center gap-3 font-mono-data uppercase text-xs tracking-widest mb-6">
             <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">{h.breaking}</span>
             <span>{h.deskEdition}</span>
           </div>
-          <h1 className="font-serif-display font-black leading-[0.88] tracking-tighter text-5xl sm:text-6xl lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
-            {h.headline}
-            <em className="italic font-serif-display">{h.headlineEm}</em>
-            {h.headlineEnd}
+          <h1 className="hero-headline font-serif-display font-black tracking-tighter text-5xl sm:text-6xl lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
+            {locale === "vi" ? (
+              <>
+                Nghiên cứu
+                <br />
+                <em className="italic font-serif-display">Xứng đáng</em>
+                <br />
+                được đọc
+                <br />
+                công bằng.
+              </>
+            ) : (
+              <>
+                {h.headline}
+                <em className="italic font-serif-display">{h.headlineEm}</em>
+                {h.headlineEnd}
+              </>
+            )}
           </h1>
           <div className="mt-8 grid grid-cols-1 md:grid-cols-12 gap-6">
             <p className="md:col-span-7 font-body text-lg leading-relaxed text-justify drop-cap">{h.lede}</p>
@@ -64,17 +78,17 @@ function Hero() {
             </Link>
           </div>
         </div>
-        <aside className="hero-split-demo p-6 lg:p-8 xl:p-10 flex flex-col justify-between gap-6">
-          <div className="hero-figure-frame border border-foreground p-4 lg:p-5 min-w-0">
-            <div className="font-mono-data uppercase text-[10px] tracking-widest mb-2">{h.figCaption}</div>
+        <aside className="hero-split-demo p-6 lg:p-6 xl:p-8 flex flex-col gap-5 lg:gap-6">
+          <div className="hero-figure-frame border border-foreground p-4 lg:p-6 min-w-0 flex-1">
+            <div className="font-mono-data uppercase text-xs tracking-widest mb-3">{h.figCaption}</div>
             <HeroPeerReviewFigure />
-            <p className="font-body italic text-sm mt-3 leading-snug">{h.figNote}</p>
+            <p className="font-body italic text-sm lg:text-base mt-4 leading-snug">{h.figNote}</p>
           </div>
-          <div className="grid grid-cols-3 border border-foreground">
+          <div className="grid grid-cols-3 border border-foreground shrink-0">
             {h.stats.map((s, i) => (
-              <div key={i} className={`p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
-                <div className="font-mono-data text-2xl font-bold">{s.k}</div>
-                <div className="font-sans-ui text-[10px] uppercase tracking-widest mt-1 text-neutral-600">{s.v}</div>
+              <div key={i} className={`p-3 lg:p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
+                <div className="font-mono-data text-xl lg:text-2xl font-bold">{s.k}</div>
+                <div className="font-sans-ui text-[10px] lg:text-xs uppercase tracking-widest mt-1 text-muted-foreground">{s.v}</div>
               </div>
             ))}
           </div>
@@ -102,7 +116,7 @@ function Features() {
           {f.items.map(({ title, body }, i) => {
             const Icon = FEATURE_ICONS[i]!;
             return (
-              <article key={title} className="p-8 border-r border-b border-foreground hover:bg-neutral-100 transition-colors">
+              <article key={title} className="p-8 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors">
                 <div className="flex items-center gap-4 mb-5">
                   <div className="h-12 w-12 border border-foreground flex items-center justify-center hover:bg-foreground hover:text-background transition-colors">
                     <Icon className="h-5 w-5" strokeWidth={1.5} />
@@ -110,7 +124,7 @@ function Features() {
                   <span className="font-mono-data text-xs uppercase tracking-widest">No. {String(i + 1).padStart(2, "0")}</span>
                 </div>
                 <h3 className="font-serif-display font-bold text-2xl mb-3">{title}</h3>
-                <p className="font-body text-base leading-relaxed text-neutral-700">{body}</p>
+                <p className="font-body text-base leading-relaxed text-muted-foreground">{body}</p>
               </article>
             );
           })}
@@ -187,7 +201,7 @@ function Integrity() {
           <div className="lg:col-span-7 lg:pl-10">
             <div className="flex items-end justify-between border-b border-foreground pb-3 mb-0">
               <span className="font-mono-data uppercase text-xs tracking-widest">{ig.guaranteesLabel}</span>
-              <span className="font-mono-data uppercase text-[10px] tracking-widest text-neutral-500 hidden sm:inline">
+              <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {ig.sectionRef}
               </span>
             </div>
@@ -197,7 +211,7 @@ function Integrity() {
                 return (
                   <li
                     key={n}
-                    className="p-6 border-r border-b border-foreground hover:bg-neutral-100/80 transition-colors group"
+                    className="p-6 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors group"
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
@@ -208,7 +222,7 @@ function Integrity() {
                       </span>
                     </div>
                     <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-                    <p className="font-body text-sm text-neutral-600 mt-2 leading-relaxed">{body}</p>
+                    <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
                   </li>
                 );
               })}
@@ -220,12 +234,149 @@ function Integrity() {
   );
 }
 
+function Plans() {
+  const { locale } = useLocale();
+  const m = useMemo(() => marketingCopy(locale), [locale]);
+  const p = m.plans;
+
+  return (
+    <section id="pricing" className="border-b-4 border-foreground newsprint-texture">
+      <div className="max-w-screen-xl mx-auto px-4 py-16">
+        {/* Section header */}
+        <div className="flex items-end justify-between border-b border-foreground pb-4 mb-0">
+          <div>
+            <span className="font-mono-data uppercase text-xs tracking-widest text-[color:var(--editorial-red)]">
+              {p.sectionLabel}
+            </span>
+            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-1">
+              {p.sectionTitle}
+            </h2>
+          </div>
+          <Link
+            to="/pricing"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]"
+          >
+            {p.sectionLink}
+          </Link>
+        </div>
+
+        {/* Two-column plan grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 border-l border-foreground">
+
+          {/* ── FREE card ── */}
+          <article className="p-8 border-r border-b border-foreground">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+                § {p.free.tier}
+              </span>
+            </div>
+
+            {/* Price */}
+            <div className="border-b border-foreground pb-6 mb-6">
+              <span className="font-serif-display font-black text-5xl tracking-tighter">
+                {p.free.price}
+              </span>
+              <span className="font-mono-data text-sm text-muted-foreground ml-2">
+                {p.free.priceSub}
+              </span>
+              <p className="font-body text-sm text-muted-foreground mt-2">{p.free.tagline}</p>
+            </div>
+
+            {/* Included features */}
+            <ul className="flex flex-col gap-3 mb-6">
+              {p.free.features.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-foreground flex items-center justify-center">
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug">{f}</span>
+                </li>
+              ))}
+              {p.free.locked.map((f) => (
+                <li key={f} className="flex items-start gap-3 opacity-40">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-foreground flex items-center justify-center">
+                    <X className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug line-through">{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+              to={editorEntryPath()}
+              className="inline-flex items-center gap-2 border border-foreground px-5 py-2.5 font-sans-ui uppercase text-xs tracking-widest hover:bg-foreground hover:text-background transition-colors min-h-[40px]"
+            >
+              {p.free.cta}
+            </Link>
+          </article>
+
+          {/* ── PRO card (editorial inverse) ── */}
+          <article className="relative p-8 border-r border-b border-foreground bg-foreground text-background">
+            {/* "Most popular" ribbon */}
+            <div className="absolute top-0 right-0 bg-[color:var(--editorial-red)] px-3 py-1">
+              <span className="font-mono-data text-[10px] uppercase tracking-widest text-background">
+                {p.pro.badge}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+                § {p.pro.tier}
+              </span>
+              <Zap className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+            </div>
+
+            {/* Price */}
+            <div className="border-b border-background/30 pb-6 mb-6">
+              <span className="font-serif-display font-black text-5xl tracking-tighter">
+                {p.pro.price}
+              </span>
+              <span className="font-mono-data text-sm text-background/60 ml-2">
+                {p.pro.priceSub}
+              </span>
+              <p className="font-body text-sm text-background/60 mt-2">{p.pro.tagline}</p>
+            </div>
+
+            {/* Features */}
+            <ul className="flex flex-col gap-3 mb-6">
+              {p.pro.features.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 border border-background/40 flex items-center justify-center">
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  <span className="font-body text-sm leading-snug">{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+              to="/pricing"
+              className="inline-flex items-center gap-2 border border-background bg-background text-foreground px-5 py-2.5 font-sans-ui uppercase text-xs tracking-widest hover:bg-transparent hover:text-background transition-colors min-h-[40px]"
+            >
+              <Zap className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {p.pro.cta}
+            </Link>
+          </article>
+        </div>
+
+        {/* Editorial footnote */}
+        <p className="font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground mt-4 text-center">
+          {p.footnote}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function Index() {
   return (
     <MarketingLayout showTicker>
       <Hero />
       <Features />
       <WorkflowTeaser />
+      <Plans />
       <Integrity />
     </MarketingLayout>
   );

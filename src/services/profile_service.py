@@ -35,6 +35,7 @@ DEFAULT_PROFILE_SETTINGS: dict[str, Any] = {
     "synctex_highlight_ms": 5000,
     "store_drafts": True,
     "telemetry_opt_in": False,
+    "subscription_plan": "free",
 }
 
 _COLUMN_FIELDS = {
@@ -125,11 +126,11 @@ def user_to_profile(user: User) -> ResearcherProfileResponse:
         ),  # type: ignore[arg-type]
         writing_locale=_coerce_enum(settings.get("writing_locale"), "en-US", {"en-US", "en-GB"}),  # type: ignore[arg-type]
         default_llm_provider=_coerce_enum(
-            "tokenrouter"
-            if settings.get("default_llm_provider") == "nvidia"
+            "openrouter"
+            if settings.get("default_llm_provider") in {"nvidia", "tokenrouter"}
             else settings.get("default_llm_provider"),
-            "zai",
-            {"openrouter", "openai", "anthropic", "zai", "tokenrouter"},
+            "openrouter",
+            {"openrouter", "openai", "anthropic", "zai"},
         ),  # type: ignore[arg-type]
         default_llm_model=settings.get("default_llm_model") or None,
         rewrite_intensity=_coerce_enum(

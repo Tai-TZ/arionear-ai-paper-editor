@@ -62,7 +62,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('arionear-theme');if(t==='dark')document.documentElement.classList.add('dark');var l=localStorage.getItem('arionear-locale');if(l==='vi')document.documentElement.lang='vi'}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('arionear-theme');if(t==='dark')document.documentElement.classList.add('dark');var l=localStorage.getItem('arionear-locale');if(l==='vi'){document.documentElement.lang='vi';document.documentElement.setAttribute('data-locale','vi')}else{document.documentElement.lang='en';document.documentElement.setAttribute('data-locale','en')}}catch(e){}})();`,
           }}
         />
       </head>

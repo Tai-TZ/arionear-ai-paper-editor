@@ -12,7 +12,9 @@ type CommonCopy = {
   nav: {
     features: string;
     workflow: string;
+    guide: string;
     integrity: string;
+    templates: string;
   };
   footer: {
     tagline: string;
@@ -28,7 +30,9 @@ type CommonCopy = {
     links: {
       features: string;
       workflow: string;
+      guide: string;
       integrity: string;
+      templates: string;
       openEditor: string;
       latexGuide: string;
       about: string;
@@ -44,6 +48,7 @@ type CommonCopy = {
     projects: string;
     profile: string;
     admin: string;
+    userGuide: string;
     signOut: string;
     loadingAccount: string;
   };
@@ -59,6 +64,13 @@ type CommonCopy = {
   shell: {
     loading: string;
     loadingRoute: string;
+    loadingProject: string;
+    openingEditor: string;
+    loadingShared: string;
+    loadingEyebrow: string;
+    loadingMasthead: string;
+    loadingSubline: string;
+    loadingFooter: string;
     notFound: {
       code: string;
       eyebrow: string;
@@ -84,7 +96,9 @@ const EN: CommonCopy = {
   nav: {
     features: "Features",
     workflow: "Workflow",
+    guide: "User Guide",
     integrity: "Integrity",
+    templates: "Templates",
   },
   footer: {
     tagline: "AI Academic Writing & Editing Assistant.",
@@ -95,7 +109,9 @@ const EN: CommonCopy = {
     links: {
       features: "Features",
       workflow: "Workflow",
+      guide: "User Guide",
       integrity: "Integrity",
+      templates: "Templates",
       openEditor: "Open Editor",
       latexGuide: "LaTeX Guide",
       about: "About",
@@ -117,6 +133,7 @@ const EN: CommonCopy = {
     projects: "Projects",
     profile: "Profile",
     admin: "Admin",
+    userGuide: "User Guide",
     signOut: "Sign out",
     loadingAccount: "Loading account…",
   },
@@ -132,6 +149,13 @@ const EN: CommonCopy = {
   shell: {
     loading: "Loading…",
     loadingRoute: "Opening page…",
+    loadingProject: "Loading manuscript…",
+    openingEditor: "Opening desk session…",
+    loadingShared: "Loading shared manuscript…",
+    loadingEyebrow: "Desk session",
+    loadingMasthead: "Manuscript desk · Loading",
+    loadingSubline: "Preparing your session",
+    loadingFooter: "Vol. I · No. 01 · Closer to Publication",
     notFound: {
       code: "404",
       eyebrow: "Missing manuscript",
@@ -157,7 +181,9 @@ const VI: CommonCopy = {
   nav: {
     features: "Tính năng",
     workflow: "Quy trình",
+    guide: "Hướng dẫn",
     integrity: "Toàn vẹn",
+    templates: "Mẫu bài",
   },
   footer: {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
@@ -168,7 +194,9 @@ const VI: CommonCopy = {
     links: {
       features: "Tính năng",
       workflow: "Quy trình",
+      guide: "Hướng dẫn sử dụng",
       integrity: "Toàn vẹn",
+      templates: "Mẫu bài",
       openEditor: "Mở Trình biên tập",
       latexGuide: "Hướng dẫn LaTeX",
       about: "Giới thiệu",
@@ -190,6 +218,7 @@ const VI: CommonCopy = {
     projects: "Dự án",
     profile: "Hồ sơ",
     admin: "Quản trị",
+    userGuide: "Hướng dẫn",
     signOut: "Đăng xuất",
     loadingAccount: "Đang tải tài khoản…",
   },
@@ -205,6 +234,13 @@ const VI: CommonCopy = {
   shell: {
     loading: "Đang tải…",
     loadingRoute: "Đang mở trang…",
+    loadingProject: "Đang tải bản thảo…",
+    openingEditor: "Đang mở phiên biên tập…",
+    loadingShared: "Đang tải bản thảo được chia sẻ…",
+    loadingEyebrow: "Phiên biên tập",
+    loadingMasthead: "Bàn biên tập · Đang tải",
+    loadingSubline: "Đang chuẩn bị phiên làm việc",
+    loadingFooter: "Tập I · Số 01 · Closer to Publication",
     notFound: {
       code: "404",
       eyebrow: "Không tìm thấy",

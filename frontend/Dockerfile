@@ -1,11 +1,14 @@
 # Arionear frontend — TanStack Start + Nitro (node-server) for Google Cloud Run
 #
 # Local Docker:
-#   docker build --build-arg VITE_API_URL=https://YOUR-API.run.app/api/v1 -t arionear-web .
+#   docker build --build-arg VITE_API_URL=https://api.arionear.id.vn/api/v1 -t arionear-web .
 #
-# Cloud Build (gcloud does not support --build-arg on builds submit; use cloudbuild.yaml):
-#   gcloud builds submit --config=cloudbuild.yaml \
-#     --substitutions=_VITE_API_URL=https://YOUR-API.run.app/api/v1,_IMAGE=REGION-docker.pkg.dev/PROJECT/arionear/frontend:latest
+# Production (via Cloud Build — preferred; defaults already set in cloudbuild.yaml):
+#   gcloud builds submit --config=frontend/cloudbuild.yaml
+#
+# Override domain (staging or alternative env):
+#   gcloud builds submit --config=frontend/cloudbuild.yaml \
+#     --substitutions=_VITE_API_URL=https://api.arionear.id.vn/api/v1,_IMAGE=REGION-docker.pkg.dev/PROJECT/arionear/frontend:latest
 
 FROM node:22-slim AS builder
 

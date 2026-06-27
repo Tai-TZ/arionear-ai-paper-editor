@@ -19,16 +19,18 @@ from src.agents.nodes.academic_nodes import (
 from src.agents.state import AgentState
 from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
+from src.services.chat_context import build_chat_user_content, task_needs_manuscript
 from src.services.chat_telemetry import ChatRunTracker
+from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
 from src.services.intent_router import classify_intent
-from src.services.llm import MINIMAX_M3_TEMPERATURE, get_llm, resolve_tokenrouter_model
+from src.services.llm import REASONING_MODEL_TEMPERATURE, get_llm, is_reasoning_model
 from src.services.llm_errors import friendly_llm_error
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     extract_cite_keys,
     parse_latex_sections,
 )
-from src.services.prompts import build_system_prompt, render_user_prompt
+from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 from src.services.slash_commands import parse_slash_command
@@ -130,6 +132,19 @@ def _task_label(task: str) -> str:
 def _scope_detail(prepared: dict[str, Any]) -> tuple[str, str]:
     """Return (section_name, human detail) for the editing scope."""
     section = str(prepared.get("section") or "").strip()
+    scope_label = str(prepared.get("scope_label") or "").strip()
+    if scope_label:
+        return section, scope_label
+
+    section_key = section.lower()
+    metadata_labels = {
+        "title": "Tiêu đề · \\title{...}",
+        "author": "Tác giả · \\author{...}",
+        "abstract": "Abstract · \\begin{abstract}",
+    }
+    if section_key in metadata_labels:
+        return section, metadata_labels[section_key]
+
     text = str(prepared.get("original_text") or "")
     word_count = len(text.split())
     apply_mode = prepared.get("apply_mode", "document")
@@ -138,6 +153,11 @@ def _scope_detail(prepared: dict[str, Any]) -> tuple[str, str]:
     if apply_mode == "document":
         return "", f"Toàn bộ main.tex · ~{word_count:,} từ".replace(",", ".")
     return "", f"Đoạn đã chọn · ~{word_count:,} từ".replace(",", ".")
+
+
+def _preview_edit_scope(query: str, latex: str, selection: str = "") -> tuple[str, str]:
+    """Resolve human scope label before running the full edit pipeline."""
+    return resolve_preview_edit_scope(query, latex, selection=selection)
 
 
 async def _monitor_long_task(
@@ -150,10 +170,11 @@ async def _monitor_long_task(
     task = asyncio.create_task(coro)
     started = time.perf_counter()
     while True:
-        try:
-            result = await asyncio.wait_for(asyncio.shield(task), timeout=interval)
-            yield result
+        if task.done():
+            yield task.result()
             return
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=interval)
         except TimeoutError:
             elapsed = round(time.perf_counter() - started, 1)
             state_evt, act_evt = on_tick(elapsed)
@@ -291,27 +312,19 @@ def _usage_from_chunk(chunk: AIMessageChunk) -> int | None:
     return None
 
 
-def _build_chat_context(query: str, selection: str, latex: str) -> str:
-    parts: list[str] = []
-    if selection:
-        parts.append(f"Selected text:\n{selection[:4000]}")
-    elif latex:
-        parts.append(f"Manuscript excerpt:\n{latex[:4000]}")
-    context_block = "\n\n".join(parts)
-    rendered = render_user_prompt("chat", context_block=context_block, query=query)
-    if rendered:
-        return rendered
-    if context_block:
-        return f"{context_block}\n\nUser request: {query}"
-    return query
+def _resolve_raw_latex(latex: str, session_id: str) -> str:
+    if session_id:
+        session = session_store.get_or_create(session_id, latex_content=latex or None)
+        if latex:
+            session_store.update(session_id, latex_content=latex)
+        return session.latex_content or latex
+    return latex
 
 
 async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
     settings = get_settings()
     provider = normalize_llm_provider(request.llm_provider or settings.llm_provider) or settings.llm_provider
     model = request.llm_model or None
-    if provider == "tokenrouter":
-        model = resolve_tokenrouter_model(model)
     tracker = ChatRunTracker(
         session_id=request.session_id,
         provider=provider,
@@ -338,37 +351,14 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             return
 
         chat_temperature = (
-            MINIMAX_M3_TEMPERATURE
-            if provider == "tokenrouter"
-            else resolve_llm_temperature()
+            resolve_llm_temperature()
+            if not is_reasoning_model(model or settings.openrouter_default_model)
+            else REASONING_MODEL_TEMPERATURE
         )
-        latex, sections, cite_keys = _parse_manuscript(
-            request.latex_content,
-            request.session_id or "",
-        )
-        has_latex = bool(latex.strip())
+        session_id = request.session_id or ""
+        raw_latex = _resolve_raw_latex(request.latex_content, session_id)
+        has_latex = bool(raw_latex.strip())
         has_selection = bool((request.selection or "").strip())
-
-        trace = await tracker.stage(
-            "manuscript_parsed",
-            sections=len(sections),
-            citations=len(cite_keys),
-            latex_chars=len(latex),
-        )
-        yield _sse("trace", trace)
-
-        parse_detail = (
-            f"{len(sections)} phần · {len(cite_keys)} trích dẫn · "
-            f"{len(latex):,} ký tự"
-        ).replace(",", ".")
-        state_evt, act_evt = _emit_state(
-            "parse",
-            "Đọc bản thảo",
-            status="done",
-            detail=parse_detail,
-        )
-        yield state_evt
-        yield act_evt
 
         state_evt, act_evt = _emit_state(
             "intent",
@@ -396,7 +386,15 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         trace = await tracker.stage("intent_classified", intent=task, scope=intent.scope)
         yield _sse("trace", trace)
 
-        intent_detail = f"{_task_label(task)} · phạm vi {intent.scope}"
+        if task == "edit":
+            _, scope_preview = _preview_edit_scope(
+                effective_message,
+                raw_latex,
+                request.selection or "",
+            )
+            intent_detail = f"{_task_label(task)} · {scope_preview}"
+        else:
+            intent_detail = f"{_task_label(task)} · phạm vi {intent.scope}"
         state_evt, act_evt = _emit_state(
             "intent",
             "Đã xác định ý định",
@@ -407,6 +405,32 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         yield state_evt
         yield act_evt
 
+        latex = raw_latex
+        sections: list[dict] = []
+        cite_keys: list[str] = []
+        if task_needs_manuscript(task):
+            latex, sections, cite_keys = _parse_manuscript(raw_latex, session_id)
+            trace = await tracker.stage(
+                "manuscript_parsed",
+                sections=len(sections),
+                citations=len(cite_keys),
+                latex_chars=len(latex),
+            )
+            yield _sse("trace", trace)
+
+            parse_detail = (
+                f"{len(sections)} phần · {len(cite_keys)} trích dẫn · "
+                f"{len(latex):,} ký tự"
+            ).replace(",", ".")
+            state_evt, act_evt = _emit_state(
+                "parse",
+                "Đọc bản thảo",
+                status="done",
+                detail=parse_detail,
+            )
+            yield state_evt
+            yield act_evt
+
         yield _sse("activity", {"text": _activity_for_task(task, sections, cite_keys, request.selection)})
 
         settings = get_settings()
@@ -415,6 +439,20 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         apply_mode: str = intent.scope
         if has_selection:
             apply_mode = "selection"
+        elif task == "edit" and raw_latex.strip():
+            preview_prepared = prepare_edit_target(
+                {
+                    "query": effective_message,
+                    "latex": raw_latex,
+                    "selection": request.selection or "",
+                    "parsed_sections": [],
+                    "apply_mode": intent.scope,
+                },
+                effective_message,
+            )
+            preview_mode = preview_prepared.get("apply_mode")
+            if preview_mode == "selection":
+                apply_mode = "selection"
 
         state: AgentState = {
             "query": effective_message,
@@ -471,7 +509,14 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             provider_tokens: int | None = None
             messages = [
                 SystemMessage(content=chat_system),
-                HumanMessage(content=_build_chat_context(request.message, request.selection, latex)),
+                HumanMessage(
+                    content=build_chat_user_content(
+                        request.message,
+                        selection=request.selection or "",
+                        latex=latex,
+                        include_manuscript=False,
+                    )
+                ),
             ]
             async for chunk in chat_llm.astream(messages):
                 if isinstance(chunk, AIMessageChunk):

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "INT-01",
+    "query": "hello",
+    "has_latex": true,
+    "expected_action": "chat"
+  },
+  {
+    "id": "INT-02",
+    "query": "Đổi đề tài từ EfficientNetV2 sang V3 giúp tôi nhé",
+    "has_latex": true,
+    "expected_action": "edit"
+  },
+  {
+    "id": "INT-03",
+    "query": "Chỉnh sửa lại phần Abstract để cho văn phong học thuật hơn nữa nhé",
+    "has_latex": true,
+    "expected_action": "style"
+  },
+  {
+    "id": "INT-04",
+    "query": "Phân tích cấu trúc IMRaD của bài này",
+    "has_latex": true,
+    "expected_action": "structure"
+  },
+  {
+    "id": "INT-05",
+    "query": "Kiểm tra logic bài báo",
+    "has_latex": true,
+    "expected_action": "logic"
+  },
+  {
+    "id": "INT-06",
+    "query": "Kiểm tra trích dẫn",
+    "has_latex": true,
+    "expected_action": "citation"
+  },
+  {
+    "id": "INT-07",
+    "query": "Thêm các section IMRaD còn thiếu",
+    "has_latex": true,
+    "expected_action": "template"
+  },
+  {
+    "id": "INT-08",
+    "query": "Sửa tiêu đề bài báo thành model EfficientNetV3 nhé",
+    "has_latex": true,
+    "expected_action": "edit"
+  },
+  {
+    "id": "INT-09",
+    "query": "Giải thích abstract này",
+    "has_latex": true,
+    "expected_action": "chat"
+  },
+  {
+    "id": "INT-10",
+    "query": "polish introduction academically",
+    "has_latex": true,
+    "expected_action": "style"
+  }
+]
