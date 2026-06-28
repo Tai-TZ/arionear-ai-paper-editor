@@ -113,6 +113,7 @@ import {
 } from "@/lib/editor-selection-anchor";
 import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { LlmSelector } from "@/components/llm-selector";
+import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -441,8 +442,8 @@ function EditorPage() {
   const lastAuditFingerprintRef = useRef<string | null>(null);
   const scoreAuditAttemptedForRef = useRef<string | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openrouter");
-  const [llmModel, setLlmModel] = useState("");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("zai");
+  const [llmModel, setLlmModel] = useState("glm-4.7-flash");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -1257,6 +1258,14 @@ function EditorPage() {
 
     const raw = launch?.message ?? chatInput.trim();
     if (!raw || chatLoading || !projectId) return;
+    if (
+      providers.length > 0 &&
+      llmProvider &&
+      llmModel &&
+      isSelectedModelPaid(providers, llmProvider, llmModel)
+    ) {
+      return;
+    }
     const parsed = launch
       ? { task: "logic" as const, message: launch.message, command: "logic" as const }
       : parseChatSlashCommand(raw);
@@ -1575,6 +1584,8 @@ function EditorPage() {
     void handleSend();
   };
 
+  const SCORE_AUDIT_TIMEOUT_MS = 90_000;
+
   const runScoreGateAudit = useCallback(async () => {
     if (!projectId || scoreAuditLoading) return;
 
@@ -1584,7 +1595,21 @@ function EditorPage() {
 
     setScoreAuditLoading(true);
     setScoreAuditError(null);
-    setScoreAuditProgress("Ario đang đọc lướt toàn bộ bài…");
+    setScoreAuditProgress(editorCopy(locale).scoreGate.hintLoading);
+
+    // Safety timeout — clears loading state if the stream never resolves
+    const timeoutId = setTimeout(() => {
+      if (!abort.signal.aborted) {
+        abort.abort();
+        setScoreAuditLoading(false);
+        setScoreAuditProgress(null);
+        setScoreAuditError(
+          locale === "vi"
+            ? "Phản biện AI quá thời gian — thử lại hoặc chọn bài ngắn hơn."
+            : "AI review timed out — try again or use a shorter manuscript.",
+        );
+      }
+    }, SCORE_AUDIT_TIMEOUT_MS);
 
     try {
       const report = await runQuickLogicAuditForScore({
@@ -1621,14 +1646,14 @@ function EditorPage() {
       });
       setScoreAuditError(formatPaperScoreGateError(message));
     } finally {
+      clearTimeout(timeoutId);
       if (!abort.signal.aborted) {
-        // Only mark as attempted when we got a result (success or empty).
-        // On hard error, leave ref unset so the dialog can retry on reopen.
         setScoreAuditLoading(false);
         setScoreAuditProgress(null);
       }
       scoreAuditAbortRef.current = null;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     projectId,
     scoreAuditLoading,
@@ -1636,6 +1661,7 @@ function EditorPage() {
     integrityStrictness,
     llmProvider,
     llmModel,
+    locale,
   ]);
 
   useEffect(() => {
@@ -2467,24 +2493,31 @@ function MobileChatSheet({
   chatSelectionContext?: EditorSelectionContext | null;
   onClearChatSelectionContext?: () => void;
 }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const canUseLlm = Boolean(
     providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
   );
+  const paidModelSelected =
+    canUseLlm && isSelectedModelPaid(providers!, llmProvider!, llmModel!);
+  const chatDisabled = !canUseLlm || paidModelSelected;
 
   useEffect(() => {
-    if (chatComposerMode !== "quick-edit") return;
+    if (chatComposerMode !== "quick-edit" || chatDisabled) return;
     const frame = requestAnimationFrame(() => chatInputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [chatComposerMode, chatSelectionContext?.start]);
+  }, [chatComposerMode, chatSelectionContext?.start, chatDisabled]);
 
   const placeholder = !canUseLlm
     ? "Cấu hình OPENROUTER_API_KEY trong .env để chat"
-    : chatComposerMode === "quick-edit"
-      ? "Mô tả cách sửa đoạn đã chọn…"
-      : chatSelectionContext
-        ? "Hỏi về vùng đã chọn…"
-        : "Ask anything";
+    : paidModelSelected
+      ? t.llm.paidChatPlaceholder
+      : chatComposerMode === "quick-edit"
+        ? "Mô tả cách sửa đoạn đã chọn…"
+        : chatSelectionContext
+          ? "Hỏi về vùng đã chọn…"
+          : "Ask anything";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col md:hidden">
@@ -2563,13 +2596,18 @@ function MobileChatSheet({
               </p>
             )}
           </div>
+          {paidModelSelected && (
+            <p className="chat-paid-model-hint mb-2" role="status">
+              {t.llm.paidChatHint}
+            </p>
+          )}
           <ChatInput
             ref={chatInputRef}
             chatInput={chatInput}
             onChatInputChange={onChatInputChange}
             onSend={onSend}
             onStop={onStop}
-            disabled={!canUseLlm}
+            disabled={chatDisabled}
             loading={chatLoading}
             placeholder={placeholder}
           />
@@ -3131,48 +3169,40 @@ function CenterPanel({
           </div>
           ) : null}
         </div>
-        <div className="flex items-center gap-1.5">
-          {/* Secondary actions — icon only */}
-          <div className="flex items-center rounded-lg border border-border/70 bg-background shadow-sm">
-            {onDefense ? (
+        <div className="flex items-center gap-2">
+          <div className="editor-toolbar-actions hidden md:flex">
+            {onExport ? (
               <button
                 type="button"
-                onClick={onDefense}
-                className="flex h-8 w-8 items-center justify-center rounded-l-lg text-muted-foreground transition hover:bg-muted hover:text-foreground hidden md:flex"
-                title="Bảo vệ luận văn (Defense Mode)"
+                onClick={onExport}
+                disabled={!exportEnabled}
+                className="editor-toolbar-action"
+                title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
               >
-                <GraduationCap className="h-3.5 w-3.5" />
+                <FileOutput className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>{t.toolbar.score}</span>
               </button>
             ) : null}
             {onShare ? (
               <button
                 type="button"
                 onClick={onShare}
-                className={`flex h-8 w-8 items-center justify-center transition ${
-                  onDefense ? "" : "rounded-l-lg"
-                } ${
-                  shareEnabled
-                    ? "text-primary hover:bg-primary/10"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
+                className={`editor-toolbar-action${shareEnabled ? " editor-toolbar-action-active" : ""}`}
                 title={t.toolbar.share}
               >
-                <Share2 className="h-3.5 w-3.5" />
+                <Share2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>{t.toolbar.share}</span>
               </button>
             ) : null}
-            {onExport ? (
+            {onDefense ? (
               <button
                 type="button"
-                onClick={onExport}
-                disabled={!exportEnabled}
-                className={`flex h-8 w-8 items-center justify-center rounded-r-lg transition hidden md:flex ${
-                  exportEnabled
-                    ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    : "cursor-not-allowed text-muted-foreground/40"
-                }`}
-                title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
+                onClick={onDefense}
+                className="editor-toolbar-action"
+                title={t.toolbar.defense}
               >
-                <FileOutput className="h-3.5 w-3.5" />
+                <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>{t.toolbar.defense}</span>
               </button>
             ) : null}
           </div>

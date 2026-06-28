@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { AlertTriangle, Download } from "lucide-react";
 import { useMemo } from "react";
 
 import {
@@ -7,9 +7,11 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useLocale } from "@/components/locale-provider";
 import { PaperScoreAuditAnimation } from "@/components/editor/paper-score-audit-animation";
 import { useAnimatedNumber } from "@/hooks/use-animated-score";
 import type { LogicAuditReport } from "@/lib/api/academic";
+import { editorCopy } from "@/lib/editor-i18n";
 import {
   computePaperScore,
   PAPER_PEER_REVIEW_ENABLED,
@@ -132,16 +134,18 @@ function ScoreSummaryPanel({
   scoreResult,
   gradeColor,
   agentScored,
+  t,
 }: {
   scoreResult: PaperScoreResult;
   gradeColor: string;
   agentScored: boolean;
+  t: ReturnType<typeof editorCopy>["scoreGate"];
 }) {
   return (
     <div className="flex flex-col items-center text-center">
       <ScoreRing score={scoreResult.overall} animate />
       <p className="mt-4 font-sans-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        Điểm tổng
+        {t.totalScore}
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         <span
@@ -153,9 +157,7 @@ function ScoreSummaryPanel({
         <span className="text-sm text-foreground/80">{scoreResult.gradeLabel}</span>
       </div>
       <p className="mt-3 max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
-        {agentScored
-          ? "Kết hợp phản biện AI, cấu trúc và trích dẫn."
-          : "Cấu trúc, trích dẫn và kỹ thuật."}
+        {agentScored ? t.withAgent : t.heuristicOnly}
       </p>
     </div>
   );
@@ -174,6 +176,9 @@ export function PaperScoreDownloadDialog({
   auditProgress = null,
   auditError = null,
 }: PaperScoreDownloadDialogProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale).scoreGate;
+
   const scoreResult: PaperScoreResult = useMemo(
     () =>
       computePaperScore({
@@ -184,8 +189,9 @@ export function PaperScoreDownloadDialog({
         logicAuditReport,
         includeLogicReview: PAPER_PEER_REVIEW_ENABLED,
         auditPending: auditLoading,
+        locale,
       }),
-    [latex, pdfData, compileError, citationResults, logicAuditReport, auditLoading],
+    [latex, pdfData, compileError, citationResults, logicAuditReport, auditLoading, locale],
   );
 
   const gradeColor = auditLoading ? "var(--muted-foreground)" : scoreColor(scoreResult.overall);
@@ -212,21 +218,31 @@ export function PaperScoreDownloadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="paper-score-dialog gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none !fixed !left-1/2 !top-4 !z-50 !flex !h-auto !w-[calc(100%-1.5rem)] !max-w-[56rem] !-translate-x-1/2 !translate-y-0 max-h-[calc(100dvh-2rem)] flex-col [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
+      <DialogContent className="paper-score-dialog gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none !fixed !left-1/2 !top-1/2 !z-50 !flex !h-auto !w-[calc(100%-1.5rem)] !max-w-[56rem] !-translate-x-1/2 !-translate-y-1/2 max-h-[calc(100dvh-2rem)] flex-col [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
+        {/* Header */}
         <div className="relative shrink-0 border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
           <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
-            Pre-publication gate
+            {t.eyebrow}
           </p>
           <DialogTitle className="mt-2 font-serif-display text-2xl font-bold tracking-tight text-background">
-            Chấm điểm bài báo
+            {t.title}
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-2xl text-sm leading-relaxed text-background/75">
-            Ario đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật.
-            Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.
+            {t.description}
           </DialogDescription>
         </div>
 
-        <div className="min-h-0 flex-1 bg-background">
+        {/* Error banner — shown even during loading so user knows what happened */}
+        {auditError && auditLoading && (
+          <div className="shrink-0 flex items-start gap-2.5 border-b border-[color:var(--editorial-amber,#b45309)]/30 bg-[color:var(--editorial-amber,#b45309)]/8 px-6 py-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]" aria-hidden />
+            <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+              <span className="font-semibold">{t.errorTitle}: </span>{auditError}
+            </p>
+          </div>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto bg-background">
           <div className="grid min-h-0 grid-cols-1 md:grid-cols-[minmax(220px,260px)_1fr]">
             {/* Left: score or audit animation */}
             <aside className="flex flex-col justify-center border-b border-border/50 bg-muted/20 px-6 py-6 md:border-b-0 md:border-r">
@@ -237,6 +253,7 @@ export function PaperScoreDownloadDialog({
                   scoreResult={scoreResult}
                   gradeColor={gradeColor}
                   agentScored={scoreResult.agentScored}
+                  t={t}
                 />
               )}
             </aside>
@@ -247,18 +264,15 @@ export function PaperScoreDownloadDialog({
                 <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-red,#b91c1c)]/30 bg-[color:var(--editorial-red,#b91c1c)]/5 px-4 py-3">
                   <span className="mt-0.5 shrink-0 text-[color:var(--editorial-red,#b91c1c)]" aria-hidden>✕</span>
                   <p className="text-xs leading-relaxed text-[color:var(--editorial-red,#b91c1c)]">
-                    <span className="font-semibold">LaTeX compile lỗi</span> — sửa lỗi trước khi xuất bản để đảm bảo PDF chính xác.
+                    {t.compileErrorBanner}
                   </p>
                 </div>
               ) : null}
+
               {summaryText && !auditLoading ? (
                 <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
                   <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {gateStaleWarning
-                      ? "Tóm tắt phản biện"
-                      : auditError && !scoreResult.agentScored
-                        ? "Lưu ý"
-                        : "Tóm tắt phản biện"}
+                    {auditError && !scoreResult.agentScored ? t.note : t.reviewSummary}
                   </p>
                   <p
                     className={`mt-1.5 text-sm leading-relaxed ${
@@ -271,14 +285,14 @@ export function PaperScoreDownloadDialog({
                   </p>
                   {gateStaleWarning ? (
                     <p className="mt-2 text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                      Không cập nhật phản biện mới: {gateStaleWarning}
+                      {t.staleWarning} {gateStaleWarning}
                     </p>
                   ) : null}
                 </div>
               ) : null}
 
               <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Tiêu chí chấm điểm
+                {t.criteria}
               </p>
               <div className="grid grid-cols-1 gap-px overflow-hidden rounded border border-border/70 bg-border/70 sm:grid-cols-2">
                 {scoreResult.dimensions.map((dim, index) => (
@@ -295,14 +309,15 @@ export function PaperScoreDownloadDialog({
           </div>
         </div>
 
+        {/* Footer */}
         <div className="shrink-0 border-t border-border/70 bg-muted/20 px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs leading-relaxed text-muted-foreground">
               {auditLoading
-                ? "Ario đang đọc abstract, giới thiệu và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng."
+                ? t.footerLoading
                 : hasCompileError
-                  ? "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước."
-                  : "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit."}
+                  ? t.footerCompileError
+                  : t.footerReady}
             </p>
             <button
               type="button"
@@ -311,7 +326,7 @@ export function PaperScoreDownloadDialog({
               className="inline-flex w-full shrink-0 items-center justify-center gap-2 border border-foreground bg-foreground px-5 py-2.5 font-sans-ui text-[11px] uppercase tracking-[0.16em] text-background transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:w-auto sm:min-w-[10.5rem]"
             >
               <Download className="h-4 w-4" aria-hidden />
-              {auditLoading ? "Đang đánh giá…" : "Tải PDF"}
+              {auditLoading ? t.evaluating : t.downloadBtn}
             </button>
           </div>
         </div>

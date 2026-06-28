@@ -38,6 +38,8 @@ export type EditorCopy = {
   toolbar: {
     share: string;
     export: string;
+    score: string;
+    defense: string;
     tools: string;
     exportPdf: string;
     compileBeforeExport: string;
@@ -160,6 +162,41 @@ export type EditorCopy = {
     crossSection: string;
     weak: string;
   };
+  llm: {
+    paidBadge: string;
+    paidChatPlaceholder: string;
+    paidChatHint: string;
+  };
+  scoreGate: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    totalScore: string;
+    withAgent: string;
+    heuristicOnly: string;
+    compileErrorBanner: string;
+    reviewSummary: string;
+    note: string;
+    staleWarning: string;
+    criteria: string;
+    footerLoading: string;
+    footerCompileError: string;
+    footerReady: string;
+    downloadBtn: string;
+    evaluating: string;
+    errorTitle: string;
+    dimStructure: string;
+    dimCompleteness: string;
+    dimCitations: string;
+    dimLogic: string;
+    gradeExcellent: string;
+    gradeGood: string;
+    gradeFair: string;
+    gradeNeedsWork: string;
+    gradeFailing: string;
+    gradeEvaluating: string;
+    hintLoading: string;
+  };
   mobile: {
     files: string;
     editor: string;
@@ -203,6 +240,8 @@ const EN: EditorCopy = {
   toolbar: {
     share: "Share",
     export: "Export",
+    score: "Score",
+    defense: "Defense",
     tools: "Tools",
     exportPdf: "Export PDF",
     compileBeforeExport: "Compile before exporting",
@@ -333,6 +372,45 @@ const EN: EditorCopy = {
     crossSection: "Cross-section:",
     weak: "WEAK",
   },
+  llm: {
+    paidBadge: "Paid",
+    paidChatPlaceholder: "Select a free model to chat…",
+    paidChatHint: "Paid models are not available for chat yet.",
+  },
+  scoreGate: {
+    eyebrow: "Pre-publication gate",
+    title: "Score manuscript",
+    description:
+      "Ario evaluates your manuscript before you export PDF — combining AI peer review and technical checks. Score is indicative — final judgement belongs to the author.",
+    totalScore: "Total score",
+    withAgent: "Combined AI review, structure and citations.",
+    heuristicOnly: "Structure, citations and technical checks.",
+    compileErrorBanner:
+      "LaTeX compile error — fix before publishing to ensure the PDF is accurate.",
+    reviewSummary: "Review summary",
+    note: "Note",
+    staleWarning: "Could not update review:",
+    criteria: "Scoring criteria",
+    footerLoading:
+      "Ario is reading abstract, introduction and conclusion — technical criteria on the right are ready.",
+    footerCompileError:
+      "PDF is ready to download — but we recommend fixing compile errors first.",
+    footerReady: "Export PDF after reviewing the score. See Logic Audit for details.",
+    downloadBtn: "Download PDF",
+    evaluating: "Evaluating…",
+    errorTitle: "Review error",
+    dimStructure: "IMRaD Structure",
+    dimCompleteness: "Content Completeness",
+    dimCitations: "Citations",
+    dimLogic: "Argument & Peer Review",
+    gradeExcellent: "Excellent",
+    gradeGood: "Good",
+    gradeFair: "Fair",
+    gradeNeedsWork: "Needs improvement",
+    gradeFailing: "Failing",
+    gradeEvaluating: "Evaluating…",
+    hintLoading: "Ario is reading the full manuscript…",
+  },
   mobile: {
     files: "Files",
     editor: "Editor",
@@ -376,6 +454,8 @@ const VI: EditorCopy = {
   toolbar: {
     share: "Chia sẻ",
     export: "Xuất",
+    score: "Chấm điểm",
+    defense: "Phản biện",
     tools: "Công cụ",
     exportPdf: "Xuất PDF",
     compileBeforeExport: "Biên dịch trước khi xuất",
@@ -506,6 +586,45 @@ const VI: EditorCopy = {
     severityInfo: "GỢI Ý",
     crossSection: "Liên section:",
     weak: "YẾU",
+  },
+  llm: {
+    paidBadge: "Trả phí",
+    paidChatPlaceholder: "Chọn model miễn phí để chat…",
+    paidChatHint: "Model trả phí chưa hỗ trợ chat.",
+  },
+  scoreGate: {
+    eyebrow: "Pre-publication gate",
+    title: "Chấm điểm bài báo",
+    description:
+      "Ario đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật. Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.",
+    totalScore: "Điểm tổng",
+    withAgent: "Kết hợp phản biện AI, cấu trúc và trích dẫn.",
+    heuristicOnly: "Cấu trúc, trích dẫn và kỹ thuật.",
+    compileErrorBanner:
+      "LaTeX compile lỗi — sửa lỗi trước khi xuất bản để đảm bảo PDF chính xác.",
+    reviewSummary: "Tóm tắt phản biện",
+    note: "Lưu ý",
+    staleWarning: "Không cập nhật phản biện mới:",
+    criteria: "Tiêu chí chấm điểm",
+    footerLoading:
+      "Ario đang đọc abstract, giới thiệu và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
+    footerCompileError:
+      "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
+    footerReady: "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit.",
+    downloadBtn: "Tải PDF",
+    evaluating: "Đang đánh giá…",
+    errorTitle: "Lỗi phản biện",
+    dimStructure: "Cấu trúc IMRaD",
+    dimCompleteness: "Độ đầy đủ nội dung",
+    dimCitations: "Trích dẫn",
+    dimLogic: "Mạch lập luận & phản biện",
+    gradeExcellent: "Xuất sắc",
+    gradeGood: "Tốt",
+    gradeFair: "Khá",
+    gradeNeedsWork: "Cần cải thiện",
+    gradeFailing: "Chưa đạt",
+    gradeEvaluating: "Đang đánh giá…",
+    hintLoading: "Ario đang đọc lướt toàn bộ bài…",
   },
   mobile: {
     files: "Tệp",

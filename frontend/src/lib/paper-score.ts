@@ -97,22 +97,23 @@ function imradCoreStatus(latex: string): { present: string[]; missing: string[] 
   return { present, missing };
 }
 
-function scoreStructure(latex: string): PaperScoreDimension {
+function scoreStructure(latex: string, locale: "en" | "vi"): PaperScoreDimension {
   const { present, missing } = imradCoreStatus(latex);
   const ratio = present.length / IMRAD_CORE.length;
   const score = Math.round(ratio * 100);
-  return {
-    id: "structure",
-    label: "Cấu trúc IMRaD",
-    score,
-    hint:
-      missing.length === 0
-        ? "Đủ các phần cốt lõi IMRaD với nội dung tối thiểu."
-        : `Thiếu hoặc quá ngắn: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`,
-  };
+  const label = locale === "en" ? "IMRaD Structure" : "Cấu trúc IMRaD";
+  const hint =
+    missing.length === 0
+      ? locale === "en"
+        ? "All core IMRaD sections present with minimum content."
+        : "Đủ các phần cốt lõi IMRaD với nội dung tối thiểu."
+      : locale === "en"
+        ? `Missing or too short: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`
+        : `Thiếu hoặc quá ngắn: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`;
+  return { id: "structure", label, score, hint };
 }
 
-function scoreCompleteness(latex: string): PaperScoreDimension {
+function scoreCompleteness(latex: string, locale: "en" | "vi"): PaperScoreDimension {
   const body = latex.replace(/%.*$/gm, "");
   const abstractMatch = /\\begin\{abstract\}(.*?)\\end\{abstract\}/is.exec(body);
   const abstractLen = plainTextLen(abstractMatch?.[1] ?? "");
@@ -144,17 +145,22 @@ function scoreCompleteness(latex: string): PaperScoreDimension {
 
   return {
     id: "completeness",
-    label: "Độ đầy đủ nội dung",
+    label: locale === "en" ? "Content Completeness" : "Độ đầy đủ nội dung",
     score,
     hint:
       score >= 75
-        ? "Các phần chính có nội dung đáng kể."
-        : "Một số section còn ngắn hoặc abstract chưa đủ chi tiết.",
+        ? locale === "en"
+          ? "Main sections have substantial content."
+          : "Các phần chính có nội dung đáng kể."
+        : locale === "en"
+          ? "Some sections are too short or abstract lacks detail."
+          : "Một số section còn ngắn hoặc abstract chưa đủ chi tiết.",
   };
 }
 
 function scoreCitations(
   latex: string,
+  locale: "en" | "vi",
   citationResults?: Record<string, unknown>[] | null,
 ): PaperScoreDimension {
   const citeKeys = [...latex.matchAll(/\\cite[a-zA-Z*]*\{([^}]+)\}/g)].flatMap((m) =>
@@ -162,24 +168,32 @@ function scoreCitations(
   );
   const uniqueCites = new Set(citeKeys);
 
+  const citLabel = locale === "en" ? "Citations" : "Trích dẫn";
+
   if (citationResults?.length) {
     const verified = citationResults.filter((r) => r.status === "verified").length;
     const ratio = verified / citationResults.length;
     const score = Math.round(ratio * 100);
     return {
       id: "citations",
-      label: "Trích dẫn",
+      label: citLabel,
       score,
-      hint: `Đã xác minh ${verified}/${citationResults.length} nguồn trích dẫn.`,
+      hint:
+        locale === "en"
+          ? `Verified ${verified}/${citationResults.length} citation sources.`
+          : `Đã xác minh ${verified}/${citationResults.length} nguồn trích dẫn.`,
     };
   }
 
   if (uniqueCites.size === 0) {
     return {
       id: "citations",
-      label: "Trích dẫn",
+      label: citLabel,
       score: 40,
-      hint: "Chưa phát hiện \\cite{} — cân nhắc thêm nguồn tham khảo.",
+      hint:
+        locale === "en"
+          ? "No \\cite{} detected — consider adding references."
+          : "Chưa phát hiện \\cite{} — cân nhắc thêm nguồn tham khảo.",
     };
   }
 
@@ -187,33 +201,43 @@ function scoreCitations(
   const score = hasBib ? 72 : 55;
   return {
     id: "citations",
-    label: "Trích dẫn",
+    label: citLabel,
     score,
     hint: hasBib
-      ? `${uniqueCites.size} cite key — chạy Citation verify để chấm chính xác hơn.`
-      : `${uniqueCites.size} cite key nhưng chưa thấy BibTeX trong bản thảo.`,
+      ? locale === "en"
+        ? `${uniqueCites.size} cite keys — run Citation verify for a more accurate score.`
+        : `${uniqueCites.size} cite key — chạy Citation verify để chấm chính xác hơn.`
+      : locale === "en"
+        ? `${uniqueCites.size} cite keys but no BibTeX found in manuscript.`
+        : `${uniqueCites.size} cite key nhưng chưa thấy BibTeX trong bản thảo.`,
   };
 }
 
 function scoreLogicIntegrity(
+  locale: "en" | "vi",
   report?: LogicAuditReport | null,
   auditPending = false,
 ): PaperScoreDimension {
+  const label = locale === "en" ? "Argument & Peer Review" : "Mạch lập luận & phản biện";
+
   if (auditPending) {
     return {
       id: "logic",
-      label: "Mạch lập luận & phản biện",
+      label,
       score: 0,
-      hint: "Ario đang đọc lướt toàn bộ bài…",
+      hint: locale === "en" ? "Ario is reading the full manuscript…" : "Ario đang đọc lướt toàn bộ bài…",
     };
   }
 
   if (!report?.sections?.length) {
     return {
       id: "logic",
-      label: "Mạch lập luận & phản biện",
+      label,
       score: 45,
-      hint: "Chưa có báo cáo phản biện — Ario sẽ phân tích khi mở dialog.",
+      hint:
+        locale === "en"
+          ? "No review report yet — Ario will analyse when you open the dialog."
+          : "Chưa có báo cáo phản biện — Ario sẽ phân tích khi mở dialog.",
     };
   }
 
@@ -236,29 +260,35 @@ function scoreLogicIntegrity(
   if (report.summary?.trim()) {
     hint = report.summary.trim();
   } else if (critical + warning + weakCount === 0) {
-    hint = "Phản biện AI không phát hiện vấn đề logic nghiêm trọng ở các phần đã quét.";
+    hint =
+      locale === "en"
+        ? "AI review found no critical logic issues in the scanned sections."
+        : "Phản biện AI không phát hiện vấn đề logic nghiêm trọng ở các phần đã quét.";
   } else {
-    const parts: string[] = [];
-    if (critical) parts.push(`${critical} nghiêm trọng`);
-    if (warning) parts.push(`${warning} cảnh báo`);
-    if (weakCount) parts.push(`${weakCount} claim yếu`);
-    hint = `Phản biện AI: ${parts.join(", ")}. Xem chi tiết trong Logic Audit.`;
+    if (locale === "en") {
+      const parts: string[] = [];
+      if (critical) parts.push(`${critical} critical`);
+      if (warning) parts.push(`${warning} warnings`);
+      if (weakCount) parts.push(`${weakCount} weak claims`);
+      hint = `AI review: ${parts.join(", ")}. See Logic Audit for details.`;
+    } else {
+      const parts: string[] = [];
+      if (critical) parts.push(`${critical} nghiêm trọng`);
+      if (warning) parts.push(`${warning} cảnh báo`);
+      if (weakCount) parts.push(`${weakCount} claim yếu`);
+      hint = `Phản biện AI: ${parts.join(", ")}. Xem chi tiết trong Logic Audit.`;
+    }
   }
 
-  return {
-    id: "logic",
-    label: "Mạch lập luận & phản biện",
-    score,
-    hint,
-  };
+  return { id: "logic", label, score, hint };
 }
 
-function gradeFromScore(overall: number): { grade: string; gradeLabel: string } {
-  if (overall >= 90) return { grade: "A", gradeLabel: "Xuất sắc" };
-  if (overall >= 80) return { grade: "B", gradeLabel: "Tốt" };
-  if (overall >= 70) return { grade: "C", gradeLabel: "Khá" };
-  if (overall >= 60) return { grade: "D", gradeLabel: "Cần cải thiện" };
-  return { grade: "F", gradeLabel: "Chưa đạt" };
+function gradeFromScore(overall: number, locale: "en" | "vi"): { grade: string; gradeLabel: string } {
+  if (overall >= 90) return { grade: "A", gradeLabel: locale === "en" ? "Excellent" : "Xuất sắc" };
+  if (overall >= 80) return { grade: "B", gradeLabel: locale === "en" ? "Good" : "Tốt" };
+  if (overall >= 70) return { grade: "C", gradeLabel: locale === "en" ? "Fair" : "Khá" };
+  if (overall >= 60) return { grade: "D", gradeLabel: locale === "en" ? "Needs improvement" : "Cần cải thiện" };
+  return { grade: "F", gradeLabel: locale === "en" ? "Failing" : "Chưa đạt" };
 }
 
 /** Agent peer-review dimension is included in the publication gate score. */
@@ -272,18 +302,20 @@ export function computePaperScore(opts: {
   logicAuditReport?: LogicAuditReport | null;
   includeLogicReview?: boolean;
   auditPending?: boolean;
+  locale?: "en" | "vi";
 }): PaperScoreResult {
+  const locale = opts.locale ?? "vi";
   const includeLogic = opts.includeLogicReview ?? PAPER_PEER_REVIEW_ENABLED;
   const auditPending = Boolean(opts.auditPending && includeLogic);
 
   const logicDim = includeLogic
-    ? scoreLogicIntegrity(opts.logicAuditReport, auditPending)
+    ? scoreLogicIntegrity(locale, opts.logicAuditReport, auditPending)
     : null;
 
   const dimensions = [
-    scoreStructure(opts.latex),
-    scoreCompleteness(opts.latex),
-    scoreCitations(opts.latex, opts.citationResults),
+    scoreStructure(opts.latex, locale),
+    scoreCompleteness(opts.latex, locale),
+    scoreCitations(opts.latex, locale, opts.citationResults),
     ...(logicDim ? [logicDim] : []),
   ];
 
@@ -297,12 +329,10 @@ export function computePaperScore(opts: {
   const weightSum = scoredWeights.reduce((a, b) => a + b, 0);
   const weighted =
     scoredDimensions.reduce((sum, dim, i) => sum + dim.score * scoredWeights[i], 0) / weightSum;
-  // While audit is pending, show partial score from heuristic dimensions only
-  // so the ring is informative rather than blank.
   const overall = Math.round(weighted);
   const { grade, gradeLabel } = auditPending
-    ? { grade: "~", gradeLabel: "Đang đánh giá…" }
-    : gradeFromScore(overall);
+    ? { grade: "~", gradeLabel: locale === "en" ? "Evaluating…" : "Đang đánh giá…" }
+    : gradeFromScore(overall, locale);
 
   const auditSummary = opts.logicAuditReport?.summary?.trim() || logicDim?.hint;
 

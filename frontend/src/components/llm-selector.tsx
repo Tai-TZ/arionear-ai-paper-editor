@@ -8,7 +8,10 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLocale } from "@/components/locale-provider";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
+import { editorCopy } from "@/lib/editor-i18n";
+import { isFreeModel, isPaidModel, parseModelLabel } from "@/lib/llm-model-tier";
 import { cn } from "@/lib/utils";
 
 type LlmSelectorProps = {
@@ -22,17 +25,6 @@ type LlmSelectorProps = {
   variant?: "light" | "dark";
 };
 
-function parseModelLabel(label: string): { name: string; tier: string | null } {
-  const sep = label.indexOf(" · ");
-  if (sep === -1) return { name: label, tier: null };
-  return { name: label.slice(0, sep), tier: label.slice(sep + 3) };
-}
-
-function isFreeModel(modelId: string, tier: string | null): boolean {
-  if (modelId.includes(":free")) return true;
-  return tier != null && /free|miễn phí/i.test(tier);
-}
-
 export function LlmSelector({
   providers,
   llmProvider,
@@ -43,13 +35,15 @@ export function LlmSelector({
   compact = false,
   variant = "light",
 }: LlmSelectorProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const current = providers.find((p) => p.id === llmProvider);
   const models = current?.models ?? [];
   const selectedModel = models.find((m) => m.id === llmModel);
-  const { name: modelName, tier: modelTier } = parseModelLabel(
-    selectedModel?.label ?? llmModel.split("/").pop() ?? llmModel,
-  );
+  const selectedLabel = selectedModel?.label ?? llmModel.split("/").pop() ?? llmModel;
+  const { name: modelName, tier: modelTier } = parseModelLabel(selectedLabel);
   const freeModel = isFreeModel(llmModel, modelTier);
+  const paidModel = isPaidModel(llmModel, selectedLabel);
 
   if (!providers.length) return null;
 
@@ -98,7 +92,9 @@ export function LlmSelector({
           >
             <Cpu className="llm-selector-model-icon" aria-hidden />
             <span className="llm-selector-model-name">{modelName}</span>
-            {modelTier && (
+            {paidModel ? (
+              <span className="llm-selector-tier llm-selector-tier-paid">{t.llm.paidBadge}</span>
+            ) : modelTier ? (
               <span
                 className={cn(
                   "llm-selector-tier",
@@ -107,7 +103,7 @@ export function LlmSelector({
               >
                 {modelTier}
               </span>
-            )}
+            ) : null}
             <ChevronDown className="llm-selector-chevron ml-auto shrink-0" aria-hidden />
           </button>
         </DropdownMenuTrigger>
@@ -117,10 +113,18 @@ export function LlmSelector({
             {models.map((m) => {
               const parsed = parseModelLabel(m.label);
               const free = isFreeModel(m.id, parsed.tier);
+              const paid = isPaidModel(m.id, m.label);
               return (
                 <DropdownMenuRadioItem key={m.id} value={m.id} className="text-sm py-2">
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-medium leading-tight">{parsed.name}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="font-medium leading-tight">{parsed.name}</span>
+                      {paid ? (
+                        <span className="llm-selector-tier llm-selector-tier-paid shrink-0">
+                          {t.llm.paidBadge}
+                        </span>
+                      ) : null}
+                    </span>
                     {parsed.tier && (
                       <span
                         className={cn(

@@ -15,11 +15,14 @@ import {
 
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
+import { useLocale } from "@/components/locale-provider";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
 import { CHAT_SLASH_HINTS, filterSlashCommands, getSlashCommandQuery, slashCommandInsert, type SlashCommandDef } from "@/lib/chat-commands";
 import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
+import { editorCopy } from "@/lib/editor-i18n";
+import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import { AiLoadingState } from "@/components/ai-loading-state";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +97,8 @@ export function ChatDock({
   onClearSelectionContext,
   streamProgress: streamProgressProp,
 }: ChatDockProps) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const subscribedProgress = useChatStreamProgress();
   const streamProgress = streamProgressProp ?? subscribedProgress;
   const { activity: liveActivity, steps: streamAiSteps, activities: streamActivities, waitElapsedSec } =
@@ -202,8 +207,13 @@ export function ChatDock({
       onModelChange,
   );
 
+  const paidModelSelected =
+    canUseLlm && isSelectedModelPaid(providers!, llmProvider!, llmModel!);
+
+  const chatDisabled = !canUseLlm || paidModelSelected;
+
   const handleSend = () => {
-    if (!chatInput.trim() || chatLoading || !canUseLlm) return;
+    if (!chatInput.trim() || chatLoading || chatDisabled) return;
     onSend();
   };
 
@@ -213,11 +223,13 @@ export function ChatDock({
 
   const placeholder = !canUseLlm
     ? "Cấu hình API key để dùng chat"
-    : composerMode === "quick-edit"
-      ? "Mô tả cách sửa đoạn đã chọn…"
-      : selectionContext
-        ? "Hỏi về vùng đã chọn…"
-        : "Hỏi Ario… hoặc gõ / để chọn lệnh";
+    : paidModelSelected
+      ? t.llm.paidChatPlaceholder
+      : composerMode === "quick-edit"
+        ? "Mô tả cách sửa đoạn đã chọn…"
+        : selectionContext
+          ? "Hỏi về vùng đã chọn…"
+          : "Hỏi Ario… hoặc gõ / để chọn lệnh";
 
   return (
     <aside
@@ -361,6 +373,12 @@ export function ChatDock({
           )}
         </div>
 
+        {paidModelSelected && (
+          <p className="chat-paid-model-hint" role="status">
+            {t.llm.paidChatHint}
+          </p>
+        )}
+
         <ChatInput
           ref={chatInputRef}
           chatInput={chatInput}
@@ -368,7 +386,7 @@ export function ChatDock({
           onSend={handleSend}
           onStop={onStop}
           onActivate={openFromComposer}
-          disabled={!canUseLlm}
+          disabled={chatDisabled}
           loading={chatLoading}
           placeholder={placeholder}
         />
@@ -568,11 +586,12 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
       onStop?.();
       return;
     }
+    if (disabled) return;
     onSend();
   };
 
   return (
-    <div className="chat-input-wrap">
+    <div className={cn("chat-input-wrap", disabled && "chat-input-wrap--disabled")}>
       {showSlashMenu && (
         <div
           className="chat-slash-menu soft-scrollbar"
@@ -609,9 +628,16 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
         <textarea
           ref={setRefs}
           value={chatInput}
-          onChange={(e) => onChatInputChange(e.target.value)}
-          onFocus={() => onActivate?.()}
+          disabled={disabled}
+          onChange={(e) => {
+            if (disabled) return;
+            onChatInputChange(e.target.value);
+          }}
+          onFocus={() => {
+            if (!disabled) onActivate?.();
+          }}
           onKeyDown={(e) => {
+            if (disabled) return;
             if (showSlashMenu) {
               if (e.key === "ArrowDown") {
                 e.preventDefault();
@@ -641,7 +667,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
             }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (!loading) onSend();
+              if (!loading && !disabled) onSend();
             }
           }}
           placeholder={placeholder}
@@ -652,7 +678,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
           <button
             type="button"
             onClick={handlePrimaryAction}
-            disabled={!loading && !canSend}
+            disabled={!loading && (!canSend || disabled)}
             className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
             aria-label={loading ? "Dừng xử lý" : "Send message"}
           >

@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
     # LLM — default provider & model
-    llm_provider: LLMProvider = "openrouter"
-    model_name: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    llm_provider: LLMProvider = "zai"
+    model_name: str = "glm-4.7-flash"
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
     # Provider API keys (set at least one)
