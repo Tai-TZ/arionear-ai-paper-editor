@@ -27,6 +27,9 @@ import {
   Share2,
   FileOutput,
   GraduationCap,
+  Pencil,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { getSession } from "@/lib/auth-store";
 import { useLocale } from "@/components/locale-provider";
@@ -36,11 +39,14 @@ import {
   formatTimeAgo,
   findProjectAsset,
   getCompilePayload,
+  isBibFile,
   isImageAssetFile,
   isProjectAssetFile,
   isTexFile,
   normalizeAssetName,
   readFileAsDataUrl,
+  type ChatThread,
+  type StoredChatMessage,
   type LatexCompiler,
   type ProjectAsset,
   type ProjectFile,
@@ -109,6 +115,13 @@ import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { LlmSelector } from "@/components/llm-selector";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
 import {
   EditorEntrySplash,
@@ -119,9 +132,10 @@ import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
 import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
-import { LLM_USER_ERROR_MSG } from "@/lib/api/api-errors";
+import { llmUserErrorMsg } from "@/lib/api/api-errors";
 import { createSmoothStream, type SmoothStreamController } from "@/lib/smooth-stream";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
+import { DefenseMastheadPrefs } from "@/components/defense/defense-masthead-prefs";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
@@ -360,6 +374,7 @@ function EditorPage() {
   } = useLatexHistory("");
   const [savedLatex, setSavedLatex] = useState("");
   const isDirty = latex !== savedLatex;
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [activeFile, setActiveFile] = useState("main.tex");
@@ -385,6 +400,12 @@ function EditorPage() {
     useState<ResearcherProfile["integrity_strictness"]>("standard");
   const profilePrefsRef = useRef<ResearcherProfile | null>(getCachedProfile());
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string>("");
+  const chatThreadsRef = useRef<ChatThread[]>([]);
+  chatThreadsRef.current = chatThreads;
+  const activeChatIdRef = useRef<string>("");
+  activeChatIdRef.current = activeChatId;
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -443,6 +464,114 @@ function EditorPage() {
     context?: string;
     latex?: string;
   } | null>(null);
+
+  // ── Chat thread helpers ──────────────────────────────────────────────────
+
+  function makeThread(title: string): ChatThread {
+    const now = Date.now();
+    return { id: crypto.randomUUID(), title, messages: [], createdAt: now, updatedAt: now };
+  }
+
+  function stripMessages(msgs: ChatMessage[]): StoredChatMessage[] {
+    return msgs
+      .filter((m) => !m.isStreaming)
+      .map((m) => ({ role: m.role, content: m.content, ...(m.isError ? { isError: true } : {}) }));
+  }
+
+  function restoreMessages(thread: ChatThread): ChatMessage[] {
+    if (!thread.messages.length) return INITIAL_MESSAGES;
+    return [
+      INITIAL_MESSAGES[0],
+      ...thread.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        ...(m.isError ? { isError: true } : {}),
+      })),
+    ];
+  }
+
+  const handleNewChat = useCallback(() => {
+    const tCopy = editorCopy(locale);
+    const snapshotted = chatThreadsRef.current.map((th) =>
+      th.id === activeChatIdRef.current
+        ? { ...th, messages: stripMessages(messages), updatedAt: Date.now() }
+        : th,
+    );
+    const newThread = makeThread(tCopy.sidebar.defaultChatTitle);
+    const allThreads = [newThread, ...snapshotted];
+    setChatThreads(allThreads);
+    setActiveChatId(newThread.id);
+    setMessages(INITIAL_MESSAGES);
+    if (projectId) updatePaper(projectId, { chatThreads: allThreads }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, projectId, locale]);
+
+  const handleSwitchChat = useCallback((id: string) => {
+    if (id === activeChatIdRef.current) return;
+    const snapshotted = chatThreadsRef.current.map((th) =>
+      th.id === activeChatIdRef.current
+        ? { ...th, messages: stripMessages(messages), updatedAt: Date.now() }
+        : th,
+    );
+    const target = snapshotted.find((th) => th.id === id);
+    if (!target) return;
+    setChatThreads(snapshotted);
+    setActiveChatId(id);
+    setMessages(restoreMessages(target));
+    if (projectId) updatePaper(projectId, { chatThreads: snapshotted }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, projectId]);
+
+  const handleRenameChat = useCallback((id: string, title: string) => {
+    const updated = chatThreadsRef.current.map((th) =>
+      th.id === id ? { ...th, title, updatedAt: Date.now() } : th,
+    );
+    setChatThreads(updated);
+    if (projectId) updatePaper(projectId, { chatThreads: updated }).catch(() => {});
+  }, [projectId]);
+
+  const handleDeleteChat = useCallback((id: string) => {
+    const tCopy = editorCopy(locale);
+    const filtered = chatThreadsRef.current.filter((th) => th.id !== id);
+    if (filtered.length === 0) {
+      const newThread = makeThread(tCopy.sidebar.defaultChatTitle);
+      const allThreads = [newThread];
+      setChatThreads(allThreads);
+      setActiveChatId(newThread.id);
+      setMessages(INITIAL_MESSAGES);
+      if (projectId) updatePaper(projectId, { chatThreads: allThreads }).catch(() => {});
+      return;
+    }
+    setChatThreads(filtered);
+    if (id === activeChatIdRef.current) {
+      const next = filtered[0];
+      setActiveChatId(next.id);
+      setMessages(restoreMessages(next));
+    }
+    if (projectId) updatePaper(projectId, { chatThreads: filtered }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, locale]);
+
+  // Debounced save of active thread messages
+  useEffect(() => {
+    if (!projectId || !activeChatId) return;
+    const timer = setTimeout(() => {
+      const threads = chatThreadsRef.current;
+      if (!threads.length) return;
+      const updated = threads.map((th) =>
+        th.id === activeChatId
+          ? { ...th, messages: stripMessages(messages), updatedAt: Date.now() }
+          : th,
+      );
+      setChatThreads(updated);
+      updatePaper(projectId, { chatThreads: updated }).catch(() => {});
+    }, 3000);
+    return () => clearTimeout(timer);
+  // chatThreads intentionally excluded — read via ref to avoid loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, projectId, activeChatId]);
+
+  // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
@@ -521,6 +650,18 @@ function EditorPage() {
           setLogicAuditReport(project.logicAuditReport);
           lastAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
         }
+        const tCopy = editorCopy(locale);
+        if (project.chatThreads?.length) {
+          const threads = project.chatThreads;
+          setChatThreads(threads);
+          const first = threads[0];
+          setActiveChatId(first.id);
+          setMessages(restoreMessages(first));
+        } else {
+          const initial = makeThread(tCopy.sidebar.defaultChatTitle);
+          setChatThreads([initial]);
+          setActiveChatId(initial.id);
+        }
         setBootState("ready");
         void loadSessionAudit(projectId);
         void fetchPaperShareStatus(projectId)
@@ -563,10 +704,10 @@ function EditorPage() {
       if (nextPath === activeFile) return;
 
       const nextIsAsset = isImageAssetFile(nextPath);
-      const currentIsTex = projectFiles.some((f) => f.path === activeFile);
+      const currentIsEditable = projectFiles.some((f) => f.path === activeFile);
 
       let files = projectFiles;
-      if (currentIsTex) {
+      if (currentIsEditable) {
         files = persistActiveFile(latex, projectFiles, activeFile);
         setProjectFiles(files);
       }
@@ -576,11 +717,28 @@ function EditorPage() {
       if (nextIsAsset) return;
 
       const nextFile = files.find((f) => f.path === nextPath);
-      const content = nextFile?.content ?? "";
-      resetHistory(content);
-      setSavedLatex(content);
+      let content = nextFile?.content;
+
+      // Fallback for .bib files previously stored as binary assets (legacy projects)
+      if (content === undefined && isBibFile(nextPath)) {
+        const bibAsset = assets.find((a) => normalizeAssetName(a.name) === nextPath);
+        if (bibAsset?.data?.startsWith("data:")) {
+          try {
+            const base64 = bibAsset.data.split(",")[1] ?? "";
+            content = atob(base64);
+            // Migrate into projectFiles so it saves properly going forward
+            const migrated = [...files, { path: nextPath, content }];
+            setProjectFiles(migrated);
+          } catch {
+            content = "";
+          }
+        }
+      }
+
+      resetHistory(content ?? "");
+      setSavedLatex(content ?? "");
     },
-    [activeFile, latex, persistActiveFile, projectFiles, resetHistory],
+    [activeFile, assets, latex, persistActiveFile, projectFiles, resetHistory],
   );
 
   const openProjectFile = useCallback(
@@ -850,12 +1008,21 @@ function EditorPage() {
     e.target.value = "";
     if (!files.length || !projectId) return;
 
+    setUploadStatus(locale === "vi" ? "Đang upload…" : "Uploading…");
     try {
       const imported = await importLatexFileList(files);
       await applyImportedFiles(imported, false);
-      toast.success(`Imported ${imported.files.length} LaTeX file(s).`);
+      toast.success(
+        locale === "vi"
+          ? `Đã nhập ${imported.files.length} file thành công.`
+          : `Imported ${imported.files.length} file(s).`,
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
+      toast.error(
+        error instanceof Error ? error.message : locale === "vi" ? "Tải lên thất bại." : "Upload failed.",
+      );
+    } finally {
+      setUploadStatus(null);
     }
   };
 
@@ -864,12 +1031,21 @@ function EditorPage() {
     e.target.value = "";
     if (!file || !projectId) return;
 
+    setUploadStatus(locale === "vi" ? "Đang upload…" : "Uploading…");
     try {
       const imported = await importOverleafZip(file);
       await applyImportedFiles(imported, true);
-      toast.success(`Imported project “${imported.name}”.`);
+      toast.success(
+        locale === "vi"
+          ? `Đã nhập dự án "${imported.name}".`
+          : `Imported project "${imported.name}".`,
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "ZIP import failed.");
+      toast.error(
+        error instanceof Error ? error.message : locale === "vi" ? "Nhập ZIP thất bại." : "ZIP import failed.",
+      );
+    } finally {
+      setUploadStatus(null);
     }
   };
 
@@ -963,9 +1139,23 @@ function EditorPage() {
     const assetFiles = files.filter((f) => isProjectAssetFile(f.name));
     if (!assetFiles.length) return;
 
-    const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
-    const updated = await addPaperAssets(projectId, uploaded);
-    if (updated.assets) setAssets(updated.assets);
+    setUploadStatus(locale === "vi" ? "Đang upload…" : "Uploading…");
+    try {
+      const uploaded = await Promise.all(assetFiles.map(readFileAsDataUrl));
+      const updated = await addPaperAssets(projectId, uploaded);
+      if (updated.assets) setAssets(updated.assets);
+      toast.success(
+        locale === "vi"
+          ? `Đã tải ${assetFiles.length} tài nguyên.`
+          : `Uploaded ${assetFiles.length} asset(s).`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : locale === "vi" ? "Tải tài nguyên thất bại." : "Asset upload failed.",
+      );
+    } finally {
+      setUploadStatus(null);
+    }
     e.target.value = "";
   };
 
@@ -1088,6 +1278,18 @@ function EditorPage() {
     chatAbortRef.current?.abort();
     const abort = new AbortController();
     chatAbortRef.current = abort;
+
+    // Auto-title: set thread name from first user message
+    const tCopy = editorCopy(locale);
+    const activeThread = chatThreadsRef.current.find((th) => th.id === activeChatIdRef.current);
+    const hasUserMessages = messages.some((m) => m.role === "user");
+    if (activeThread && !hasUserMessages && activeThread.title === tCopy.sidebar.defaultChatTitle) {
+      const autoTitle = text.slice(0, 40) + (text.length > 40 ? "…" : "");
+      const updated = chatThreadsRef.current.map((th) =>
+        th.id === activeChatIdRef.current ? { ...th, title: autoTitle, updatedAt: Date.now() } : th,
+      );
+      setChatThreads(updated);
+    }
 
     flushSync(() => {
       resetChatStreamProgress();
@@ -1336,7 +1538,7 @@ function EditorPage() {
           isStreaming: false,
           content:
             msg.content.trim() ||
-            LLM_USER_ERROR_MSG,
+            llmUserErrorMsg(locale),
         };
         return next;
       });
@@ -1654,6 +1856,16 @@ function EditorPage() {
 
   return (
     <div className="editor-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground">
+      {uploadStatus && (
+        <div className="upload-blocking-overlay">
+          <div className="upload-blocking-card">
+            <p className="upload-blocking-msg">{uploadStatus}</p>
+            <div className="upload-progress-track" role="progressbar" aria-label={uploadStatus}>
+              <div className="upload-progress-bar" />
+            </div>
+          </div>
+        </div>
+      )}
       {bootState === "error" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="font-serif-body text-lg font-semibold">Could not open project</p>
@@ -1784,6 +1996,12 @@ function EditorPage() {
           onUploadZip={() => zipInputRef.current?.click()}
           onUploadAsset={() => assetInputRef.current?.click()}
           isDirty={isDirty}
+          chatThreads={chatThreads}
+          activeChatId={activeChatId}
+          onNewChat={handleNewChat}
+          onSwitchChat={handleSwitchChat}
+          onRenameChat={handleRenameChat}
+          onDeleteChat={handleDeleteChat}
         />
         <EditorDesktopPanels
           center={
@@ -2026,9 +2244,11 @@ function ArionearMasthead({
           </>
         )}
         <span className="hidden sm:inline opacity-70">{formatMastheadDate(locale)}</span>
+        <span className="hidden sm:inline opacity-40">·</span>
         <span className="text-[color:var(--editorial-red)]">
           {t.masthead.integrityGuard} · {integrityLabel}
         </span>
+        <DefenseMastheadPrefs />
       </div>
     </div>
   );
@@ -2359,6 +2579,173 @@ function MobileChatSheet({
   );
 }
 
+function ChatThreadList({
+  threads,
+  activeChatId,
+  onNewChat,
+  onSwitchChat,
+  onRenameChat,
+  onDeleteChat,
+}: {
+  threads: ChatThread[];
+  activeChatId: string;
+  onNewChat: () => void;
+  onSwitchChat: (id: string) => void;
+  onRenameChat: (id: string, title: string) => void;
+  onDeleteChat: (id: string) => void;
+}) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const startRename = (id: string, current: string) => {
+    setRenamingId(id);
+    setRenameValue(current);
+    setTimeout(() => renameInputRef.current?.select(), 20);
+  };
+
+  const commitRename = () => {
+    if (renamingId && renameValue.trim()) {
+      onRenameChat(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTargetId) {
+      onDeleteChat(deleteTargetId);
+    }
+    setDeleteTargetId(null);
+  };
+
+  const deleteTargetTitle = threads.find((th) => th.id === deleteTargetId)?.title ?? "";
+
+  return (
+    <>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-2">
+          {threads.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-muted-foreground">{t.sidebar.noChats}</p>
+          ) : (
+            threads.map((thread) => {
+              const isActive = thread.id === activeChatId;
+              const isRenaming = renamingId === thread.id;
+              return (
+                <div
+                  key={thread.id}
+                  className={`group flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 transition ${
+                    isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <MessageSquare
+                    className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+                  />
+                  {isRenaming ? (
+                    <input
+                      ref={renameInputRef}
+                      className="min-w-0 flex-1 rounded border border-border bg-background px-1.5 py-0.5 text-[12px] outline-none focus:border-primary"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      className={`min-w-0 flex-1 truncate text-left text-[13px] ${
+                        isActive ? "font-medium text-foreground" : "text-foreground/70"
+                      }`}
+                      onClick={() => onSwitchChat(thread.id)}
+                      title={thread.title}
+                    >
+                      {thread.title}
+                    </button>
+                  )}
+                  {!isRenaming && (
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                      <button
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground transition"
+                        title={t.sidebar.renameChat}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startRename(thread.id, thread.title);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        className="rounded p-0.5 text-muted-foreground hover:text-destructive transition"
+                        title={t.sidebar.deleteChat}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTargetId(thread.id);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                  {isRenaming && (
+                    <button
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground transition"
+                      onClick={commitRename}
+                    >
+                      <Check className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="shrink-0 border-t border-border p-2">
+          <button
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-[12px] text-muted-foreground transition hover:border-primary hover:text-foreground"
+            onClick={onNewChat}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t.sidebar.newChat}
+          </button>
+        </div>
+      </div>
+
+      <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <DialogContent className="max-w-sm p-5">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">{t.sidebar.deleteChat}</DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] text-muted-foreground leading-relaxed">
+            {t.sidebar.deleteChatConfirm}
+            {deleteTargetTitle ? (
+              <> — <span className="font-medium text-foreground">"{deleteTargetTitle}"</span></>
+            ) : null}
+          </p>
+          <DialogFooter className="mt-1 gap-2">
+            <button
+              className="rounded-md border border-border px-3 py-1.5 text-[13px] transition hover:bg-secondary"
+              onClick={() => setDeleteTargetId(null)}
+            >
+              {locale === "vi" ? "Hủy" : "Cancel"}
+            </button>
+            <button
+              className="rounded-md bg-destructive px-3 py-1.5 text-[13px] font-medium text-destructive-foreground transition hover:opacity-90"
+              onClick={confirmDelete}
+            >
+              {t.sidebar.deleteChat}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function LeftSidebar({
   projectName,
   outlineLatex,
@@ -2379,6 +2766,12 @@ function LeftSidebar({
   onUploadZip,
   onUploadAsset,
   isDirty = false,
+  chatThreads,
+  activeChatId,
+  onNewChat,
+  onSwitchChat,
+  onRenameChat,
+  onDeleteChat,
 }: {
   projectName: string;
   outlineLatex: string;
@@ -2399,6 +2792,12 @@ function LeftSidebar({
   onUploadZip: () => void;
   onUploadAsset: () => void;
   isDirty?: boolean;
+  chatThreads: ChatThread[];
+  activeChatId: string;
+  onNewChat: () => void;
+  onSwitchChat: (id: string) => void;
+  onRenameChat: (id: string, title: string) => void;
+  onDeleteChat: (id: string) => void;
 }) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
@@ -2487,21 +2886,14 @@ function LeftSidebar({
               />
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto p-3">
-              {["Edit Introduction", "Citation format APA", "Improve abstract"].map((label, i) => (
-                <button
-                  key={label}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition ${
-                    i === 0
-                      ? "bg-sidebar-accent font-medium"
-                      : "text-foreground/70 hover:bg-sidebar-accent/50"
-                  }`}
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
+            <ChatThreadList
+              threads={chatThreads}
+              activeChatId={activeChatId}
+              onNewChat={onNewChat}
+              onSwitchChat={onSwitchChat}
+              onRenameChat={onRenameChat}
+              onDeleteChat={onDeleteChat}
+            />
           )}
 
           <div className="border-t border-border p-3">
@@ -2710,10 +3102,7 @@ function CenterPanel({
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
         <div className="flex min-w-0 items-center gap-2">
           <div className="editor-file-tab flex items-center gap-2 rounded-lg border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
-            <Avatar className="h-4 w-4 rounded-md">
-              <AvatarImage src={arioAvatar} alt="" className="object-cover" />
-              <AvatarFallback className="rounded-md text-[9px]">A</AvatarFallback>
-            </Avatar>
+            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span>{activeFile}</span>
             {isDirty && !viewingAsset ? <span className="file-dirty-mark">*</span> : null}
           </div>
@@ -2742,47 +3131,55 @@ function CenterPanel({
           </div>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          {onDefense ? (
-            <button
-              type="button"
-              onClick={onDefense}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-muted hidden md:inline-flex"
-              title="Chuẩn bị bảo vệ luận văn (Defense Mode)"
-            >
-              <GraduationCap className="h-3 w-3" />
-              Bảo vệ
-            </button>
-          ) : null}
-          {onShare ? (
-            <button
-              type="button"
-              onClick={onShare}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-sm transition ${
-                shareEnabled
-                  ? "border-primary/30 bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground hover:bg-muted"
-              }`}
-            >
-              <Share2 className="h-3 w-3" />
-              {t.toolbar.share}
-            </button>
-          ) : null}
-          {onExport ? (
-            <button
-              type="button"
-              onClick={onExport}
-              disabled={!exportEnabled}
-              className="editor-export-btn hidden md:inline-flex"
-              title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
-            >
-              <FileOutput className="h-3.5 w-3.5" />
-              {t.toolbar.export}
-            </button>
-          ) : null}
+        <div className="flex items-center gap-1.5">
+          {/* Secondary actions — icon only */}
+          <div className="flex items-center rounded-lg border border-border/70 bg-background shadow-sm">
+            {onDefense ? (
+              <button
+                type="button"
+                onClick={onDefense}
+                className="flex h-8 w-8 items-center justify-center rounded-l-lg text-muted-foreground transition hover:bg-muted hover:text-foreground hidden md:flex"
+                title="Bảo vệ luận văn (Defense Mode)"
+              >
+                <GraduationCap className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            {onShare ? (
+              <button
+                type="button"
+                onClick={onShare}
+                className={`flex h-8 w-8 items-center justify-center transition ${
+                  onDefense ? "" : "rounded-l-lg"
+                } ${
+                  shareEnabled
+                    ? "text-primary hover:bg-primary/10"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+                title={t.toolbar.share}
+              >
+                <Share2 className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            {onExport ? (
+              <button
+                type="button"
+                onClick={onExport}
+                disabled={!exportEnabled}
+                className={`flex h-8 w-8 items-center justify-center rounded-r-lg transition hidden md:flex ${
+                  exportEnabled
+                    ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "cursor-not-allowed text-muted-foreground/40"
+                }`}
+                title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
+              >
+                <FileOutput className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+          {/* Primary action */}
           <button
             onClick={onToggleTools}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+            className={`flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition ${
               toolsOpen
                 ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"

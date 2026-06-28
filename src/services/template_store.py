@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import re
 import shutil
@@ -29,9 +28,39 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _PREVIEW_NAMES = ("preview.png", "preview.jpg", "preview.jpeg", "preview.webp", "preview.svg")
 _PDF_NAMES = ("sample.pdf", "preview.pdf")
 
-_IEEE_PLACEHOLDER_PDF = base64.b64decode(
-    "JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL01lZGlhQm94WzAgMCA2MTIgNzkyXS9QYXJlbnQgMiAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDQgMCBSPj4+Pi9Db250ZW50cyA1IDAgUj4+ZW5kb2JqCjQgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iago1IDAgb2JqPDwvTGVuZ3RoIDU5Pj5zdHJlYW0KQlQgL0YxIDIwIFRmIDcyIDcyMCBUZCAoSUVFRSBKb3VybmFsIFRlbXBsYXRlIFNhbXBsZSkgVGogRVQKZW5zdHJlYW0KZW5kb2JqCnhyZWYKMCAxMAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1MiAwMDAwMCBuIAowMDAwMDAwMTAxIDAwMDAwIG4gCjAwMDAwMDAyMTEgMDAwMDAgbiAKMDAwMDAwMDI3MiAwMDAwMCBuIAp0cmFpbGVyPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMzc3CiUlRU9GCg=="
-)
+
+def _build_placeholder_pdf(title: str = "IEEE Journal Template Sample") -> bytes:
+    """Minimal valid single-page PDF for template gallery previews."""
+    stream = f"BT /F1 20 Tf 72 720 Td ({title}) Tj ET".encode("latin-1")
+    parts: list[bytes] = [b"%PDF-1.4\n"]
+    offsets = [0]
+    objects = [
+        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n",
+        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n",
+        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>endobj\n",
+        b"4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n",
+        f"5 0 obj<</Length {len(stream)}>>stream\n".encode("ascii") + stream + b"\nendstream\nendobj\n",
+    ]
+    for obj in objects:
+        offsets.append(sum(len(part) for part in parts))
+        parts.append(obj)
+    xref_pos = sum(len(part) for part in parts)
+    parts.append(b"xref\n")
+    parts.append(f"0 {len(offsets)}\n".encode("ascii"))
+    parts.append(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        parts.append(f"{off:010d} 00000 n \n".encode("ascii"))
+    parts.append(b"trailer<</Size 6/Root 1 0 R>>\n")
+    parts.append(f"startxref\n{xref_pos}\n%%EOF\n".encode("ascii"))
+    return b"".join(parts)
+
+
+def _is_valid_pdf(path: Path) -> bool:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    return data.startswith(b"%PDF-") and b"endstream" in data and data.rstrip().endswith(b"%%EOF")
 
 
 def _utcnow() -> datetime:
@@ -467,9 +496,9 @@ def _ensure_sample_pdf(template_id: str) -> None:
     if not folder.is_dir():
         return
     pdf_path = folder / "sample.pdf"
-    if pdf_path.is_file():
+    if pdf_path.is_file() and _is_valid_pdf(pdf_path):
         return
-    pdf_path.write_bytes(_IEEE_PLACEHOLDER_PDF)
+    pdf_path.write_bytes(_build_placeholder_pdf())
 
 
 def ensure_template_seed() -> None:

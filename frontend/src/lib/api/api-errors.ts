@@ -1,14 +1,26 @@
-export const LLM_USER_ERROR_MSG =
-  "Úi, kết nối tới AI đang bị gián đoạn một chút. Bạn thử đổi Model/Provider giúp mình nhé!";
+import { apiErrorsCopy } from "@/lib/api-errors-i18n";
+import type { UiLanguage } from "@/lib/locale-store";
+import { getStoredLocale } from "@/lib/locale-store";
 
-const CONNECTION_MSG = LLM_USER_ERROR_MSG;
+function resolveLocale(locale?: UiLanguage): UiLanguage {
+  return locale ?? getStoredLocale();
+}
 
-const GENERIC_MSG = LLM_USER_ERROR_MSG;
+function msgs(locale?: UiLanguage) {
+  return apiErrorsCopy(resolveLocale(locale));
+}
 
-const AUTH_MSG = LLM_USER_ERROR_MSG;
+export function llmUserErrorMsg(locale?: UiLanguage): string {
+  return msgs(locale).llm;
+}
 
-const CITATION_MSG =
-  "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.";
+export function networkErrorMsg(locale?: UiLanguage): string {
+  return msgs(locale).network;
+}
+
+export function streamInterruptedMessage(locale?: UiLanguage): string {
+  return msgs(locale).streamInterrupted;
+}
 
 function isNetworkError(message: string): boolean {
   const m = message.toLowerCase();
@@ -55,44 +67,71 @@ function isLlmProviderFailure(message: string): boolean {
     m.includes("chưa cấu hình") ||
     m.includes("rerank") ||
     m.includes("model llm không khả dụng") ||
-    m.includes("không thể gọi mô hình ai") ||
-    m.includes("gián đoạn")
+    m.includes("không thể gọi mô hình ai")
   );
 }
 
-function mapHttpStatus(status: number): string {
-  if (status === 401 || status === 403) return AUTH_MSG;
-  if (status === 503) return LLM_USER_ERROR_MSG;
-  if (status >= 500) return GENERIC_MSG;
-  return GENERIC_MSG;
+function detailText(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const record = item as { msg?: string };
+        return typeof record.msg === "string" ? record.msg : "";
+      })
+      .filter(Boolean)
+      .join(" ");
+  }
+  return "";
 }
 
-/** Map any API/network error to a short, user-safe Vietnamese message. */
-export function toUserFacingMessage(error: unknown): string {
+function mapHttpStatus(status: number, detail: unknown, locale?: UiLanguage): string {
+  const m = msgs(locale);
+  const detailStr = detailText(detail);
+
+  if (status === 401 || status === 403) return m.auth;
+  if (status === 429) {
+    return isLlmProviderFailure(detailStr) ? m.llm : m.rateLimit;
+  }
+  if (status === 503 && isLlmProviderFailure(detailStr)) return m.llm;
+  if (status === 502 || status === 503 || status === 504) return m.network;
+  if (status >= 500) return m.backend;
+  return m.backend;
+}
+
+/** Map any API/network error to a short, user-safe message in the active UI locale. */
+export function toUserFacingMessage(error: unknown, locale?: UiLanguage): string {
+  const m = msgs(locale);
   if (!(error instanceof Error)) {
-    return CONNECTION_MSG;
+    return m.network;
   }
 
   const msg = error.message.trim();
-  if (!msg || isNetworkError(msg) || isTechnicalMessage(msg)) {
-    return CONNECTION_MSG;
+  if (!msg || isNetworkError(msg)) {
+    return m.network;
+  }
+  if (isTechnicalMessage(msg)) {
+    return m.backend;
   }
 
-  return msg.length > 160 ? GENERIC_MSG : msg;
+  return msg.length > 160 ? m.backend : msg;
 }
 
-export function streamErrorMessage(message: string): string {
+export function streamErrorMessage(message: string, locale?: UiLanguage): string {
+  const m = msgs(locale);
   if (isLlmProviderFailure(message)) {
-    return LLM_USER_ERROR_MSG;
+    return m.llm;
   }
-  return toUserFacingMessage(new Error(message));
+  return toUserFacingMessage(new Error(message), locale);
 }
 
-export function citationErrorMessage(): string {
-  return CITATION_MSG;
+export function citationErrorMessage(locale?: UiLanguage): string {
+  return msgs(locale).citation;
 }
 
-export function mapApiHttpError(status: number, detail: unknown): string {
+export function mapApiHttpError(status: number, detail: unknown, locale?: UiLanguage): string {
+  const m = msgs(locale);
   if (Array.isArray(detail)) {
     const messages = detail
       .map((item) => {
@@ -103,7 +142,7 @@ export function mapApiHttpError(status: number, detail: unknown): string {
           : "";
         const msg = typeof record.msg === "string" ? record.msg : null;
         if (!msg) return null;
-        if (field === "name") return "Full name is required.";
+        if (field === "name") return m.validationNameRequired;
         return field ? `${field}: ${msg}` : msg;
       })
       .filter((msg): msg is string => Boolean(msg));
@@ -113,6 +152,22 @@ export function mapApiHttpError(status: number, detail: unknown): string {
   if (typeof detail === "string" && detail && !isTechnicalMessage(detail) && detail.length <= 160) {
     if (status === 400 || status === 422) return detail;
     if (status < 500) return detail;
+    if (isLlmProviderFailure(detail)) return m.llm;
   }
-  return mapHttpStatus(status);
+
+  return mapHttpStatus(status, detail, locale);
+}
+
+export async function mapApiHttpErrorFromResponse(
+  res: Response,
+  locale?: UiLanguage,
+): Promise<string> {
+  let detail: unknown = res.statusText;
+  try {
+    const body = await res.json();
+    detail = (body as { detail?: unknown }).detail ?? detail;
+  } catch {
+    /* ignore non-JSON bodies */
+  }
+  return mapApiHttpError(res.status, detail, locale);
 }

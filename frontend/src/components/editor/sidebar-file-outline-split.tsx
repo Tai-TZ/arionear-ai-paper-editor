@@ -46,10 +46,8 @@ export function SidebarFileOutlineSplit({
   return (
     <ResizablePanelGroup
       id="sidebar-file-outline"
-      autoSaveId="arionear-sidebar-files-outline"
       orientation="vertical"
       className="sidebar-file-outline-split"
-      defaultLayout={{ "file-tree": 62, outline: 38 }}
     >
       <ResizablePanel
         id="file-tree"

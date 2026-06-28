@@ -325,6 +325,43 @@ export async function findPageForQuery(
   return null;
 }
 
+export type PdfSearchMatch = {
+  page: number;
+  /** 0-based occurrence index within that page */
+  occurrenceOnPage: number;
+};
+
+/** Collect every substring match across all pages (no citation stopword filter). */
+export async function collectPdfSearchMatches(
+  pdf: PDFDocumentProxy,
+  query: string,
+): Promise<PdfSearchMatch[]> {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
+
+  const matches: PdfSearchMatch[] = [];
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const text = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+    const lower = text.toLowerCase();
+    let start = 0;
+    let occurrenceOnPage = 0;
+    while (true) {
+      const idx = lower.indexOf(needle, start);
+      if (idx < 0) break;
+      matches.push({ page: pageNum, occurrenceOnPage });
+      occurrenceOnPage += 1;
+      start = idx + needle.length;
+    }
+  }
+
+  return matches;
+}
+
 export function computeFitScale(containerWidth: number, pageWidth: number, padding = 48): number {
   const available = Math.max(120, containerWidth - padding);
   return Math.min(2, Math.max(0.35, available / pageWidth));

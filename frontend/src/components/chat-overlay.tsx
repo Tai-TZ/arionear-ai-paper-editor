@@ -3,13 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   ArrowUp,
-  AudioLines,
   ChevronDown,
   ChevronUp,
   Copy,
   Maximize2,
   PanelRightClose,
-  Plus,
   Sparkles,
   Square,
   X,
@@ -651,12 +649,6 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
           className="chat-input-field"
         />
         <div className="chat-input-actions">
-          <button type="button" className="chat-input-icon-btn" aria-label="Add context">
-            <Plus className="h-4 w-4" />
-          </button>
-          <button type="button" className="chat-input-icon-btn" aria-label="Voice input">
-            <AudioLines className="h-4 w-4" />
-          </button>
           <button
             type="button"
             onClick={handlePrimaryAction}

@@ -29,6 +29,7 @@ import { Route as DataUseRouteImport } from './routes/data-use'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as TemplatesRouteRouteImport } from './routes/templates/route'
 import { Route as WorkspaceRouteRouteImport } from './routes/_workspace/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates/index'
@@ -142,6 +143,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TemplatesRouteRoute = TemplatesRouteRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceRouteRoute = WorkspaceRouteRouteImport.update({
   id: '/_workspace',
   getParentRoute: () => rootRouteImport,
@@ -152,9 +158,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
-  id: '/templates/',
-  path: '/templates/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => TemplatesRouteRoute,
 } as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
@@ -183,14 +189,14 @@ const WorkspaceGuideRoute = WorkspaceGuideRouteImport.update({
 } as any)
 const TemplatesTemplateIdIndexRoute =
   TemplatesTemplateIdIndexRouteImport.update({
-    id: '/templates/$templateId/',
-    path: '/templates/$templateId/',
-    getParentRoute: () => rootRouteImport,
+    id: '/$templateId/',
+    path: '/$templateId/',
+    getParentRoute: () => TemplatesRouteRoute,
   } as any)
 const TemplatesTemplateIdPdfRoute = TemplatesTemplateIdPdfRouteImport.update({
-  id: '/templates/$templateId/pdf',
-  path: '/templates/$templateId/pdf',
-  getParentRoute: () => rootRouteImport,
+  id: '/$templateId/pdf',
+  path: '/$templateId/pdf',
+  getParentRoute: () => TemplatesRouteRoute,
 } as any)
 const BillingConfirmCheckoutIdRoute =
   BillingConfirmCheckoutIdRouteImport.update({
@@ -206,6 +212,7 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/templates': typeof TemplatesRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
@@ -274,6 +281,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_workspace': typeof WorkspaceRouteRouteWithChildren
+  '/templates': typeof TemplatesRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
@@ -309,6 +317,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/templates'
     | '/about'
     | '/admin'
     | '/contact'
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_workspace'
+    | '/templates'
     | '/about'
     | '/admin'
     | '/contact'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkspaceRouteRoute: typeof WorkspaceRouteRouteWithChildren
+  TemplatesRouteRoute: typeof TemplatesRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
@@ -432,11 +443,8 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WorkflowRoute: typeof WorkflowRoute
   ShareTokenRoute: typeof ShareTokenRoute
-  TemplatesIndexRoute: typeof TemplatesIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   BillingConfirmCheckoutIdRoute: typeof BillingConfirmCheckoutIdRoute
-  TemplatesTemplateIdPdfRoute: typeof TemplatesTemplateIdPdfRoute
-  TemplatesTemplateIdIndexRoute: typeof TemplatesTemplateIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -581,6 +589,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_workspace': {
       id: '/_workspace'
       path: ''
@@ -597,10 +612,10 @@ declare module '@tanstack/react-router' {
     }
     '/templates/': {
       id: '/templates/'
-      path: '/templates'
+      path: '/'
       fullPath: '/templates/'
       preLoaderRoute: typeof TemplatesIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TemplatesRouteRoute
     }
     '/share/$token': {
       id: '/share/$token'
@@ -639,17 +654,17 @@ declare module '@tanstack/react-router' {
     }
     '/templates/$templateId/': {
       id: '/templates/$templateId/'
-      path: '/templates/$templateId'
+      path: '/$templateId'
       fullPath: '/templates/$templateId/'
       preLoaderRoute: typeof TemplatesTemplateIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TemplatesRouteRoute
     }
     '/templates/$templateId/pdf': {
       id: '/templates/$templateId/pdf'
-      path: '/templates/$templateId/pdf'
+      path: '/$templateId/pdf'
       fullPath: '/templates/$templateId/pdf'
       preLoaderRoute: typeof TemplatesTemplateIdPdfRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TemplatesRouteRoute
     }
     '/billing/confirm/$checkoutId': {
       id: '/billing/confirm/$checkoutId'
@@ -686,9 +701,26 @@ const WorkspaceRouteRouteWithChildren = WorkspaceRouteRoute._addFileChildren(
   WorkspaceRouteRouteChildren,
 )
 
+interface TemplatesRouteRouteChildren {
+  TemplatesIndexRoute: typeof TemplatesIndexRoute
+  TemplatesTemplateIdPdfRoute: typeof TemplatesTemplateIdPdfRoute
+  TemplatesTemplateIdIndexRoute: typeof TemplatesTemplateIdIndexRoute
+}
+
+const TemplatesRouteRouteChildren: TemplatesRouteRouteChildren = {
+  TemplatesIndexRoute: TemplatesIndexRoute,
+  TemplatesTemplateIdPdfRoute: TemplatesTemplateIdPdfRoute,
+  TemplatesTemplateIdIndexRoute: TemplatesTemplateIdIndexRoute,
+}
+
+const TemplatesRouteRouteWithChildren = TemplatesRouteRoute._addFileChildren(
+  TemplatesRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkspaceRouteRoute: WorkspaceRouteRouteWithChildren,
+  TemplatesRouteRoute: TemplatesRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
@@ -710,11 +742,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WorkflowRoute: WorkflowRoute,
   ShareTokenRoute: ShareTokenRoute,
-  TemplatesIndexRoute: TemplatesIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   BillingConfirmCheckoutIdRoute: BillingConfirmCheckoutIdRoute,
-  TemplatesTemplateIdPdfRoute: TemplatesTemplateIdPdfRoute,
-  TemplatesTemplateIdIndexRoute: TemplatesTemplateIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

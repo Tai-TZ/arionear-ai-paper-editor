@@ -46,6 +46,7 @@ type CommonCopy = {
   ticker: string[];
   workspace: {
     projects: string;
+    templates: string;
     profile: string;
     plan: string;
     planFree: string;
@@ -134,6 +135,7 @@ const EN: CommonCopy = {
   ],
   workspace: {
     projects: "Projects",
+    templates: "Templates",
     profile: "Profile",
     plan: "Plan",
     planFree: "Free",
@@ -222,6 +224,7 @@ const VI: CommonCopy = {
   ],
   workspace: {
     projects: "Dự án",
+    templates: "Mẫu bài",
     profile: "Hồ sơ",
     plan: "Gói",
     planFree: "Miễn phí",
