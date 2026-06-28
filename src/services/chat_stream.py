@@ -24,7 +24,7 @@ from src.services.chat_telemetry import ChatRunTracker
 from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
 from src.services.intent_router import classify_intent
 from src.services.llm import REASONING_MODEL_TEMPERATURE, get_llm, is_reasoning_model
-from src.services.llm_errors import friendly_llm_error
+from src.services.llm_errors import friendly_llm_error, looks_like_provider_error
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     extract_cite_keys,
@@ -518,21 +518,33 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                     )
                 ),
             ]
-            async for chunk in chat_llm.astream(messages):
-                if isinstance(chunk, AIMessageChunk):
-                    reported = _usage_from_chunk(chunk)
-                    if reported:
-                        provider_tokens = reported
-                async for kind, delta in _stream_chat_tokens_from_chunk(chunk):
-                    if first_token and kind == "token":
-                        trace = await tracker.stage("llm_first_token", task=task)
-                        yield _sse("trace", trace)
-                        first_token = False
-                    if kind == "reasoning":
-                        yield _sse("reasoning", {"delta": delta})
-                    else:
-                        full_response.append(delta)
-                        yield _sse("token", {"delta": delta})
+            try:
+                async for chunk in chat_llm.astream(messages):
+                    if isinstance(chunk, AIMessageChunk):
+                        reported = _usage_from_chunk(chunk)
+                        if reported:
+                            provider_tokens = reported
+                    async for kind, delta in _stream_chat_tokens_from_chunk(chunk):
+                        if first_token and kind == "token":
+                            trace = await tracker.stage("llm_first_token", task=task)
+                            yield _sse("trace", trace)
+                            first_token = False
+                        if kind == "reasoning":
+                            yield _sse("reasoning", {"delta": delta})
+                        else:
+                            full_response.append(delta)
+                            combined = "".join(full_response)
+                            if looks_like_provider_error(combined):
+                                message = friendly_llm_error(Exception(combined))
+                                await tracker.fail(message)
+                                yield _sse("error", {"message": message})
+                                return
+                            yield _sse("token", {"delta": delta})
+            except Exception as exc:
+                message = friendly_llm_error(exc)
+                await tracker.fail(message)
+                yield _sse("error", {"message": message})
+                return
             done_payload["response"] = "".join(full_response).strip()
             done_payload["_provider_tokens"] = provider_tokens
             state_evt, act_evt = _emit_state(
