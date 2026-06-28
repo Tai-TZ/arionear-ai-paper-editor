@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-06-27 03:34:47 UTC",
-  "api_url": null,
-  "frontend_url": null,
+  "timestamp": "2026-06-27 21:32:25 UTC",
+  "api_url": "https://api.arionear.id.vn",
+  "frontend_url": "https://arionear.id.vn",
   "offline": {
     "intent": {
       "metric": "intent_routing_accuracy",
@@ -159,7 +159,48 @@
       }
     }
   },
-  "live": null,
+  "live": {
+    "health": {
+      "status": 200,
+      "latency_ms": [
+        229.3937000213191,
+        122.81649996293709,
+        138.1415000068955
+      ],
+      "p50_ms": 138.1,
+      "p95_ms": 229.4,
+      "body": {
+        "status": "ok",
+        "env": "production",
+        "database": "connected"
+      }
+    },
+    "compile_status": {
+      "status": 200,
+      "latency_s": 0.112,
+      "body": {
+        "available": true,
+        "engine": "/usr/bin/pdflatex",
+        "engines": {
+          "pdflatex": "/usr/bin/pdflatex",
+          "xelatex": "/usr/bin/xelatex",
+          "lualatex": "/usr/bin/lualatex",
+          "latex": "/usr/bin/latex",
+          "latexmk": "/usr/bin/latexmk",
+          "biber": "/usr/bin/biber",
+          "bibtex": "/usr/bin/bibtex"
+        }
+      }
+    },
+    "compile_minimal": {
+      "status": 422,
+      "latency_s": 0.136,
+      "success": false,
+      "pdf_bytes": 0,
+      "error": null
+    },
+    "compile_success_rate": 0.0
+  },
   "measured": {
     "intent_routing_accuracy": 1.0,
     "edit_scope_accuracy": 1.0,
@@ -167,8 +208,8 @@
     "numeric_drift_detection_rate": 1.0,
     "chat_latency_p50_s": null,
     "style_latency_p50_s": null,
-    "compile_success_rate": null,
-    "health_latency_p95_ms": null,
+    "compile_success_rate": 0.0,
+    "health_latency_p95_ms": 229.4,
     "cost_per_active_user_month_usd": 1.2
   },
   "comparison": [
@@ -207,6 +248,24 @@
       "delta": 1.0,
       "improved_vs_baseline": true,
       "baseline_description": "No numeric drift checks on AI suggestions"
+    },
+    {
+      "metric": "compile_success_rate",
+      "arionear": 0.0,
+      "baseline": 0.7,
+      "unit": "ratio",
+      "delta": -0.7,
+      "improved_vs_baseline": false,
+      "baseline_description": "Local MiKTeX without Docker TeX Live (Windows dev)"
+    },
+    {
+      "metric": "health_latency_p95_ms",
+      "arionear": 229.4,
+      "baseline": 800,
+      "unit": "milliseconds",
+      "delta": 570.6,
+      "improved_vs_baseline": true,
+      "baseline_description": "Cold-start serverless without warm instance"
     },
     {
       "metric": "cost_per_active_user_month_usd",
