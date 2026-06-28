@@ -1,42 +1,68 @@
 from __future__ import annotations
 
+import re
+
+LLM_USER_ERROR_MSG = (
+    "Úi, kết nối tới AI đang bị gián đoạn một chút. Bạn thử đổi Model/Provider giúp mình nhé!"
+)
+
+_USER_SAFE_HINTS = (
+    "thử đổi model",
+    "thử lại",
+    "gián đoạn",
+    "model/provider",
+    "api key",
+)
+
+
+def looks_like_provider_error(msg: str) -> bool:
+    """True when text is a raw LLM/provider failure, not user-facing prose."""
+    text = (msg or "").strip()
+    if not text:
+        return False
+    lower = text.lower()
+
+    if lower.startswith("error code:"):
+        return True
+    if "insufficient balance" in lower or "please recharge" in lower:
+        return True
+    if "no resource package" in lower:
+        return True
+    if re.search(r"error\s*code\s*:\s*\d{3}", lower):
+        return True
+    if "'error'" in text and ("'code'" in text or "'message'" in text):
+        return True
+    if re.search(r"\b[45]\d{2}\b", text) and "error" in lower:
+        return True
+    if "rate_limit" in lower or "rate limit exceeded" in lower:
+        return True
+    if "overloaded" in lower and "error" in lower:
+        return True
+    if text.startswith("{") and "error" in lower:
+        return True
+    return False
+
+
+def _is_user_safe_message(msg: str) -> bool:
+    lower = msg.lower()
+    return any(hint in lower for hint in _USER_SAFE_HINTS)
+
 
 def friendly_llm_error(exc: BaseException) -> str:
     """Map provider/LLM exceptions to short user-facing Vietnamese messages."""
     msg = str(exc).strip()
     lower = msg.lower()
 
-    if not msg:
-        return "Không thể gọi mô hình AI. Vui lòng thử lại hoặc đổi model trong khung chat."
+    if not msg or looks_like_provider_error(msg):
+        return LLM_USER_ERROR_MSG
 
     if "no api key" in lower or "api_key" in lower:
-        return (
-            "Chưa cấu hình API key cho nhà cung cấp LLM. "
-            "Thêm ZAI_API_KEY (hoặc OPENROUTER/OPENAI/ANTHROPIC) vào .env rồi khởi động lại backend."
-        )
+        return LLM_USER_ERROR_MSG
 
     if "rerank" in lower:
-        return (
-            "Model đang chọn là model rerank, không dùng được cho chat. "
-            "Hãy chọn model chat (ví dụ meta-llama/llama-3.2-3b-instruct:free) trong khung chat."
-        )
+        return LLM_USER_ERROR_MSG
 
-    if "model" in lower and any(token in lower for token in ("not found", "does not exist", "404", "invalid")):
-        return "Model LLM không khả dụng trên OpenRouter. Thử đổi model khác trong khung chat."
-
-    if "rate" in lower and "limit" in lower:
-        return "Đã vượt giới hạn gọi API. Đợi vài phút hoặc đổi sang model/provider khác."
-
-    if "504" in lower or "gateway timeout" in lower or "timeout" in lower:
-        return (
-            "OpenRouter/provider quá thời gian chờ (504). Nemotron chậm với bài dài — "
-            "chọn đoạn/section cần sửa, hoặc đổi sang GPT-4o Mini trong khung chat."
-        )
-
-    if "401" in lower or "unauthorized" in lower or "authentication" in lower:
-        return "API key LLM không hợp lệ hoặc đã hết hạn. Kiểm tra lại .env."
-
-    if len(msg) <= 160 and "http" not in lower and "traceback" not in lower:
+    if _is_user_safe_message(msg) and len(msg) <= 220:
         return msg
 
-    return "Không thể gọi mô hình AI. Thử đổi model trong khung chat hoặc kiểm tra API key trong .env."
+    return LLM_USER_ERROR_MSG

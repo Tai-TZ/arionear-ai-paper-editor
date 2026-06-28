@@ -1,11 +1,11 @@
-const CONNECTION_MSG =
-  "Trợ lý AI tạm thời không phản hồi. Vui lòng kiểm tra kết nối mạng và thử lại sau vài giây.";
+export const LLM_USER_ERROR_MSG =
+  "Úi, kết nối tới AI đang bị gián đoạn một chút. Bạn thử đổi Model/Provider giúp mình nhé!";
 
-const GENERIC_MSG =
-  "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.";
+const CONNECTION_MSG = LLM_USER_ERROR_MSG;
 
-const AUTH_MSG =
-  "Không thể kết nối dịch vụ AI. Vui lòng thử lại sau hoặc liên hệ quản trị viên.";
+const GENERIC_MSG = LLM_USER_ERROR_MSG;
+
+const AUTH_MSG = LLM_USER_ERROR_MSG;
 
 const CITATION_MSG =
   "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.";
@@ -31,13 +31,38 @@ function isTechnicalMessage(message: string): boolean {
     m.includes("127.0.0.1") ||
     m.includes("cors") ||
     m.includes("exception") ||
-    m.includes("traceback")
+    m.includes("traceback") ||
+    m.startsWith("error code:") ||
+    m.includes("insufficient balance") ||
+    m.includes("please recharge") ||
+    m.includes("no resource package") ||
+    /error\s*code\s*:\s*\d{3}/.test(m) ||
+    (m.includes("'error'") && (m.includes("'code'") || m.includes("'message'"))) ||
+    (/\b[45]\d{2}\b/.test(message) && m.includes("error"))
+  );
+}
+
+function isLlmProviderFailure(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    isTechnicalMessage(message) ||
+    m.includes("429") ||
+    (m.includes("rate") && m.includes("limit")) ||
+    m.includes("insufficient balance") ||
+    m.includes("please recharge") ||
+    m.includes("no resource package") ||
+    m.includes("api key") ||
+    m.includes("chưa cấu hình") ||
+    m.includes("rerank") ||
+    m.includes("model llm không khả dụng") ||
+    m.includes("không thể gọi mô hình ai") ||
+    m.includes("gián đoạn")
   );
 }
 
 function mapHttpStatus(status: number): string {
   if (status === 401 || status === 403) return AUTH_MSG;
-  if (status === 503) return "Dịch vụ AI chưa sẵn sàng. Vui lòng thử lại sau.";
+  if (status === 503) return LLM_USER_ERROR_MSG;
   if (status >= 500) return GENERIC_MSG;
   return GENERIC_MSG;
 }
@@ -57,18 +82,9 @@ export function toUserFacingMessage(error: unknown): string {
 }
 
 export function streamErrorMessage(message: string): string {
-  const m = message.toLowerCase();
-
-  if (m.includes("api key") || m.includes("chưa cấu hình")) {
-    return message;
+  if (isLlmProviderFailure(message)) {
+    return LLM_USER_ERROR_MSG;
   }
-  if (m.includes("rerank") || m.includes("model llm không khả dụng")) {
-    return message;
-  }
-  if (m.includes("không thể gọi mô hình ai")) {
-    return message;
-  }
-
   return toUserFacingMessage(new Error(message));
 }
 

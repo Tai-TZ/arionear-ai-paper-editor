@@ -119,6 +119,8 @@ import { LatexOutlineNav } from "@/components/latex-outline-nav";
 import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { useLatexHistory } from "@/lib/use-latex-history";
 import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
+import { LLM_USER_ERROR_MSG } from "@/lib/api/api-errors";
+import { createSmoothStream, type SmoothStreamController } from "@/lib/smooth-stream";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
@@ -394,6 +396,7 @@ function EditorPage() {
     getChatStreamProgressSnapshot(),
   );
   const chatAbortRef = useRef<AbortController | null>(null);
+  const chatSmoothStreamRef = useRef<SmoothStreamController | null>(null);
   const [selection, setSelection] = useState("");
   const [selectionPick, setSelectionPick] = useState<{
     context: EditorSelectionContext;
@@ -1127,6 +1130,13 @@ function EditorPage() {
       });
     };
 
+    chatSmoothStreamRef.current?.dispose();
+    chatSmoothStreamRef.current = createSmoothStream((displayed) => {
+      flushSync(() => {
+        patchAssistant((msg) => ({ ...msg, content: displayed, isError: false }));
+      });
+    });
+
     try {
       await streamChat(
         text,
@@ -1187,12 +1197,7 @@ function EditorPage() {
             const progress = getChatStreamProgressSnapshot();
             const isLogicAudit = progress.steps.some((s) => s.id.startsWith("logic-"));
             if (isLogicAudit) return;
-            flushSync(() => {
-              patchAssistant((msg) => ({
-                ...msg,
-                content: msg.content + delta,
-              }));
-            });
+            chatSmoothStreamRef.current?.push(delta);
           },
           onLogicSection: (section) => {
             flushSync(() => {
@@ -1201,6 +1206,7 @@ function EditorPage() {
             });
           },
           onDone: (result) => {
+            chatSmoothStreamRef.current?.flush();
             const progress = getChatStreamProgressSnapshot();
             const finalSteps = filterDisplaySteps(
               progress.steps.length ? progress.steps : [],
@@ -1210,6 +1216,7 @@ function EditorPage() {
               ...msg,
               content: result.response || (hasLogicReport ? "" : msg.content),
               isStreaming: false,
+              isError: false,
               aiSteps: filterDisplaySteps(msg.aiSteps ?? []).length
                 ? filterDisplaySteps(msg.aiSteps ?? [])
                 : finalSteps,
@@ -1288,22 +1295,27 @@ function EditorPage() {
             }
           },
           onError: (message) => {
+            chatSmoothStreamRef.current?.dispose();
+            chatSmoothStreamRef.current = null;
             patchAssistant((msg) => ({
               ...msg,
               content: message,
               isStreaming: false,
+              isError: true,
             }));
           },
         },
         abort.signal,
       );
     } finally {
+      chatSmoothStreamRef.current?.dispose();
+      chatSmoothStreamRef.current = null;
       finishChatStreamProgress();
       syncChatStreamProgress();
       setChatLoading(false);
       chatAbortRef.current = null;
       setMessages((prev) => {
-        const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
+        const idx = prev.findLastIndex((m) => m.role === "assistant");
         if (idx === -1) return prev;
         const next = [...prev];
         const msg = next[idx] as ChatMessage;
@@ -1315,12 +1327,16 @@ function EditorPage() {
           };
           return next;
         }
+        if (msg.isError && msg.content.trim()) {
+          next[idx] = { ...msg, isStreaming: false };
+          return next;
+        }
         next[idx] = {
           ...msg,
           isStreaming: false,
           content:
             msg.content.trim() ||
-            "Không nhận được phản hồi từ trợ lý. Vui lòng thử lại.",
+            LLM_USER_ERROR_MSG,
         };
         return next;
       });
@@ -2322,7 +2338,8 @@ function MobileChatSheet({
               />
             ) : (
               <p className="chat-dock-llm-hint">
-                Chưa có provider LLM — thêm <code>OPENROUTER_API_KEY</code> vào <code>.env</code>.
+                Chưa có provider LLM — thêm <code>OPENROUTER_API_KEY</code> hoặc <code>ZAI_API_KEY</code> vào{" "}
+                <code>.env</code>.
               </p>
             )}
           </div>

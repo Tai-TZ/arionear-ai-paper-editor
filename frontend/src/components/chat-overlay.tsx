@@ -23,6 +23,7 @@ import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/ch
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
 import { AiLoadingState } from "@/components/ai-loading-state";
+import { cn } from "@/lib/utils";
 
 export type ChatMessage = {
   role: "user" | "assistant";
@@ -33,6 +34,7 @@ export type ChatMessage = {
   streamLabel?: string;
   streamElapsedSec?: number | null;
   isStreaming?: boolean;
+  isError?: boolean;
 };
 
 export function hasChatHistory(messages: ChatMessage[]): boolean {
@@ -342,7 +344,6 @@ export function ChatDock({
         )}
 
         <div className="chat-dock-llm-bar">
-          <span className="chat-dock-llm-label">AI</span>
           {canUseLlm ? (
             <LlmSelector
               providers={providers!}
@@ -356,7 +357,7 @@ export function ChatDock({
             />
           ) : (
             <p className="chat-dock-llm-hint">
-              Thêm <code>OPENROUTER_API_KEY</code> (hoặc OpenAI/Anthropic) vào <code>.env</code> rồi restart
+              Thêm <code>OPENROUTER_API_KEY</code> (hoặc OpenAI/Anthropic/Z.AI) vào <code>.env</code> rồi restart
               backend.
             </p>
           )}
@@ -466,7 +467,7 @@ export function ChatMessages({
             (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
         );
         const showLoadingState = Boolean(
-          isStreamingAssistant && (hasLiveProgress || chatLoading) && !m.content,
+          isStreamingAssistant && hasLiveProgress && !m.content && !m.isError,
         );
 
         return (
@@ -481,7 +482,12 @@ export function ChatMessages({
                 />
               )}
               {m.content && (
-                <div className="chat-assistant-text">
+                <div
+                  className={cn(
+                    "chat-assistant-text",
+                    m.isError && "chat-assistant-text-error",
+                  )}
+                >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                 </div>
               )}

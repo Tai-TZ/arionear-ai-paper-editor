@@ -46,7 +46,8 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
 def is_reasoning_model(model: str | None) -> bool:
     if not model:
         return False
-    return "nemotron" in model.lower()
+    lowered = model.lower()
+    return "nemotron" in lowered or "deepseek-r1" in lowered
 
 
 def resolve_heavy_edit_model(
@@ -180,15 +181,18 @@ def _dedupe_models(models: list[str]) -> list[str]:
     return unique
 
 
+# Curated top-10 for academic LaTeX editing: free-first, plus cheap paid for quality.
 OPENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
     (OPENROUTER_NEMOTRON_MODEL, "Nemotron 3 Ultra · reasoning (free)"),
-    ("openai/gpt-4o-mini", "GPT-4o Mini · fast & cheap"),
+    ("deepseek/deepseek-r1:free", "DeepSeek R1 · reasoning (free)"),
+    ("meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B · balanced (free)"),
+    ("google/gemma-2-9b-it:free", "Gemma 2 9B · writing (free)"),
+    ("meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B · fast drafts (free)"),
+    ("openai/gpt-4o-mini", "GPT-4o Mini · fast & reliable"),
     ("google/gemini-2.5-flash-preview", "Gemini 2.5 Flash · fast"),
-    ("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku · fast"),
-    ("meta-llama/llama-3.3-70b-instruct", "Llama 3.3 70B · quality"),
+    ("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku · precise"),
     ("qwen/qwen-2.5-72b-instruct", "Qwen 2.5 72B · academic"),
-    ("meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B · free"),
-    ("google/gemma-2-9b-it:free", "Gemma 2 9B · free"),
+    ("deepseek/deepseek-chat-v3-0324", "DeepSeek V3 · quality"),
 ]
 
 OPENAI_MODEL_CATALOG: list[tuple[str, str]] = [
