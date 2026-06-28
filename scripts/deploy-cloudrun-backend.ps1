@@ -54,8 +54,15 @@ function Set-GcpSecret {
         Write-Warning "Skip secret '$Name' - empty value in .env"
         return
     }
-    $exists = gcloud secrets describe $Name --project $ProjectId 2>$null
-    if ($LASTEXITCODE -ne 0) { $exists = $false } else { $exists = $true }
+    $exists = $false
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        gcloud secrets describe $Name --project $ProjectId 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $exists = $true }
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
     $secretFile = Join-Path $env:TEMP "gcp-secret-$Name.txt"
     try {
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
@@ -75,6 +82,7 @@ function Set-GcpSecret {
 $directDb = Get-DotEnvValue "DIRECT_DATABASE_URL"
 $authSecret = Get-DotEnvValue "AUTH_SECRET_KEY"
 $openrouterKey = Get-DotEnvValue "OPENROUTER_API_KEY"
+$zaiKey = Get-DotEnvValue "ZAI_API_KEY"
 $googleSecret = Get-DotEnvValue "GOOGLE_CLIENT_SECRET"
 $smtpPassword = Get-DotEnvValue "SMTP_PASSWORD"
 $adminPassword = Get-DotEnvValue "ADMIN_GOD_PASSWORD"
@@ -94,6 +102,9 @@ Write-Host "`n=== Step 1: Upload secrets ===" -ForegroundColor Cyan
 Set-GcpSecret "direct-database-url" $directDb
 Set-GcpSecret "auth-secret-key" $authSecret
 Set-GcpSecret "openrouter-api-key" $openrouterKey
+if ($zaiKey) {
+    Set-GcpSecret "zai-api-key" $zaiKey
+}
 Set-GcpSecret "google-client-secret" $googleSecret
 Set-GcpSecret "smtp-password" $smtpPassword
 Set-GcpSecret "admin-god-password" $adminPassword
@@ -162,6 +173,9 @@ if ($langchainKey -and $langchainKey -ne "your-langsmith-key-here") {
 }
 if ($aiLogKey) {
     $secretBindings += "AI_LOG_API_KEY=ai-log-api-key:latest"
+}
+if ($zaiKey) {
+    $secretBindings += "ZAI_API_KEY=zai-api-key:latest"
 }
 
 $envVars = @(
