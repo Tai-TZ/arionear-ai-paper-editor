@@ -29,6 +29,7 @@ export type DefenseMessage = {
   content: string;
   isStreaming?: boolean;
   isCancelled?: boolean;
+  isError?: boolean;
 };
 
 export function countCompletedCouncilTurns(messages: DefenseMessage[]): number {
@@ -89,6 +90,17 @@ function MessageRow({
           <div className="defense-msg-user">{message.content}</div>
         </div>
       </div>
+    );
+  }
+
+  if (message.isError) {
+    return (
+      <article className="defense-msg defense-msg--error">
+        <div className="defense-msg-error-body">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+          <p>{message.content}</p>
+        </div>
+      </article>
     );
   }
 

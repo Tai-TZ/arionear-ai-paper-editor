@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileText, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { useLocale } from "@/components/locale-provider";
+import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-context";
 import {
   TemplateBackLink,
-  TemplateGalleryShell,
   TemplateOfficialBadge,
   TemplateTagList,
 } from "@/components/templates/template-gallery-shell";
@@ -25,6 +25,28 @@ export const Route = createFileRoute("/templates/$templateId/")({
   ssr: false,
   component: TemplateDetailPage,
 });
+
+function TemplateDetailFrame({ children }: { children: ReactNode }) {
+  const variant = useTemplatesLayoutVariant();
+
+  if (variant === "workspace") {
+    return (
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="projects-desk soft-scrollbar flex-1 overflow-y-auto">
+          <div className="projects-desk-inner template-detail-page">{children}</div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <article className="border-b-4 border-foreground newsprint-texture">
+      <div className="template-gallery-marketing template-detail-page mx-auto max-w-4xl px-4 py-12 lg:py-16">
+        {children}
+      </div>
+    </article>
+  );
+}
 
 function TemplateDetailPage() {
   const { templateId } = Route.useParams();
@@ -74,21 +96,21 @@ function TemplateDetailPage() {
 
   if (loading) {
     return (
-      <TemplateGalleryShell>
-        <div className="flex items-center justify-center gap-2 py-24 text-muted-foreground">
+      <TemplateDetailFrame>
+        <div className="template-gallery-state">
           <Loader2 className="h-5 w-5 animate-spin" />
           {t.loading}
         </div>
-      </TemplateGalleryShell>
+      </TemplateDetailFrame>
     );
   }
 
   if (error || !item) {
     return (
-      <TemplateGalleryShell>
+      <TemplateDetailFrame>
         <TemplateBackLink to="/templates" label={t.backToGallery} />
-        <p className="text-destructive">{error ?? "Not found"}</p>
-      </TemplateGalleryShell>
+        <p className="template-gallery-state template-gallery-state-error">{error ?? "Not found"}</p>
+      </TemplateDetailFrame>
     );
   }
 
@@ -99,23 +121,18 @@ function TemplateDetailPage() {
     : "—";
 
   return (
-    <TemplateGalleryShell>
+    <TemplateDetailFrame>
       <TemplateBackLink to="/templates" label={t.backToGallery} />
 
-      <div className="template-detail-grid grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="template-detail-grid">
         <div>
-          <h1 className="text-2xl font-bold leading-snug sm:text-3xl">
+          <h1 className="template-detail-title">
             {title}
             {item.is_official ? <TemplateOfficialBadge label={t.official} /> : null}
           </h1>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={onOpen}
-              disabled={opening}
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#3d9a5d] px-4 text-sm font-semibold text-white hover:bg-[#348a52] disabled:opacity-60"
-            >
+          <div className="template-detail-actions">
+            <button type="button" onClick={onOpen} disabled={opening} className="template-detail-primary-btn">
               {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
               {opening ? t.opening : t.openAsTemplate}
             </button>
@@ -123,32 +140,32 @@ function TemplateDetailPage() {
               <Link
                 to="/templates/$templateId/pdf"
                 params={{ templateId }}
-                className="inline-flex h-10 items-center rounded-md border border-foreground/20 bg-background px-4 text-sm font-medium hover:bg-muted"
+                className="template-detail-secondary-btn"
               >
                 {t.viewPdf}
               </Link>
             ) : null}
           </div>
 
-          <dl className="mt-8 space-y-4 text-sm">
+          <dl className="template-detail-meta">
             <div>
-              <dt className="font-semibold">{t.author}</dt>
-              <dd className="mt-1 text-muted-foreground">{item.author}</dd>
+              <dt>{t.author}</dt>
+              <dd>{item.author}</dd>
             </div>
             <div>
-              <dt className="font-semibold">{t.lastUpdated}</dt>
-              <dd className="mt-1 text-muted-foreground">{updated}</dd>
+              <dt>{t.lastUpdated}</dt>
+              <dd>{updated}</dd>
             </div>
             <div>
-              <dt className="font-semibold">{t.license}</dt>
-              <dd className="mt-1 text-muted-foreground">{item.license || "—"}</dd>
+              <dt>{t.license}</dt>
+              <dd>{item.license || "—"}</dd>
             </div>
             <div>
-              <dt className="font-semibold">{t.abstract}</dt>
-              <dd className="mt-1 whitespace-pre-wrap leading-relaxed text-muted-foreground">{abstract}</dd>
+              <dt>{t.abstract}</dt>
+              <dd className="template-detail-abstract">{abstract}</dd>
             </div>
             <div>
-              <dt className="mb-2 font-semibold">{t.tags}</dt>
+              <dt>{t.tags}</dt>
               <dd>
                 <TemplateTagList tags={item.tags} />
               </dd>
@@ -158,18 +175,12 @@ function TemplateDetailPage() {
 
         <aside className="template-detail-preview">
           {item.has_preview ? (
-            <img
-              src={templatePreviewUrl(item.id)}
-              alt=""
-              className="w-full rounded border border-border bg-white shadow-md"
-            />
+            <img src={templatePreviewUrl(item.id)} alt="" />
           ) : (
-            <div className="flex aspect-[3/4] items-center justify-center rounded border border-dashed border-border bg-muted text-sm text-muted-foreground">
-              Preview
-            </div>
+            <div className="template-catalog-cover-placeholder template-detail-preview-empty">Preview</div>
           )}
         </aside>
       </div>
-    </TemplateGalleryShell>
+    </TemplateDetailFrame>
   );
 }

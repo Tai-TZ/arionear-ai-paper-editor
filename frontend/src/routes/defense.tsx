@@ -361,10 +361,10 @@ function DefensePage() {
           const text = isDefenseQuotaError(message)
             ? formatDefenseQuotaError(message, t.chat)
             : message;
-          toast.error(text);
           setMessages((prev) => {
             const next = [...prev];
             if (next[next.length - 1]?.isStreaming) next.pop();
+            next.push({ role: "assistant", content: text, isError: true });
             return next;
           });
           setActivityText("");

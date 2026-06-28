@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { FolderOpen, Shield, UserCircle, BookOpen, Zap } from "lucide-react";
+import { FolderOpen, Shield, UserCircle, BookOpen, Zap, LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { useLocale } from "@/components/locale-provider";
 import { WorkspaceSidebarFooter } from "@/components/workspace/workspace-sidebar-footer";
@@ -11,10 +11,11 @@ import type { AuthUser } from "@/lib/auth-store";
 import { isAdminUser } from "@/lib/require-auth";
 import type { UserTier } from "@/lib/api/billing-api";
 
-export type WorkspaceNav = "projects" | "profile" | "plan" | "guide" | "admin";
+export type WorkspaceNav = "projects" | "templates" | "profile" | "plan" | "guide" | "admin";
 
 type WorkspaceSidebarLabels = {
   projects: string;
+  templates?: string;
   profile: string;
   plan?: string;
   planFree?: string;
@@ -204,6 +205,14 @@ export function WorkspaceSidebar({
           to="/projects"
           icon={FolderOpen}
           label={mergedLabels.projects}
+          onNavigate={onNavigate}
+        />
+        <NavItem
+          active={active === "templates"}
+          current={active === "templates"}
+          to="/templates"
+          icon={LayoutTemplate}
+          label={mergedLabels.templates ?? "Templates"}
           onNavigate={onNavigate}
         />
         <NavItem

@@ -7,8 +7,14 @@ export function templatesCopy(locale: UiLanguage) {
 const EN = {
   galleryTitle: "LaTeX templates",
   gallerySubtitle:
-    "LaTeX templates for journal articles, conference papers, theses, and more — curated for Arionear Paper IDE.",
-  searchPlaceholder: "Search templates…",
+    "Journal articles, conference papers, theses, and more — curated starters for Arionear Paper IDE.",
+  catalogueEyebrow: "Template catalogue",
+  editorsPick: "Editor's pick",
+  resultCountOne: "template",
+  resultCountMany: "templates",
+  filterAll: "All",
+  viewTemplate: "View template",
+  searchPlaceholder: "Search by title, venue, or keyword…",
   search: "Search",
   filtersAll: "All",
   filtersTemplates: "Templates",
@@ -40,8 +46,14 @@ const EN = {
 const VI = {
   galleryTitle: "Mẫu LaTeX",
   gallerySubtitle:
-    "Mẫu LaTeX cho bài tạp chí, hội nghị, luận văn và nhiều hơn — dành cho Paper IDE Arionear.",
-  searchPlaceholder: "Tìm mẫu…",
+    "Bài tạp chí, hội nghị, luận văn và nhiều hơn — mẫu khởi đầu dành cho Paper IDE Arionear.",
+  catalogueEyebrow: "Danh mục mẫu",
+  editorsPick: "Mẫu nổi bật",
+  resultCountOne: "mẫu",
+  resultCountMany: "mẫu",
+  filterAll: "Tất cả",
+  viewTemplate: "Xem mẫu",
+  searchPlaceholder: "Tìm theo tên, tạp chí hoặc từ khóa…",
   search: "Tìm",
   filtersAll: "Tất cả",
   filtersTemplates: "Mẫu",

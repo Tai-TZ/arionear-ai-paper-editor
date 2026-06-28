@@ -18,6 +18,7 @@ import {
 import { CompileLogPanel } from "@/components/compile-log-panel";
 import {
   computeFitScale,
+  collectPdfSearchMatches,
   extractPdfWordContext,
   findPageForQuery,
   loadPdfDocument,
@@ -27,13 +28,14 @@ import {
   renderPageTextLayer,
   renderPageToCanvas,
   type PdfPageRenderResult,
+  type PdfSearchMatch,
 } from "@/lib/pdf-renderer";
 import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
-import { clearPdfHighlights, highlightPdfTextLayer } from "@/lib/pdf-text-highlight";
+import { clearPdfHighlights, highlightPdfTextLayer, highlightPdfTextLayerOccurrence } from "@/lib/pdf-text-highlight";
 
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
 type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
@@ -249,8 +251,9 @@ export function PdfPreviewPanel({
   citationFocus = null,
 }: PdfPreviewPanelProps) {
   const { locale } = useLocale();
-  const t = editorCopy(locale);
+  const t = useMemo(() => editorCopy(locale), [locale]);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollToPageRef = useRef<(page: number) => void>(() => {});
   const linkService = useMemo(
     () => new PdfLinkService((page) => scrollToPageRef.current(page)),
@@ -266,6 +269,9 @@ export function PdfPreviewPanel({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchStatus, setSearchStatus] = useState<string | null>(null);
+  const [searchMatches, setSearchMatches] = useState<PdfSearchMatch[]>([]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
+  const [isSearching, setIsSearching] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState<boolean | null>(null);
   const [enginesInfo, setEnginesInfo] = useState<Partial<Record<string, boolean>>>({});
@@ -396,17 +402,116 @@ export function PdfPreviewPanel({
     setZoomMode(prev);
   };
 
-  const handleSearch = async () => {
-    if (!pdf || !searchQuery.trim()) return;
-    setSearchStatus("Searching…");
-    const page = await findPageForQuery(pdf, searchQuery, currentPage);
-    if (page) {
-      scrollToPage(page);
-      setSearchStatus(`Found on page ${page}`);
-    } else {
-      setSearchStatus("No matches");
-    }
+  const applySearchHighlight = useCallback(
+    async (matchIndex: number, matches: PdfSearchMatch[], query: string) => {
+      const match = matches[matchIndex];
+      if (!match) return;
+
+      scrollToPage(match.page);
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        const layer = viewport.querySelector(
+          `[data-page="${match.page}"] .pdf-preview-text-layer`,
+        );
+        if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
+
+        clearPdfHighlights(viewport);
+        const mark = highlightPdfTextLayerOccurrence(layer, query, match.occurrenceOnPage);
+        if (mark) {
+          mark.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+    },
+    [scrollToPage],
+  );
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchStatus(null);
+    setSearchMatches([]);
+    setActiveMatchIndex(-1);
+    if (viewportRef.current) clearPdfHighlights(viewportRef.current);
+  }, []);
+
+  const goToMatch = useCallback(
+    async (matchIndex: number, matches: PdfSearchMatch[], query: string) => {
+      if (matchIndex < 0 || matchIndex >= matches.length) return;
+      setActiveMatchIndex(matchIndex);
+      setSearchStatus(t.pdf.searchMatchOf(matchIndex + 1, matches.length));
+      await applySearchHighlight(matchIndex, matches, query);
+    },
+    [applySearchHighlight, t.pdf],
+  );
+
+  const runSearch = useCallback(
+    async (query: string, preferredIndex = 0) => {
+      if (!pdf || !query.trim()) {
+        setSearchMatches([]);
+        setActiveMatchIndex(-1);
+        setSearchStatus(null);
+        if (viewportRef.current) clearPdfHighlights(viewportRef.current);
+        return;
+      }
+
+      setIsSearching(true);
+      setSearchStatus(t.pdf.searching);
+      try {
+        const matches = await collectPdfSearchMatches(pdf, query);
+        setSearchMatches(matches);
+        if (!matches.length) {
+          setActiveMatchIndex(-1);
+          setSearchStatus(t.pdf.searchNoMatches);
+          if (viewportRef.current) clearPdfHighlights(viewportRef.current);
+          return;
+        }
+        const idx = Math.min(Math.max(0, preferredIndex), matches.length - 1);
+        await goToMatch(idx, matches, query);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [goToMatch, pdf, t.pdf],
+  );
+
+  const handleSearchNext = () => {
+    if (!searchMatches.length || !searchQuery.trim()) return;
+    const next = activeMatchIndex < 0 ? 0 : (activeMatchIndex + 1) % searchMatches.length;
+    void goToMatch(next, searchMatches, searchQuery);
   };
+
+  const handleSearchPrev = () => {
+    if (!searchMatches.length || !searchQuery.trim()) return;
+    const prev =
+      activeMatchIndex <= 0 ? searchMatches.length - 1 : activeMatchIndex - 1;
+    void goToMatch(prev, searchMatches, searchQuery);
+  };
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchOpen || !pdf) return;
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchMatches([]);
+      setActiveMatchIndex(-1);
+      setSearchStatus(null);
+      if (viewportRef.current) clearPdfHighlights(viewportRef.current);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void runSearch(query, 0);
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [searchOpen, searchQuery, pdf, runSearch]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -589,23 +694,65 @@ export function PdfPreviewPanel({
             </button>
           )}
           {!readOnly && searchOpen ? (
-            <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-1 rounded px-2 py-0.5">
+            <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-0.5 rounded px-1.5 py-0.5">
               <input
+                ref={searchInputRef}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleSearch();
-                  if (e.key === "Escape") setSearchOpen(false);
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (searchMatches.length) {
+                      if (e.shiftKey) handleSearchPrev();
+                      else handleSearchNext();
+                    } else {
+                      void runSearch(searchQuery, 0);
+                    }
+                  }
+                  if (e.key === "Escape") closeSearch();
                 }}
-                placeholder="Find in PDF…"
-                className="w-28 bg-transparent text-[11px] outline-none md:w-40"
+                placeholder={t.pdf.findInPdf}
+                className="w-28 bg-transparent text-[11px] outline-none md:w-36"
+                aria-label={t.pdf.findInPdf}
               />
-              <button type="button" onClick={() => setSearchOpen(false)} className="pdf-preview-toolbar-muted">
+              {searchMatches.length > 0 ? (
+                <span className="pdf-preview-toolbar-muted shrink-0 font-mono text-[10px]">
+                  {t.pdf.searchMatchOf(activeMatchIndex + 1, searchMatches.length)}
+                </span>
+              ) : searchQuery.trim() && searchStatus ? (
+                <span className="pdf-preview-toolbar-muted shrink-0 text-[10px]">
+                  {searchStatus}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                title={t.pdf.searchPrev}
+                onClick={handleSearchPrev}
+                disabled={!searchMatches.length || isSearching}
+                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                title={t.pdf.searchNext}
+                onClick={handleSearchNext}
+                disabled={!searchMatches.length || isSearching}
+                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
+              >
+                <ChevronRight className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={closeSearch}
+                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded"
+                aria-label={t.tools.close}
+              >
                 <X className="h-3 w-3" />
               </button>
             </div>
           ) : !readOnly ? (
-            <IconBtn title="Search" onClick={() => setSearchOpen(true)}>
+            <IconBtn title={t.pdf.search} onClick={() => setSearchOpen(true)} disabled={!pdf}>
               <Search className="pdf-preview-toolbar-muted h-3.5 w-3.5" />
             </IconBtn>
           ) : null}
@@ -722,12 +869,6 @@ export function PdfPreviewPanel({
           </IconBtn>
         </div>
       </footer>
-
-      {searchStatus && searchOpen && (
-        <div className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 rounded bg-[#333] px-3 py-1 text-[11px] text-white shadow">
-          {searchStatus}
-        </div>
-      )}
 
       <CompileLogPanel log={compileLog ?? ""} open={logOpen} onClose={() => setLogOpen(false)} />
 

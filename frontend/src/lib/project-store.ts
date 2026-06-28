@@ -14,6 +14,20 @@ export type ProjectFile = {
 
 export type LatexCompiler = "auto" | "pdflatex" | "xelatex" | "lualatex" | "latex";
 
+export type StoredChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  isError?: boolean;
+};
+
+export type ChatThread = {
+  id: string;
+  title: string;
+  messages: StoredChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type StoredProject = {
   id: string;
   name: string;
@@ -23,6 +37,7 @@ export type StoredProject = {
   compiler?: LatexCompiler;
   assets?: ProjectAsset[];
   logicAuditReport?: LogicAuditReport;
+  chatThreads?: ChatThread[];
   createdAt: number;
   updatedAt: number;
 };
@@ -42,7 +57,7 @@ const LATEX_SUPPORT_EXTENSIONS = new Set([
   ".cls",
   ".bst",
   ".sty",
-  ".bib",
+  // NOTE: .bib is intentionally excluded — it is a plain-text file edited in the code editor
 ]);
 
 const TEX_EXTENSIONS = new Set([".tex", ".latex"]);
@@ -205,6 +220,10 @@ export function isImageAssetFile(name: string) {
 export function isLatexSupportAssetFile(name: string) {
   const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
   return LATEX_SUPPORT_EXTENSIONS.has(ext);
+}
+
+export function isBibFile(name: string) {
+  return name.slice(name.lastIndexOf(".")).toLowerCase() === ".bib";
 }
 
 export function isBinaryProjectAsset(name: string) {
@@ -419,7 +438,7 @@ export function getCompilePayload(project: StoredProject) {
 
   const texAssets =
     normalized.files
-      ?.filter((f) => f.path !== mainFile && isTexFile(f.path))
+      ?.filter((f) => f.path !== mainFile && (isTexFile(f.path) || isBibFile(f.path)))
       .map((f) => ({
         name: f.path,
         dataUrl: textToDataUrl(f.content),

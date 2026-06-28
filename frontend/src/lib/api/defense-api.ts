@@ -1,5 +1,5 @@
 import { resolveApiBase } from "./base-url";
-import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
+import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
 import { getAccessToken } from "@/lib/auth-store";
 import type { LLMProvider } from "./academic";
 
@@ -294,10 +294,7 @@ export async function streamDefense(
   const url = `${API_BASE}/defense/stream`;
   const authToken = getAccessToken();
   const body = JSON.stringify(request);
-  const interruptedMsg =
-    request.locale === "en"
-      ? "Stream interrupted. Please try again."
-      : "Kết nối stream bị gián đoạn. Vui lòng thử lại.";
+  const interruptedMsg = streamInterruptedMessage(request.locale);
 
   if (typeof XMLHttpRequest !== "undefined") {
     await streamDefenseWithXhr(url, body, authToken, callbacks, signal, interruptedMsg);

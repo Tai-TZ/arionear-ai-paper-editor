@@ -1,6 +1,6 @@
 import { getAccessToken, logoutUser } from "@/lib/auth-store";
 import { resolveApiBase } from "@/lib/api/base-url";
-import { mapApiHttpError } from "@/lib/api/api-errors";
+import { mapApiHttpError, networkErrorMsg } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
 import type { LatexImportResult } from "@/lib/latex-import";
@@ -42,6 +42,9 @@ function toStoredProject(paper: PaperResponse): StoredProject {
   const compiler =
     typeof metadata.compiler === "string" ? (metadata.compiler as LatexCompiler) : undefined;
   const logicAuditReport = parseLogicAuditReport(metadata.logic_audit_report);
+  const chatThreads = Array.isArray(metadata.chat_threads)
+    ? (metadata.chat_threads as import("@/lib/project-store").ChatThread[])
+    : undefined;
   return {
     id: paper.id,
     name: paper.name,
@@ -51,6 +54,7 @@ function toStoredProject(paper: PaperResponse): StoredProject {
     mainFile,
     compiler,
     logicAuditReport,
+    chatThreads,
     createdAt: parseApiDate(paper.created_at),
     updatedAt: parseApiDate(paper.updated_at),
   };
@@ -83,9 +87,7 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error(
-      "Không kết nối được server. Kiểm tra backend đang chạy (uvicorn port 8000) rồi thử lại.",
-    );
+    throw new Error(networkErrorMsg());
   }
 
   if (res.status === 204) {
@@ -149,7 +151,7 @@ export async function createPaper(
 
 export async function updatePaper(
   id: string,
-  patch: Partial<Pick<StoredProject, "name" | "latex" | "files" | "mainFile" | "compiler">> & {
+  patch: Partial<Pick<StoredProject, "name" | "latex" | "files" | "mainFile" | "compiler" | "chatThreads">> & {
     assets?: ProjectAsset[];
     metadata?: Record<string, unknown>;
   },
@@ -163,12 +165,14 @@ export async function updatePaper(
   } else if (
     patch.files !== undefined ||
     patch.mainFile !== undefined ||
-    patch.compiler !== undefined
+    patch.compiler !== undefined ||
+    patch.chatThreads !== undefined
   ) {
     body.metadata = {
       ...(patch.files !== undefined ? { files: patch.files } : {}),
       ...(patch.mainFile !== undefined ? { mainFile: patch.mainFile } : {}),
       ...(patch.compiler !== undefined ? { compiler: patch.compiler } : {}),
+      ...(patch.chatThreads !== undefined ? { chat_threads: patch.chatThreads } : {}),
     };
   }
 

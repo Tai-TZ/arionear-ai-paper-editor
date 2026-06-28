@@ -1,5 +1,5 @@
 import { resolveApiBase } from "./base-url";
-import { mapApiHttpError, streamErrorMessage, toUserFacingMessage } from "./api-errors";
+import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
@@ -453,9 +453,7 @@ function streamChatWithXhr(
     const finish = () => {
       buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
       if (!failed && !isFinished() && !signal?.aborted) {
-        callbacks.onError(
-          streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
-        );
+        callbacks.onError(streamInterruptedMessage());
       }
       resolve();
     };
@@ -562,9 +560,7 @@ async function streamChatWithFetch(
 
   if (!isFinished()) {
     if (signal?.aborted) return;
-    callbacks.onError(
-      streamErrorMessage("Kết nối stream bị gián đoạn. Vui lòng thử lại."),
-    );
+        callbacks.onError(streamInterruptedMessage());
   }
   signal?.removeEventListener("abort", onAbort);
 }

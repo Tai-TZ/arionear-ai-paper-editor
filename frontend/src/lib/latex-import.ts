@@ -1,6 +1,7 @@
 import {
   detectMainTexFile,
   inferProjectName,
+  isBibFile,
   isBinaryProjectAsset,
   isImageAssetFile,
   isTexFile,
@@ -66,6 +67,7 @@ function shouldImportPath(path: string): boolean {
   const normalized = normalizeAssetName(path);
   if (!normalized || normalized.startsWith("__MACOSX/")) return false;
   if (isTexFile(normalized)) return true;
+  if (isBibFile(normalized)) return true;
   if (isBinaryProjectAsset(normalized)) return true;
   if (isImageAssetFile(normalized)) return true;
   return normalized.includes("/figures/") || normalized.includes("/images/");
@@ -82,7 +84,7 @@ export async function importLatexFileList(
     const path = fileRelativePath(file);
     if (!shouldImportPath(path)) continue;
 
-    if (isTexFile(path)) {
+    if (isTexFile(path) || isBibFile(path)) {
       texFiles.push({ path, content: await readFileAsText(file) });
       continue;
     }

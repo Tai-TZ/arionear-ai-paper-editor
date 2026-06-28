@@ -18,7 +18,7 @@ export type ProjectTreeNode = {
 
 function classifyPath(path: string): { kind: ProjectTreeFileKind; editable: boolean } {
   if (isTexFile(path)) return { kind: "tex", editable: true };
-  if (path.toLowerCase().endsWith(".bib")) return { kind: "bib", editable: false };
+  if (path.toLowerCase().endsWith(".bib")) return { kind: "bib", editable: true };
   if (isImageAssetFile(path)) return { kind: "image", editable: false };
   if (isLatexSupportAssetFile(path)) return { kind: "support", editable: false };
   return { kind: "other", editable: false };

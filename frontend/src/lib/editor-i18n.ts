@@ -24,6 +24,12 @@ export type EditorCopy = {
     importZip: string;
     emptyTree: string;
     fileActions: string;
+    newChat: string;
+    noChats: string;
+    defaultChatTitle: string;
+    renameChat: string;
+    deleteChat: string;
+    deleteChatConfirm: string;
   };
   assetPreview: {
     download: string;
@@ -53,6 +59,13 @@ export type EditorCopy = {
     emptyHint: string;
     compilerAuto: string;
     log: string;
+    findInPdf: string;
+    search: string;
+    searching: string;
+    searchNoMatches: string;
+    searchMatchOf: (current: number, total: number) => string;
+    searchPrev: string;
+    searchNext: string;
   };
   tools: {
     projectInfo: string;
@@ -176,6 +189,12 @@ const EN: EditorCopy = {
     importZip: "Import Overleaf ZIP",
     emptyTree: "No files yet. Import a ZIP or upload files.",
     fileActions: "File actions",
+    newChat: "New chat",
+    noChats: "No chats yet.",
+    defaultChatTitle: "New Chat",
+    renameChat: "Rename",
+    deleteChat: "Delete",
+    deleteChatConfirm: "Delete this chat?",
   },
   assetPreview: {
     download: "Download",
@@ -205,6 +224,13 @@ const EN: EditorCopy = {
     emptyHint: "Press Compile to generate a PDF preview with PDF.js.",
     compilerAuto: "Auto",
     log: "Log",
+    findInPdf: "Find in PDF…",
+    search: "Search",
+    searching: "Searching…",
+    searchNoMatches: "No matches",
+    searchMatchOf: (current, total) => `${current} of ${total}`,
+    searchPrev: "Previous match",
+    searchNext: "Next match",
   },
   tools: {
     projectInfo: "Project Info",
@@ -336,6 +362,12 @@ const VI: EditorCopy = {
     importZip: "Nhập ZIP Overleaf",
     emptyTree: "Chưa có tệp. Nhập ZIP Overleaf hoặc tải tệp lên.",
     fileActions: "Thao tác tệp",
+    newChat: "Chat mới",
+    noChats: "Chưa có cuộc trò chuyện.",
+    defaultChatTitle: "Chat mới",
+    renameChat: "Đổi tên",
+    deleteChat: "Xóa",
+    deleteChatConfirm: "Xóa cuộc trò chuyện này?",
   },
   assetPreview: {
     download: "Tải xuống",
@@ -365,6 +397,13 @@ const VI: EditorCopy = {
     emptyHint: "Nhấn Biên dịch để tạo bản xem trước PDF với PDF.js.",
     compilerAuto: "Tự động",
     log: "Nhật ký",
+    findInPdf: "Tìm trong PDF…",
+    search: "Tìm",
+    searching: "Đang tìm…",
+    searchNoMatches: "Không có kết quả",
+    searchMatchOf: (current, total) => `${current}/${total}`,
+    searchPrev: "Kết quả trước",
+    searchNext: "Kết quả sau",
   },
   tools: {
     projectInfo: "Thông tin dự án",

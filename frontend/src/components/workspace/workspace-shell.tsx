@@ -9,6 +9,7 @@ import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import type { ResearcherProfile } from "@/lib/researcher-profile";
 
 function workspaceNavFromPath(pathname: string): WorkspaceNav {
+  if (pathname.startsWith("/templates")) return "templates";
   if (pathname.startsWith("/profile")) return "profile";
   if (pathname.startsWith("/plan")) return "plan";
   if (pathname.startsWith("/guide")) return "guide";
