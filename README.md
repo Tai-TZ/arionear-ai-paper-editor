@@ -339,8 +339,12 @@ ruff check src tests
 | [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
 | [ROADMAP.md](./ROADMAP.md) | Lộ trình phase |
 | [eval/results/report.md](./eval/results/report.md) | Báo cáo đánh giá |
+| [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) | Gate 3 metrics (11 metrics vs baseline) |
 | [REPORT_GATE3.md](./REPORT_GATE3.md) | Gate 3 — production, eval, guardrails |
 | [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) | Guardrail 4 lớp |
+| [eval/results/guardrails.html](./eval/results/guardrails.html) | Báo cáo Guardrails (HTML) |
+| [eval/results/evaluation-metrics.html](./eval/results/evaluation-metrics.html) | Gate 3 metrics (HTML) |
+| [eval/results/cost-report.html](./eval/results/cost-report.html) | Cost report (HTML) |
 | [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book) | Hướng dẫn Arionear 10 chương |
 
 ---
@@ -358,10 +362,12 @@ bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you a
 
 ## Team
 
-| Thành viên | Vai trò |
-|------------|---------|
-| **Nguyễn Thành Tài** | Dev chính — full-stack, kiến trúc, CI |
-| **Đặng Hải Lộc** | Mentor (Arionear) |
+| Thành viên | MSSV |
+|------------|------|
+| **Nguyễn Trọng Nguyên** | *** |
+| **Nguyễn Thành Tài** | *** |
+| **Ngô Thị Ánh** | *** |
+
 
 ---
 

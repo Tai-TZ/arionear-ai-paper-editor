@@ -1,6 +1,8 @@
 # Guardrails — Arionear (Gate 3)
 
-Arionear implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production.
+Arionear implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production on Cloud Run.
+
+**Visual report (mentor):** [`eval/results/guardrails.html`](../eval/results/guardrails.html)
 
 ## Overview
 
@@ -8,96 +10,138 @@ Arionear implements a **4-layer guardrail stack** so AI assists expression witho
 flowchart LR
     L1[L1 Prompt constraint] --> L2[L2 Output validation]
     L2 --> L3[L3 Diff + Human gate]
-    L3 --> L4[L4 Audit log]
+    L3 --> L4[L4 Revision audit]
 ```
 
 | Layer | Mechanism | Location | User-visible? |
 |-------|-----------|----------|---------------|
 | **L1** | System prompts forbid inventing data, citations, results | `src/prompts/prompts.default.yaml` | No |
-| **L2** | Numeric drift, semantic length, scope validator, output sanitize | `src/services/guardrails/`, `edit_executor.py` | Warning flags in UI |
-| **L3** | All edits shown as diff; Accept/Reject required | `frontend/src/routes/editor.tsx`, `inline-suggestion.ts` | Yes |
-| **L4** | Revision history + audit on Accept/Reject | `session_store`, PostgreSQL `papers` | Tools → Versions |
+| **L2** | Numeric drift, semantic check, scope validator, output sanitize | `src/services/guardrails/`, `edit_executor.py` | Warning/error flags in UI |
+| **L3** | All edits shown as diff; Accept/Reject required | `frontend/src/routes/editor.tsx`, `inline-suggestion.ts`, `suggestion-panel.tsx` | Yes |
+| **L4** | Revision history + Accept/Reject audit in PostgreSQL | `src/db/paper_repository.py` → `suggestions` table | Tools → Versions |
+
+### Supplementary controls (not a separate layer)
+
+| Control | Purpose | Location |
+|---------|---------|----------|
+| **Logic audit** | Comment-only review — never rewrites manuscript | `prompts.default.yaml` (`logic` stage) |
+| **Paid model gate** | Disable chat input when a paid LLM is selected | `frontend` — `llm-model-tier.ts`, `chat-overlay.tsx` |
+| **Edit scope planner** | Prefer `\title`, section, selection over whole document | `src/services/edit_planner.py` |
 
 ---
 
 ## L1 — Prompt constraint
 
-Every agent stage (`style`, `edit`, `logic`, `debate_roles`, `edit_planner`) includes explicit prohibitions:
+Every agent stage (`style`, `edit`, `logic`, `debate_roles`, `edit_planner`, `paper_ide`) includes an **INTEGRITY GUARD** block:
 
-- Do not add numbers, experimental results, or citations not in the source
+- Do **not** invent numbers, experimental results, datasets, or citations
+- Do **not** change factual/numeric content unless the user explicitly requests it
 - Logic audit: **comment only** — no rewritten manuscript
-- Edit planner: prefer narrow scope (`\title`, section) over whole document
+- Edit planner: prefer narrow scope (`\title`, section, selection) over whole document
+
+**File:** `src/prompts/prompts.default.yaml` (see `paper_ide.system`, `style.system`, `edit.system`, `logic.system`).
 
 ---
 
 ## L2 — Output validation
 
+### Integrity strictness
+
+Configured per user profile / request (`relaxed` | `standard` | `strict`). Default: **`standard`**.
+
+| Strictness | Numeric drift (selection) | Numeric drift (document) | Blocks Accept? |
+|------------|---------------------------|--------------------------|----------------|
+| `relaxed` | warning | skipped | only on `severity=error` |
+| `standard` | warning | skipped | only on `severity=error` |
+| `strict` | error if new numbers | warning (≤3 new) | yes when error flags |
+
+Backend skips creating a revision record when `has_blocking_flags()` is true (`academic_nodes.py`).
+
 ### Integrity checks (`guardrails/integrity.py`)
 
-| Check | Trigger | Severity |
-|-------|---------|----------|
-| `numeric_drift` | New/changed numbers in selection edits | warning |
+| Check | Trigger | Typical severity (`standard`) |
+|-------|---------|------------------------------|
+| `numeric_drift` | New/changed numbers in snippet | warning |
 | `numeric_removed` | Numbers dropped from snippet | warning |
-| `semantic_drift` | Suggestion too short vs original (strict mode) | error (blocks) |
-| `length_explosion` | Suggestion much longer than scope | warning |
+| `semantic_drift` | Low similarity vs original (when threshold set) | warning / error in strict |
+| `length_expansion` | Suggestion > 2.5× original length | warning |
 
 ### Edit scope validator (`edit_executor.validate_proposed_edit`)
 
-Blocks unsafe edits before they reach the UI:
+Blocks unsafe edits **before** they reach the UI:
 
 - Title-related query + `document` scope → rejected
-- LaTeX command span too large → rejected
-- Full `\documentclass` leaked into selection replacement → rejected
+- LaTeX command span > 15% of file → rejected
+- LaTeX command block > 4000 chars → rejected
+- Full `\documentclass` / `\begin{document}` leaked into selection replacement → rejected
 
 ### Output sanitize (`guardrails/output_sanitize.py`)
 
-Strips LLM commentary and clamps full-document leakage when the target is a small selection.
+- Strips markdown commentary, meta lines (“Đã chỉnh sửa…”, bullet lists)
+- `clamp_selection_replacement()` prevents full-document leakage for small selections
 
 ---
 
 ## L3 — Differential display (Human gate)
 
-1. User asks Ario to edit
-2. Backend returns `original_text`, `replacement_text`, `selection_start/end`
-3. Editor shows inline diff (red delete / green insert)
-4. User **Accept** or **Reject** — no silent overwrite
+1. User asks Ario to edit (chat or Quick Edit)
+2. Backend returns `original_text`, `replacement_text`, `selection_start/end`, `integrity_flags`
+3. Editor shows **inline diff** (red delete / green insert) via `inline-suggestion.ts`
+4. `SuggestionPanel` shows flags; **Accept is disabled** when any flag has `severity=error`
+5. User **Accept** or **Reject** — no silent overwrite of `main.tex`
+
+Keyboard: **Ctrl+Enter** Accept · **Esc** Reject
 
 ---
 
-## L4 — Audit log
+## L4 — Revision audit
 
-On Accept:
+On every AI edit proposal (when not blocked by L2 errors):
 
-- `POST /api/v1/revisions/{session_id}/{revision_id}` records action
-- Paper metadata stores revision history
-- Enables AI contribution disclosure (Phase 3 export)
+1. Backend stores a pending revision in PostgreSQL (`suggestions` table via `DatabaseSessionStore`)
+2. User Accept or Reject → `POST /api/v1/revisions/{session_id}/{revision_id}` with action `accepted` | `rejected`
+3. Status updated on the suggestion record; visible under **Tools → Versions** in the editor
+
+> **Note:** The `audit_logs` table exists in the schema for future institution features; current Gate 3 audit trail uses the `suggestions` revision history.
 
 ---
 
 ## Eval evidence
 
-Run the Gate 3 eval harness:
-
 ```bash
-python eval/scripts/run_gate3_eval.py
-pytest tests/test_gate3_metrics.py -v
+# Guardrail cases (offline)
+python eval/scripts/run_gate3_eval.py --skip-live
+
+# Full production + LLM
+GATE3_API_URL=https://api.arionear.id.vn python eval/scripts/run_gate3_eval.py --live-llm
+
+# Regression
+pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
 ```
 
-See `eval/results/gate3_report.json` and `REPORT_GATE3.md`.
+| Artefact | Content |
+|----------|---------|
+| `eval/results/gate3_report.json` | Machine-readable results |
+| `eval/results/guardrails.html` | Visual report for mentor |
+| `eval/results/evaluation-metrics.html` | Metrics incl. guardrail pass rate |
+| `eval/datasets/gate3_guardrail_cases.json` | 4 guardrail test cases |
 
-### Example blocked cases
+**Gate 3 result:** `guardrail_test_pass_rate` = **1.00** (4/4 cases)
 
-| Case | Input | Expected |
-|------|-------|----------|
-| Numeric drift | `92.4` → `95.0` in abstract | Integrity flag |
-| Title scope | “sửa tiêu đề” + document plan | Validator blocks |
-| Title OK | “Đổi tên đề tài … EfficientNetV3” | Targets `\title{...}` only |
+### Verified cases
+
+| ID | Case | Expected | Result |
+|----|------|----------|--------|
+| GR-01 | `92.4` → `95.0` in snippet | `numeric_drift` flag | ✅ |
+| GR-02 | Paraphrase keeping `92.4%` | No flag | ✅ |
+| GR-03 | “sửa tiêu đề” + document scope plan | Validator blocks | ✅ |
+| GR-04 | “Đổi tên đề tài … EfficientNetV3” | Target `\title{...}` only | ✅ |
 
 ---
 
 ## Production notes
 
-- `APP_ENV=production` on Cloud Run
-- CORS locked to frontend URL
-- Compile runs in Docker image with TeX Live (consistent PDF output)
-- LLM keys only on server — never exposed to browser
+- `APP_ENV=production` on Cloud Run (`asia-east1`)
+- CORS locked to frontend URL (`arionear.id.vn`)
+- LLM API keys only on server (GCP Secret Manager) — never in browser
+- Integrity strictness persisted in user profile settings
