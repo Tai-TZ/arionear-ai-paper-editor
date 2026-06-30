@@ -26,6 +26,7 @@ from src.models.admin_schemas import (
     LlmProviderStatus,
 )
 from src.services.auth_service import is_god_admin, user_to_dict
+from src.services.llm import list_provider_catalog
 from src.services.llm_policy import (
     cost_rate_per_token,
     get_llm_limits_from_profile,
@@ -34,8 +35,6 @@ from src.services.llm_policy import (
     write_global_defaults,
 )
 from src.services.usage_tracking import effective_tokens_expr, resolved_user_id_expr
-
-from src.services.llm import list_provider_catalog
 
 
 def _iso(dt: datetime | None) -> str | None:
