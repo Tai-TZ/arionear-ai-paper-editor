@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-27 21:32:25 UTC",
+  "timestamp": "2026-06-29 16:01:04 UTC",
   "api_url": "https://api.arionear.id.vn",
   "frontend_url": "https://arionear.id.vn",
   "offline": {
@@ -163,12 +163,12 @@
     "health": {
       "status": 200,
       "latency_ms": [
-        229.3937000213191,
-        122.81649996293709,
-        138.1415000068955
+        207.55859999917448,
+        120.8178999950178,
+        137.99580000340939
       ],
-      "p50_ms": 138.1,
-      "p95_ms": 229.4,
+      "p50_ms": 138.0,
+      "p95_ms": 207.6,
       "body": {
         "status": "ok",
         "env": "production",
@@ -177,7 +177,7 @@
     },
     "compile_status": {
       "status": 200,
-      "latency_s": 0.112,
+      "latency_s": 0.147,
       "body": {
         "available": true,
         "engine": "/usr/bin/pdflatex",
@@ -193,13 +193,13 @@
       }
     },
     "compile_minimal": {
-      "status": 422,
-      "latency_s": 0.136,
-      "success": false,
-      "pdf_bytes": 0,
-      "error": null
+      "status": 200,
+      "latency_s": 0.476,
+      "success": true,
+      "pdf_bytes": 18372,
+      "error": ""
     },
-    "compile_success_rate": 0.0
+    "compile_success_rate": 1.0
   },
   "measured": {
     "intent_routing_accuracy": 1.0,
@@ -208,8 +208,8 @@
     "numeric_drift_detection_rate": 1.0,
     "chat_latency_p50_s": null,
     "style_latency_p50_s": null,
-    "compile_success_rate": 0.0,
-    "health_latency_p95_ms": 229.4,
+    "compile_success_rate": 1.0,
+    "health_latency_p95_ms": 207.6,
     "cost_per_active_user_month_usd": 1.2
   },
   "comparison": [
@@ -251,19 +251,19 @@
     },
     {
       "metric": "compile_success_rate",
-      "arionear": 0.0,
+      "arionear": 1.0,
       "baseline": 0.7,
       "unit": "ratio",
-      "delta": -0.7,
-      "improved_vs_baseline": false,
+      "delta": 0.3,
+      "improved_vs_baseline": true,
       "baseline_description": "Local MiKTeX without Docker TeX Live (Windows dev)"
     },
     {
       "metric": "health_latency_p95_ms",
-      "arionear": 229.4,
+      "arionear": 207.6,
       "baseline": 800,
       "unit": "milliseconds",
-      "delta": 570.6,
+      "delta": 592.4,
       "improved_vs_baseline": true,
       "baseline_description": "Cold-start serverless without warm instance"
     },
