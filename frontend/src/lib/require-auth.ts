@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import { getSession, isAuthenticated, type AuthUser } from "./auth-store";
+import { getSession, isAuthenticated, refreshSession, type AuthUser } from "./auth-store";
 
 function isClient() {
   return typeof window !== "undefined";
@@ -19,12 +19,22 @@ export function requireAuth() {
   }
 }
 
+/** Verify god-admin status with the API — do not trust cached session alone. */
+export async function verifyGodAdmin(): Promise<AuthUser | null> {
+  if (!isClient()) return null;
+  if (!isAuthenticated()) return null;
+  const user = await refreshSession();
+  return user?.is_god_admin === true ? user : null;
+}
+
 /** Redirect non-god-admin users away from admin routes. */
-export function requireAdmin() {
-  if (!isClient()) return;
+export async function requireAdmin() {
+  if (!isClient()) {
+    throw redirect({ to: "/signin" });
+  }
   requireAuth();
-  const user = getSession();
-  if (!user?.is_god_admin) {
+  const user = await verifyGodAdmin();
+  if (!user) {
     throw redirect({ to: "/projects" });
   }
 }

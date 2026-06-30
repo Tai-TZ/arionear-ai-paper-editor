@@ -71,60 +71,86 @@ const BUILTIN_ASSET_URLS: Record<string, string> = {
 const STORAGE_KEY = "arionear-projects";
 const DEFAULT_MAIN_FILE = "main.tex";
 
-export const SAMPLE_LATEX = `\\documentclass{article}
-\\usepackage{amsmath}
-\\usepackage{graphicx}
-\\usepackage[a4paper, margin=2.5cm]{geometry}
+export const SAMPLE_LATEX = `\\documentclass[journal]{IEEEtran}
 
-\\title{Lightweight Adapters for Biomedical NER}
-\\author{Author Name}
-\\date{\\today}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
 
 \\begin{document}
+
+\\title{Sample IEEE Journal Manuscript (IMRaD)}
+\\author{Author Name}
 
 \\maketitle
 
 \\begin{abstract}
-We present a transformer-based pipeline for low-resource biomedical named entity recognition.
-Our approach combines contrastive pre-training with adapter-based fine-tuning.
+This sample follows the IEEEtran journal layout with IMRaD sections.
+Use it to explore compile, preview, and Arionear editorial tools before replacing every placeholder with your own research content.
 \\end{abstract}
 
+\\begin{IEEEkeywords}
+IEEEtran, IMRaD, scientific writing, LaTeX, journal article.
+\\end{IEEEkeywords}
+
 \\section{Introduction}
-Biomedical NER remains challenging because labeled corpora are small and terminology is dense.
-Prior work has shown that domain-adaptive pre-training helps, but it is computationally heavy.
+Scientific manuscripts benefit from a predictable structure.
+The Introduction states the problem, prior work, and the contribution you intend to make in this paper.
 
 \\section{Methods}
-We use PubMedBERT as the backbone. Adapters are inserted in every transformer block with bottleneck dimension 64.
+Describe datasets, experimental setup, and evaluation metrics here.
+Keep procedures reproducible and aligned with the claims you will present in Results.
 
 \\section{Results}
-On BC5CDR-Chemical we obtain F1 of 92.4, on NCBI-Disease 88.1, and on JNLPBA 78.6.
+Report key findings with tables or figures as needed.
+Replace these placeholder sentences with measured outcomes from your study.
+
+\\section{Discussion}
+Interpret the Results, note limitations, and compare against related studies.
+Avoid introducing new empirical claims that are not supported in Results.
 
 \\section{Conclusion}
-Adapter-based fine-tuning with contrastive warm-up is a practical recipe for low-resource biomedical NER.
+Summarize contributions and outline practical next steps for readers and future work.
 
 \\end{document}`;
 
-export const BLANK_LATEX = `\\documentclass[11pt]{article}
-\\usepackage[margin=1in]{geometry}
+export const BLANK_LATEX = `\\documentclass[journal]{IEEEtran}
 
-% Core packages
-\\usepackage{amsmath, amssymb}
-\\usepackage{tikz-cd}
-\\usepackage{multicol}
-
-% Paragraphs
-\\setlength{\\parindent}{0pt}
-\\setlength{\\parskip}{1\\baselineskip}
-
-\\title{Untitled}
-\\author{Author Name}
-\\date{\\today}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
 
 \\begin{document}
 
+\\title{Untitled Manuscript}
+\\author{Author Name}
+
 \\maketitle
 
+\\begin{abstract}
+% TODO: Summarize objective, methods, and main results.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+% TODO: Add 3--5 keywords.
+\\end{IEEEkeywords}
+
 \\section{Introduction}
+% TODO: Background, objectives, and contributions.
+
+\\section{Methods}
+% TODO: Data, procedures, and evaluation setup.
+
+\\section{Results}
+% TODO: Present key findings (keep numbers factual).
+
+\\section{Discussion}
+% TODO: Interpret results and relate to prior work.
+
+\\section{Conclusion}
+% TODO: Summary and future work.
 
 \\end{document}`;
 

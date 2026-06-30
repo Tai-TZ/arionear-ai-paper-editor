@@ -36,6 +36,8 @@ def record_ai_usage(
     user_input: str,
     ai_output: str,
     tokens_used: int | None = None,
+    llm_provider: str | None = None,
+    llm_model: str | None = None,
 ) -> None:
     """Persist one AI interaction for admin usage / cost reporting."""
     if not db_is_ready():
@@ -58,6 +60,11 @@ def record_ai_usage(
             paper = db.query(Paper).filter(Paper.id == pid).first()
             if not paper:
                 return
+            metadata: dict[str, str] = {}
+            if llm_provider:
+                metadata["llm_provider"] = llm_provider
+            if llm_model:
+                metadata["llm_model"] = llm_model
             session = AiSession(
                 paper_id=pid,
                 user_id=paper.user_id,
@@ -65,6 +72,7 @@ def record_ai_usage(
                 user_input=input_text,
                 ai_output=output_text,
                 tokens_used=max(int(tokens), 0),
+                metadata_=metadata,
             )
             db.add(session)
     except Exception:

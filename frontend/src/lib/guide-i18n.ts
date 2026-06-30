@@ -12,7 +12,6 @@ export type GuideStep = {
 export type GuideDemoLabels = {
   projectsChrome: string;
   newBtn: string;
-  importBtn: string;
   editorChrome: string;
   files: string;
   source: string;
@@ -41,7 +40,6 @@ const EN: GuidePageContent = {
   demo: {
     projectsChrome: "Your Projects",
     newBtn: "+ New",
-    importBtn: "Import",
     editorChrome: "Editor · main.tex",
     files: "Files",
     source: "LaTeX",
@@ -61,7 +59,7 @@ const EN: GuidePageContent = {
       step: "01",
       title: "Create or import a project",
       description:
-        "Open Projects from the sidebar. Use + New for a blank or sample manuscript, or Import for a `.tex` file, folder, or Overleaf ZIP. Click a row to open the editor.",
+        "Open Projects from the sidebar. Use + New to start a blank or sample IEEEtran IMRaD manuscript, or import an Overleaf ZIP or project folder. Click a row to open the editor.",
     },
     {
       id: "editor",
@@ -108,7 +106,6 @@ const VI: GuidePageContent = {
   demo: {
     projectsChrome: "Dự án của bạn",
     newBtn: "+ Mới",
-    importBtn: "Nhập",
     editorChrome: "Editor · main.tex",
     files: "File",
     source: "LaTeX",
@@ -128,7 +125,7 @@ const VI: GuidePageContent = {
       step: "01",
       title: "Tạo hoặc nhập dự án",
       description:
-        "Mở Dự án từ sidebar. Dùng + Mới cho bản thảo trống hoặc mẫu, hoặc Nhập file `.tex`, thư mục, ZIP Overleaf. Click tên dự án để mở editor.",
+        "Mở Dự án từ sidebar. Dùng + Mới để tạo bản thảo IEEEtran IMRaD trống hoặc mẫu, hoặc nhập ZIP Overleaf / thư mục dự án. Click tên dự án để mở editor.",
     },
     {
       id: "editor",

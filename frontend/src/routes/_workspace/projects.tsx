@@ -6,10 +6,10 @@ import {
   List,
   ChevronDown,
   Plus,
-  Upload,
   FileText,
   Pencil,
   FolderOpen,
+  FileArchive,
   Sparkles,
   Trash2,
   Loader2,
@@ -19,7 +19,6 @@ import {
 import { refreshSession } from "@/lib/auth-store";
 import {
   SHOW_PROJECTS_IMPORT,
-  SHOW_PROJECTS_UPLOAD,
 } from "@/components/workspace/workspace-layout";
 import {
   createPaper,
@@ -49,6 +48,11 @@ import {
   type EditableProjectNameHandle,
 } from "@/components/editable-project-name";
 import { toast } from "sonner";
+import {
+  ProjectFormatNoticeDialog,
+  hasAcknowledgedProjectFormatNotice,
+  useProjectFormatNotice,
+} from "@/components/projects/project-format-notice-dialog";
 
 export const Route = createFileRoute("/_workspace/projects")({
   ssr: false,
@@ -57,7 +61,7 @@ export const Route = createFileRoute("/_workspace/projects")({
       { title: "Your Projects — Arionear" },
       {
         name: "description",
-        content: "Upload LaTeX manuscripts or start from a sample project before opening the editor.",
+        content: "Write IMRaD scientific papers in IEEE format, or import from Overleaf.",
       },
     ],
   }),
@@ -69,7 +73,6 @@ function ProjectsPage() {
   const { locale } = useLocale();
   const t = useMemo(() => projectsCopy(locale), [locale]);
   const workspace = useMemo(() => commonCopy(locale).workspace, [locale]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<StoredProject[]>([]);
@@ -81,7 +84,9 @@ function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
-  const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const { open: formatNoticeOpen, setOpen: setFormatNoticeOpen, runWithNotice, confirm: confirmFormatNotice, dismiss: dismissFormatNotice } =
+    useProjectFormatNotice();
+
   useEffect(() => {
     let cancelled = false;
 
@@ -111,6 +116,12 @@ function ProjectsPage() {
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
+
+  useEffect(() => {
+    if (loading || filtered.length > 0 || search.trim()) return;
+    if (hasAcknowledgedProjectFormatNotice()) return;
+    setFormatNoticeOpen(true);
+  }, [loading, filtered.length, search, setFormatNoticeOpen]);
 
   const openEditor = (projectId: string) => {
     if (!projectId.trim()) return;
@@ -145,7 +156,7 @@ function ProjectsPage() {
     setCreatingLabel(t.creatingSample);
     setNewMenuOpen(false);
     try {
-      const project = await createPaper("Biomedical NER (Sample)", SAMPLE_LATEX);
+      const project = await createPaper("IEEE IMRaD (Sample)", SAMPLE_LATEX);
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
@@ -159,7 +170,7 @@ function ProjectsPage() {
     setCreatingLabel(t.creatingBlank);
     setNewMenuOpen(false);
     try {
-      const project = await createPaper("New Project", BLANK_LATEX);
+      const project = await createPaper("IEEE IMRaD Project", BLANK_LATEX);
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
@@ -180,7 +191,6 @@ function ProjectsPage() {
     }
 
     setCreatingLabel(t.uploading);
-    setImportMenuOpen(false);
     setNewMenuOpen(false);
     try {
       const imported = await importLatexFileList(files);
@@ -198,7 +208,6 @@ function ProjectsPage() {
     if (!file) return;
     setCreatingLabel(t.importingZip);
     setCreatingDetail(t.importingZipDetail);
-    setImportMenuOpen(false);
     setNewMenuOpen(false);
     setLoadError(null);
     try {
@@ -249,14 +258,6 @@ function ProjectsPage() {
           detail={creatingDetail ?? undefined}
         />
       ) : null}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".tex,.latex,.png,.jpg,.jpeg,.gif,.webp,.svg,.pdf,.eps,.cls,.bst,.sty,.bib"
-        multiple
-        className="hidden"
-        onChange={handleUpload}
-      />
       <input
         ref={folderInputRef}
         type="file"
@@ -320,85 +321,72 @@ function ProjectsPage() {
               </button>
             </div>
 
-            {SHOW_PROJECTS_IMPORT && (
-              <span className="projects-header-divider" aria-hidden="true" />
-            )}
-
-            {SHOW_PROJECTS_IMPORT && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImportMenuOpen((v) => !v);
-                    setNewMenuOpen(false);
-                  }}
-                  disabled={!!creatingLabel}
-                  className="projects-header-btn"
-                >
-                  {t.importBtn}
-                  <ChevronDown className="h-3.5 w-3.5 opacity-70" strokeWidth={1.5} />
-                </button>
-                {importMenuOpen && (
-                  <div className="projects-menu absolute right-0 top-full z-20 mt-1 min-w-[10rem]">
-                    <button
-                      onClick={() => zipInputRef.current?.click()}
-                      className="projects-menu-item"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      {t.importZip}
-                    </button>
-                    <button
-                      onClick={() => folderInputRef.current?.click()}
-                      className="projects-menu-item"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      {t.importFolder}
-                    </button>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="projects-menu-item"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      {t.importTexFigures}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="projects-header-new relative">
               <button
                 type="button"
                 onClick={() => {
-                  setNewMenuOpen((v) => !v);
-                  setImportMenuOpen(false);
+                  if (newMenuOpen) {
+                    setNewMenuOpen(false);
+                    return;
+                  }
+                  runWithNotice(() => setNewMenuOpen(true));
                 }}
                 disabled={!!creatingLabel}
                 className="projects-header-btn projects-header-btn-primary"
+                aria-expanded={newMenuOpen}
+                aria-haspopup="menu"
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={2} />
                 {t.newBtn}
                 <ChevronDown className="h-3.5 w-3.5 opacity-80" strokeWidth={1.5} />
               </button>
               {newMenuOpen && (
-                <div className="projects-menu absolute right-0 top-full z-20 mt-1 min-w-[11rem]">
-                  <button onClick={handleCreateBlank} className="projects-menu-item">
+                <div className="projects-menu projects-menu-grouped absolute right-0 top-full z-20 mt-1 min-w-[11.5rem]">
+                  <p className="projects-menu-label">{t.menuCreate}</p>
+                  <button
+                    onClick={() => runWithNotice(() => void handleCreateBlank())}
+                    className="projects-menu-item"
+                  >
                     <FileText className="h-3.5 w-3.5" />
                     {t.blankProject}
                   </button>
-                  <button onClick={handleCreateSample} className="projects-menu-item">
+                  <button
+                    onClick={() => runWithNotice(() => void handleCreateSample())}
+                    className="projects-menu-item"
+                  >
                     <Sparkles className="h-3.5 w-3.5" />
                     {t.sampleProject}
                   </button>
-                  {SHOW_PROJECTS_UPLOAD && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="projects-menu-item"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      {t.uploadLatex}
-                    </button>
-                  )}
+                  {SHOW_PROJECTS_IMPORT ? (
+                    <>
+                      <div className="projects-menu-divider" role="separator" />
+                      <p className="projects-menu-label">{t.menuImport}</p>
+                      <button
+                        onClick={() =>
+                          runWithNotice(() => {
+                            setNewMenuOpen(false);
+                            zipInputRef.current?.click();
+                          })
+                        }
+                        className="projects-menu-item"
+                      >
+                        <FileArchive className="h-3.5 w-3.5" />
+                        {t.importZip}
+                      </button>
+                      <button
+                        onClick={() =>
+                          runWithNotice(() => {
+                            setNewMenuOpen(false);
+                            folderInputRef.current?.click();
+                          })
+                        }
+                        className="projects-menu-item"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        {t.importFolder}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -427,9 +415,8 @@ function ProjectsPage() {
             <EmptyProjects
               hasSearch={!!search.trim()}
               t={t}
-              onUpload={() => fileInputRef.current?.click()}
-              onSample={handleCreateSample}
-              onBlank={handleCreateBlank}
+              onSample={() => runWithNotice(() => void handleCreateSample())}
+              onBlank={() => runWithNotice(() => void handleCreateBlank())}
               disabled={!!creatingLabel}
             />
           ) : view === "list" ? (
@@ -479,6 +466,14 @@ function ProjectsPage() {
           </div>
         </div>
       </main>
+
+      <ProjectFormatNoticeDialog
+        open={formatNoticeOpen}
+        onConfirm={confirmFormatNotice}
+        onOpenChange={(next) => {
+          if (!next) dismissFormatNotice();
+        }}
+      />
     </>
   );
 }
@@ -486,14 +481,12 @@ function ProjectsPage() {
 function EmptyProjects({
   hasSearch,
   t,
-  onUpload,
   onSample,
   onBlank,
   disabled = false,
 }: {
   hasSearch: boolean;
   t: ReturnType<typeof projectsCopy>;
-  onUpload: () => void;
   onSample: () => void;
   onBlank: () => void;
   disabled?: boolean;
@@ -513,25 +506,12 @@ function EmptyProjects({
       <p>{t.emptyStartBody}</p>
 
       <div className="projects-empty-actions">
-        <button
-          type="button"
-          onClick={onUpload}
-          disabled={disabled || !SHOW_PROJECTS_UPLOAD}
-          className="projects-empty-card"
-          aria-disabled={!SHOW_PROJECTS_UPLOAD || disabled}
-        >
+        <button type="button" onClick={onBlank} disabled={disabled} className="projects-empty-card">
           <div className="icon-box">
-            <Upload className="h-5 w-5" strokeWidth={1.5} />
+            <FileText className="h-5 w-5" strokeWidth={1.5} />
           </div>
-          <h3>
-            {t.emptyUpload}
-            {!SHOW_PROJECTS_UPLOAD && <span className="projects-coming-soon">{t.emptyComingSoon}</span>}
-          </h3>
-          <p>
-            {SHOW_PROJECTS_UPLOAD
-              ? t.emptyUploadHint
-              : t.emptyUploadHintSoon}
-          </p>
+          <h3>{t.blankProject}</h3>
+          <p>{t.emptyBlankHint}</p>
         </button>
 
         <button type="button" onClick={onSample} disabled={disabled} className="projects-empty-card">
@@ -542,11 +522,6 @@ function EmptyProjects({
           <p>{t.emptySampleHint}</p>
         </button>
       </div>
-
-      <button type="button" onClick={onBlank} disabled={disabled} className="projects-empty-blank">
-        <FileText className="h-4 w-4" strokeWidth={1.5} />
-        {t.blankProject}
-      </button>
     </div>
   );
 }

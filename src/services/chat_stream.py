@@ -923,6 +923,8 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 user_input=input_text,
                 ai_output=output_text,
                 tokens_used=provider_tokens,
+                llm_provider=provider,
+                llm_model=model or "",
             )
 
         await tracker.complete(

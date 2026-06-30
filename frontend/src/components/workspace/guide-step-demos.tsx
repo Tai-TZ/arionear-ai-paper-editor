@@ -17,7 +17,6 @@ function ProjectsDemo({ d }: { d: GuideDemoLabels }) {
       <div className="guide-demo-body guide-demo-projects">
         <div className="guide-demo-projects-toolbar">
           <span className="guide-demo-pulse-btn">{d.newBtn}</span>
-          <span className="guide-demo-ghost-btn">{d.importBtn}</span>
         </div>
         <div className="guide-demo-projects-row guide-demo-row-active">
           <Skel className="guide-demo-skel-title" />

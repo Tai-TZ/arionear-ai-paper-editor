@@ -5,6 +5,16 @@ import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
+export class AdminApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AdminApiError";
+    this.status = status;
+  }
+}
+
 export type LlmLimits = {
   daily_token_max: number;
   monthly_cost_cap_usd: number;
@@ -49,6 +59,39 @@ export type AdminUsageSummary = {
   users_over_cost_cap: number;
 };
 
+export type AdminRecentUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  provider: string;
+  role: string;
+  created_at?: string | null;
+  last_active_at?: string | null;
+};
+
+export type AdminModelUsageRow = {
+  provider: string;
+  model: string;
+  session_count: number;
+  tokens: number;
+};
+
+export type AdminUserModelPreferenceRow = {
+  provider: string;
+  model: string;
+  user_count: number;
+};
+
+export type AdminOverviewResponse = {
+  summary: AdminUsageSummary;
+  new_users_1d: number;
+  new_users_7d: number;
+  new_users_30d: number;
+  recent_users: AdminRecentUserRow[];
+  session_model_usage: AdminModelUsageRow[];
+  user_model_preferences: AdminUserModelPreferenceRow[];
+};
+
 export type AdminCostReportRow = {
   user_id: string;
   name: string;
@@ -69,11 +112,17 @@ export type AdminCostReport = {
   rows: AdminCostReportRow[];
 };
 
+export type LlmModelOption = {
+  id: string;
+  label: string;
+};
+
 export type LlmProviderStatus = {
   id: string;
   label: string;
   configured: boolean;
   default_model: string;
+  models: LlmModelOption[];
 };
 
 export type LlmGlobalDefaults = {
@@ -124,7 +173,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* ignore */
     }
-    throw new Error(mapApiHttpError(res.status, detail));
+    throw new AdminApiError(mapApiHttpError(res.status, detail), res.status);
   }
 
   return res.json() as Promise<T>;
@@ -141,10 +190,20 @@ export async function fetchAdminUsageSummary(): Promise<AdminUsageSummary> {
   return fetchDedupe("admin:usage", () => adminFetch<AdminUsageSummary>("/admin/usage/summary"));
 }
 
-export async function fetchAdminCostReport(year: number, month: number): Promise<AdminCostReport> {
-  const key = `admin:cost:${year}-${month}`;
+export async function fetchAdminOverview(): Promise<AdminOverviewResponse> {
+  return fetchDedupe("admin:overview", () => adminFetch<AdminOverviewResponse>("/admin/overview"));
+}
+
+export async function fetchAdminCostReport(
+  year: number,
+  month: number,
+  includeUnused = false,
+): Promise<AdminCostReport> {
+  const key = `admin:cost:${year}-${month}:${includeUnused ? "all" : "used"}`;
   return fetchDedupe(key, () =>
-    adminFetch<AdminCostReport>(`/admin/usage/cost-report?year=${year}&month=${month}`),
+    adminFetch<AdminCostReport>(
+      `/admin/usage/cost-report?year=${year}&month=${month}&include_unused=${includeUnused}`,
+    ),
   );
 }
 

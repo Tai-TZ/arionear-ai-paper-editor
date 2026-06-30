@@ -71,6 +71,39 @@ class AdminUsageSummary(BaseModel):
     users_over_cost_cap: int
 
 
+class AdminRecentUserRow(BaseModel):
+    id: str
+    name: str
+    email: str
+    provider: str
+    role: str
+    created_at: str | None = None
+    last_active_at: str | None = None
+
+
+class AdminModelUsageRow(BaseModel):
+    provider: str
+    model: str
+    session_count: int
+    tokens: int
+
+
+class AdminUserModelPreferenceRow(BaseModel):
+    provider: str
+    model: str
+    user_count: int
+
+
+class AdminOverviewResponse(BaseModel):
+    summary: AdminUsageSummary
+    new_users_1d: int
+    new_users_7d: int
+    new_users_30d: int
+    recent_users: list[AdminRecentUserRow]
+    session_model_usage: list[AdminModelUsageRow]
+    user_model_preferences: list[AdminUserModelPreferenceRow]
+
+
 class AdminCostReportRow(BaseModel):
     user_id: str
     name: str
@@ -91,11 +124,17 @@ class AdminCostReport(BaseModel):
     rows: list[AdminCostReportRow]
 
 
+class LlmModelOption(BaseModel):
+    id: str
+    label: str
+
+
 class LlmProviderStatus(BaseModel):
     id: str
     label: str
     configured: bool
     default_model: str
+    models: list[LlmModelOption] = Field(default_factory=list)
 
 
 class LlmGlobalConfigResponse(BaseModel):
