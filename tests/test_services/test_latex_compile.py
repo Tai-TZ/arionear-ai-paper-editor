@@ -2,8 +2,21 @@
 
 from __future__ import annotations
 
+import shutil
+
+import pytest
+
 from src.models.schemas import CompileRequest
 from src.services import latex_compile as lc
+
+
+@pytest.fixture(autouse=True)
+def _clear_compile_workspaces():
+    yield
+    with lc._workspace_lock:
+        for workspace in lc._workspaces.values():
+            shutil.rmtree(workspace.path, ignore_errors=True)
+        lc._workspaces.clear()
 
 
 def test_detect_compiler_defaults_to_pdflatex():
@@ -95,6 +108,34 @@ def test_synctex_inverse_when_available():
     hit = lc.parse_synctex_inverse(result.synctex_base64, result.pdf_base64, 1, 200.0, 650.0, "main")
     assert hit is not None
     assert hit["line"] >= 1
+
+
+def test_max_direct_passes_simple_article():
+    latex = r"\documentclass{article}\begin{document}Hello\end{document}"
+    assert lc._max_direct_passes(latex) == 1
+
+
+def test_max_direct_passes_with_references():
+    latex = r"\documentclass{article}\begin{document}\label{sec:a}See \ref{sec:a}\end{document}"
+    assert lc._max_direct_passes(latex) == 2
+
+
+def test_max_direct_passes_with_bibliography():
+    latex = r"\documentclass{article}\begin{document}\cite{smith}\bibliography{refs}\end{document}"
+    assert lc._max_direct_passes(latex) == 0
+
+
+def test_assets_fingerprint_changes_with_asset_content():
+    from src.models.schemas import CompileAssetFile
+
+    a = [CompileAssetFile(name="a.tex", content_base64="ZGE=")]
+    b = [CompileAssetFile(name="a.tex", content_base64="ZGI=")]
+    assert lc._assets_fingerprint(a) != lc._assets_fingerprint(b)
+
+
+def test_workspace_cache_key_scopes_by_project():
+    assets_key = "abc123"
+    assert lc._workspace_cache_key("proj-1", assets_key) != lc._workspace_cache_key("proj-2", assets_key)
 
 
 def test_compile_minimal_document_when_pdflatex_available():

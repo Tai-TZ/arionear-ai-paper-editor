@@ -693,6 +693,7 @@ export async function compileLatex(
   options?: {
     mainFile?: string;
     compiler?: LatexCompiler;
+    cacheId?: string;
   },
 ): Promise<CompileResult> {
   return apiFetch("/compile", {
@@ -701,6 +702,7 @@ export async function compileLatex(
       latex,
       main_file: options?.mainFile ?? "main.tex",
       compiler: options?.compiler ?? "auto",
+      cache_id: options?.cacheId ?? null,
       assets: assets.map(
         (asset): CompileAssetPayload => ({
           name: asset.name,

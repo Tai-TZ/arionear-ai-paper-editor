@@ -1,29 +1,47 @@
-from src.services.llm import OPENROUTER_NEMOTRON_MODEL
 from src.services.logic_audit.config import (
+    ZAI_LOGIC_AUDIT_DEEP_MODEL,
+    ZAI_LOGIC_AUDIT_QUICK_MODEL,
+    logic_audit_engine_label,
     resolve_logic_audit_llm,
     select_logic_targets,
 )
 
 
-def test_resolve_logic_audit_quick_prefers_openrouter(monkeypatch):
+def test_resolve_logic_audit_quick_prefers_zai(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("LLM_PROVIDER", "openrouter")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("ZAI_API_KEY", "zai-test")
     provider, model = resolve_logic_audit_llm("quick", "openrouter")
-    assert provider == "openrouter"
-    assert model == "openai/gpt-4o-mini"
+    assert provider == "zai"
+    assert model == ZAI_LOGIC_AUDIT_QUICK_MODEL
 
 
-def test_resolve_logic_audit_deep_uses_nemotron(monkeypatch):
+def test_resolve_logic_audit_deep_uses_glm_quality(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("ZAI_API_KEY", "zai-test")
     provider, model = resolve_logic_audit_llm("deep", "openrouter")
-    assert provider == "openrouter"
-    assert model == OPENROUTER_NEMOTRON_MODEL
+    assert provider == "zai"
+    assert model == ZAI_LOGIC_AUDIT_DEEP_MODEL
+
+
+def test_logic_audit_engine_label():
+    assert logic_audit_engine_label("quick") == "GLM-4.7 Flash"
+    assert logic_audit_engine_label("deep") == "GLM-4.7"
+
+
+def test_persona_timeout_reads_settings(monkeypatch):
+    from src.config import get_settings
+    from src.services.logic_audit.debate import _persona_timeout_sec
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("LOGIC_AUDIT_PERSONA_TIMEOUT_SEC", "120")
+    assert _persona_timeout_sec("glm-4.7-flash") == 120.0
 
 
 def test_select_logic_targets_quick_defaults():

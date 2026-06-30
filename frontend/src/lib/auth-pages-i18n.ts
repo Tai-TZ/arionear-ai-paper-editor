@@ -67,6 +67,28 @@ type AuthPagesCopy = {
     dividerGoogle: string;
     alreadyHave: string;
     signIn: string;
+    fullNameLabel: string;
+    fullNamePlaceholder: string;
+    affiliationLabel: string;
+    affiliationPlaceholder: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    integrityPolicy: string;
+    continue: string;
+    acceptPolicyError: string;
+    passwordTooShort: string;
+    passwordTooLong: string;
+    passwordNeedsLetter: string;
+    passwordNeedsNumber: string;
+    strengthWeak: string;
+    strengthFair: string;
+    strengthGood: string;
+    strengthStrong: string;
+  };
+  sso: {
+    continueWithGoogle: string;
   };
   googleCallback: {
     pageTitle: string;
@@ -153,6 +175,29 @@ const EN: AuthPagesCopy = {
     dividerGoogle: "or continue with Google",
     alreadyHave: "Already have an account?",
     signIn: "Sign in",
+    fullNameLabel: "Full name",
+    fullNamePlaceholder: "Dr. Jane Doe",
+    affiliationLabel: "Affiliation",
+    affiliationPlaceholder: "VNU, MIT, …",
+    emailLabel: "Academic email",
+    emailPlaceholder: "name@university.edu",
+    passwordLabel: "Password",
+    passwordPlaceholder: "At least 8 characters, 1 letter & 1 number",
+    integrityPolicy:
+      "I agree to Arionear's editorial integrity policy — AI assists with language and structure; the author remains responsible for the science.",
+    continue: "Continue",
+    acceptPolicyError: "Please accept the editorial integrity policy to continue.",
+    passwordTooShort: "Password must be at least 8 characters.",
+    passwordTooLong: "Password must be at most 72 characters.",
+    passwordNeedsLetter: "Password must include at least one letter.",
+    passwordNeedsNumber: "Password must include at least one number.",
+    strengthWeak: "Weak",
+    strengthFair: "Fair",
+    strengthGood: "Good",
+    strengthStrong: "Strong",
+  },
+  sso: {
+    continueWithGoogle: "Continue with Google",
   },
   googleCallback: {
     pageTitle: "Signing in — Arionear",
@@ -239,6 +284,29 @@ const VI: AuthPagesCopy = {
     dividerGoogle: "hoặc tiếp tục với Google",
     alreadyHave: "Đã có tài khoản?",
     signIn: "Đăng nhập",
+    fullNameLabel: "Họ và tên",
+    fullNamePlaceholder: "TS. Nguyễn Văn A",
+    affiliationLabel: "Đơn vị công tác",
+    affiliationPlaceholder: "VNU, MIT, …",
+    emailLabel: "Email học thuật",
+    emailPlaceholder: "name@university.edu",
+    passwordLabel: "Mật khẩu",
+    passwordPlaceholder: "Tối thiểu 8 ký tự, 1 chữ cái & 1 số",
+    integrityPolicy:
+      "Tôi đồng ý với chính sách trung thực biên tập của Arionear — AI hỗ trợ ngôn ngữ và cấu trúc; tác giả vẫn chịu trách nhiệm về khoa học.",
+    continue: "Tiếp tục",
+    acceptPolicyError: "Vui lòng chấp nhận chính sách trung thực biên tập để tiếp tục.",
+    passwordTooShort: "Mật khẩu phải có ít nhất 8 ký tự.",
+    passwordTooLong: "Mật khẩu tối đa 72 ký tự.",
+    passwordNeedsLetter: "Mật khẩu phải có ít nhất một chữ cái.",
+    passwordNeedsNumber: "Mật khẩu phải có ít nhất một số.",
+    strengthWeak: "Yếu",
+    strengthFair: "Trung bình",
+    strengthGood: "Khá",
+    strengthStrong: "Mạnh",
+  },
+  sso: {
+    continueWithGoogle: "Tiếp tục với Google",
   },
   googleCallback: {
     pageTitle: "Đang đăng nhập — Arionear",

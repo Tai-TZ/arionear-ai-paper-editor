@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppLoadingScreenInner } from "@/components/app-loading-screen";
-import { applyLocale, getStoredLocale, readBootstrapLocale, type UiLanguage } from "@/lib/locale-store";
+import { applyLocale, getStoredLocale, type UiLanguage } from "@/lib/locale-store";
 import { applyTheme, getStoredTheme } from "@/lib/theme-store";
 import { commonCopy } from "@/lib/common-i18n";
 
@@ -17,8 +17,13 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 const BOOTSTRAP_EXIT_MS = 280;
 
-function ShellBootstrapScreen({ exiting }: { exiting: boolean }) {
-  const locale = readBootstrapLocale();
+function ShellBootstrapScreen({
+  exiting,
+  locale,
+}: {
+  exiting: boolean;
+  locale: UiLanguage;
+}) {
   const t = commonCopy(locale).shell;
   return (
     <AppLoadingScreenInner
@@ -65,7 +70,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   return (
     <LocaleContext.Provider value={value}>
       {phase !== "booting" ? children : null}
-      {phase !== "ready" ? <ShellBootstrapScreen exiting={phase === "exiting"} /> : null}
+      {phase !== "ready" ? (
+        <ShellBootstrapScreen exiting={phase === "exiting"} locale={locale} />
+      ) : null}
     </LocaleContext.Provider>
   );
 }

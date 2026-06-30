@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from src.config import LLMProvider, get_settings, normalize_llm_provider
-from src.services.llm import OPENROUTER_NEMOTRON_MODEL
 
 LogicAuditMode = str  # "quick" | "deep"
+
+ZAI_LOGIC_AUDIT_QUICK_MODEL = "glm-4.7-flash"
+ZAI_LOGIC_AUDIT_DEEP_MODEL = "glm-4.7"
 
 QUICK_DEFAULT_SECTION_KEYS = ("abstract", "introduction", "conclusion")
 QUICK_MAX_SECTIONS = 3
@@ -26,17 +28,19 @@ def resolve_logic_audit_llm(
     chat = normalize_llm_provider(chat_provider)
 
     if normalized_mode == "deep":
-        if settings.openrouter_api_key.strip():
-            return "openrouter", OPENROUTER_NEMOTRON_MODEL
+        if settings.zai_api_key.strip():
+            return "zai", ZAI_LOGIC_AUDIT_DEEP_MODEL
+        if settings.openai_api_key.strip():
+            return "openai", settings.openai_default_model
+        if settings.anthropic_api_key.strip():
+            return "anthropic", settings.anthropic_default_model
         if chat:
             return chat, None
-        return settings.llm_provider, OPENROUTER_NEMOTRON_MODEL
+        return settings.llm_provider, ZAI_LOGIC_AUDIT_DEEP_MODEL
 
-    # Quick — fast models first.
-    if settings.openrouter_api_key.strip():
-        return "openrouter", settings.openrouter_logic_audit_quick_model
+    # Quick — Z.AI GLM-4.7 Flash first.
     if settings.zai_api_key.strip():
-        return "zai", settings.zai_default_model
+        return "zai", ZAI_LOGIC_AUDIT_QUICK_MODEL
     if settings.openai_api_key.strip():
         return "openai", settings.openai_default_model
     if settings.anthropic_api_key.strip():
@@ -44,6 +48,12 @@ def resolve_logic_audit_llm(
     if chat:
         return chat, None
     return settings.llm_provider, None
+
+
+def logic_audit_engine_label(mode: str) -> str:
+    if (mode or "quick").strip().lower() == "deep":
+        return "GLM-4.7"
+    return "GLM-4.7 Flash"
 
 
 def _name_matches_filter(section_name: str, filters: list[str]) -> bool:

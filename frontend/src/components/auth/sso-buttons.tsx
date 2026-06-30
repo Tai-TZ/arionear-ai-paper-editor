@@ -1,5 +1,7 @@
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useLocale } from "@/components/locale-provider";
+import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { startGoogleOAuth } from "@/lib/auth-store";
 
 function GoogleIcon() {
@@ -34,6 +36,8 @@ export function AuthSsoButtons({
   remember?: boolean;
   returnTo?: string;
 }) {
+  const { locale } = useLocale();
+  const t = useMemo(() => authPagesCopy(locale).sso, [locale]);
   const [loading, setLoading] = useState(false);
 
   const handleGoogle = () => {
@@ -59,7 +63,7 @@ export function AuthSsoButtons({
       ) : (
         <GoogleIcon />
       )}
-      <span>Continue with Google</span>
+      <span>{t.continueWithGoogle}</span>
     </button>
   );
 }

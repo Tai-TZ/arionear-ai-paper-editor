@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -39,6 +43,19 @@ _WINDOWS_MIKTEX_BIN = (
     Path.home() / "AppData" / "Local" / "Programs" / "MiKTeX" / "miktex" / "bin" / "x64",
 )
 _LOG_LIMIT = 200_000
+_WORKSPACE_TTL_SEC = 2 * 60 * 60
+_WORKSPACE_MAX = 24
+_LATEX_INTERACTION = "batchmode"
+
+
+@dataclass
+class _CachedWorkspace:
+    path: Path
+    last_used: float
+
+
+_workspaces: dict[str, _CachedWorkspace] = {}
+_workspace_lock = threading.Lock()
 
 
 def _find_executable(name: str) -> str | None:
@@ -205,11 +222,95 @@ def _copy_latex_stubs(work_dir: Path, latex: str) -> None:
                 shutil.copy2(src, dest)
 
 
-def _miktex_env() -> dict[str, str]:
+def _miktex_env(*, allow_package_install: bool = True) -> dict[str, str]:
     env = os.environ.copy()
-    env["MIKTEX_ENABLE_INSTALLER"] = "1"
-    env["MIKTEX_ALLOW_UNATTENDED"] = "1"
+    if allow_package_install:
+        env["MIKTEX_ENABLE_INSTALLER"] = "1"
+        env["MIKTEX_ALLOW_UNATTENDED"] = "1"
+    else:
+        env["MIKTEX_ENABLE_INSTALLER"] = "0"
     return env
+
+
+def _assets_fingerprint(assets: list) -> str:
+    digest = hashlib.sha256()
+    for asset in sorted(assets, key=lambda item: item.name.lower()):
+        digest.update(asset.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(asset.content_base64.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _workspace_cache_key(cache_id: str | None, assets_key: str) -> str:
+    project = (cache_id or "").strip()
+    return f"{project}:{assets_key}" if project else assets_key
+
+
+def _prune_workspaces(now: float | None = None) -> None:
+    now = now or time.monotonic()
+    expired = [
+        key
+        for key, workspace in _workspaces.items()
+        if now - workspace.last_used > _WORKSPACE_TTL_SEC
+    ]
+    for key in expired:
+        workspace = _workspaces.pop(key)
+        shutil.rmtree(workspace.path, ignore_errors=True)
+
+    overflow = len(_workspaces) - _WORKSPACE_MAX
+    if overflow <= 0:
+        return
+    for key in sorted(_workspaces, key=lambda item: _workspaces[item].last_used)[:overflow]:
+        workspace = _workspaces.pop(key)
+        shutil.rmtree(workspace.path, ignore_errors=True)
+
+
+def _acquire_workspace(assets_key: str, assets: list) -> tuple[Path, bool]:
+    with _workspace_lock:
+        _prune_workspaces()
+        cached = _workspaces.get(assets_key)
+        if cached and cached.path.is_dir():
+            cached.last_used = time.monotonic()
+            return cached.path, False
+
+        work_dir = Path(tempfile.mkdtemp(prefix="arionear-latex-"))
+        _workspaces[assets_key] = _CachedWorkspace(path=work_dir, last_used=time.monotonic())
+        fresh = True
+
+    for asset in assets:
+        rel = _safe_asset_path(asset.name)
+        if rel is None:
+            continue
+        dest = work_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(_decode_asset_payload(asset.content_base64))
+
+    _mirror_figure_assets_to_root(work_dir)
+    return work_dir, fresh
+
+
+def _needs_full_toolchain(latex: str) -> bool:
+    if uses_biblatex(latex):
+        return True
+    if _extract_bib_files(latex):
+        return True
+    if _extract_cite_keys(latex):
+        return True
+    if re.search(r"\\printbibliography\b", latex):
+        return True
+    return False
+
+
+def _max_direct_passes(latex: str) -> int:
+    if _needs_full_toolchain(latex):
+        return 0
+    if re.search(
+        r"\\(?:label|ref|eqref|pageref|autoref|cref|Cref|tableofcontents|listoffigures|listoftables)\b",
+        latex,
+    ):
+        return 2
+    return 1
 
 
 def _extract_cite_keys(latex: str) -> set[str]:
@@ -412,7 +513,13 @@ def _jobname(main_file: str) -> str:
     return Path(main_file).stem or "main"
 
 
-def _run_subprocess(cmd: list[str], work_dir: Path, timeout: int = 600) -> tuple[int, str]:
+def _run_subprocess(
+    cmd: list[str],
+    work_dir: Path,
+    timeout: int = 600,
+    *,
+    allow_package_install: bool = True,
+) -> tuple[int, str]:
     result = subprocess.run(
         cmd,
         cwd=work_dir,
@@ -422,7 +529,7 @@ def _run_subprocess(cmd: list[str], work_dir: Path, timeout: int = 600) -> tuple
         errors="replace",
         timeout=timeout,
         check=False,
-        env=_miktex_env(),
+        env=_miktex_env(allow_package_install=allow_package_install),
     )
     log = (result.stdout or "") + (result.stderr or "")
     return result.returncode, log
@@ -440,42 +547,86 @@ def _latexmk_compiler_flag(compiler: str) -> list[str]:
     return ["-pdf"]
 
 
-def _run_latexmk(compiler: str, work_dir: Path, main_file: str) -> tuple[int, str]:
+def _run_latexmk(
+    compiler: str,
+    work_dir: Path,
+    main_file: str,
+    *,
+    allow_package_install: bool = True,
+) -> tuple[int, str]:
     latexmk = find_latexmk()
     if not latexmk:
         return -1, ""
     cmd = [
         latexmk,
         *_latexmk_compiler_flag(compiler),
-        "-interaction=nonstopmode",
+        f"-interaction={_LATEX_INTERACTION}",
         "-synctex=1",
         "-halt-on-error",
         main_file,
     ]
-    return _run_subprocess(cmd, work_dir, timeout=600)
+    return _run_subprocess(
+        cmd,
+        work_dir,
+        timeout=600,
+        allow_package_install=allow_package_install,
+    )
 
 
-def _run_tex_pass(compiler: str, engine: str, work_dir: Path, main_file: str) -> tuple[int, str]:
+def _run_tex_pass(
+    compiler: str,
+    engine: str,
+    work_dir: Path,
+    main_file: str,
+    *,
+    allow_package_install: bool = True,
+) -> tuple[int, str]:
     cmd = [
         engine,
-        "-interaction=nonstopmode",
+        f"-interaction={_LATEX_INTERACTION}",
         "-synctex=1",
         "--enable-installer",
         main_file,
     ]
-    return _run_subprocess(cmd, work_dir, timeout=600)
+    return _run_subprocess(
+        cmd,
+        work_dir,
+        timeout=600,
+        allow_package_install=allow_package_install,
+    )
 
 
-def _run_bibtex(work_dir: Path, jobname: str, bibtex: str | None = None) -> tuple[int, str]:
+def _run_bibtex(
+    work_dir: Path,
+    jobname: str,
+    bibtex: str | None = None,
+    *,
+    allow_package_install: bool = True,
+) -> tuple[int, str]:
     engine = bibtex or find_bibtex() or "bibtex"
-    return _run_subprocess([engine, jobname], work_dir, timeout=120)
+    return _run_subprocess(
+        [engine, jobname],
+        work_dir,
+        timeout=120,
+        allow_package_install=allow_package_install,
+    )
 
 
-def _run_biber(work_dir: Path, jobname: str) -> tuple[int, str]:
+def _run_biber(
+    work_dir: Path,
+    jobname: str,
+    *,
+    allow_package_install: bool = True,
+) -> tuple[int, str]:
     biber = find_biber()
     if not biber:
         return -1, "biber not found"
-    return _run_subprocess([biber, jobname], work_dir, timeout=180)
+    return _run_subprocess(
+        [biber, jobname],
+        work_dir,
+        timeout=180,
+        allow_package_install=allow_package_install,
+    )
 
 
 def _needs_rerun(log_text: str) -> bool:
@@ -489,11 +640,46 @@ def _needs_rerun(log_text: str) -> bool:
     return any(m in log_text for m in markers)
 
 
+def _direct_compile(
+    compiler: str,
+    work_dir: Path,
+    main_file: str,
+    passes: int,
+    *,
+    allow_package_install: bool = True,
+) -> list[str]:
+    logs: list[str] = []
+    engine = find_tex_engine(compiler)
+    if not engine or passes <= 0:
+        return logs
+
+    jobname = _jobname(main_file)
+    pdf_path = work_dir / f"{jobname}.pdf"
+
+    for _ in range(passes):
+        code, log = _run_tex_pass(
+            compiler,
+            engine,
+            work_dir,
+            main_file,
+            allow_package_install=allow_package_install,
+        )
+        logs.append(log)
+        if code != 0 and not pdf_path.is_file():
+            break
+        if not _needs_rerun(log):
+            break
+
+    return logs
+
+
 def _manual_compile(
     compiler: str,
     work_dir: Path,
     main_file: str,
     main_latex: str,
+    *,
+    allow_package_install: bool = True,
 ) -> list[str]:
     logs: list[str] = []
     engine = find_tex_engine(compiler)
@@ -506,12 +692,24 @@ def _manual_compile(
     needs_biber = uses_biblatex(main_latex)
 
     def tex_passes() -> None:
-        code, log = _run_tex_pass(compiler, engine, work_dir, main_file)
+        code, log = _run_tex_pass(
+            compiler,
+            engine,
+            work_dir,
+            main_file,
+            allow_package_install=allow_package_install,
+        )
         logs.append(log)
         if code != 0 and not (work_dir / f"{jobname}.pdf").exists():
             return
         if _needs_rerun(log):
-            code, log = _run_tex_pass(compiler, engine, work_dir, main_file)
+            code, log = _run_tex_pass(
+                compiler,
+                engine,
+                work_dir,
+                main_file,
+                allow_package_install=allow_package_install,
+            )
             logs.append(log)
 
     tex_passes()
@@ -519,10 +717,16 @@ def _manual_compile(
     if needs_biber:
         biber = find_biber()
         if biber:
-            code, log = _run_biber(work_dir, jobname)
+            code, log = _run_biber(work_dir, jobname, allow_package_install=allow_package_install)
             logs.append(log)
             for _ in range(2):
-                code, log = _run_tex_pass(compiler, engine, work_dir, main_file)
+                code, log = _run_tex_pass(
+                    compiler,
+                    engine,
+                    work_dir,
+                    main_file,
+                    allow_package_install=allow_package_install,
+                )
                 logs.append(log)
         else:
             logs.append("biblatex detected but biber is not installed.")
@@ -530,10 +734,21 @@ def _manual_compile(
     if needs_bibtex:
         bibtex = find_bibtex()
         if bibtex:
-            code, log = _run_bibtex(work_dir, jobname, bibtex)
+            code, log = _run_bibtex(
+                work_dir,
+                jobname,
+                bibtex,
+                allow_package_install=allow_package_install,
+            )
             logs.append(log)
             for _ in range(2):
-                code, log = _run_tex_pass(compiler, engine, work_dir, main_file)
+                code, log = _run_tex_pass(
+                    compiler,
+                    engine,
+                    work_dir,
+                    main_file,
+                    allow_package_install=allow_package_install,
+                )
                 logs.append(log)
 
     return logs
@@ -574,6 +789,55 @@ def _collect_all_tex_sources(main_latex: str, work_dir: Path, main_file: str) ->
     return "\n".join(combined)
 
 
+def _run_compile_attempts(
+    compiler: str,
+    work_dir: Path,
+    main_file: str,
+    all_tex: str,
+    *,
+    allow_package_install: bool,
+) -> list[str]:
+    logs: list[str] = []
+    jobname = _jobname(main_file)
+    pdf_path = work_dir / f"{jobname}.pdf"
+
+    direct_passes = _max_direct_passes(all_tex)
+    if direct_passes > 0:
+        logs.extend(
+            _direct_compile(
+                compiler,
+                work_dir,
+                main_file,
+                direct_passes,
+                allow_package_install=allow_package_install,
+            )
+        )
+        if pdf_path.is_file():
+            return logs
+
+    latexmk_code, latexmk_log = _run_latexmk(
+        compiler,
+        work_dir,
+        main_file,
+        allow_package_install=allow_package_install,
+    )
+    if latexmk_code >= 0 and latexmk_log:
+        logs.append(latexmk_log)
+
+    if not pdf_path.is_file():
+        logs.extend(
+            _manual_compile(
+                compiler,
+                work_dir,
+                main_file,
+                all_tex,
+                allow_package_install=allow_package_install,
+            )
+        )
+
+    return logs
+
+
 def compile_latex(request: CompileRequest) -> CompileResponse:
     main_file = request.main_file.strip() or "main.tex"
     compiler = detect_compiler(request.latex, request.compiler)
@@ -594,87 +858,100 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
     warnings: list[str] = []
     jobname = _jobname(main_file)
 
-    with tempfile.TemporaryDirectory(prefix="arionear-latex-") as tmp:
-        work_dir = Path(tmp)
-        asset_names = {Path(a.name).name for a in request.assets}
+    assets_key = _workspace_cache_key(
+        request.cache_id,
+        _assets_fingerprint(request.assets),
+    )
+    work_dir, fresh_workspace = _acquire_workspace(assets_key, request.assets)
+    allow_package_install = fresh_workspace
+    asset_names = {Path(a.name).name for a in request.assets}
 
-        for asset in request.assets:
-            rel = _safe_asset_path(asset.name)
-            if rel is None:
-                continue
-            dest = work_dir / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(_decode_asset_payload(asset.content_base64))
+    patched_latex, fallback_warnings = _force_apply_known_fallbacks(request.latex)
+    if fallback_warnings:
+        warnings.extend(fallback_warnings)
+        for cls_name in _DOCUMENTCLASS_FALLBACKS:
+            bogus = work_dir / f"{cls_name}.cls"
+            if bogus.is_file() and not _is_usable_cls_file(bogus):
+                bogus.unlink(missing_ok=True)
 
-        _mirror_figure_assets_to_root(work_dir)
+    _copy_support_files_to_root(work_dir)
 
-        patched_latex, fallback_warnings = _force_apply_known_fallbacks(request.latex)
-        if fallback_warnings:
-            warnings.extend(fallback_warnings)
-            for cls_name in _DOCUMENTCLASS_FALLBACKS:
-                bogus = work_dir / f"{cls_name}.cls"
-                if bogus.is_file() and not _is_usable_cls_file(bogus):
-                    bogus.unlink(missing_ok=True)
+    prepared = _prepare_latex_source(patched_latex, work_dir, asset_names)
+    prepared, class_warnings = _resolve_document_class(prepared, work_dir)
+    warnings.extend(class_warnings)
 
-        _copy_support_files_to_root(work_dir)
+    main_path = work_dir / main_file.replace("\\", "/")
+    main_path.parent.mkdir(parents=True, exist_ok=True)
+    main_path.write_text(prepared, encoding="utf-8")
 
-        prepared = _prepare_latex_source(patched_latex, work_dir, asset_names)
-        prepared, class_warnings = _resolve_document_class(prepared, work_dir)
-        warnings.extend(class_warnings)
+    _copy_latex_stubs(work_dir, prepared)
+    all_tex = _collect_all_tex_sources(prepared, work_dir, main_file)
+    _ensure_bibliography(work_dir, all_tex)
 
-        main_path = work_dir / main_file.replace("\\", "/")
-        main_path.parent.mkdir(parents=True, exist_ok=True)
-        main_path.write_text(prepared, encoding="utf-8")
+    logs.extend(
+        _run_compile_attempts(
+            compiler,
+            work_dir,
+            main_file,
+            all_tex,
+            allow_package_install=allow_package_install,
+        )
+    )
 
-        _copy_latex_stubs(work_dir, prepared)
-        all_tex = _collect_all_tex_sources(prepared, work_dir, main_file)
-        _ensure_bibliography(work_dir, all_tex)
+    pdf_path = work_dir / f"{jobname}.pdf"
+    if not pdf_path.is_file() and not fresh_workspace:
+        logs.extend(
+            _run_compile_attempts(
+                compiler,
+                work_dir,
+                main_file,
+                all_tex,
+                allow_package_install=True,
+            )
+        )
 
-        latexmk_code, latexmk_log = _run_latexmk(compiler, work_dir, main_file)
-        if latexmk_code >= 0 and latexmk_log:
-            logs.append(latexmk_log)
-
-        pdf_path = work_dir / f"{jobname}.pdf"
-        if not pdf_path.is_file():
-            logs.extend(_manual_compile(compiler, work_dir, main_file, all_tex))
-
-        if not pdf_path.is_file():
-            merged = "\n".join(logs)
-            missing_sty = _extract_missing_sty(merged)
-            if missing_sty and missing_sty not in _DROPPABLE_PACKAGES:
-                _DROPPABLE_PACKAGES.add(missing_sty)
-                warnings.append(f"Package `{missing_sty}` not available — removed for preview.")
-                retry_tex = _strip_droppable_packages(prepared)
-                main_path.write_text(retry_tex, encoding="utf-8")
-                logs.clear()
-                latexmk_code, latexmk_log = _run_latexmk(compiler, work_dir, main_file)
-                if latexmk_log:
-                    logs.append(latexmk_log)
-                if not pdf_path.is_file():
-                    logs.extend(_manual_compile(compiler, work_dir, main_file, retry_tex))
-
-        if not pdf_path.is_file():
-            merged_log = "\n".join(logs)
-            return CompileResponse(
-                success=False,
-                log=merged_log[-_LOG_LIMIT:],
-                error=_extract_latex_error(merged_log),
-                engine=compiler,
-                compiler=compiler,
+    if not pdf_path.is_file():
+        merged = "\n".join(logs)
+        missing_sty = _extract_missing_sty(merged)
+        if missing_sty and missing_sty not in _DROPPABLE_PACKAGES:
+            _DROPPABLE_PACKAGES.add(missing_sty)
+            warnings.append(f"Package `{missing_sty}` not available — removed for preview.")
+            retry_tex = _strip_droppable_packages(prepared)
+            main_path.write_text(retry_tex, encoding="utf-8")
+            all_tex = _collect_all_tex_sources(retry_tex, work_dir, main_file)
+            logs.clear()
+            logs.extend(
+                _run_compile_attempts(
+                    compiler,
+                    work_dir,
+                    main_file,
+                    all_tex,
+                    allow_package_install=True,
+                )
             )
 
-        synctex_b64 = _read_synctex_gz(work_dir, jobname)
+    if not pdf_path.is_file():
         merged_log = "\n".join(logs)
         return CompileResponse(
-            success=True,
-            pdf_base64=base64.b64encode(pdf_path.read_bytes()).decode("ascii"),
+            success=False,
             log=merged_log[-_LOG_LIMIT:],
+            error=_extract_latex_error(merged_log),
             engine=compiler,
             compiler=compiler,
-            warning="\n".join(warnings),
-            synctex_base64=synctex_b64,
-            main_file=main_file,
         )
+
+    synctex_b64 = _read_synctex_gz(work_dir, jobname)
+    merged_log = "\n".join(logs)
+    return CompileResponse(
+        success=True,
+        pdf_base64=base64.b64encode(pdf_path.read_bytes()).decode("ascii"),
+        log=merged_log[-_LOG_LIMIT:],
+        engine=compiler,
+        compiler=compiler,
+        warning="\n".join(warnings),
+        synctex_base64=synctex_b64,
+        main_file=main_file,
+    )
 
 
 def find_synctex() -> str | None:

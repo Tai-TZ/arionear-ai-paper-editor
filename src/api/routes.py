@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import subprocess
 
 from fastapi import APIRouter, HTTPException, Request
@@ -322,7 +323,7 @@ async def get_compile_status():
 @router.post("/compile", response_model=CompileResponse)
 async def compile_manuscript(body: CompileRequest):
     try:
-        result = compile_latex(body)
+        result = await asyncio.to_thread(compile_latex, body)
         return result
     except subprocess.TimeoutExpired as e:
         raise HTTPException(status_code=504, detail="LaTeX compilation timed out.") from e

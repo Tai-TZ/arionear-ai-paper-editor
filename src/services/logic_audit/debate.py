@@ -8,6 +8,7 @@ from collections.abc import Callable
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.config import get_settings
 from src.services.llm import (
     REASONING_MODEL_TEMPERATURE,
     extract_llm_stream_deltas,
@@ -29,15 +30,24 @@ PERSONA_LABELS: dict[str, str] = {
     "devil_advocate": "Devil's advocate",
 }
 
-PERSONA_TIMEOUT_DEFAULT_SEC = 30.0
-PERSONA_TIMEOUT_REASONING_SEC = 180.0
-SYNTH_TIMEOUT_REASONING_SEC = 180.0
+PERSONA_TIMEOUT_DEFAULT_SEC = 90.0
+PERSONA_TIMEOUT_REASONING_SEC = 240.0
+SYNTH_TIMEOUT_DEFAULT_SEC = 120.0
+SYNTH_TIMEOUT_REASONING_SEC = 240.0
 
 
 def _persona_timeout_sec(model: str | None) -> float:
+    settings = get_settings()
     if is_reasoning_model(model):
-        return PERSONA_TIMEOUT_REASONING_SEC
-    return PERSONA_TIMEOUT_DEFAULT_SEC
+        return settings.logic_audit_persona_timeout_reasoning_sec
+    return settings.logic_audit_persona_timeout_sec
+
+
+def _synth_timeout_sec(model: str | None) -> float:
+    settings = get_settings()
+    if is_reasoning_model(model):
+        return settings.logic_audit_synth_timeout_reasoning_sec
+    return settings.logic_audit_synth_timeout_sec
 
 
 def _resolve_llm_temperature(model: str | None, task_temp: float) -> float:
@@ -299,7 +309,7 @@ async def synthesize_perspectives(
         model=model,
         temperature=_resolve_llm_temperature(model, 0.1),
     )
-    timeout = SYNTH_TIMEOUT_REASONING_SEC if is_reasoning_model(model) else None
+    timeout = _synth_timeout_sec(model)
     messages = [SystemMessage(content=system), HumanMessage(content=user)]
     try:
         text = await _stream_llm_text(

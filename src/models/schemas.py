@@ -217,6 +217,11 @@ class CompileRequest(BaseModel):
     main_file: str = Field(default="main.tex", max_length=512)
     compiler: Literal["auto", "pdflatex", "xelatex", "lualatex", "latex"] = "auto"
     assets: list[CompileAssetFile] = Field(default_factory=list)
+    cache_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Stable project id so incremental compile workspaces do not leak across projects.",
+    )
 
 
 class CompileResponse(BaseModel):
