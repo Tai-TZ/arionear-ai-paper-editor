@@ -7,6 +7,7 @@ from src.api.deps import get_admin_user, get_db_session
 from src.db.models import User
 from src.models.admin_schemas import (
     AdminCostReport,
+    AdminOverviewResponse,
     AdminUsageSummary,
     AdminUserListResponse,
     AdminUserPatch,
@@ -16,6 +17,7 @@ from src.models.admin_schemas import (
     LlmGlobalDefaultsPatch,
 )
 from src.services.admin_service import (
+    get_admin_overview,
     get_cost_report,
     get_global_llm_config,
     get_usage_summary,
@@ -71,15 +73,24 @@ def admin_usage_summary(
     return get_usage_summary(db)
 
 
+@router.get("/overview", response_model=AdminOverviewResponse)
+def admin_overview(
+    _admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    return get_admin_overview(db)
+
+
 @router.get("/usage/cost-report", response_model=AdminCostReport)
 def admin_cost_report(
     year: int,
     month: int,
+    include_unused: bool = False,
     _admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db_session),
 ):
     try:
-        return get_cost_report(db, year=year, month=month)
+        return get_cost_report(db, year=year, month=month, include_unused=include_unused)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

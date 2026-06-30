@@ -228,6 +228,51 @@ def _model_options(
     ]
 
 
+def list_provider_catalog() -> list[dict]:
+    """Full provider + model catalog for admin (all providers, regardless of API keys)."""
+    settings = get_settings()
+    specs: list[tuple[str, str, str, list[tuple[str, str]], bool]] = [
+        (
+            "openai",
+            "OpenAI",
+            settings.openai_default_model,
+            OPENAI_MODEL_CATALOG,
+            bool(settings.openai_api_key.strip()),
+        ),
+        (
+            "anthropic",
+            "Anthropic (Claude)",
+            settings.anthropic_default_model,
+            ANTHROPIC_MODEL_CATALOG,
+            bool(settings.anthropic_api_key.strip()),
+        ),
+        (
+            "openrouter",
+            "OpenRouter",
+            settings.openrouter_default_model,
+            OPENROUTER_MODEL_CATALOG,
+            bool(settings.openrouter_api_key.strip()),
+        ),
+        (
+            "zai",
+            "Z.AI (GLM)",
+            settings.zai_default_model,
+            ZAI_MODEL_CATALOG,
+            bool(settings.zai_api_key.strip()),
+        ),
+    ]
+    return [
+        {
+            "id": provider_id,
+            "name": name,
+            "default_model": default_model,
+            "configured": configured,
+            "models": _model_options(catalog, default_model),
+        }
+        for provider_id, name, default_model, catalog, configured in specs
+    ]
+
+
 def list_providers() -> list[dict]:
     """Return configured providers for the frontend selector."""
     settings = get_settings()

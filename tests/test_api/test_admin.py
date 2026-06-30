@@ -79,6 +79,52 @@ async def test_god_admin_can_list_users(client, admin_db):
 
 
 @pytest.mark.asyncio
+async def test_admin_overview_endpoint(client, admin_db):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "god@test.local", "password": "GodAdmin123"},
+    )
+    token = login.json()["access_token"]
+    overview = await client.get(
+        "/api/v1/admin/overview",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert overview.status_code == 200
+    data = overview.json()
+    assert "summary" in data
+    assert data["summary"]["total_users"] >= 2
+    assert "new_users_1d" in data
+    assert "new_users_7d" in data
+    assert "recent_users" in data
+    assert "session_model_usage" in data
+    assert "user_model_preferences" in data
+
+
+@pytest.mark.asyncio
+async def test_admin_cost_report_excludes_unused_by_default(client, admin_db):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "god@test.local", "password": "GodAdmin123"},
+    )
+    token = login.json()["access_token"]
+    report = await client.get(
+        "/api/v1/admin/usage/cost-report?year=2099&month=1",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert report.status_code == 200
+    data = report.json()
+    assert data["rows"] == []
+    assert data["active_users_with_usage"] == 0
+
+    all_users = await client.get(
+        "/api/v1/admin/usage/cost-report?year=2099&month=1&include_unused=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert all_users.status_code == 200
+    assert len(all_users.json()["rows"]) >= 2
+
+
+@pytest.mark.asyncio
 async def test_admin_cost_report_endpoint(client, admin_db):
     login = await client.post(
         "/api/v1/auth/login",

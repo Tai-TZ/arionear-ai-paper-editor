@@ -10,11 +10,8 @@ import {
 import type { AuthUser } from "@/lib/auth-store";
 import type { ResearcherProfile } from "@/lib/researcher-profile";
 
-/** Set false to show Import in the projects header again. */
+/** Set false to hide import options inside the + New menu. */
 export const SHOW_PROJECTS_IMPORT = true;
-
-/** Set false to disable Upload LaTeX on the projects empty state. */
-export const SHOW_PROJECTS_UPLOAD = true;
 
 /** Set false to hide import/upload controls in the editor sidebar. */
 export const SHOW_EDITOR_IMPORT = true;

@@ -20,6 +20,10 @@ import { getSession } from "@/lib/auth-store";
 import { editorEntryPath } from "@/lib/require-auth";
 import { templatesCopy } from "@/lib/templates-i18n";
 import { markEditorEntryTransition } from "@/components/editor-entry-splash";
+import {
+  ProjectFormatNoticeDialog,
+  useProjectFormatNotice,
+} from "@/components/projects/project-format-notice-dialog";
 
 export const Route = createFileRoute("/templates/$templateId/")({
   ssr: false,
@@ -57,6 +61,30 @@ function TemplateDetailPage() {
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { open: formatNoticeOpen, runWithNotice, confirm: confirmFormatNotice, dismiss: dismissFormatNotice } =
+    useProjectFormatNotice();
+
+  const openProject = useCallback(async () => {
+    setOpening(true);
+    try {
+      const { paper_id } = await openTemplateAsProject(templateId);
+      markEditorEntryTransition();
+      navigate({ to: "/editor", search: { projectId: paper_id } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open template.");
+    } finally {
+      setOpening(false);
+    }
+  }, [navigate, templateId]);
+
+  const onOpen = useCallback(() => {
+    if (!getSession()) {
+      toast.message(t.signInToOpen);
+      navigate({ to: editorEntryPath() });
+      return;
+    }
+    runWithNotice(() => void openProject());
+  }, [navigate, openProject, runWithNotice, t.signInToOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,24 +103,6 @@ function TemplateDetailPage() {
       cancelled = true;
     };
   }, [templateId]);
-
-  const onOpen = useCallback(async () => {
-    if (!getSession()) {
-      toast.message(t.signInToOpen);
-      navigate({ to: editorEntryPath() });
-      return;
-    }
-    setOpening(true);
-    try {
-      const { paper_id } = await openTemplateAsProject(templateId);
-      markEditorEntryTransition();
-      navigate({ to: "/editor", search: { projectId: paper_id } });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not open template.");
-    } finally {
-      setOpening(false);
-    }
-  }, [navigate, t.signInToOpen, templateId]);
 
   if (loading) {
     return (
@@ -121,10 +131,11 @@ function TemplateDetailPage() {
     : "—";
 
   return (
-    <TemplateDetailFrame>
-      <TemplateBackLink to="/templates" label={t.backToGallery} />
+    <>
+      <TemplateDetailFrame>
+        <TemplateBackLink to="/templates" label={t.backToGallery} />
 
-      <div className="template-detail-grid">
+        <div className="template-detail-grid">
         <div>
           <h1 className="template-detail-title">
             {title}
@@ -181,6 +192,15 @@ function TemplateDetailPage() {
           )}
         </aside>
       </div>
-    </TemplateDetailFrame>
+      </TemplateDetailFrame>
+
+      <ProjectFormatNoticeDialog
+        open={formatNoticeOpen}
+        onConfirm={confirmFormatNotice}
+        onOpenChange={(next) => {
+          if (!next) dismissFormatNotice();
+        }}
+      />
+    </>
   );
 }

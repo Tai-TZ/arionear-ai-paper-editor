@@ -292,7 +292,7 @@ def run_live_probes(api_base: str, *, live_llm: bool) -> dict[str, Any]:
         "POST",
         f"{v1}/compile",
         {
-            "latex_content": MINIMAL_COMPILE_LATEX,
+            "latex": MINIMAL_COMPILE_LATEX,
             "main_file": "main.tex",
         },
         timeout=180,

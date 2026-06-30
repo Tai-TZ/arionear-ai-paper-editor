@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Brain, Coins, FileStack, Gauge, LogOut, Shield, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useLocale } from "@/components/locale-provider";
+import { adminCopy } from "@/lib/admin-i18n";
 import { initialsFromName } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";
 
@@ -15,15 +17,15 @@ type AdminSidebarProps = {
   className?: string;
 };
 
-const NAV_ITEMS: { id: AdminNavTab; label: string; icon: typeof Gauge }[] = [
-  { id: "overview", label: "Overview", icon: Gauge },
-  { id: "users", label: "Users & Quotas", icon: Users },
-  { id: "cost", label: "Cost Report", icon: Coins },
-  { id: "llm", label: "LLM Policy", icon: Brain },
-  { id: "templates", label: "Templates", icon: FileStack },
+const NAV_ITEMS: { id: AdminNavTab; icon: typeof Gauge }[] = [
+  { id: "overview", icon: Gauge },
+  { id: "users", icon: Users },
+  { id: "cost", icon: Coins },
+  { id: "llm", icon: Brain },
+  { id: "templates", icon: FileStack },
 ];
 
-function AdminIdentityCard({ user }: { user: AuthUser }) {
+function AdminIdentityCard({ user, godAdminLabel }: { user: AuthUser; godAdminLabel: string }) {
   return (
     <div className="admin-sidebar-identity">
       <div className="flex items-center gap-2.5">
@@ -41,7 +43,7 @@ function AdminIdentityCard({ user }: { user: AuthUser }) {
       </div>
       <span className="admin-sidebar-role-badge">
         <Shield className="h-3 w-3" strokeWidth={1.5} />
-        God Admin
+        {godAdminLabel}
       </span>
     </div>
   );
@@ -55,25 +57,28 @@ export function AdminSidebar({
   onNavigate,
   className,
 }: AdminSidebarProps) {
+  const { locale } = useLocale();
+  const t = adminCopy(locale);
+
   return (
     <aside className={`admin-sidebar flex h-full w-56 shrink-0 flex-col lg:w-60${className ? ` ${className}` : ""}`}>
       <div className="admin-sidebar-topbar flex shrink-0 flex-col justify-center px-4">
         <Link to="/" className="admin-brand">
           Arionear
         </Link>
-        <p className="admin-eyebrow mt-1">Admin Console</p>
+        <p className="admin-eyebrow mt-1">{t.consoleEyebrow}</p>
       </div>
 
       <div className="px-3 pt-3">
         {user ? (
-          <AdminIdentityCard user={user} />
+          <AdminIdentityCard user={user} godAdminLabel={t.godAdmin} />
         ) : (
-          <div className="admin-sidebar-identity text-xs opacity-70">Platform operator</div>
+          <div className="admin-sidebar-identity text-xs opacity-70">{t.platformOperator}</div>
         )}
       </div>
 
       <nav className="admin-nav mt-2 px-3" aria-label="Admin navigation">
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+        {NAV_ITEMS.map(({ id, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -84,7 +89,7 @@ export function AdminSidebar({
             }}
           >
             <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-            {label}
+            {t.tabs[id]}
           </button>
         ))}
       </nav>
@@ -92,7 +97,7 @@ export function AdminSidebar({
       <div className="mt-auto border-t border-[color:var(--admin-sidebar-border)] p-3">
         <button type="button" onClick={onSignOut} className="admin-signout w-full">
           <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Sign out
+          {t.signOut}
         </button>
       </div>
     </aside>
