@@ -137,6 +137,8 @@ export type EditorCopy = {
     intro: string;
     modeQuick: string;
     modeDeep: string;
+    modeQuickSubtitle: string;
+    modeDeepSubtitle: string;
     scanFull: string;
     scanFullHintQuick: (count: number) => string;
     scanFullHintDeep: (count: number) => string;
@@ -339,21 +341,23 @@ const EN: EditorCopy = {
   logicAudit: {
     intro:
       "Comment-only — does not auto-edit the manuscript. Audit modes use a dedicated engine, independent of the chat provider.",
-    modeQuick: "Quick (OpenRouter)",
-    modeDeep: "Deep (Nemotron 3 Ultra)",
+    modeQuick: "Quick (Z.AI GLM-4.7 Flash)",
+    modeDeep: "Deep (GLM-4.7)",
+    modeQuickSubtitle: "Z.AI · GLM-4.7 Flash",
+    modeDeepSubtitle: "Z.AI · GLM-4.7",
     scanFull: "Scan entire manuscript",
     scanFullHintQuick: (count) =>
       `All sections in the manuscript (max 20 parts, currently ${count}).`,
     scanFullHintDeep: (count) =>
-      `All sections — deep Nemotron pass (max 8 parts, currently ${count}).`,
+      `All sections — deep GLM-4.7 pass (max 8 parts, currently ${count}).`,
     hintQuickSelected:
-      "Quick scan of 2–3 sections via OpenRouter — ~2–3 min. Independent of chat provider.",
+      "Quick scan of 2–3 sections via GLM-4.7 Flash — ~2–3 min. Independent of chat provider.",
     hintDeepSelected:
-      "Deep scan of 1 section via Nemotron 3 Ultra — ~3–5 min. Independent of chat provider.",
+      "Deep scan of 1 section via GLM-4.7 — ~3–5 min. Independent of chat provider.",
     hintQuickFull:
-      "Full-manuscript scan (max 20 sections) via OpenRouter — usually ~5–10 min.",
+      "Full-manuscript scan (max 20 sections) via GLM-4.7 Flash — usually ~5–10 min.",
     hintDeepFull:
-      "Full-manuscript deep scan (max 8 sections) via Nemotron 3 Ultra — may take 10–20 min.",
+      "Full-manuscript deep scan (max 8 sections) via GLM-4.7 — may take 10–20 min.",
     pickOneSection: "Pick 1 section",
     pickSections: "Pick sections to scan",
     selectAll: "Select all",
@@ -554,21 +558,23 @@ const VI: EditorCopy = {
   logicAudit: {
     intro:
       "Chỉ nhận xét — không tự sửa bản thảo. Chế độ audit dùng engine riêng, không phụ thuộc provider trong chat.",
-    modeQuick: "Nhanh (OpenRouter)",
-    modeDeep: "Sâu (Nemotron 3 Ultra)",
+    modeQuick: "Nhanh (Z.AI GLM-4.7 Flash)",
+    modeDeep: "Sâu (GLM-4.7)",
+    modeQuickSubtitle: "Z.AI · GLM-4.7 Flash",
+    modeDeepSubtitle: "Z.AI · GLM-4.7",
     scanFull: "Quét toàn bộ bài",
     scanFullHintQuick: (count) =>
       `Tất cả section trong bản thảo (tối đa 20 phần, hiện có ${count}).`,
     scanFullHintDeep: (count) =>
-      `Tất cả section — Nemotron sâu (tối đa 8 phần, hiện có ${count}).`,
+      `Tất cả section — GLM-4.7 sâu (tối đa 8 phần, hiện có ${count}).`,
     hintQuickSelected:
-      "Quét nhanh 2–3 phần bằng OpenRouter — ~2–3 phút. Không phụ thuộc provider chat.",
+      "Quét nhanh 2–3 phần bằng GLM-4.7 Flash — ~2–3 phút. Không phụ thuộc provider chat.",
     hintDeepSelected:
-      "Soi sâu 1 phần bằng Nemotron 3 Ultra — ~3–5 phút. Không phụ thuộc provider chat.",
+      "Soi sâu 1 phần bằng GLM-4.7 — ~3–5 phút. Không phụ thuộc provider chat.",
     hintQuickFull:
-      "Quét toàn bộ bài (tối đa 20 phần) bằng OpenRouter — thường ~5–10 phút.",
+      "Quét toàn bộ bài (tối đa 20 phần) bằng GLM-4.7 Flash — thường ~5–10 phút.",
     hintDeepFull:
-      "Quét toàn bộ bài (tối đa 8 phần) bằng Nemotron 3 Ultra — có thể mất 10–20 phút.",
+      "Quét toàn bộ bài (tối đa 8 phần) bằng GLM-4.7 — có thể mất 10–20 phút.",
     pickOneSection: "Chọn 1 phần",
     pickSections: "Chọn phần quét",
     selectAll: "Chọn tất cả",

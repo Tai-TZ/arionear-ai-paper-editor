@@ -117,12 +117,15 @@ def get_llm(
     else:
         temp = settings.llm_temperature
 
+    request_timeout = settings.llm_request_timeout_sec
+
     if provider == "openai":
         return ChatOpenAI(
             model=model_name,
             api_key=_resolve_api_key(settings, "openai"),
             base_url=settings.openai_base_url,
             temperature=temp,
+            timeout=request_timeout,
         )
 
     if provider == "anthropic":
@@ -133,6 +136,7 @@ def get_llm(
                 model=model_name,
                 api_key=_resolve_api_key(settings, "anthropic"),
                 temperature=temp,
+                timeout=request_timeout,
             )
         except ImportError:
             return ChatOpenAI(
@@ -140,6 +144,7 @@ def get_llm(
                 api_key=_resolve_api_key(settings, "anthropic"),
                 base_url=f"{settings.anthropic_base_url.rstrip('/')}/v1",
                 temperature=temp,
+                timeout=request_timeout,
             )
 
     if provider == "openrouter":
@@ -155,6 +160,7 @@ def get_llm(
             base_url=settings.openrouter_base_url,
             temperature=temp,
             default_headers=default_headers or None,
+            timeout=request_timeout,
         )
 
     if provider == "zai":
@@ -165,6 +171,7 @@ def get_llm(
             base_url=settings.zai_base_url,
             temperature=temp,
             extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
+            timeout=request_timeout,
         )
 
     raise ValueError(f"Unsupported LLM provider: {provider}")

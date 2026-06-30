@@ -802,6 +802,7 @@ function EditorPage() {
       const result = await compileLatex(payload.latex, payload.assets, {
         mainFile: payload.mainFile,
         compiler: payload.compiler,
+        cacheId: projectId ?? undefined,
       });
       setCompileLog(result.log || null);
       if (result.success && result.pdf_base64) {
@@ -3285,10 +3286,17 @@ function CenterPanel({
             <div className="px-3 pb-2">
               <div className="flex flex-col gap-1">
                 {pendingEdits.map((e) => (
-                  <button
+                  <div
                     key={e.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelectEdit?.(e.id)}
+                    onKeyDown={(evt) => {
+                      if (evt.key === "Enter" || evt.key === " ") {
+                        evt.preventDefault();
+                        onSelectEdit?.(e.id);
+                      }
+                    }}
                     className={`text-left rounded-md border px-2.5 py-2 text-xs transition ${
                       activeEditId === e.id
                         ? "border-primary/35 bg-primary/10"
@@ -3328,7 +3336,7 @@ function CenterPanel({
                         </button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>

@@ -83,8 +83,8 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
       <div className="logic-audit-mode-toggle mt-4 grid grid-cols-2 gap-2">
         {(
           [
-            { id: "quick" as const, icon: Zap, label: t.modeQuick, subtitle: "OpenRouter" },
-            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: "Nemotron 3 Ultra" },
+            { id: "quick" as const, icon: Zap, label: t.modeQuick, subtitle: t.modeQuickSubtitle },
+            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: t.modeDeepSubtitle },
           ] as const
         ).map(({ id, icon: Icon, label, subtitle }) => (
           <button

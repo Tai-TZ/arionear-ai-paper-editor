@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { computePaperScore, extractPeerReviewItems } from "./paper-score";
+import { SAMPLE_LATEX as IEEE_SAMPLE_LATEX } from "./project-store";
+import { assessManuscriptMaturity, computePaperScore, extractPeerReviewItems } from "./paper-score";
 import {
   formatPaperScoreGateError,
   hasUsableLogicAuditReport,
@@ -90,6 +91,34 @@ describe("computePaperScore", () => {
       },
     });
     expect(result.auditSummary).toContain("citation");
+  });
+
+  it("detects the built-in IEEE sample as a placeholder template", () => {
+    const maturity = assessManuscriptMaturity(IEEE_SAMPLE_LATEX);
+    expect(maturity.isPlaceholderTemplate).toBe(true);
+    expect(maturity.bodyWordCount).toBeLessThan(220);
+  });
+
+  it("scores the built-in IEEE sample much lower than a real draft", () => {
+    const templateResult = computePaperScore({
+      latex: IEEE_SAMPLE_LATEX,
+      hasPdf: true,
+      logicAuditReport: {
+        summary:
+          "Manuscript hiện tại chỉ chứa các mô tả chung về cấu trúc và hướng dẫn thay thế nội dung, chưa chứa bất kỳ nội dung nghiên cứu khoa học cụ thể nào.",
+        sections: [{ section: "Introduction", conflicts: [], weak_claims: [] }],
+      },
+    });
+    const draftResult = computePaperScore({
+      latex: SAMPLE_LATEX,
+      hasPdf: true,
+    });
+
+    expect(templateResult.overall).toBeLessThan(55);
+    expect(templateResult.dimensions.find((d) => d.id === "structure")?.score).toBeLessThanOrEqual(58);
+    expect(templateResult.dimensions.find((d) => d.id === "completeness")?.score).toBeLessThanOrEqual(38);
+    expect(templateResult.dimensions.find((d) => d.id === "logic")?.score).toBeLessThanOrEqual(38);
+    expect(draftResult.overall).toBeGreaterThan(templateResult.overall);
   });
 });
 

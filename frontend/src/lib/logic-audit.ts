@@ -29,20 +29,20 @@ export function defaultQuickSectionSelection(options: string[]): string[] {
 }
 
 export function logicAuditModeLabel(mode: LogicAuditMode): string {
-  return mode === "deep" ? "Deep (Nemotron 3 Ultra)" : "Quick (OpenRouter)";
+  return mode === "deep" ? "Deep (GLM-4.7)" : "Quick (Z.AI GLM-4.7 Flash)";
 }
 
 export function logicAuditModeHint(mode: LogicAuditMode, scope: LogicAuditScope = "selected"): string {
   if (scope === "full") {
     if (mode === "deep") {
-      return "Quét toàn bộ bài (tối đa 8 phần) bằng Nemotron 3 Ultra — có thể mất 10–20 phút.";
+      return "Quét toàn bộ bài (tối đa 8 phần) bằng GLM-4.7 — có thể mất 10–20 phút.";
     }
-    return "Quét toàn bộ bài (tối đa 20 phần) bằng OpenRouter — thường ~5–10 phút.";
+    return "Quét toàn bộ bài (tối đa 20 phần) bằng GLM-4.7 Flash — thường ~5–10 phút.";
   }
   if (mode === "deep") {
-    return "Soi sâu 1 phần bằng Nemotron 3 Ultra — ~3–5 phút. Không phụ thuộc provider chat.";
+    return "Soi sâu 1 phần bằng GLM-4.7 — ~3–5 phút. Không phụ thuộc provider chat.";
   }
-  return "Quét nhanh 2–3 phần bằng OpenRouter — ~2–3 phút. Không phụ thuộc provider chat.";
+  return "Quét nhanh 2–3 phần bằng GLM-4.7 Flash — ~2–3 phút. Không phụ thuộc provider chat.";
 }
 
 export function mergeLogicSectionReport(

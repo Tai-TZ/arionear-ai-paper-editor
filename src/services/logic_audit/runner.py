@@ -6,8 +6,8 @@ import re
 import uuid
 from typing import Any
 
-from src.services.llm import is_reasoning_model
 from src.services.logic_audit.config import (
+    logic_audit_engine_label,
     logic_audit_runtime_flags,
     resolve_logic_audit_llm,
     select_logic_targets,
@@ -233,7 +233,7 @@ async def run_logic_audit(
     audit_provider, audit_model = resolve_logic_audit_llm(mode, chat_provider or provider)
     provider = audit_provider
     model = model or audit_model
-    is_deep_reasoning = flags["mode"] == "deep" or is_reasoning_model(model)
+    engine_label = logic_audit_engine_label(flags["mode"])
 
     if flags["use_combined_persona"]:
         roles = load_combined_logic_role() or load_debate_roles()
@@ -272,7 +272,7 @@ async def run_logic_audit(
     persona_count = len(roles)
     if on_progress:
         parallel = "tuần tự" if persona_sequential else "song song"
-        engine = "Nemotron 3 Ultra" if is_deep_reasoning else "fast scan"
+        engine = engine_label
         on_progress(
             "logic-plan",
             f"Logic audit · {mode_label}",
@@ -349,7 +349,7 @@ async def run_logic_audit(
 
     if on_progress:
         parallel = "tuần tự" if persona_sequential else "song song"
-        engine = "Nemotron 3 Ultra" if is_deep_reasoning else "fast scan"
+        engine = engine_label
         on_progress(
             "logic-plan",
             f"Logic audit · {mode_label}",
@@ -461,9 +461,8 @@ async def run_logic_audit(
         return {
             "logic_audit_report": {},
             "response": (
-                "Logic audit chưa hoàn thành — model LLM quá chậm hoặc timeout "
-                "(thường gặp với Nemotron 3 Ultra). Thử lại hoặc chọn model nhanh hơn "
-                "(GPT-4o Mini / Z.AI GLM)."
+                "Logic audit chưa hoàn thành — model LLM quá chậm, timeout hoặc lỗi API. "
+                "Kiểm tra ZAI_API_KEY trong .env và thử lại (Quick · GLM-4.7 Flash)."
             ),
             "analysis": "Logic audit: all persona calls failed or timed out.",
         }

@@ -44,6 +44,68 @@ const SECTION_ALIASES: Record<string, string> = {
 const MIN_ABSTRACT_CHARS = 40;
 const MIN_SECTION_CHARS = 50;
 const MIN_SECTION_FILL_CHARS = 120;
+const MIN_SUBSTANTIVE_BODY_WORDS = 220;
+
+const PLACEHOLDER_MARKERS: RegExp[] = [
+  /replace these placeholder/i,
+  /replacing every placeholder/i,
+  /before replacing placeholders/i,
+  /sample ieee/i,
+  /\\author\{author name\}/i,
+  /describe .+ here/i,
+  /use it to explore compile/i,
+  /intended for exploring compilation/i,
+  /% TODO:/,
+];
+
+const TEMPLATE_SUMMARY_MARKERS = [
+  "placeholder",
+  "template",
+  "sample manuscript",
+  "mẫu",
+  "chưa chứa",
+  "không chứa",
+  "mô tả chung",
+  "hướng dẫn thay thế",
+  "no specific scientific",
+  "not submission-ready",
+  "no empirical",
+  "no research content",
+];
+
+type ManuscriptMaturity = {
+  isPlaceholderTemplate: boolean;
+  bodyWordCount: number;
+};
+
+function extractDocumentBody(latex: string): string {
+  const match = /\\begin\{document\}([\s\S]*?)\\end\{document\}/i.exec(latex.replace(/%.*$/gm, ""));
+  return match?.[1] ?? latex;
+}
+
+function countWords(text: string): number {
+  const plain = text
+    .replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, " ")
+    .replace(/[{}]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!plain) return 0;
+  return plain.split(" ").filter(Boolean).length;
+}
+
+export function assessManuscriptMaturity(latex: string): ManuscriptMaturity {
+  const body = extractDocumentBody(latex);
+  const bodyWordCount = countWords(body);
+  const markerHits = PLACEHOLDER_MARKERS.filter((pattern) => pattern.test(latex)).length;
+  const thin = bodyWordCount < MIN_SUBSTANTIVE_BODY_WORDS;
+  const isPlaceholderTemplate = markerHits >= 2 || (markerHits >= 1 && thin);
+  return { isPlaceholderTemplate, bodyWordCount };
+}
+
+function summaryIndicatesTemplate(summary: string): boolean {
+  const lower = summary.toLowerCase();
+  return TEMPLATE_SUMMARY_MARKERS.some((marker) => lower.includes(marker));
+}
 
 function normalizeSectionName(name: string): string {
   const lower = name.trim().toLowerCase();
@@ -97,23 +159,46 @@ function imradCoreStatus(latex: string): { present: string[]; missing: string[] 
   return { present, missing };
 }
 
-function scoreStructure(latex: string, locale: "en" | "vi"): PaperScoreDimension {
+function scoreStructure(
+  latex: string,
+  locale: "en" | "vi",
+  maturity: ManuscriptMaturity,
+): PaperScoreDimension {
   const { present, missing } = imradCoreStatus(latex);
   const ratio = present.length / IMRAD_CORE.length;
-  const score = Math.round(ratio * 100);
+  let score = Math.round(ratio * 100);
   const label = locale === "en" ? "IMRaD Structure" : "Cấu trúc IMRaD";
-  const hint =
-    missing.length === 0
-      ? locale === "en"
+
+  if (maturity.isPlaceholderTemplate) {
+    score = Math.min(score, 58);
+  }
+
+  let hint: string;
+  if (maturity.isPlaceholderTemplate) {
+    hint =
+      locale === "en"
+        ? "IMRaD skeleton only — replace template placeholders with real research content."
+        : "Chỉ có khung IMRaD — thay nội dung mẫu bằng nghiên cứu thật.";
+  } else if (missing.length === 0) {
+    hint =
+      locale === "en"
         ? "All core IMRaD sections present with minimum content."
-        : "Đủ các phần cốt lõi IMRaD với nội dung tối thiểu."
-      : locale === "en"
+        : "Đủ các phần cốt lõi IMRaD với nội dung tối thiểu.";
+  } else {
+    hint =
+      locale === "en"
         ? `Missing or too short: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`
         : `Thiếu hoặc quá ngắn: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}.`;
+  }
+
   return { id: "structure", label, score, hint };
 }
 
-function scoreCompleteness(latex: string, locale: "en" | "vi"): PaperScoreDimension {
+function scoreCompleteness(
+  latex: string,
+  locale: "en" | "vi",
+  maturity: ManuscriptMaturity,
+): PaperScoreDimension {
   const body = latex.replace(/%.*$/gm, "");
   const abstractMatch = /\\begin\{abstract\}(.*?)\\end\{abstract\}/is.exec(body);
   const abstractLen = plainTextLen(abstractMatch?.[1] ?? "");
@@ -141,20 +226,37 @@ function scoreCompleteness(latex: string, locale: "en" | "vi"): PaperScoreDimens
 
   const abstractScore = abstractLen >= 80 ? 1 : abstractLen >= 30 ? 0.6 : abstractLen > 0 ? 0.3 : 0;
   const sectionScore = totalBodySections > 0 ? filledSections / Math.max(totalBodySections, 4) : 0;
-  const score = Math.round((abstractScore * 0.35 + sectionScore * 0.65) * 100);
+  let score = Math.round((abstractScore * 0.35 + sectionScore * 0.65) * 100);
+
+  if (maturity.isPlaceholderTemplate) {
+    score = Math.min(score, 38);
+  } else if (maturity.bodyWordCount < MIN_SUBSTANTIVE_BODY_WORDS) {
+    score = Math.min(score, 55);
+  }
+
+  let hint: string;
+  if (maturity.isPlaceholderTemplate) {
+    hint =
+      locale === "en"
+        ? "Template or instructional text only — not enough substantive research content."
+        : "Chỉ là mẫu/hướng dẫn — chưa có nội dung nghiên cứu thực sự.";
+  } else if (score >= 75) {
+    hint =
+      locale === "en"
+        ? "Main sections have substantial content."
+        : "Các phần chính có nội dung đáng kể.";
+  } else {
+    hint =
+      locale === "en"
+        ? "Some sections are too short or abstract lacks detail."
+        : "Một số section còn ngắn hoặc abstract chưa đủ chi tiết.";
+  }
 
   return {
     id: "completeness",
     label: locale === "en" ? "Content Completeness" : "Độ đầy đủ nội dung",
     score,
-    hint:
-      score >= 75
-        ? locale === "en"
-          ? "Main sections have substantial content."
-          : "Các phần chính có nội dung đáng kể."
-        : locale === "en"
-          ? "Some sections are too short or abstract lacks detail."
-          : "Một số section còn ngắn hoặc abstract chưa đủ chi tiết.",
+    hint,
   };
 }
 
@@ -254,7 +356,11 @@ function scoreLogicIntegrity(
   critical += (report.cross_section_conflicts ?? []).length;
 
   const penalty = critical * 18 + warning * 8 + weakCount * 4;
-  const score = Math.max(0, Math.min(100, 100 - penalty));
+  let score = Math.max(0, Math.min(100, 100 - penalty));
+
+  if (report.summary?.trim() && summaryIndicatesTemplate(report.summary)) {
+    score = Math.min(score, weakCount + warning + critical > 0 ? 50 : 38);
+  }
 
   let hint: string;
   if (report.summary?.trim()) {
@@ -307,14 +413,15 @@ export function computePaperScore(opts: {
   const locale = opts.locale ?? "vi";
   const includeLogic = opts.includeLogicReview ?? PAPER_PEER_REVIEW_ENABLED;
   const auditPending = Boolean(opts.auditPending && includeLogic);
+  const maturity = assessManuscriptMaturity(opts.latex);
 
   const logicDim = includeLogic
     ? scoreLogicIntegrity(locale, opts.logicAuditReport, auditPending)
     : null;
 
   const dimensions = [
-    scoreStructure(opts.latex, locale),
-    scoreCompleteness(opts.latex, locale),
+    scoreStructure(opts.latex, locale, maturity),
+    scoreCompleteness(opts.latex, locale, maturity),
     scoreCitations(opts.latex, locale, opts.citationResults),
     ...(logicDim ? [logicDim] : []),
   ];

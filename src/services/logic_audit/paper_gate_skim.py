@@ -6,6 +6,7 @@ full multi-persona debate to stay under ~30 s.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import uuid
@@ -13,6 +14,7 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.config import get_settings
 from src.services.llm import get_llm
 from src.services.logic_audit.config import resolve_logic_audit_llm
 from src.services.logic_audit.debate import (
@@ -80,6 +82,7 @@ JSON schema:
 
 Rules:
 - Report only real issues; if a section is fine write an empty conflicts list.
+- If the manuscript is clearly a template, sample, or only placeholder/instructional text with no empirical claims, data, methods, or citations, you MUST add at least 2 warning-severity conflicts and state in summary that it is not submission-ready.
 - Maximum 4 conflicts per section, maximum 3 weak_claims per section.
 - Keep comments concise and actionable.
 - summary field: ALWAYS write in {ui_language}.
@@ -194,10 +197,14 @@ async def run_paper_gate_skim(
     llm = get_llm(provider=effective_provider, model=effective_model, temperature=0.3)
 
     try:
-        response = await llm.ainvoke(
-            [SystemMessage(content=system_prompt), HumanMessage(content=user_msg)]
+        response = await asyncio.wait_for(
+            llm.ainvoke([SystemMessage(content=system_prompt), HumanMessage(content=user_msg)]),
+            timeout=get_settings().logic_audit_gate_timeout_sec,
         )
         raw_text = str(response.content or "")
+    except TimeoutError as exc:
+        _progress("gate-error", "Lỗi phân tích", detail="Timeout", status="error")
+        raise RuntimeError("Gate skim LLM timed out.") from exc
     except Exception as exc:
         _progress("gate-error", "Lỗi phân tích", status="error")
         raise RuntimeError(f"Gate skim LLM error: {exc}") from exc

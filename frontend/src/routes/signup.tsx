@@ -20,7 +20,7 @@ import { sendSignupVerificationCode, verifySignupCode } from "@/lib/auth-store";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { redirectIfAuthenticated } from "@/lib/require-auth";
 import { authToast } from "@/lib/auth-toast";
-import { passwordStrength, validatePassword } from "@/lib/auth-validation";
+import { passwordStrength } from "@/lib/auth-validation";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: () => {
@@ -38,6 +38,23 @@ export const Route = createFileRoute("/signup")({
 type SignupStep = "form" | "verify";
 
 const RESEND_COOLDOWN_SECONDS = 60;
+
+type SignupCopy = ReturnType<typeof authPagesCopy>["signup"];
+
+function localizedPasswordHint(password: string, t: SignupCopy): string | null {
+  if (!password) return null;
+  if (password.length < 8) return t.passwordTooShort;
+  if (new TextEncoder().encode(password).length > 72) return t.passwordTooLong;
+  if (!/[A-Za-z]/.test(password)) return t.passwordNeedsLetter;
+  if (!/\d/.test(password)) return t.passwordNeedsNumber;
+  return null;
+}
+
+function localizedPasswordStrength(password: string, t: SignupCopy) {
+  const raw = passwordStrength(password);
+  const labels = ["", t.strengthWeak, t.strengthFair, t.strengthGood, t.strengthStrong];
+  return { score: raw.score, label: labels[raw.score] ?? "" };
+}
 
 function SignUpPage() {
   const navigate = useNavigate();
@@ -63,15 +80,15 @@ function SignUpPage() {
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
 
-  const strength = useMemo(() => passwordStrength(password), [password]);
-  const passwordHint = password ? validatePassword(password) : null;
+  const strength = useMemo(() => localizedPasswordStrength(password, t), [password, t]);
+  const passwordHint = useMemo(() => localizedPasswordHint(password, t), [password, t]);
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!accepted) {
-      const message = "Please accept the editorial integrity policy to continue.";
+      const message = t.acceptPolicyError;
       authToast.signUpError(message);
       setError(message);
       return;
@@ -229,47 +246,47 @@ function SignUpPage() {
             <div className="grid sm:grid-cols-2 gap-5">
               <AuthField
                 id="name"
-                label="Full name"
+                label={t.fullNameLabel}
                 icon={<User className="h-4 w-4" strokeWidth={1.5} />}
                 value={name}
                 onChange={setName}
                 autoComplete="name"
                 required
-                placeholder="Dr. Jane Doe"
+                placeholder={t.fullNamePlaceholder}
               />
               <AuthField
                 id="affiliation"
-                label="Affiliation"
+                label={t.affiliationLabel}
                 icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />}
                 value={affiliation}
                 onChange={setAffiliation}
                 autoComplete="organization"
-                placeholder="VNU, MIT, …"
+                placeholder={t.affiliationPlaceholder}
               />
             </div>
 
             <AuthField
               id="email"
-              label="Academic email"
+              label={t.emailLabel}
               icon={<Mail className="h-4 w-4" strokeWidth={1.5} />}
               type="email"
               autoComplete="email"
               required
               value={email}
               onChange={setEmail}
-              placeholder="name@university.edu"
+              placeholder={t.emailPlaceholder}
             />
 
             <div>
               <AuthField
                 id="password"
-                label="Password"
+                label={t.passwordLabel}
                 icon={<Lock className="h-4 w-4" strokeWidth={1.5} />}
                 autoComplete="new-password"
                 required
                 value={password}
                 onChange={setPassword}
-                placeholder="At least 8 characters, 1 letter & 1 number"
+                placeholder={t.passwordPlaceholder}
                 showToggle
                 error={passwordHint ?? undefined}
               />
@@ -302,12 +319,12 @@ function SignUpPage() {
                 className="mt-1 h-4 w-4 border border-foreground accent-foreground"
               />
               <span className="font-serif-body text-sm text-foreground/80">
-                I agree to Arionear's editorial integrity policy — AI assists with language and structure; the author remains responsible for the science.
+                {t.integrityPolicy}
               </span>
             </label>
 
             <AuthSubmitButton loading={loading} disabled={!accepted}>
-              Continue <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+              {t.continue} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </AuthSubmitButton>
           </form>
 
