@@ -224,10 +224,11 @@ try {
         --platform managed `
         --allow-unauthenticated `
         --port 8000 `
-        --memory 2Gi `
-        --cpu 2 `
+        --memory 4Gi `
+        --cpu 4 `
+        --concurrency 90 `
         --timeout 300 `
-        --max-instances 5 `
+        --max-instances 15 `
         --set-secrets ($secretBindings -join ",") `
         --env-vars-file $envVarsFile
 } finally {

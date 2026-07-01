@@ -19,3 +19,6 @@ npm-debug.log*
 .dev.vars
 coverage
 *.local
+.codegraph
+.pytest_cache
+public/core/busytex

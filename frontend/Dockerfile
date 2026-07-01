@@ -16,9 +16,9 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# Lockfile is often generated on Windows — reinstall deps so Linux native binaries resolve.
-RUN rm -rf node_modules package-lock.json \
-    && npm install --include=dev --legacy-peer-deps
+# Keep lockfile versions; add Linux native bindings missing from Windows-generated lockfile.
+RUN npm install --include=dev --legacy-peer-deps \
+    && npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --legacy-peer-deps --no-save
 
 COPY . .
 
@@ -35,8 +35,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Nitro node-server output: .output/server/index.mjs + static assets
-COPY --from=builder /app/.output ./.output
+# Nitro node-server output (TanStack Start): dist/server/index.mjs + static assets
+COPY --from=builder /app/dist ./dist
 
 # Cloud Run injects PORT; Nitro reads process.env.PORT
 EXPOSE 8080
@@ -44,4 +44,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080)).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "dist/server/index.mjs"]
