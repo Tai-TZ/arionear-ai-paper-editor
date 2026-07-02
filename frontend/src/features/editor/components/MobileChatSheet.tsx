@@ -1,0 +1,174 @@
+import { useEffect, useRef } from "react";
+import type React from "react";
+import { Sparkles, X } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
+import { ChatInput, ChatMessages, arioAvatar, type ChatMessage } from "@/components/chat-overlay";
+import { LlmSelector } from "@/components/llm-selector";
+import { editorCopy } from "@/lib/editor-i18n";
+import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
+import type { ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
+import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
+import { isSelectedModelPaid } from "@/lib/llm-model-tier";
+
+export function MobileChatSheet({
+  onClose,
+  messages,
+  chatInput,
+  onChatInputChange,
+  onSend,
+  onStop,
+  chatEndRef,
+  chatLoading,
+  streamProgress,
+  providers,
+  llmProvider,
+  llmModel,
+  onProviderChange,
+  onModelChange,
+  onNewChat,
+  chatComposerMode = "normal",
+  chatSelectionContext = null,
+  onClearChatSelectionContext,
+}: {
+  onClose: () => void;
+  messages: ChatMessage[];
+  chatInput: string;
+  onChatInputChange: (v: string) => void;
+  onSend: () => void;
+  onStop?: () => void;
+  chatEndRef: React.RefObject<HTMLDivElement | null>;
+  chatLoading?: boolean;
+  streamProgress?: ChatStreamProgressSnapshot;
+  providers?: ProviderInfo[];
+  llmProvider?: LLMProvider;
+  llmModel?: string;
+  onProviderChange?: (p: LLMProvider) => void;
+  onModelChange?: (m: string) => void;
+  onNewChat?: () => void;
+  chatComposerMode?: "normal" | "quick-edit";
+  chatSelectionContext?: EditorSelectionContext | null;
+  onClearChatSelectionContext?: () => void;
+}) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const canUseLlm = Boolean(
+    providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
+  );
+  const paidModelSelected =
+    canUseLlm && isSelectedModelPaid(providers!, llmProvider!, llmModel!);
+  const chatDisabled = !canUseLlm || paidModelSelected;
+
+  useEffect(() => {
+    if (chatComposerMode !== "quick-edit" || chatDisabled) return;
+    const frame = requestAnimationFrame(() => chatInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [chatComposerMode, chatSelectionContext?.start, chatDisabled]);
+
+  const placeholder = !canUseLlm
+    ? t.chatDock.placeholderNoProvider
+    : paidModelSelected
+      ? t.llm.paidChatPlaceholder
+      : chatComposerMode === "quick-edit"
+        ? t.chatDock.placeholderQuickEdit
+        : chatSelectionContext
+          ? t.chatDock.placeholderSelection
+          : t.chatDock.placeholderDefault;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col md:hidden">
+      <button
+        className="mobile-chat-backdrop absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-label={t.chatDock.closeChat}
+      />
+      <div className="mobile-chat-sheet relative mt-auto flex max-h-[88dvh] min-h-[50dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border/50 bg-card shadow-[0_-8px_40px_-8px_rgba(15,23,42,0.2)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <img src={arioAvatar} alt="" className="h-8 w-8 rounded-lg object-contain" />
+            <span className="text-sm font-medium">Ario</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary transition"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <ChatMessages
+          messages={messages}
+          chatEndRef={chatEndRef}
+          chatLoading={chatLoading}
+          streamProgress={streamProgress}
+        />
+
+        <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
+          {chatComposerMode === "quick-edit" && (
+            <div className="chat-quick-edit-banner mb-2" role="status">
+              <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{t.chatDock.quickEditBanner}</span>
+            </div>
+          )}
+          {chatSelectionContext && (
+            <div className="chat-selection-chip mb-2">
+              <span className="chat-selection-chip-label">
+                {chatSelectionContext.lineStart === chatSelectionContext.lineEnd
+                  ? t.chatDock.selectionLine(chatSelectionContext.lineStart)
+                  : t.chatDock.selectionLineRange(
+                      chatSelectionContext.lineStart,
+                      chatSelectionContext.lineEnd,
+                    )}
+                <span className="chat-selection-chip-preview">
+                  {chatSelectionContext.text.trim().slice(0, 72)}
+                  {chatSelectionContext.text.trim().length > 72 ? "…" : ""}
+                </span>
+              </span>
+              {onClearChatSelectionContext && (
+                <button
+                  type="button"
+                  className="chat-selection-chip-clear"
+                  onClick={onClearChatSelectionContext}
+                  aria-label={t.chatDock.clearSelection}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+          <div className="chat-dock-llm-bar mb-2">
+            {canUseLlm ? (
+              <LlmSelector
+                providers={providers!}
+                llmProvider={llmProvider!}
+                llmModel={llmModel!}
+                onProviderChange={onProviderChange!}
+                onModelChange={onModelChange!}
+                onNewChat={onNewChat}
+                compact
+                variant="light"
+              />
+            ) : (
+              <p className="chat-dock-llm-hint">{t.chatDock.llmHint}</p>
+            )}
+          </div>
+          {paidModelSelected && (
+            <p className="chat-paid-model-hint mb-2" role="status">
+              {t.llm.paidChatHint}
+            </p>
+          )}
+          <ChatInput
+            ref={chatInputRef}
+            chatInput={chatInput}
+            onChatInputChange={onChatInputChange}
+            onSend={onSend}
+            onStop={onStop}
+            disabled={chatDisabled}
+            loading={chatLoading}
+            placeholder={placeholder}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

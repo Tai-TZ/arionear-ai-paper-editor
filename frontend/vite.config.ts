@@ -45,6 +45,10 @@ export default defineConfig({
         },
       },
     },
+    test: {
+      environment: "node",
+      include: ["src/**/*.test.ts"],
+    },
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

@@ -11,7 +11,7 @@ IntegrityStrictness = Literal["relaxed", "standard", "strict"]
 CitationStyle = Literal["ieee", "apa", "vancouver", "chicago", "nature"]
 DefaultTemplate = Literal["imrad", "ieee", "acm", "springer", "blank"]
 WritingLocale = Literal["en-US", "en-GB"]
-LlmProviderPref = Literal["openrouter", "openai", "anthropic", "zai"]
+LlmProviderPref = Literal["openrouter", "openai", "anthropic", "zai", "google"]
 
 
 class ResearcherProfileResponse(BaseModel):

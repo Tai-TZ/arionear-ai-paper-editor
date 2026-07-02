@@ -83,6 +83,7 @@ $directDb = Get-DotEnvValue "DIRECT_DATABASE_URL"
 $authSecret = Get-DotEnvValue "AUTH_SECRET_KEY"
 $openrouterKey = Get-DotEnvValue "OPENROUTER_API_KEY"
 $zaiKey = Get-DotEnvValue "ZAI_API_KEY"
+$googleApiKey = Get-DotEnvValue "GOOGLE_API_KEY"
 $googleSecret = Get-DotEnvValue "GOOGLE_CLIENT_SECRET"
 $smtpPassword = Get-DotEnvValue "SMTP_PASSWORD"
 $adminPassword = Get-DotEnvValue "ADMIN_GOD_PASSWORD"
@@ -104,6 +105,9 @@ Set-GcpSecret "auth-secret-key" $authSecret
 Set-GcpSecret "openrouter-api-key" $openrouterKey
 if ($zaiKey) {
     Set-GcpSecret "zai-api-key" $zaiKey
+}
+if ($googleApiKey) {
+    Set-GcpSecret "google-api-key" $googleApiKey
 }
 Set-GcpSecret "google-client-secret" $googleSecret
 Set-GcpSecret "smtp-password" $smtpPassword
@@ -176,6 +180,9 @@ if ($aiLogKey) {
 }
 if ($zaiKey) {
     $secretBindings += "ZAI_API_KEY=zai-api-key:latest"
+}
+if ($googleApiKey) {
+    $secretBindings += "GOOGLE_API_KEY=google-api-key:latest"
 }
 
 $envVars = @(

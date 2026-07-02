@@ -18,10 +18,11 @@ def test_numeric_drift_flag():
     assert not any(f["severity"] == "error" for f in flags)
 
 
-def test_document_edit_skips_numeric_block():
+def test_document_edit_warns_on_numeric_drift():
     original = r"\documentclass{article}\begin{document}Accuracy 92.4\end{document}"
     suggestion = r"\documentclass{article}\begin{document}Accuracy 95.0\end{document}"
     flags = check_integrity(original, suggestion, strictness="standard", scope="document")
+    assert any(f.get("code") == "numeric_drift" for f in flags)
     assert not any(f.get("severity") == "error" for f in flags)
 
 
@@ -64,3 +65,19 @@ def test_imrad_template_adds_missing_sections():
     assert "\\section{Discussion}" in result
     assert "\\section{Conclusion}" in result
     assert "Hi" in result
+
+
+def test_analyze_structure_flags_missing_methods():
+    from src.services.parser.latex import analyze_structure, parse_latex_sections
+
+    latex = r"""
+\begin{abstract}Summary\end{abstract}
+\section{Introduction}Intro text here with enough content to avoid length warning.
+\section{Results}Results text here with enough content to avoid length warning.
+\section{Discussion}Discussion text here with enough content.
+\section{Conclusion}Conclusion text here with enough content.
+"""
+    sections = parse_latex_sections(latex)
+    suggestions = analyze_structure(sections)
+    missing = [s for s in suggestions if s.get("type") == "missing"]
+    assert any(s.get("section") == "Methods" for s in missing)

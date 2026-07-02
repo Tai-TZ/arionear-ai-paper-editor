@@ -1,4 +1,10 @@
-from src.services.llm_errors import LLM_USER_ERROR_MSG, friendly_llm_error, looks_like_provider_error
+from src.services.llm_errors import (
+    _PROVIDER_NO_KEY_MSG,
+    _PROVIDER_RATE_LIMIT_MSG,
+    LLM_USER_ERROR_MSG,
+    friendly_llm_error,
+    looks_like_provider_error,
+)
 
 
 def test_friendly_llm_error_rerank_model():
@@ -8,7 +14,7 @@ def test_friendly_llm_error_rerank_model():
 
 def test_friendly_llm_error_api_key():
     msg = friendly_llm_error(ValueError("No API key configured for provider 'openrouter'"))
-    assert msg == LLM_USER_ERROR_MSG
+    assert msg == _PROVIDER_NO_KEY_MSG
 
 
 def test_friendly_llm_error_zai_insufficient_balance():
@@ -17,7 +23,7 @@ def test_friendly_llm_error_zai_insufficient_balance():
         "'message': 'Insufficient balance or no resource package. Please recharge.'}}"
     )
     msg = friendly_llm_error(Exception(raw))
-    assert msg == LLM_USER_ERROR_MSG
+    assert msg == _PROVIDER_RATE_LIMIT_MSG
     assert "429" not in msg
     assert "1113" not in msg
 

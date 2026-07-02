@@ -54,6 +54,18 @@ function isTechnicalMessage(message: string): boolean {
   );
 }
 
+function isQuotaMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("hạn mức") ||
+    m.includes("quota") ||
+    m.includes("quá nhiều yêu cầu") ||
+    m.includes("hết lượt") ||
+    m.includes("dùng hết") ||
+    m.includes("chưa được bật quyền dùng ai")
+  );
+}
+
 function isLlmProviderFailure(message: string): boolean {
   const m = message.toLowerCase();
   return (
@@ -118,7 +130,21 @@ export function toUserFacingMessage(error: unknown, locale?: UiLanguage): string
   return msg.length > 160 ? m.backend : msg;
 }
 
+function isKnownEditorErrorMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    isQuotaMessage(message) ||
+    m.includes("provider ai đang giới hạn") ||
+    m.includes("server ai đang quá tải") ||
+    m.includes("chưa cấu hình api key") ||
+    m.includes("model không khả dụng") ||
+    m.includes("tài khoản provider hết số dư") ||
+    m.includes("quá thời gian")
+  );
+}
+
 export function streamErrorMessage(message: string, locale?: UiLanguage): string {
+  if (isKnownEditorErrorMessage(message)) return message;
   const m = msgs(locale);
   if (isLlmProviderFailure(message)) {
     return m.llm;

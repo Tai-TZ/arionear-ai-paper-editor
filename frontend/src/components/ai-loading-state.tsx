@@ -92,6 +92,7 @@ export function AiLoadingState({
   steps = [],
   activities = [],
   activity = null,
+  waitElapsedSec = null,
   compact = false,
 }: AiLoadingStateProps) {
   const maskId = useId().replace(/:/g, "");
@@ -107,6 +108,10 @@ export function AiLoadingState({
   }, [activities, displaySteps]);
   const progress = useMemo(() => computeProgress(steps), [steps]);
   const status = resolveStatus(displaySteps, activity);
+  const statusWithElapsed =
+    typeof waitElapsedSec === "number" && waitElapsedSec > 0
+      ? `${status} · ${Math.round(waitElapsedSec)}s`
+      : status;
 
   useEffect(() => {
     const el = feedRef.current;
@@ -125,7 +130,7 @@ export function AiLoadingState({
     >
       <div className="ai-loading-state-head">
         <LoadingAnimation progress={progress} maskId={maskId} />
-        <span className="ai-loading-state-status">{status}…</span>
+        <span className="ai-loading-state-status">{statusWithElapsed}…</span>
       </div>
 
       <div className="ai-loading-state-feed-wrap">

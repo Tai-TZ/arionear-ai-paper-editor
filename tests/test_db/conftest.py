@@ -22,5 +22,8 @@ def sqlite_test_db(monkeypatch):
     yield
     reset_db_state()
     get_settings.cache_clear()
+    import src.services.sessions as sessions_mod
+
+    sessions_mod._store = None
     if os.path.exists(db_path):
         os.remove(db_path)

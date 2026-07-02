@@ -101,8 +101,8 @@ def _numeric_severity(
         return "skip" if scope == "document" else "warning"
     if strictness == "standard":
         if scope == "document":
-            return "skip"
-        # Selection / section edits: warn only — user reviews diff before Accept.
+            # Document edits: warn (human gate) but do not hard-block Accept in UI.
+            return "warning"
         return "warning"
     # strict
     if scope == "document" and new_count <= 3:
@@ -120,8 +120,8 @@ def check_integrity(
 ) -> list[dict]:
     """Layer-2 guardrail: numeric drift + optional semantic overlap.
 
-  ``standard`` (default): never blocks on numeric drift; document edits skip
-  numeric checks. ``strict``: blocks when new metrics appear (selection scope).
+  ``standard`` (default): numeric drift yields warnings; user reviews diff before Accept.
+  ``strict``: blocks when new metrics appear in selection scope.
     """
     flags: list[dict] = []
 

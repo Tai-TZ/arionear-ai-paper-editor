@@ -111,6 +111,14 @@ export type EditorCopy = {
     noCitationsInManuscript: string;
     verifiedCitations: (verified: number, total: number) => string;
     citationVerifyError: string;
+    structure: string;
+    structureIntro: string;
+    structureEmpty: string;
+    structureJump: string;
+    structureAskArio: string;
+    structureUnknownSection: string;
+    citationAskArio: string;
+    citationFixAll: string;
   };
   share: {
     circulationDesk: string;
@@ -163,6 +171,15 @@ export type EditorCopy = {
     severityInfo: string;
     crossSection: string;
     weak: string;
+    panelLaunch: {
+      displayQuick: string;
+      displayQuickFull: string;
+      displayDeep: string;
+      displayDeepFull: string;
+      messageFull: string;
+      messageDeepSelected: string;
+      messageQuickSelected: string;
+    };
   };
   llm: {
     paidBadge: string;
@@ -203,6 +220,69 @@ export type EditorCopy = {
     files: string;
     editor: string;
     preview: string;
+    tools: string;
+    chats: string;
+  };
+  chatDock: {
+    openChat: string;
+    quickEditBanner: string;
+    selectionLine: (line: number) => string;
+    selectionLineRange: (start: number, end: number) => string;
+    clearSelection: string;
+    placeholderNoProvider: string;
+    placeholderQuickEdit: string;
+    placeholderSelection: string;
+    placeholderDefault: string;
+    llmHint: string;
+    closeChat: string;
+    collapseChat: string;
+    resizeChat: string;
+    emptySlashHint: (hints: string) => string;
+    reasoningTitle: string;
+    expandChat: string;
+    stopProcessing: string;
+    copyMessage: string;
+    sendMessage: string;
+  };
+  suggestion: {
+    documentMode: string;
+    selectionMode: string;
+    shortcutHint: string;
+    reject: string;
+    accept: string;
+  };
+  pendingEdits: {
+    title: (count: number) => string;
+    hint: string;
+    rejectAll: string;
+    acceptAll: string;
+    reject: string;
+    accept: string;
+    proposedChange: string;
+    integrityBlocked: string;
+    staleWarning: string;
+    staleBadge: string;
+    staleOnAccept: string;
+  };
+  welcome: {
+    assistantMessage: string;
+  };
+  chatStream: {
+    processing: string;
+    stopped: string;
+    timeout: string;
+    acceptApplied: string;
+    acceptAppliedCompile: string;
+    rejectSuggestionHint: string;
+    rejectScopeDocument: string;
+    rejectScopeStyle: string;
+    rejectScopeAllEdits: string;
+  };
+  errors: {
+    saveFailed: string;
+    syncFailed: string;
+    revisionFailed: string;
+    chatPersistFailed: string;
   };
 };
 
@@ -315,6 +395,14 @@ const EN: EditorCopy = {
     noCitationsInManuscript: "No citations found in manuscript.",
     verifiedCitations: (verified, total) => `Verified ${verified}/${total} citations.`,
     citationVerifyError: "Could not verify citations right now. Please try again later.",
+    structure: "Structure",
+    structureIntro: "IMRAD outline suggestions from Ario. Jump to a section or ask Ario to fix it.",
+    structureEmpty: "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
+    structureJump: "Jump in editor",
+    structureAskArio: "Ask Ario",
+    structureUnknownSection: "Manuscript",
+    citationAskArio: "Ask Ario",
+    citationFixAll: "Fix unverified citations",
   },
   share: {
     circulationDesk: "Circulation desk",
@@ -375,6 +463,15 @@ const EN: EditorCopy = {
     severityInfo: "SUGGESTION",
     crossSection: "Cross-section:",
     weak: "WEAK",
+    panelLaunch: {
+      displayQuick: "Logic audit · Quick",
+      displayQuickFull: "Logic audit · Quick · full manuscript",
+      displayDeep: "Logic audit · Deep",
+      displayDeepFull: "Logic audit · Deep · full manuscript",
+      messageFull: "Run a logic audit on the full manuscript",
+      messageDeepSelected: "Deep logic audit on selected sections",
+      messageQuickSelected: "Quick logic audit on the manuscript",
+    },
   },
   llm: {
     paidBadge: "Paid",
@@ -419,6 +516,75 @@ const EN: EditorCopy = {
     files: "Files",
     editor: "Editor",
     preview: "Preview",
+    tools: "Tools",
+    chats: "Chats",
+  },
+  chatDock: {
+    openChat: "Open chat",
+    quickEditBanner: "Quick Edit — edit the selected region in the editor",
+    selectionLine: (line) => `Line ${line}`,
+    selectionLineRange: (start, end) => `Lines ${start}–${end}`,
+    clearSelection: "Clear selection",
+    placeholderNoProvider: "Configure an API key to use chat",
+    placeholderQuickEdit: "Describe how to edit the selected passage…",
+    placeholderSelection: "Ask about the selected region…",
+    placeholderDefault: "Ask Ario… or type / for commands",
+    llmHint: "No LLM provider — add OPENROUTER_API_KEY or ZAI_API_KEY to .env",
+    closeChat: "Close chat",
+    collapseChat: "Collapse chat",
+    resizeChat: "Drag to resize chat",
+    emptySlashHint: (hints) =>
+      `Pick a provider and model below. Quick commands: ${hints}.`,
+    reasoningTitle: "Reasoning",
+    expandChat: "Expand chat",
+    stopProcessing: "Stop processing",
+    copyMessage: "Copy message",
+    sendMessage: "Send message",
+  },
+  suggestion: {
+    documentMode:
+      "Ario suggests a change — inline in the editor (red = remove, green = add)",
+    selectionMode:
+      "Ario suggests an edit — inline in the editor (red = remove, green = add)",
+    shortcutHint: "Ctrl+Enter Accept · Esc Reject",
+    reject: "Reject",
+    accept: "Accept",
+  },
+  pendingEdits: {
+    title: (count) => `Changes from Ario (${count})`,
+    hint: "Click to preview · Ctrl+Enter Accept · Esc Reject",
+    rejectAll: "Reject all",
+    acceptAll: "Accept all",
+    reject: "Reject",
+    accept: "Accept",
+    proposedChange: "Proposed change",
+    integrityBlocked:
+      "Serious integrity flags — review the diff and Reject or revise before Accept.",
+    staleWarning: "The file changed since this suggestion was created.",
+    staleBadge: "Out of date",
+    staleOnAccept: "This edit is out of date — reject it and ask Ario again.",
+  },
+  welcome: {
+    assistantMessage:
+      "Hi — I'm Ario, your research assistant in Paper IDE ARIONEAR. You can assign tasks freely: rename title/author, rewrite the Abstract, polish academic tone, check IMRAD structure, or ask about LaTeX. Pick a provider/model below and describe what you need.",
+  },
+  chatStream: {
+    processing: "Processing",
+    stopped: "Stopped.",
+    timeout: "AI task timed out — try a shorter scope or a faster model.",
+    acceptApplied: "Applied to the draft. Press Ctrl+S to save.",
+    acceptAppliedCompile: "Applied to the draft. Compiling PDF…",
+    rejectSuggestionHint:
+      "Suggestion rejected. A follow-up prompt is in the chat box — refine your request and send again.",
+    rejectScopeDocument: "entire manuscript",
+    rejectScopeStyle: "style edit",
+    rejectScopeAllEdits: "pending edits",
+  },
+  errors: {
+    saveFailed: "Could not save the project — check your connection and try again.",
+    syncFailed: "Could not sync the AI session — your draft is saved locally.",
+    revisionFailed: "Could not update revision history.",
+    chatPersistFailed: "Could not save chat history.",
   },
 };
 
@@ -532,6 +698,15 @@ const VI: EditorCopy = {
     noCitationsInManuscript: "Không tìm thấy trích dẫn trong bản thảo.",
     verifiedCitations: (verified, total) => `Đã xác minh ${verified}/${total} trích dẫn.`,
     citationVerifyError: "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.",
+    structure: "Cấu trúc",
+    structureIntro:
+      "Gợi ý cấu trúc IMRAD từ Ario. Nhảy tới section hoặc nhờ Ario chỉnh trực tiếp.",
+    structureEmpty: "Chưa có gợi ý cấu trúc. Chạy /structure trong chat để phân tích bản thảo.",
+    structureJump: "Xem trong editor",
+    structureAskArio: "Nhờ Ario sửa",
+    structureUnknownSection: "Bản thảo",
+    citationAskArio: "Nhờ Ario sửa",
+    citationFixAll: "Sửa trích dẫn chưa xác minh",
   },
   share: {
     circulationDesk: "Bàn phát hành",
@@ -592,6 +767,15 @@ const VI: EditorCopy = {
     severityInfo: "GỢI Ý",
     crossSection: "Liên section:",
     weak: "YẾU",
+    panelLaunch: {
+      displayQuick: "Logic audit · Quick",
+      displayQuickFull: "Logic audit · Quick · toàn bộ",
+      displayDeep: "Logic audit · Deep",
+      displayDeepFull: "Logic audit · Deep · toàn bộ",
+      messageFull: "Kiểm tra logic toàn bộ bài báo",
+      messageDeepSelected: "Logic audit sâu phần đã chọn",
+      messageQuickSelected: "Kiểm tra logic bài báo",
+    },
   },
   llm: {
     paidBadge: "Trả phí",
@@ -636,6 +820,76 @@ const VI: EditorCopy = {
     files: "Tệp",
     editor: "Soạn thảo",
     preview: "Xem trước",
+    tools: "Công cụ",
+    chats: "Hội thoại",
+  },
+  chatDock: {
+    openChat: "Mở chat",
+    quickEditBanner: "Quick Edit — chỉnh sửa vùng đã chọn trong editor",
+    selectionLine: (line) => `Dòng ${line}`,
+    selectionLineRange: (start, end) => `Dòng ${start}–${end}`,
+    clearSelection: "Bỏ vùng chọn",
+    placeholderNoProvider: "Cấu hình API key để dùng chat",
+    placeholderQuickEdit: "Mô tả cách sửa đoạn đã chọn…",
+    placeholderSelection: "Hỏi về vùng đã chọn…",
+    placeholderDefault: "Hỏi Ario… hoặc gõ / để chọn lệnh",
+    llmHint:
+      "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
+    closeChat: "Đóng chat",
+    collapseChat: "Thu gọn chat",
+    resizeChat: "Kéo để đổi chiều cao chat",
+    emptySlashHint: (hints) =>
+      `Chọn provider và model phía dưới. Gõ lệnh nhanh: ${hints}.`,
+    reasoningTitle: "Suy luận",
+    expandChat: "Mở rộng chat",
+    stopProcessing: "Dừng xử lý",
+    copyMessage: "Sao chép tin nhắn",
+    sendMessage: "Gửi tin nhắn",
+  },
+  suggestion: {
+    documentMode:
+      "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
+    selectionMode:
+      "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
+    shortcutHint: "Ctrl+Enter Accept · Esc Reject",
+    reject: "Từ chối",
+    accept: "Chấp nhận",
+  },
+  pendingEdits: {
+    title: (count) => `Các thay đổi từ Ario (${count})`,
+    hint: "Click để preview · Ctrl+Enter Accept · Esc Reject",
+    rejectAll: "Từ chối tất cả",
+    acceptAll: "Chấp nhận tất cả",
+    reject: "Từ chối",
+    accept: "Chấp nhận",
+    proposedChange: "Đề xuất thay đổi",
+    integrityBlocked:
+      "Có cảnh báo integrity nghiêm trọng — xem diff và Reject hoặc chỉnh lại trước khi Accept.",
+    staleWarning: "File đã thay đổi kể từ khi tạo đề xuất này.",
+    staleBadge: "Đã lỗi thời",
+    staleOnAccept: "Đề xuất đã lỗi thời — hãy Reject và nhờ Ario tạo lại.",
+  },
+  welcome: {
+    assistantMessage:
+      "Xin chào — tôi là Ario, trợ lý NCKH trong Paper IDE ARIONEAR. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
+  },
+  chatStream: {
+    processing: "Đang xử lý",
+    stopped: "Đã dừng xử lý.",
+    timeout: "Tác vụ AI quá thời gian — thử lại với đoạn ngắn hơn hoặc đổi model.",
+    acceptApplied: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file.",
+    acceptAppliedCompile: "Đã áp dụng thay đổi vào bản thảo. Đang compile PDF…",
+    rejectSuggestionHint:
+      "Đã từ chối gợi ý. Mình đã gợi ý câu lệnh trong ô chat — bổ sung yêu cầu rồi gửi lại nhé.",
+    rejectScopeDocument: "toàn bộ bản thảo",
+    rejectScopeStyle: "biên tập văn phong",
+    rejectScopeAllEdits: "các gợi ý chỉnh sửa",
+  },
+  errors: {
+    saveFailed: "Không lưu được dự án — kiểm tra kết nối và thử lại.",
+    syncFailed: "Không đồng bộ được phiên AI — bản thảo vẫn được lưu cục bộ.",
+    revisionFailed: "Không cập nhật được lịch sử phiên bản.",
+    chatPersistFailed: "Không lưu được lịch sử chat.",
   },
 };
 

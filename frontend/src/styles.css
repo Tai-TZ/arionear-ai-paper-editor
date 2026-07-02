@@ -4454,6 +4454,7 @@ html[lang="vi"] .hero-headline {
   --chat-accent: var(--primary);
   --chat-user-bg: var(--primary);
   --chat-user-text: var(--primary-foreground);
+  --chat-dock-panel-h: 0px;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--chat-border);
@@ -4462,6 +4463,35 @@ html[lang="vi"] .hero-headline {
   box-shadow: 0 -6px 24px -10px oklch(0.2 0.02 255 / 12%);
   color: var(--chat-text);
   z-index: 10;
+  overflow: hidden;
+}
+
+.editor-shell .chat-dock-panel-wrap {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  height: var(--chat-dock-panel-h);
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editor-shell .chat-dock:not([data-resizing="true"]) .chat-dock-panel-wrap {
+  transition:
+    height 0.44s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.editor-shell .chat-dock[data-open="true"] .chat-dock-panel-wrap {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.editor-shell .chat-dock[data-open="true"]:not([data-resizing="true"]) .chat-dock-panel-wrap {
+  transition:
+    height 0.44s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.05s;
 }
 
 .editor-shell .chat-dock[data-open="true"] {
@@ -4471,6 +4501,48 @@ html[lang="vi"] .hero-headline {
 .editor-shell .chat-dock-panel {
   border-bottom: 1px solid oklch(0.9 0.01 90 / 70%);
   min-height: 0;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.editor-shell .chat-dock:not([data-resizing="true"]) .chat-dock-panel {
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.editor-shell .chat-dock[data-open="true"] .chat-dock-panel {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.editor-shell .chat-dock[data-open="true"]:not([data-resizing="true"]) .chat-dock-panel {
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
+    transform 0.38s cubic-bezier(0.32, 0.72, 0, 1) 0.04s;
+}
+
+.editor-shell .chat-dock-collapse-icon,
+.editor-shell .chat-dock-expand-icon {
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.editor-shell .chat-dock-expand-btn:hover .chat-dock-expand-icon {
+  transform: translateY(-2px);
+}
+
+.editor-shell .chat-dock-icon-btn:hover .chat-dock-collapse-icon {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-shell .chat-dock-panel-wrap,
+  .editor-shell .chat-dock-panel,
+  .editor-shell .chat-dock-collapse-icon,
+  .editor-shell .chat-dock-expand-icon {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
 }
 
 .editor-shell .chat-dock-toolbar {
@@ -4942,6 +5014,11 @@ html[lang="vi"] .hero-headline {
   font-size: 0.6875rem;
   font-weight: 500;
   color: var(--chat-accent);
+  transition: color 0.15s ease;
+}
+
+.editor-shell .chat-dock-expand-btn:hover {
+  color: color-mix(in oklch, var(--chat-accent) 82%, var(--foreground));
 }
 
 .editor-shell .chat-dock-llm-bar {
@@ -5214,16 +5291,16 @@ html[lang="vi"] .hero-headline {
   color: oklch(0.75 0.02 90);
 }
 
-.editor-shell .llm-selector-dark .llm-selector-refresh {
+.editor-shell .llm-selector-dark .llm-selector-new-chat {
   color: oklch(0.75 0.02 90);
 }
 
-.editor-shell .llm-selector-dark .llm-selector-refresh:hover {
+.editor-shell .llm-selector-dark .llm-selector-new-chat:hover {
   background: oklch(1 0 0 / 10%);
   color: oklch(0.92 0.01 90);
 }
 
-/* LLM provider / model selector — pill chips + dropdown menus */
+/* LLM provider / model selector */
 .editor-shell .llm-selector {
   display: flex;
   align-items: center;
@@ -5235,59 +5312,70 @@ html[lang="vi"] .hero-headline {
   width: 100%;
 }
 
-.editor-shell .llm-selector-chip {
+.editor-shell .llm-selector-shell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in oklch, var(--editor-chat-border) 80%, transparent);
+  background: color-mix(in oklch, var(--chat-input-bg) 96%, var(--muted) 4%);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 60%) inset,
+    0 10px 24px -18px oklch(0.2 0.02 255 / 24%);
+}
+
+.editor-shell .llm-selector-segment {
+  appearance: none;
+  border: none;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   min-width: 0;
-  max-width: 100%;
-  border-radius: 999px;
-  border: 1px solid var(--editor-chat-border);
-  background: color-mix(in oklch, var(--chat-input-bg) 88%, var(--muted) 12%);
-  padding: 0.3125rem 0.625rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  line-height: 1.2;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.15;
   color: var(--foreground);
   cursor: pointer;
   outline: none;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.editor-shell .llm-selector-chip:hover {
-  background: color-mix(in oklch, var(--chat-input-bg) 78%, var(--primary) 6%);
-  border-color: color-mix(in oklch, var(--primary) 22%, var(--editor-chat-border));
+.editor-shell .llm-selector-segment:hover {
+  background: color-mix(in oklch, var(--chat-input-bg) 82%, var(--primary) 6%);
 }
 
-.editor-shell .llm-selector-chip:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 18%, transparent);
+.editor-shell .llm-selector-segment:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--primary) 18%, transparent);
 }
 
-.editor-shell .llm-selector-chip-provider {
-  flex-shrink: 0;
-  max-width: 7.5rem;
+.editor-shell .llm-selector-divider {
+  width: 1px;
+  align-self: stretch;
+  background: color-mix(in oklch, var(--editor-chat-border) 65%, transparent);
+}
+
+.editor-shell .llm-selector-segment-provider,
+.editor-shell .llm-selector-segment-model {
+  flex: 1 1 0;
 }
 
 .editor-shell .llm-selector-provider-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.editor-shell .llm-selector-chip-model {
-  flex: 1;
   min-width: 0;
-  padding-right: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 .editor-shell .llm-selector-model-icon {
   height: 0.8125rem;
   width: 0.8125rem;
   flex-shrink: 0;
-  opacity: 0.55;
+  opacity: 0.62;
 }
 
 .editor-shell .llm-selector-model-name {
@@ -5295,20 +5383,26 @@ html[lang="vi"] .hero-headline {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  letter-spacing: -0.01em;
+}
+
+.editor-shell .llm-selector-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .editor-shell .llm-selector-tier {
   flex-shrink: 0;
-  max-width: 5.5rem;
+  max-width: 6.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   border-radius: 999px;
-  background: color-mix(in oklch, var(--muted) 18%, transparent);
-  padding: 0.125rem 0.4375rem;
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  background: color-mix(in oklch, var(--muted) 22%, transparent);
+  padding: 0.125rem 0.45rem;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--muted-foreground);
 }
 
@@ -5339,6 +5433,66 @@ html[lang="vi"] .hero-headline {
   background: var(--muted-foreground);
 }
 
+.editor-shell .llm-provider-avatar {
+  height: 0.95rem;
+  width: 0.95rem;
+  flex-shrink: 0;
+  border-radius: 0.25rem;
+  object-fit: contain;
+}
+
+.editor-shell .llm-selector-segment-provider .llm-provider-avatar {
+  border-radius: 0.3rem;
+}
+
+/* Dropdown menus are portaled outside `.editor-shell` — duplicate the critical
+   size rules unscoped so provider icons don't blow up in the menu. */
+.llm-provider-avatar {
+  height: 0.95rem;
+  width: 0.95rem;
+  flex-shrink: 0;
+  border-radius: 0.25rem;
+  object-fit: contain;
+}
+
+.dark .llm-provider-avatar[data-provider="openrouter"] {
+  filter: invert(1) brightness(1.1) contrast(1.05);
+}
+
+.llm-selector-dot {
+  display: inline-block;
+  height: 0.4375rem;
+  width: 0.4375rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+
+.llm-selector-dot[data-provider="openrouter"] {
+  background: oklch(0.58 0.18 285);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.58 0.18 285) 25%, transparent);
+}
+
+.llm-selector-dot[data-provider="zai"] {
+  background: oklch(0.62 0.16 155);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.62 0.16 155) 25%, transparent);
+}
+
+.llm-selector-dot[data-provider="openai"] {
+  background: oklch(0.55 0.12 195);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.55 0.12 195) 25%, transparent);
+}
+
+.llm-selector-dot[data-provider="anthropic"] {
+  background: oklch(0.62 0.14 55);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.62 0.14 55) 25%, transparent);
+}
+
+.llm-selector-dot[data-provider="google"] {
+  background: oklch(0.58 0.16 250);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.58 0.16 250) 25%, transparent);
+}
+
 .editor-shell .llm-selector-dot[data-provider="openrouter"] {
   background: oklch(0.58 0.18 285);
   box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.58 0.18 285) 25%, transparent);
@@ -5359,6 +5513,11 @@ html[lang="vi"] .hero-headline {
   box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.62 0.14 55) 25%, transparent);
 }
 
+.editor-shell .llm-selector-dot[data-provider="google"] {
+  background: oklch(0.58 0.16 250);
+  box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.58 0.16 250) 25%, transparent);
+}
+
 .editor-shell .llm-selector-chevron {
   height: 0.75rem;
   width: 0.75rem;
@@ -5366,7 +5525,7 @@ html[lang="vi"] .hero-headline {
   opacity: 0.45;
 }
 
-.editor-shell .llm-selector-refresh {
+.editor-shell .llm-selector-new-chat {
   display: flex;
   height: 1.75rem;
   width: 1.75rem;
@@ -5381,7 +5540,7 @@ html[lang="vi"] .hero-headline {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.editor-shell .llm-selector-refresh:hover {
+.editor-shell .llm-selector-new-chat:hover {
   background: var(--editor-surface-hover);
   color: var(--foreground);
 }
@@ -6317,12 +6476,9 @@ html[lang="vi"] .hero-headline {
   color: oklch(0.78 0.1 55);
 }
 
+.chat-slash-menu,
 .editor-shell .chat-slash-menu {
-  position: absolute;
-  bottom: calc(100% + 0.375rem);
-  left: 0;
-  right: 0;
-  z-index: 40;
+  z-index: 200;
   max-height: 16rem;
   overflow-y: auto;
   border-radius: 0.75rem;
@@ -6334,6 +6490,16 @@ html[lang="vi"] .hero-headline {
   padding: 0.25rem 0;
 }
 
+.dark .chat-slash-menu,
+.dark .editor-shell .chat-slash-menu {
+  border-color: oklch(0.35 0.02 255 / 70%);
+  background: oklch(0.2 0.015 255 / 96%);
+  box-shadow:
+    0 8px 32px oklch(0 0 0 / 35%),
+    0 1px 3px oklch(0 0 0 / 20%);
+}
+
+.chat-slash-menu-item,
 .editor-shell .chat-slash-menu-item {
   display: flex;
   width: 100%;
@@ -6347,11 +6513,14 @@ html[lang="vi"] .hero-headline {
   transition: background 0.12s ease;
 }
 
+.chat-slash-menu-item:hover,
+.chat-slash-menu-item--active,
 .editor-shell .chat-slash-menu-item:hover,
 .editor-shell .chat-slash-menu-item--active {
   background: oklch(0.96 0.008 90);
 }
 
+.chat-slash-menu-icon,
 .editor-shell .chat-slash-menu-icon {
   height: 2rem;
   width: 2rem;
@@ -6362,6 +6531,7 @@ html[lang="vi"] .hero-headline {
   padding: 0.125rem;
 }
 
+.chat-slash-menu-body,
 .editor-shell .chat-slash-menu-body {
   display: flex;
   min-width: 0;
@@ -6371,6 +6541,7 @@ html[lang="vi"] .hero-headline {
   padding-top: 0.0625rem;
 }
 
+.chat-slash-menu-cmd,
 .editor-shell .chat-slash-menu-cmd {
   font-size: 0.875rem;
   font-weight: 600;
@@ -6378,6 +6549,7 @@ html[lang="vi"] .hero-headline {
   color: var(--foreground);
 }
 
+.chat-slash-menu-desc,
 .editor-shell .chat-slash-menu-desc {
   display: block;
   font-size: 0.72rem;
@@ -6385,6 +6557,7 @@ html[lang="vi"] .hero-headline {
   color: var(--muted-foreground);
 }
 
+.chat-slash-menu-detail,
 .editor-shell .chat-slash-menu-detail {
   display: block;
   margin-top: 0.15rem;
@@ -6525,18 +6698,13 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .tools-tab-btn.is-active {
-  color: var(--foreground);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 0 var(--primary);
 }
 
 .editor-shell .tools-tab-btn.is-active::after {
-  content: "";
-  position: absolute;
-  left: 0.5rem;
-  right: 0.5rem;
-  bottom: -0.6875rem;
-  height: 2px;
-  background: var(--primary);
-  border-radius: 999px;
+  content: none;
 }
 
 .editor-shell .tools-section-title {

@@ -134,23 +134,123 @@ def parse_bib_entries(bib: str) -> dict[str, dict]:
     return entries
 
 
+STANDARD_SECTIONS = [
+    "abstract",
+    "introduction",
+    "related work",
+    "methods",
+    "methodology",
+    "materials and methods",
+    "experiments",
+    "results",
+    "discussion",
+    "conclusion",
+]
+
+# IMRaD groups — any alias match counts as present.
+_IMRAD_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ("Abstract", ("abstract", "tóm tắt", "tom tat")),
+    ("Introduction", ("introduction", "intro", "giới thiệu", "gioi thieu", "mở đầu", "mo dau")),
+    (
+        "Methods",
+        (
+            "method",
+            "methodology",
+            "materials and methods",
+            "materials",
+            "experiment",
+            "approach",
+            "phương pháp",
+            "phuong phap",
+            "experimental setup",
+        ),
+    ),
+    ("Results", ("result", "kết quả", "ket qua", "findings")),
+    ("Discussion", ("discussion", "thảo luận", "thao luan")),
+    ("Conclusion", ("conclusion", "kết luận", "ket luan")),
+]
+
+_IMRAD_ORDER = ("Introduction", "Methods", "Results", "Discussion", "Conclusion")
+
+
+def _section_name_matches(name: str, patterns: tuple[str, ...]) -> bool:
+    lower = name.lower()
+    return any(pattern in lower for pattern in patterns)
+
+
+def _find_group_index(section_names: list[str], patterns: tuple[str, ...]) -> int | None:
+    for idx, name in enumerate(section_names):
+        if _section_name_matches(name, patterns):
+            return idx
+    return None
+
+
+def _group_patterns(label: str) -> tuple[str, ...]:
+    for group_label, patterns in _IMRAD_GROUPS:
+        if group_label == label:
+            return patterns
+    return ()
+
+
 def analyze_structure(sections: list[dict]) -> list[dict]:
     """Rule-based structure suggestions (no LLM)."""
     suggestions: list[dict] = []
-    names = {s["name"].lower() for s in sections}
-    name_list = [s["name"].lower() for s in sections]
+    all_names = [str(s.get("name", "")).strip() for s in sections if str(s.get("name", "")).strip()]
+    heading_names = [
+        str(s.get("name", "")).strip()
+        for s in sections
+        if s.get("kind") == "section" and str(s.get("name", "")).strip()
+    ]
+    name_list = [n.lower() for n in all_names]
 
-    for expected in STANDARD_SECTIONS:
-        if expected not in names and not any(expected in n for n in names):
-            if expected in ("abstract", "introduction", "conclusion"):
-                suggestions.append(
-                    {
-                        "type": "missing",
-                        "section": expected.title(),
-                        "message": f"Consider adding a {expected.title()} section.",
-                        "severity": "warning",
-                    }
-                )
+    group_present: dict[str, bool] = {}
+    group_index: dict[str, int | None] = {}
+    for label, patterns in _IMRAD_GROUPS:
+        present = any(_section_name_matches(n, patterns) for n in all_names)
+        group_present[label] = present
+        group_index[label] = _find_group_index(heading_names, patterns)
+
+    for label, patterns in _IMRAD_GROUPS:
+        if group_present[label]:
+            continue
+        if label == "Abstract":
+            msg = "Thiếu Abstract — nên có \\begin{abstract} hoặc section tóm tắt."
+        elif label == "Methods":
+            msg = (
+                "Thiếu phần Methods/Phương pháp — bài IMRaD cần mô tả phương pháp "
+                "trước Results."
+            )
+        else:
+            msg = f"Thiếu phần {label} — khung IMRaD thường cần section này."
+        suggestions.append(
+            {
+                "type": "missing",
+                "section": label,
+                "message": msg,
+                "severity": "warning",
+            }
+        )
+
+    # IMRaD order on \\section headings (skip abstract block).
+    ordered: list[tuple[str, int]] = []
+    for label in _IMRAD_ORDER:
+        idx = group_index.get(label)
+        if idx is not None:
+            ordered.append((label, idx))
+    for i in range(1, len(ordered)):
+        prev_label, prev_idx = ordered[i - 1]
+        curr_label, curr_idx = ordered[i]
+        if curr_idx < prev_idx:
+            suggestions.append(
+                {
+                    "type": "misplaced",
+                    "section": curr_label,
+                    "message": (
+                        f"Thứ tự IMRaD: {prev_label} nên đứng trước {curr_label}."
+                    ),
+                    "severity": "warning",
+                }
+            )
 
     for idx, section in enumerate(sections):
         content_len = len(section.get("content", ""))
@@ -159,18 +259,27 @@ def analyze_structure(sections: list[dict]) -> list[dict]:
                 {
                     "type": "length",
                     "section": section["name"],
-                    "message": f"Section '{section['name']}' is very short ({content_len} chars).",
+                    "message": f"Section '{section['name']}' rất ngắn ({content_len} ký tự).",
                     "severity": "info",
                 }
             )
         lower = section["name"].lower()
-        if "method" in lower and idx > 0 and "result" in name_list[max(0, idx - 1)]:
+        if (
+            section.get("kind") == "section"
+            and any(p in lower for p in _group_patterns("Methods"))
+            and idx > 0
+            and any(
+                p in name_list[max(0, idx - 1)]
+                for p in _group_patterns("Results")
+            )
+        ):
             suggestions.append(
                 {
                     "type": "misplaced",
                     "section": section["name"],
-                    "message": "Methods typically precede Results.",
+                    "message": "Methods thường đứng trước Results trong khung IMRaD.",
                     "severity": "warning",
                 }
             )
+
     return suggestions

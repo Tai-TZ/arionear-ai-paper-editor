@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, forwardRef, useMemo } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, forwardRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -7,7 +8,6 @@ import {
   ChevronUp,
   Copy,
   Maximize2,
-  PanelRightClose,
   Sparkles,
   Square,
   X,
@@ -17,7 +17,8 @@ import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
 import { useLocale } from "@/components/locale-provider";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
-import { CHAT_SLASH_HINTS, filterSlashCommands, getSlashCommandQuery, slashCommandInsert, type SlashCommandDef } from "@/lib/chat-commands";
+import { filterSlashCommands, getSlashCommandQuery, slashCommandInsert, type SlashCommandDef } from "@/lib/chat-commands";
+import { getChatSlashHints } from "@/lib/chat-commands-i18n";
 import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  reasoning?: string;
   activities?: string[];
   aiSteps?: ChatAiStep[];
   /** Latest SSE step label while streaming */
@@ -42,7 +44,6 @@ export function hasChatHistory(messages: ChatMessage[]): boolean {
   return messages.some((m) => m.role === "user");
 }
 
-const CHAT_DOCK_COLLAPSED_H = 92;
 const CHAT_MIN_H = 320;
 const CHAT_DEFAULT_RATIO = 0.62;
 const CHAT_MAX_RATIO = 0.86;
@@ -64,7 +65,7 @@ type ChatDockProps = {
   llmModel?: string;
   onProviderChange?: (p: LLMProvider) => void;
   onModelChange?: (m: string) => void;
-  onRefreshProviders?: () => void;
+  onNewChat?: () => void;
   composerMode?: "normal" | "quick-edit";
   selectionContext?: EditorSelectionContext | null;
   onClearSelectionContext?: () => void;
@@ -91,7 +92,7 @@ export function ChatDock({
   llmModel,
   onProviderChange,
   onModelChange,
-  onRefreshProviders,
+  onNewChat,
   composerMode = "normal",
   selectionContext = null,
   onClearSelectionContext,
@@ -107,6 +108,7 @@ export function ChatDock({
   const dockRef = useRef<HTMLElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const [panelH, setPanelH] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
   const lastPanelHRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
   const conversationStarted = hasChatHistory(messages);
@@ -173,17 +175,19 @@ export function ChatDock({
     handle.setPointerCapture(e.pointerId);
     const startY = e.clientY;
     const startH = panelH;
+    setIsResizing(true);
 
     const onMove = (ev: PointerEvent) => {
       setPanelH(clampHeight(startH + (startY - ev.clientY)));
     };
-    const onUp = (ev: PointerEvent) => {
+    const finish = (ev: PointerEvent) => {
       handle.releasePointerCapture(ev.pointerId);
       handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onUp);
-      handle.removeEventListener("pointercancel", onUp);
+      handle.removeEventListener("pointerup", finish);
+      handle.removeEventListener("pointercancel", finish);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      setIsResizing(false);
       setPanelH((current) => {
         const clamped = clampHeight(current);
         persistPanelHeight(clamped);
@@ -194,8 +198,8 @@ export function ChatDock({
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
     handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onUp);
-    handle.addEventListener("pointercancel", onUp);
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
   };
 
   const canUseLlm = Boolean(
@@ -222,43 +226,44 @@ export function ChatDock({
   };
 
   const placeholder = !canUseLlm
-    ? "Cấu hình API key để dùng chat"
+    ? t.chatDock.placeholderNoProvider
     : paidModelSelected
       ? t.llm.paidChatPlaceholder
       : composerMode === "quick-edit"
-        ? "Mô tả cách sửa đoạn đã chọn…"
+        ? t.chatDock.placeholderQuickEdit
         : selectionContext
-          ? "Hỏi về vùng đã chọn…"
-          : "Hỏi Ario… hoặc gõ / để chọn lệnh";
+          ? t.chatDock.placeholderSelection
+          : t.chatDock.placeholderDefault;
 
   return (
     <aside
       ref={dockRef}
       className="chat-dock shrink-0"
       data-open={open}
-      style={open ? { height: panelH + CHAT_DOCK_COLLAPSED_H } : undefined}
+      data-resizing={isResizing}
+      style={{ "--chat-dock-panel-h": open ? `${panelH}px` : "0px" } as React.CSSProperties}
     >
-      {open && (
+      <div className="chat-dock-panel-wrap" aria-hidden={!open}>
         <button
           type="button"
           className="chat-dock-resize-handle chat-dock-resize-handle--top"
           onPointerDown={startResize}
-          aria-label="Kéo để đổi chiều cao chat"
+          aria-label={t.chatDock.resizeChat}
+          tabIndex={open ? 0 : -1}
         >
           <span className="chat-dock-resize-bar" />
         </button>
-      )}
 
-      {open && (
         <div className="chat-dock-panel flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="chat-dock-toolbar shrink-0">
             <button
               type="button"
               onClick={onClose}
               className="chat-dock-icon-btn"
-              aria-label="Thu gọn chat"
+              aria-label={t.chatDock.collapseChat}
+              tabIndex={open ? 0 : -1}
             >
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="chat-dock-collapse-icon h-4 w-4" />
             </button>
             <div className="chat-dock-title">
               <img src={arioAvatar} alt="" className="chat-dock-title-avatar" />
@@ -268,7 +273,8 @@ export function ChatDock({
             <button
               type="button"
               className="chat-dock-icon-btn"
-              aria-label="Mở rộng chat"
+              aria-label={t.chatDock.expandChat}
+              tabIndex={open ? 0 : -1}
               onClick={() => {
                 const maxH = getMaxHeight();
                 if (Math.abs(panelH - maxH) <= 8 && lastPanelHRef.current) {
@@ -285,14 +291,6 @@ export function ChatDock({
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
-            <button
-              type="button"
-              className="chat-dock-icon-btn"
-              aria-label="Đóng chat"
-              onClick={onClose}
-            >
-              <PanelRightClose className="h-3.5 w-3.5" />
-            </button>
           </div>
 
           <ChatMessages
@@ -302,13 +300,13 @@ export function ChatDock({
             streamProgress={streamProgress}
           />
         </div>
-      )}
+      </div>
 
       <div className="chat-dock-composer shrink-0">
         {!open && conversationStarted && !chatLoading && (
           <button type="button" className="chat-dock-expand-btn" onClick={onOpen}>
-            <ChevronUp className="h-3.5 w-3.5" />
-            <span>Xem lịch sử chat</span>
+            <ChevronUp className="chat-dock-expand-icon h-3.5 w-3.5" />
+            <span>{t.chatDock.openChat}</span>
           </button>
         )}
 
@@ -325,7 +323,7 @@ export function ChatDock({
         {composerMode === "quick-edit" && (
           <div className="chat-quick-edit-banner" role="status">
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>Quick Edit — chỉnh sửa vùng đã chọn trong editor</span>
+            <span>{t.chatDock.quickEditBanner}</span>
           </div>
         )}
 
@@ -333,8 +331,11 @@ export function ChatDock({
           <div className="chat-selection-chip">
             <span className="chat-selection-chip-label">
               {selectionContext.lineStart === selectionContext.lineEnd
-                ? `Dòng ${selectionContext.lineStart}`
-                : `Dòng ${selectionContext.lineStart}–${selectionContext.lineEnd}`}
+                ? t.chatDock.selectionLine(selectionContext.lineStart)
+                : t.chatDock.selectionLineRange(
+                    selectionContext.lineStart,
+                    selectionContext.lineEnd,
+                  )}
               <span className="chat-selection-chip-preview">
                 {selectionContext.text.trim().slice(0, 72)}
                 {selectionContext.text.trim().length > 72 ? "…" : ""}
@@ -345,7 +346,7 @@ export function ChatDock({
                 type="button"
                 className="chat-selection-chip-clear"
                 onClick={onClearSelectionContext}
-                aria-label="Bỏ vùng chọn"
+                  aria-label={t.chatDock.clearSelection}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -361,15 +362,12 @@ export function ChatDock({
               llmModel={llmModel!}
               onProviderChange={onProviderChange!}
               onModelChange={onModelChange!}
-              onRefresh={onRefreshProviders}
+              onNewChat={onNewChat}
               compact
               variant="light"
             />
           ) : (
-            <p className="chat-dock-llm-hint">
-              Thêm <code>OPENROUTER_API_KEY</code> (hoặc OpenAI/Anthropic/Z.AI) vào <code>.env</code> rồi restart
-              backend.
-            </p>
+            <p className="chat-dock-llm-hint">{t.chatDock.llmHint}</p>
           )}
         </div>
 
@@ -437,6 +435,8 @@ export function ChatMessages({
   chatLoading?: boolean;
   streamProgress?: ChatStreamProgressSnapshot;
 }) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const hookProgress = useChatStreamProgress();
   const progress = streamProgressProp ?? hookProgress;
   const liveActivity = progress.activity;
@@ -449,7 +449,7 @@ export function ChatMessages({
     <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3">
       {visibleMessages.length === 0 && !chatLoading && (
         <p className="chat-dock-empty-hint">
-          Chọn provider và model phía dưới. Gõ lệnh nhanh: {CHAT_SLASH_HINTS.join(", ")}.
+          {t.chatDock.emptySlashHint(getChatSlashHints(locale).join(", "))}
         </p>
       )}
 
@@ -462,7 +462,7 @@ export function ChatMessages({
                 <button
                   type="button"
                   className="chat-copy-btn"
-                  aria-label="Copy message"
+                  aria-label={t.chatDock.copyMessage}
                   onClick={() => copyText(m.content)}
                 >
                   <Copy className="h-3 w-3" />
@@ -490,11 +490,22 @@ export function ChatMessages({
           <div key={i} className="chat-message-row chat-assistant-row">
             <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
             <div className="chat-assistant-content min-w-0 flex-1">
+              {m.reasoning?.trim() ? (
+                <details className="chat-reasoning-panel mb-2" open={Boolean(m.isStreaming)}>
+                  <summary className="chat-reasoning-title cursor-pointer select-none">
+                    {t.chatDock.reasoningTitle}
+                  </summary>
+                  <div className="chat-reasoning-block mt-1 max-h-40 overflow-y-auto text-xs text-muted-foreground whitespace-pre-wrap">
+                    {m.reasoning}
+                  </div>
+                </details>
+              ) : null}
               {showLoadingState && (
                 <ChatAiStatePanel
                   steps={liveSteps}
                   activities={liveActivities}
                   activity={m.streamLabel ?? liveActivity}
+                  waitElapsedSec={m.streamElapsedSec}
                 />
               )}
               {m.content && (
@@ -520,6 +531,67 @@ export function ChatMessages({
   );
 }
 
+const SLASH_MENU_GAP_PX = 6;
+const SLASH_MENU_MAX_HEIGHT_PX = 256;
+
+function useSlashMenuPosition(
+  open: boolean,
+  anchorRef: React.RefObject<HTMLTextAreaElement | null>,
+  itemCount: number,
+) {
+  const [style, setStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
+
+  const update = useCallback(() => {
+    const el = anchorRef.current;
+    if (!open || !el) {
+      setStyle({ visibility: "hidden" });
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const estimatedHeight = Math.min(
+      SLASH_MENU_MAX_HEIGHT_PX,
+      Math.max(112, itemCount * 56),
+    );
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceAbove >= estimatedHeight || spaceAbove >= spaceBelow;
+
+    if (openUpward) {
+      setStyle({
+        position: "fixed",
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        bottom: `${window.innerHeight - rect.top + SLASH_MENU_GAP_PX}px`,
+        maxHeight: `${Math.max(96, Math.min(SLASH_MENU_MAX_HEIGHT_PX, spaceAbove - SLASH_MENU_GAP_PX - 8))}px`,
+        visibility: "visible",
+      });
+      return;
+    }
+
+    setStyle({
+      position: "fixed",
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      top: `${rect.bottom + SLASH_MENU_GAP_PX}px`,
+      maxHeight: `${Math.max(96, Math.min(SLASH_MENU_MAX_HEIGHT_PX, spaceBelow - SLASH_MENU_GAP_PX - 8))}px`,
+      visibility: "visible",
+    });
+  }, [open, anchorRef, itemCount]);
+
+  useLayoutEffect(() => {
+    update();
+    if (!open) return;
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, update]);
+
+  return style;
+}
+
 export const ChatInput = forwardRef<HTMLTextAreaElement, {
   chatInput: string;
   onChatInputChange: (v: string) => void;
@@ -542,6 +614,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
   },
   ref,
 ) {
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const internalRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -556,8 +630,8 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
 
   const slashQuery = useMemo(() => getSlashCommandQuery(chatInput), [chatInput]);
   const filteredCommands = useMemo(
-    () => (slashQuery !== null ? filterSlashCommands(slashQuery) : []),
-    [slashQuery],
+    () => (slashQuery !== null ? filterSlashCommands(slashQuery, locale) : []),
+    [slashQuery, locale],
   );
   const showSlashMenu =
     !disabled && slashQuery !== null && filteredCommands.length > 0;
@@ -580,6 +654,43 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
   );
 
   const canSend = chatInput.trim().length > 0 && !disabled;
+  const slashMenuStyle = useSlashMenuPosition(showSlashMenu, internalRef, filteredCommands.length);
+
+  const slashMenu =
+    showSlashMenu &&
+    createPortal(
+      <div
+        className="chat-slash-menu chat-slash-menu--portaled soft-scrollbar"
+        style={slashMenuStyle}
+        role="listbox"
+        aria-label="Lệnh chat"
+      >
+        {filteredCommands.map((cmd, index) => (
+          <button
+            key={`${cmd.command}-${cmd.task}`}
+            type="button"
+            role="option"
+            aria-selected={index === highlightIndex}
+            className={`chat-slash-menu-item${index === highlightIndex ? " chat-slash-menu-item--active" : ""}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              applySlashCommand(cmd);
+            }}
+            onMouseEnter={() => setHighlightIndex(index)}
+          >
+            <img src={arioAvatar} alt="" className="chat-slash-menu-icon" />
+            <span className="chat-slash-menu-body">
+              <span className="chat-slash-menu-cmd">/{cmd.command}</span>
+              <span className="chat-slash-menu-desc">{cmd.description}</span>
+              {cmd.detail ? (
+                <span className="chat-slash-menu-detail">{cmd.detail}</span>
+              ) : null}
+            </span>
+          </button>
+        ))}
+      </div>,
+      document.body,
+    );
 
   const handlePrimaryAction = () => {
     if (loading) {
@@ -592,37 +703,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
 
   return (
     <div className={cn("chat-input-wrap", disabled && "chat-input-wrap--disabled")}>
-      {showSlashMenu && (
-        <div
-          className="chat-slash-menu soft-scrollbar"
-          role="listbox"
-          aria-label="Lệnh chat"
-        >
-          {filteredCommands.map((cmd, index) => (
-            <button
-              key={`${cmd.command}-${cmd.task}`}
-              type="button"
-              role="option"
-              aria-selected={index === highlightIndex}
-              className={`chat-slash-menu-item${index === highlightIndex ? " chat-slash-menu-item--active" : ""}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                applySlashCommand(cmd);
-              }}
-              onMouseEnter={() => setHighlightIndex(index)}
-            >
-              <img src={arioAvatar} alt="" className="chat-slash-menu-icon" />
-              <span className="chat-slash-menu-body">
-                <span className="chat-slash-menu-cmd">/{cmd.command}</span>
-                <span className="chat-slash-menu-desc">{cmd.description}</span>
-                {cmd.detail ? (
-                  <span className="chat-slash-menu-detail">{cmd.detail}</span>
-                ) : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      {slashMenu}
 
       <div className="chat-input-shell">
         <textarea
@@ -680,7 +761,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
             onClick={handlePrimaryAction}
             disabled={!loading && (!canSend || disabled)}
             className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
-            aria-label={loading ? "Dừng xử lý" : "Send message"}
+            aria-label={loading ? t.chatDock.stopProcessing : t.chatDock.sendMessage}
           >
             {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-4 w-4" />}
           </button>
