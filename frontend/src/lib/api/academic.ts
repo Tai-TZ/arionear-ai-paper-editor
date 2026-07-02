@@ -1,10 +1,11 @@
 import { resolveApiBase } from "./base-url";
+import { getAccessToken, logoutUser } from "@/lib/auth-store";
 import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
 const API_BASE = resolveApiBase();
 
-export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai";
+export type LLMProvider = "openai" | "anthropic" | "openrouter" | "zai" | "google";
 
 export function normalizeLlmProvider(provider: string): LLMProvider {
   if (provider === "nvidia" || provider === "tokenrouter") return "openrouter";
@@ -187,17 +188,31 @@ type LlmOptions = {
   llm_model?: string;
 };
 
+export type ChatHistoryTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 function buildChatRequestBody(
   message: string,
   opts: {
     sessionId: string;
     latexContent: string;
+    latexContentHash?: string;
+    activeFileContent?: string;
+    activeFileContentHash?: string;
     selection?: string;
+    selectionStart?: number;
+    selectionEnd?: number;
+    locale?: "vi" | "en";
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
     logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
+    conversationHistory?: ChatHistoryTurn[];
+    activeFile?: string;
+    mainFile?: string;
   } & LlmOptions,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -206,6 +221,7 @@ function buildChatRequestBody(
     selection: opts.selection ?? "",
   };
   if (opts.sessionId) body.session_id = opts.sessionId;
+  if (opts.latexContentHash) body.latex_content_hash = opts.latexContentHash;
   if (opts.task) body.task = opts.task;
   if (opts.llm_provider) body.llm_provider = opts.llm_provider;
   if (opts.llm_model?.trim()) body.llm_model = opts.llm_model.trim();
@@ -215,6 +231,20 @@ function buildChatRequestBody(
   if (opts.logic_audit_sections?.length) {
     body.logic_audit_sections = opts.logic_audit_sections;
   }
+  if (opts.conversationHistory?.length) {
+    body.conversation_history = opts.conversationHistory;
+  }
+  if (opts.activeFile?.trim()) body.active_file = opts.activeFile.trim();
+  if (opts.mainFile?.trim()) body.main_file = opts.mainFile.trim();
+  if (opts.activeFileContent !== undefined) {
+    body.active_file_content = opts.activeFileContent;
+  }
+  if (opts.activeFileContentHash) {
+    body.active_file_content_hash = opts.activeFileContentHash;
+  }
+  if (opts.selectionStart != null) body.selection_start = opts.selectionStart;
+  if (opts.selectionEnd != null) body.selection_end = opts.selectionEnd;
+  if (opts.locale) body.locale = opts.locale;
   return body;
 }
 
@@ -241,6 +271,11 @@ function formatTraceActivity(stage: string, payload: Record<string, unknown>): s
   return `${label}${suffix} · ${seconds}s`;
 }
 
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -248,11 +283,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders(),
         ...init?.headers,
       },
     });
   } catch {
     throw new Error(path.startsWith("/compile") ? COMPILE_CONNECTION_MSG : "NETWORK_ERROR");
+  }
+  if (res.status === 401) {
+    logoutUser();
   }
   if (!res.ok) {
     let detail: unknown = res.statusText;
@@ -462,11 +501,14 @@ function streamChatWithXhr(
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Accept", "text/event-stream");
     xhr.setRequestHeader("Cache-Control", "no-cache");
+    const token = getAccessToken();
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     xhr.onreadystatechange = () => {
       if (xhr.readyState !== XMLHttpRequest.HEADERS_RECEIVED) return;
       if (xhr.status >= 200 && xhr.status < 300) return;
       failed = true;
+      if (xhr.status === 401) logoutUser();
       let detail: unknown = xhr.statusText;
       try {
         detail = JSON.parse(xhr.responseText)?.detail ?? detail;
@@ -512,6 +554,7 @@ async function streamChatWithFetch(
         "Content-Type": "application/json",
         Accept: "text/event-stream",
         "Cache-Control": "no-cache",
+        ...authHeaders(),
       },
       body,
       signal,
@@ -519,6 +562,10 @@ async function streamChatWithFetch(
   } catch {
     callbacks.onError(toUserFacingMessage(new Error("NETWORK_ERROR")));
     return;
+  }
+
+  if (res.status === 401) {
+    logoutUser();
   }
 
   if (!res.ok || !res.body) {
@@ -570,12 +617,21 @@ export async function streamChat(
   opts: {
     sessionId: string;
     latexContent: string;
+    latexContentHash?: string;
+    activeFileContent?: string;
+    activeFileContentHash?: string;
     selection?: string;
+    selectionStart?: number;
+    selectionEnd?: number;
+    locale?: "vi" | "en";
     task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
     integrity_strictness?: "relaxed" | "standard" | "strict";
     logic_audit_mode?: "quick" | "deep" | "gate";
     logic_audit_scope?: "selected" | "full";
     logic_audit_sections?: string[];
+    conversationHistory?: ChatHistoryTurn[];
+    activeFile?: string;
+    mainFile?: string;
   } & LlmOptions,
   callbacks: StreamChatCallbacks,
   signal?: AbortSignal,

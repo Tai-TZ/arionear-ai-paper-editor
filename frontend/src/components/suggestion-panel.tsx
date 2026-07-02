@@ -1,6 +1,9 @@
 import { Check, ShieldAlert, X } from "lucide-react";
 
+import { useLocale } from "@/components/locale-provider";
 import type { IntegrityFlag } from "@/lib/api/academic";
+import { editorCopy } from "@/lib/editor-i18n";
+import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";
 
 type SuggestionPanelProps = {
   originalText: string;
@@ -19,7 +22,9 @@ export function SuggestionPanel({
   onAccept,
   onReject,
 }: SuggestionPanelProps) {
-  const hasErrors = flags.some((f) => f.severity === "error");
+  const { locale } = useLocale();
+  const t = editorCopy(locale);
+  const hasErrors = hasBlockingIntegrityFlags(flags);
 
   return (
     <div className="suggestion-panel shrink-0 border-t border-primary/15 bg-card/98 shadow-[0_-4px_20px_-8px_oklch(0.2_0.02_255_/_12%)] backdrop-blur-sm">
@@ -27,12 +32,10 @@ export function SuggestionPanel({
         <div className="flex items-center gap-2 text-xs font-medium text-primary">
           <ShieldAlert className="h-3.5 w-3.5" />
           <span>
-            {applyMode === "document"
-              ? "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)"
-              : "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)"}
+            {applyMode === "document" ? t.suggestion.documentMode : t.suggestion.selectionMode}
           </span>
           <span className="text-[10px] font-normal text-muted-foreground">
-            Ctrl+Enter Accept · Esc Reject
+            {t.suggestion.shortcutHint}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -42,7 +45,7 @@ export function SuggestionPanel({
             className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:bg-secondary"
           >
             <X className="h-3 w-3" />
-            Reject
+            {t.suggestion.reject}
           </button>
           <button
             type="button"
@@ -51,7 +54,7 @@ export function SuggestionPanel({
             className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
             <Check className="h-3 w-3" />
-            Accept
+            {t.suggestion.accept}
           </button>
         </div>
       </div>

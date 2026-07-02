@@ -75,7 +75,8 @@ def check_rate_limit(user_id: uuid.UUID, limit_per_min: int) -> None:
     bucket[:] = [t for t in bucket if now - t < 60]
     if len(bucket) >= limit_per_min:
         raise QuotaExceededError(
-            f"Rate limit exceeded ({limit_per_min} requests per minute). Please wait and try again."
+            f"Bạn gửi quá nhiều yêu cầu ({limit_per_min} lượt/phút). "
+            "Vui lòng đợi một chút rồi thử lại."
         )
     bucket.append(now)
 
@@ -84,7 +85,9 @@ def assert_llm_allowed(db: Session, user: User) -> None:
     """Raise QuotaExceededError if the user may not call the LLM."""
     limits = get_llm_limits_from_profile(user.profile_settings)
     if not limits.llm_enabled:
-        raise QuotaExceededError("LLM access is disabled for your account. Contact the platform admin.")
+        raise QuotaExceededError(
+            "Tài khoản của bạn chưa được bật quyền dùng AI. Liên hệ quản trị viên để được hỗ trợ."
+        )
 
     check_rate_limit(user.id, limits.rate_limit_per_min)
 
@@ -99,14 +102,16 @@ def assert_llm_allowed(db: Session, user: User) -> None:
     daily_tokens = _sum_tokens_for_user(db, user.id, start=day_start, end=day_start + timedelta(days=1))
     if daily_tokens >= limits.daily_token_max:
         raise QuotaExceededError(
-            f"Daily token limit reached ({limits.daily_token_max:,} tokens). Try again tomorrow or contact admin."
+            f"Bạn đã dùng hết hạn mức token hôm nay ({limits.daily_token_max:,} token). "
+            "Hãy thử lại vào ngày mai hoặc liên hệ quản trị viên."
         )
 
     monthly_tokens = _sum_tokens_for_user(db, user.id, start=month_start, end=month_end)
     monthly_cost = monthly_tokens * cost_rate_per_token()
     if monthly_cost >= limits.monthly_cost_cap_usd:
         raise QuotaExceededError(
-            f"Monthly cost cap reached (${limits.monthly_cost_cap_usd:.2f} estimated). Contact admin to increase your quota."
+            f"Bạn đã đạt hạn mức chi phí tháng này (ước tính ${limits.monthly_cost_cap_usd:.2f}). "
+            "Liên hệ quản trị viên để tăng hạn mức."
         )
 
 

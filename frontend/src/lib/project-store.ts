@@ -1,5 +1,5 @@
 import type { LogicAuditReport } from "@/lib/api/academic";
-export { formatProjectDateTime, formatTimeAgo } from "@/lib/date-i18n";
+export { formatProjectDateTime, formatTimeAgo, parseApiTimestamp } from "@/lib/date-i18n";
 
 export type ProjectAsset = {
   name: string;

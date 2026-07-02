@@ -3,7 +3,7 @@ from src.services.edit_executor import (
     resolve_edit_plan,
     validate_proposed_edit,
 )
-from src.services.edit_planner import infer_edit_plan_rules
+from src.services.edit_planner import EditPlan, infer_edit_plan_rules, is_vague_edit_query
 from src.services.latex_outline import build_manuscript_outline
 
 
@@ -85,4 +85,47 @@ def test_validator_blocks_document_scope_for_title_query():
         "new",
         query="sửa tiêu đề thành V3",
     )
+    assert err is not None
+
+
+def test_vague_edit_query_detects_default_slash_message():
+    assert is_vague_edit_query("Chỉnh sửa bản thảo")
+    assert is_vague_edit_query("/edit")
+    assert is_vague_edit_query("edit manuscript")
+    assert is_vague_edit_query("revise the draft")
+    assert is_vague_edit_query("rewrite paper")
+    assert not is_vague_edit_query("sửa phần Abstract cho ngắn gọn hơn")
+    assert not is_vague_edit_query("sửa Abstract cho ngắn gọn hơn")
+    assert not is_vague_edit_query("edit Abstract to be shorter")
+    assert not is_vague_edit_query("revise the Introduction section")
+
+
+def test_validator_blocks_truncated_document_replacement():
+    latex = (
+        "\\documentclass[journal]{IEEEtran}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\n"
+        "Long introduction content for testing minimum length guards.\n"
+        "\\section{Methods}\n"
+        "Methods content here.\n"
+        "\\end{document}\n"
+    )
+    plan = infer_edit_plan_rules("sửa toàn bộ main.tex", build_manuscript_outline(latex), has_selection=False)
+    assert plan is not None
+    assert plan.target_type == "document"
+    resolved = resolve_edit_plan(latex, plan)
+    assert resolved is not None
+    err = validate_proposed_edit(latex, plan, resolved, "\\documentclass[journal]{IEEEtran}")
+    assert err is not None
+
+
+def test_validator_blocks_documentclass_after_end_document():
+    latex = (
+        "\\documentclass{article}\n\\begin{document}\nBody\n\\end{document}\n"
+    )
+    plan = EditPlan(target_type="document", operation="replace_snippet")
+    resolved = resolve_edit_plan(latex, plan)
+    assert resolved is not None
+    broken = latex + "\\documentclass{article}\n"
+    err = validate_proposed_edit(latex, plan, resolved, broken)
     assert err is not None

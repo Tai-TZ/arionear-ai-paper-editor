@@ -19,10 +19,23 @@ const TIME_AGO = {
   },
 } as const;
 
-export function formatTimeAgo(timestamp: number, locale: UiLanguage = "en"): string {
-  if (!Number.isFinite(timestamp)) return "—";
+export function parseApiTimestamp(value: string | number | Date): number {
+  if (typeof value === "number") return value;
+  if (value instanceof Date) return value.getTime();
+  const raw = String(value).trim();
+  if (!raw) return NaN;
+  const normalized = /[zZ]|[+-]\d{2}:\d{2}$/.test(raw) ? raw : `${raw}Z`;
+  return new Date(normalized).getTime();
+}
+
+export function formatTimeAgo(
+  timestamp: number | string | Date,
+  locale: UiLanguage = "en",
+): string {
+  const ms = typeof timestamp === "number" ? timestamp : parseApiTimestamp(timestamp);
+  if (!Number.isFinite(ms)) return "—";
   const labels = TIME_AGO[locale];
-  const diff = Date.now() - timestamp;
+  const diff = Date.now() - ms;
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return labels.justNow;
   if (minutes < 60) return labels.minutes(minutes);
@@ -30,7 +43,7 @@ export function formatTimeAgo(timestamp: number, locale: UiLanguage = "en"): str
   if (hours < 24) return labels.hours(hours);
   const days = Math.floor(hours / 24);
   if (days < 7) return labels.days(days);
-  return formatProjectDateTime(timestamp, locale);
+  return formatProjectDateTime(ms, locale);
 }
 
 /** Absolute local date/time for project list columns and cards. */

@@ -6,7 +6,9 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from src.config import LLMProvider, get_settings, normalize_llm_provider
+from src.config import LLMProvider, get_settings
+from src.services.chat_context import prepend_conversation_history
+from src.services.editor_llm import resolve_editor_aux_llm
 from src.services.latex_outline import ManuscriptOutline
 from src.services.parser.latex import find_section_for_query
 from src.services.prompts import build_system_prompt, render_user_prompt
@@ -27,6 +29,21 @@ _AUTHOR_HINTS = re.compile(
 _DOCUMENT_HINTS = re.compile(
     r"toàn\s*bộ|cả\s*bài|whole\s*document|entire\s*(file|document|manuscript)|main\.tex",
     re.IGNORECASE,
+)
+_VAGUE_EDIT_RE = re.compile(
+    r"^(?:/?edit\s*)?"
+    r"(?:chỉnh\s*sửa|sửa|edit|chỉnh|revise|rewrite)\s*"
+    r"(?:the\s+)?"
+    r"(?:bản\s*thảo|manuscript|file|latex|main\.tex|draft|paper|document)?\s*"
+    r"[-–—.:!…]*\s*$",
+    re.IGNORECASE,
+)
+
+VAGUE_EDIT_GUIDANCE = (
+    "Please specify what to edit — e.g. «edit Abstract», «change title», "
+    "«rewrite Methods». Or select text in the editor and send /edit.\n\n"
+    "Hãy nói rõ phần cần sửa — ví dụ: «sửa Abstract», «đổi tiêu đề», "
+    "«viết lại Methods». Hoặc bôi đen đoạn trong editor rồi gửi /edit."
 )
 _MODEL_RE = re.compile(r"efficientnet\s*v?\s*(\d+)", re.IGNORECASE)
 
@@ -223,6 +240,16 @@ def infer_edit_plan_rules(
     return None
 
 
+def is_vague_edit_query(query: str) -> bool:
+    """True when the user did not specify what to edit (unsafe to guess scope)."""
+    q = (query or "").strip()
+    if not q:
+        return True
+    if re.match(r"^/edit\s*$", q, re.IGNORECASE):
+        return True
+    return bool(_VAGUE_EDIT_RE.match(q))
+
+
 async def plan_edit(
     query: str,
     outline: ManuscriptOutline,
@@ -230,13 +257,14 @@ async def plan_edit(
     has_selection: bool,
     provider: LLMProvider | None = None,
     model: str | None = None,
+    conversation_history: list | None = None,
 ) -> EditPlan:
     from langchain_core.messages import HumanMessage, SystemMessage
 
     from src.services.llm import get_llm
 
     ruled = infer_edit_plan_rules(query, outline, has_selection=has_selection)
-    if ruled and (ruled.target_type != "document" or ruled.confidence >= 0.9):
+    if ruled:
         return ruled
 
     settings = get_settings()
@@ -252,9 +280,11 @@ async def plan_edit(
     system = build_system_prompt("edit_planner")
     if not system.strip():
         return ruled or EditPlan(
-            target_type="document",
+            target_type="latex_command",
+            target_id="title",
             operation="replace_snippet",
-            confidence=0.3,
+            confidence=0.5,
+            label="Tiêu đề · \\title{...}",
         )
 
     context = render_user_prompt(
@@ -269,11 +299,9 @@ async def plan_edit(
             f"text_selected: {has_selection}\n\n"
             f"Manuscript outline:\n{outline.to_planner_json()}"
         )
+    context = prepend_conversation_history(context, conversation_history or [])
 
-    router_provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
-    planner_model = model
-    if router_provider == "openrouter":
-        planner_model = settings.openrouter_logic_audit_quick_model
+    router_provider, planner_model = resolve_editor_aux_llm()
 
     llm = get_llm(provider=router_provider, model=planner_model, temperature=0)
     try:
@@ -288,12 +316,17 @@ async def plan_edit(
         )
     except Exception:
         return ruled or EditPlan(
-            target_type="document",
+            target_type="latex_command",
+            target_id="title",
             operation="replace_snippet",
-            confidence=0.3,
+            confidence=0.5,
+            label="Tiêu đề · \\title{...}",
         )
 
     parsed = parse_edit_plan_payload(str(response.content or ""))
+    if parsed and parsed.confidence >= 0.5:
+        if parsed.target_type == "document" and not _DOCUMENT_HINTS.search(query):
+            parsed = None
     if parsed and parsed.confidence >= 0.5:
         if _TITLE_HINTS.search(query) and parsed.target_type == "document":
             return ruled or EditPlan(

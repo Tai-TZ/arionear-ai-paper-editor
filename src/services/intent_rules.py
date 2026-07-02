@@ -55,6 +55,23 @@ _CONVERSATIONAL_CHAT_RE = re.compile(
     r"giúp\s+tôi\s+gì|help\s+me|bạn\s+biết\s+gì",
     re.IGNORECASE,
 )
+_IMPROVE_RE = re.compile(
+    r"hay\s+hơn|tốt\s+hơn|ngắn\s+hơn|dài\s+hơn|cải\s+thiện|"
+    r"improve|better|polish|làm\s+mượt|clearer",
+    re.IGNORECASE,
+)
+_MANUSCRIPT_SECTION_RE = re.compile(
+    r"abstract|tóm\s*tắt|introduction|giới\s*thiệu|method|phương\s*pháp|"
+    r"result|kết\s*quả|discussion|thảo\s*luận|conclusion|kết\s*luận|"
+    r"section|phần|đoạn",
+    re.IGNORECASE,
+)
+_FOLLOWUP_SHORT_RE = re.compile(
+    r"^(?:ngắn\s+hơn|dài\s+hơn|lại|thử\s+lại|tiếp|nữa|ok|được|"
+    r"sửa\s+tiếp|chỉnh\s+tiếp|hay\s+hơn|tốt\s+hơn|mượt\s+hơn|"
+    r"shorter|longer|again|retry|continue)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -70,6 +87,76 @@ def is_casual_chat(query: str) -> bool:
     if _GREETING_CHAT_RE.match(q):
         return True
     return _CONVERSATIONAL_CHAT_RE.search(q) is not None
+
+
+def _turn_content(turn: object) -> str:
+    if hasattr(turn, "content"):
+        return str(turn.content or "").strip()
+    if isinstance(turn, dict):
+        return str(turn.get("content", "")).strip()
+    return ""
+
+
+def _turn_role(turn: object) -> str:
+    if hasattr(turn, "role"):
+        return str(turn.role or "")
+    if isinstance(turn, dict):
+        return str(turn.get("role", ""))
+    return ""
+
+
+def looks_like_edit_followup(query: str, history: list | None) -> bool:
+    if is_casual_chat(query):
+        return False
+    if not history:
+        return False
+    q = query.strip()
+    if not q:
+        return False
+    if _FOLLOWUP_SHORT_RE.match(q):
+        return True
+    last_assistant = ""
+    for turn in history[-6:]:
+        if _turn_role(turn) == "assistant":
+            last_assistant = _turn_content(turn)
+    if not last_assistant:
+        return False
+    lower = last_assistant.lower()
+    if any(
+        hint in lower
+        for hint in (
+            "accept/reject",
+            "xem diff",
+            "đã cập nhật",
+            "gợi ý",
+            "proposed",
+            "biên tập",
+            "chỉnh sửa",
+        )
+    ):
+        return len(q) <= 120
+    return False
+
+
+def infer_followup_intent(
+    query: str,
+    history: list | None,
+    *,
+    has_selection: bool,
+) -> IntentResult | None:
+    if is_casual_chat(query):
+        return None
+    if not looks_like_edit_followup(query, history):
+        return None
+    q = query.strip().lower()
+    scope: Scope = "selection" if has_selection else "document"
+    if _STYLE_RE.search(q) or re.search(
+        r"ngắn\s+hơn|dài\s+hơn|mượt|hay\s+hơn|polish|viết\s+lại",
+        q,
+        re.IGNORECASE,
+    ):
+        return IntentResult(action="style", scope=scope)
+    return IntentResult(action="edit", scope=scope)
 
 
 def fallback_intent(query: str, has_latex: bool, has_selection: bool) -> IntentResult:
@@ -105,6 +192,20 @@ def fallback_intent(query: str, has_latex: bool, has_selection: bool) -> IntentR
         return IntentResult(action="structure")
 
     if q.endswith("?"):
+        if re.search(
+            r"sửa|chỉnh|viết\s*lại|đổi|thay|rewrite|polish|edit|fix",
+            q,
+            re.IGNORECASE,
+        ):
+            return IntentResult(
+                action="style" if _STYLE_RE.search(q) else "edit",
+                scope="selection" if has_selection else "document",
+            )
+        if _IMPROVE_RE.search(q) and _MANUSCRIPT_SECTION_RE.search(q):
+            return IntentResult(
+                action="style" if _STYLE_RE.search(q) else "edit",
+                scope="selection" if has_selection else "document",
+            )
         return IntentResult(action="chat")
 
     if has_selection:

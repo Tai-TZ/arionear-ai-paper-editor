@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import subprocess
+import uuid
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
 from src.agents.graph import agent
 from src.config import get_settings
 from src.db.engine import db_is_ready, is_db_enabled
@@ -133,7 +136,11 @@ async def get_providers():
 
 
 @router.post("/sessions", response_model=SessionResponse)
-async def create_session(body: SessionCreate):
+async def create_session(
+    body: SessionCreate,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(body.id, user_id)
     session = session_store.create(
         session_id=body.id,
         name=body.name,
@@ -144,7 +151,11 @@ async def create_session(body: SessionCreate):
 
 
 @router.get("/sessions/{session_id}", response_model=SessionResponse)
-async def get_session(session_id: str):
+async def get_session(
+    session_id: str,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(session_id, user_id)
     session = session_store.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -152,7 +163,12 @@ async def get_session(session_id: str):
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionResponse)
-async def update_session(session_id: str, body: SessionUpdate):
+async def update_session(
+    session_id: str,
+    body: SessionUpdate,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(session_id, user_id)
     session = session_store.get(session_id)
     if not session:
         session = session_store.get_or_create(
@@ -173,7 +189,11 @@ async def update_session(session_id: str, body: SessionUpdate):
 
 
 @router.get("/sessions/{session_id}/revisions", response_model=RevisionsListResponse)
-async def list_session_revisions(session_id: str):
+async def list_session_revisions(
+    session_id: str,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(session_id, user_id)
     session = session_store.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -183,7 +203,11 @@ async def list_session_revisions(session_id: str):
 
 
 @router.get("/sessions/{session_id}/citations", response_model=CitationVerifyResponse)
-async def get_session_citations(session_id: str):
+async def get_session_citations(
+    session_id: str,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(session_id, user_id)
     session = session_store.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -198,12 +222,36 @@ async def get_session_citations(session_id: str):
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest, http_request: Request):
-    async def stream_with_disconnect():
-        async for chunk in flush_sse_stream(stream_chat(request)):
+async def chat_stream(
+    request: ChatRequest,
+    http_request: Request,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(request.session_id or "", user_id)
+    cancel = asyncio.Event()
+
+    async def watch_disconnect() -> None:
+        while not cancel.is_set():
             if await http_request.is_disconnected():
-                break
-            yield chunk
+                cancel.set()
+                return
+            await asyncio.sleep(0.2)
+
+    async def stream_with_disconnect():
+        watcher = asyncio.create_task(watch_disconnect())
+        agen = stream_chat(request, cancel_event=cancel)
+        try:
+            async for chunk in flush_sse_stream(agen):
+                if cancel.is_set():
+                    break
+                yield chunk
+        finally:
+            cancel.set()
+            watcher.cancel()
+            with contextlib.suppress(Exception):
+                await agen.aclose()
+            with contextlib.suppress(asyncio.CancelledError):
+                await watcher
 
     try:
         return StreamingResponse(
@@ -223,7 +271,11 @@ async def chat_stream(request: ChatRequest, http_request: Request):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(request.session_id or "", user_id)
     try:
         if request.session_id and request.latex_content:
             session_store.get_or_create(
@@ -252,7 +304,11 @@ async def chat(request: ChatRequest):
 
 
 @router.post("/edit/style", response_model=StyleEditResponse)
-async def edit_style(request: StyleEditRequest):
+async def edit_style(
+    request: StyleEditRequest,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(request.session_id, user_id)
     try:
         session = session_store.get_or_create(request.session_id)
         session_store.update(request.session_id, latex_content=session.latex_content)
@@ -285,7 +341,11 @@ async def edit_style(request: StyleEditRequest):
 
 
 @router.post("/citations/verify", response_model=CitationVerifyResponse)
-async def verify_session_citations(request: CitationVerifyRequest):
+async def verify_session_citations(
+    request: CitationVerifyRequest,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(request.session_id, user_id)
     session = session_store.get_or_create(request.session_id)
     latex = session.latex_content
     bib = extract_bib_content(latex, request.bib_content)
@@ -362,7 +422,13 @@ async def synctex_lookup(body: SyncTeXLookupRequest):
 
 
 @router.post("/revisions/{session_id}/{revision_id}")
-async def revision_action(session_id: str, revision_id: str, body: RevisionAction):
+async def revision_action(
+    session_id: str,
+    revision_id: str,
+    body: RevisionAction,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    assert_paper_session_access(session_id, user_id)
     record = session_store.set_revision_action(session_id, revision_id, body.action)
     if not record:
         raise HTTPException(status_code=404, detail="Revision not found")

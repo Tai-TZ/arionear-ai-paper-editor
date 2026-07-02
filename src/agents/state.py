@@ -33,3 +33,9 @@ class AgentState(TypedDict, total=False):
     apply_mode: str
     metadata: dict
     integrity_strictness: str
+    active_file: str
+    main_file: str
+    main_latex: str
+    selection_start: int
+    selection_end: int
+    conversation_history: list

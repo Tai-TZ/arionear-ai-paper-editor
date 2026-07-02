@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai", "anthropic", "openrouter", "zai"]
+LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "google"]
 
 
 def normalize_llm_provider(provider: str | None) -> LLMProvider | None:
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     zai_api_key: str = ""
+    google_api_key: str = ""
 
     # Provider base URLs
     openai_base_url: str = "https://api.openai.com/v1"
@@ -82,6 +83,7 @@ class Settings(BaseSettings):
     openrouter_default_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     openrouter_logic_audit_quick_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
+    google_default_model: str = "gemini-2.5-flash"
 
     # LLM HTTP + logic-audit stream timeouts (seconds)
     llm_request_timeout_sec: float = Field(default=180.0, ge=30.0, le=900.0)

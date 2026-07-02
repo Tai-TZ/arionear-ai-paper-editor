@@ -149,13 +149,40 @@ export async function createPaper(
   return toStoredProject(data);
 }
 
-export async function updatePaper(
-  id: string,
-  patch: Partial<Pick<StoredProject, "name" | "latex" | "files" | "mainFile" | "compiler" | "chatThreads">> & {
-    assets?: ProjectAsset[];
-    metadata?: Record<string, unknown>;
-  },
-): Promise<StoredProject> {
+type PaperPatch = Partial<
+  Pick<StoredProject, "name" | "latex" | "files" | "mainFile" | "compiler" | "chatThreads">
+> & {
+  assets?: ProjectAsset[];
+  metadata?: Record<string, unknown>;
+};
+
+type PaperPatchOptions = {
+  /** Flush immediately (e.g. Ctrl+S) instead of debouncing. */
+  immediate?: boolean;
+};
+
+type PaperQueue = {
+  pending: PaperPatch;
+  timer: ReturnType<typeof setTimeout> | null;
+  inflight: Promise<StoredProject> | null;
+  flushWaiters: Array<{
+    resolve: (value: StoredProject) => void;
+    reject: (reason?: unknown) => void;
+  }>;
+};
+
+const PAPER_PATCH_DEBOUNCE_MS = 400;
+const paperQueues = new Map<string, PaperQueue>();
+
+function mergePaperPatch(base: PaperPatch, next: PaperPatch): PaperPatch {
+  const merged: PaperPatch = { ...base, ...next };
+  if (base.metadata || next.metadata) {
+    merged.metadata = { ...(base.metadata ?? {}), ...(next.metadata ?? {}) };
+  }
+  return merged;
+}
+
+function buildPaperPatchBody(patch: PaperPatch): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.latex !== undefined) body.latex = patch.latex;
@@ -175,13 +202,93 @@ export async function updatePaper(
       ...(patch.chatThreads !== undefined ? { chat_threads: patch.chatThreads } : {}),
     };
   }
+  return body;
+}
 
+async function executePaperPatch(id: string, patch: PaperPatch): Promise<StoredProject> {
   const data = await papersFetch<PaperResponse>(`/papers/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body: JSON.stringify(buildPaperPatchBody(patch)),
   });
   invalidateFetchPrefix("papers:");
   return toStoredProject(data);
+}
+
+function getPaperQueue(id: string): PaperQueue {
+  let queue = paperQueues.get(id);
+  if (!queue) {
+    queue = { pending: {}, timer: null, inflight: null, flushWaiters: [] };
+    paperQueues.set(id, queue);
+  }
+  return queue;
+}
+
+function schedulePaperFlush(id: string, immediate = false) {
+  const queue = getPaperQueue(id);
+  if (queue.timer) {
+    clearTimeout(queue.timer);
+    queue.timer = null;
+  }
+
+  const runFlush = () => {
+    if (queue.inflight) {
+      queue.timer = setTimeout(runFlush, 50);
+      return;
+    }
+    if (Object.keys(queue.pending).length === 0) {
+      if (queue.inflight) {
+        void queue.inflight.then(
+          (result) => {
+            const waiters = queue.flushWaiters.splice(0);
+            waiters.forEach((w) => w.resolve(result));
+          },
+          (err) => {
+            const waiters = queue.flushWaiters.splice(0);
+            waiters.forEach((w) => w.reject(err));
+          },
+        );
+      }
+      return;
+    }
+
+    const patch = queue.pending;
+    queue.pending = {};
+    queue.inflight = executePaperPatch(id, patch)
+      .then((result) => {
+        queue.inflight = null;
+        const waiters = queue.flushWaiters.splice(0);
+        waiters.forEach((w) => w.resolve(result));
+        if (Object.keys(queue.pending).length > 0) {
+          schedulePaperFlush(id, true);
+        }
+        return result;
+      })
+      .catch((err) => {
+        queue.inflight = null;
+        const waiters = queue.flushWaiters.splice(0);
+        waiters.forEach((w) => w.reject(err));
+        throw err;
+      });
+  };
+
+  if (immediate) {
+    runFlush();
+  } else {
+    queue.timer = setTimeout(runFlush, PAPER_PATCH_DEBOUNCE_MS);
+  }
+}
+
+export async function updatePaper(
+  id: string,
+  patch: PaperPatch,
+  options?: PaperPatchOptions,
+): Promise<StoredProject> {
+  const queue = getPaperQueue(id);
+  queue.pending = mergePaperPatch(queue.pending, patch);
+  return new Promise((resolve, reject) => {
+    queue.flushWaiters.push({ resolve, reject });
+    schedulePaperFlush(id, options?.immediate ?? false);
+  });
 }
 
 export async function deletePaper(id: string): Promise<void> {

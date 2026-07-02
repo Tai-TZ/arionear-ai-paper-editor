@@ -130,7 +130,7 @@ def user_to_profile(user: User) -> ResearcherProfileResponse:
             if settings.get("default_llm_provider") in {"nvidia", "tokenrouter"}
             else settings.get("default_llm_provider"),
             "openrouter",
-            {"openrouter", "openai", "anthropic", "zai"},
+            {"openrouter", "openai", "anthropic", "zai", "google"},
         ),  # type: ignore[arg-type]
         default_llm_model=settings.get("default_llm_model") or None,
         rewrite_intensity=_coerce_enum(

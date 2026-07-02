@@ -1,3 +1,10 @@
+import type { UiLanguage } from "@/lib/researcher-profile";
+import {
+  getChatSlashCommands,
+  getChatSlashHints,
+  getSlashDefaultMessage,
+} from "@/lib/chat-commands-i18n";
+
 export type ChatSlashTask =
   | "style"
   | "structure"
@@ -29,87 +36,11 @@ const COMMAND_TO_TASK: Record<string, ChatSlashTask> = {
   chat: "chat",
 };
 
-const DEFAULT_MESSAGES: Partial<Record<ChatSlashTask, string>> = {
-  logic: "Kiểm tra logic bài báo",
-  style: "Chỉnh văn phong bản thảo",
-  structure: "Kiểm tra cấu trúc bài báo",
-  citation: "Kiểm tra trích dẫn",
-  template: "Tạo khung IMRAD",
-  edit: "Chỉnh sửa bản thảo",
-};
+/** @deprecated Use getChatSlashCommands(locale) */
+export const CHAT_SLASH_COMMANDS = getChatSlashCommands("vi");
 
-/** Catalog shown in the Telegram-style slash menu. */
-export const CHAT_SLASH_COMMANDS: SlashCommandDef[] = [
-  {
-    command: "logic",
-    task: "logic",
-    description: "Logic audit Quick — quét nhanh logic & claim–evidence",
-    detail: "Z.AI GLM-4.7 Flash · ~2–3 phút · mặc định 3 phần IMRAD · comment-only",
-  },
-  {
-    command: "logic full",
-    task: "logic",
-    description: "Logic audit Quick — toàn bộ bài",
-    detail: "Z.AI GLM-4.7 Flash · ~5–10 phút · tối đa 20 section · tab Logic Audit để xem chi tiết",
-  },
-  {
-    command: "logic deep",
-    task: "logic",
-    description: "Logic audit Deep — soi sâu 1 phần",
-    detail: "Z.AI GLM-4.7 (engine riêng) · ~3–5 phút · không dùng provider chat",
-  },
-  {
-    command: "logic deep full",
-    task: "logic",
-    description: "Logic audit Deep — toàn bộ bài",
-    detail: "Z.AI GLM-4.7 · ~10–20 phút · tối đa 8 section · chọn section ở tab Logic Audit",
-  },
-  {
-    command: "style",
-    task: "style",
-    description: "Chỉnh văn phong học thuật, giữ nguyên ý nghĩa",
-    detail: "Dùng provider/model đang chọn · đề xuất sửa từng đoạn",
-  },
-  {
-    command: "structure",
-    task: "structure",
-    description: "Phân tích cấu trúc IMRAD / outline bản thảo",
-    detail: "Gợi ý thứ tự section, thiếu/thừa phần chuẩn bài báo",
-  },
-  {
-    command: "citation",
-    task: "citation",
-    description: "Kiểm tra trích dẫn và bibliography",
-    detail: "Đối chiếu \\cite{...} với metadata có sẵn",
-  },
-  {
-    command: "template",
-    task: "template",
-    description: "Tạo khung IMRAD trống trong file",
-    detail: "Abstract, Introduction, Methods, Results, Conclusion",
-  },
-  {
-    command: "edit",
-    task: "edit",
-    description: "Chỉnh sửa nội dung theo yêu cầu cụ thể",
-    detail: "Mô tả thay đổi sau lệnh · có thể kèm vùng chọn",
-  },
-  {
-    command: "chat",
-    task: "chat",
-    description: "Hỏi đáp, giải thích — không tự sửa file",
-    detail: "Giải thích LaTeX, ý tưởng, phản biện — không ghi đè bản thảo",
-  },
-];
-
-export const CHAT_SLASH_HINTS = [
-  "/logic",
-  "/logic full",
-  "/logic deep",
-  "/style",
-  "/structure",
-  "/citation",
-];
+/** @deprecated Use getChatSlashHints(locale) */
+export const CHAT_SLASH_HINTS = getChatSlashHints("vi");
 
 /** Prefix after `/` while picking a command, or null when menu should hide. */
 export function getSlashCommandQuery(input: string): string | null {
@@ -125,85 +56,77 @@ export function getSlashCommandQuery(input: string): string | null {
   return input.slice(1);
 }
 
-export function filterSlashCommands(query: string): SlashCommandDef[] {
+export function filterSlashCommands(
+  query: string,
+  locale: UiLanguage = "vi",
+): SlashCommandDef[] {
+  const commands = getChatSlashCommands(locale);
   const q = query.toLowerCase().trim();
-  if (!q) return CHAT_SLASH_COMMANDS;
-  return CHAT_SLASH_COMMANDS.filter((c) => {
-    const key = c.command.toLowerCase();
-    return key.startsWith(q) || key.includes(q);
+  if (!q) return commands;
+  return commands.filter((c) => {
+    const cmd = c.command.toLowerCase();
+    return cmd.startsWith(q) || cmd.includes(q);
   });
 }
 
-export function slashCommandInsert(cmd: SlashCommandDef | string): string {
-  if (typeof cmd === "string") return `/${cmd} `;
-  const text = cmd.insertText ?? `/${cmd.command}`;
-  return text.endsWith(" ") ? text : `${text} `;
+export function slashCommandInsert(cmd: SlashCommandDef): string {
+  return cmd.insertText ?? `/${cmd.command} `;
 }
 
-export type LogicAuditMode = "quick" | "deep";
+const CASUAL_GREETING_RE =
+  /^(?:h+u+l+o+|hello|hi|hey|chào|chao|xin\s*chào|yo|hú|hu|hì|helo|good\s*(?:morning|afternoon|evening)|thanks?|thank\s*you|cảm\s*ơn|cam\s*on|ok(?:ay)?|oke|ừ|uh|ah|test|thử|thu)\s*[!?.…]*$/i;
 
-function _parse_logic_flags(rest: string): {
-  logicAuditMode?: LogicAuditMode;
-  logicAuditScope?: "selected" | "full";
-  rest: string;
-} {
-  let remaining = rest.trim();
-  let logicAuditMode: LogicAuditMode | undefined;
-  let logicAuditScope: "selected" | "full" | undefined;
+const CASUAL_CONVERSATIONAL_RE =
+  /bạn\s+là\s+ai|who\s+are\s+you|what\s+can\s+you\s+do|giúp\s+tôi\s+gì|help\s+me|bạn\s+biết\s+gì/i;
 
-  if (/^(deep\s+full|full\s+deep)\b/i.test(remaining)) {
-    logicAuditMode = "deep";
-    logicAuditScope = "full";
-    remaining = remaining.replace(/^(deep\s+full|full\s+deep)\s*/i, "").trim();
-  } else if (/^full\b/i.test(remaining)) {
-    logicAuditScope = "full";
-    remaining = remaining.replace(/^full\s*/i, "").trim();
-  }
-
-  if (/^deep\b/i.test(remaining)) {
-    logicAuditMode = "deep";
-    remaining = remaining.replace(/^deep\s*/i, "").trim();
-  } else if (/^quick\b/i.test(remaining)) {
-    logicAuditMode = "quick";
-    remaining = remaining.replace(/^quick\s*/i, "").trim();
-  }
-
-  return { logicAuditMode, logicAuditScope, rest: remaining };
+/** Greetings / small talk — must not trigger quick-edit or edit follow-up heuristics. */
+export function isCasualChatMessage(message: string): boolean {
+  const q = message.trim();
+  if (!q) return true;
+  if (CASUAL_GREETING_RE.test(q)) return true;
+  return CASUAL_CONVERSATIONAL_RE.test(q);
 }
 
-export function parseChatSlashCommand(raw: string): {
-  task?: ChatSlashTask;
+export function parseChatSlashCommand(
+  raw: string,
+  locale: UiLanguage = "vi",
+): {
+  task: ChatSlashTask | null;
   message: string;
-  command?: string;
-  logicAuditMode?: LogicAuditMode;
+  command: string | null;
+  logicAuditMode?: "quick" | "deep";
   logicAuditScope?: "selected" | "full";
 } {
-  const text = raw.trim();
-  const match = /^\/(\w+)\s*(.*)$/s.exec(text);
-  if (!match) return { message: raw };
-
-  const command = match[1].toLowerCase();
-  const task = COMMAND_TO_TASK[command];
-  if (!task) return { message: raw };
-
-  let rest = (match[2] ?? "").trim();
-  let logicAuditMode: LogicAuditMode | undefined;
-  let logicAuditScope: "selected" | "full" | undefined;
-  if (command === "logic") {
-    const flags = _parse_logic_flags(rest);
-    logicAuditMode = flags.logicAuditMode;
-    logicAuditScope = flags.logicAuditScope;
-    rest = flags.rest;
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("/")) {
+    return { task: null, message: trimmed, command: null };
   }
 
-  if (rest) {
-    return { task, message: rest, command, logicAuditMode, logicAuditScope };
+  const spaceIdx = trimmed.indexOf(" ");
+  const cmdPart = (spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx)).toLowerCase();
+  const text = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx + 1).trim();
+
+  const logicAuditMode =
+    cmdPart === "logic deep" || cmdPart === "logic deep full" ? ("deep" as const) : undefined;
+  const logicAuditScope =
+    cmdPart === "logic full" || cmdPart === "logic deep full"
+      ? ("full" as const)
+      : cmdPart.startsWith("logic")
+        ? ("selected" as const)
+        : undefined;
+
+  const baseCmd = cmdPart.split(" ")[0];
+  const task = COMMAND_TO_TASK[baseCmd] ?? COMMAND_TO_TASK[cmdPart] ?? null;
+
+  if (!task) {
+    return { task: null, message: trimmed, command: null };
   }
+
   return {
     task,
-    message: DEFAULT_MESSAGES[task] ?? text,
-    command,
-    logicAuditMode,
-    logicAuditScope,
+    message: getSlashDefaultMessage(locale, task) ?? text,
+    command: cmdPart,
+    ...(logicAuditMode ? { logicAuditMode } : {}),
+    ...(logicAuditScope ? { logicAuditScope } : {}),
   };
 }

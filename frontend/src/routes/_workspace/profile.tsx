@@ -400,6 +400,7 @@ function ProfilePage() {
                     <option value="openrouter">OpenRouter</option>
                     <option value="openai">OpenAI</option>
                     <option value="anthropic">Anthropic</option>
+                    <option value="google">Google (Gemini)</option>
                     <option value="zai">Z.AI (GLM)</option>
                   </select>
                 </Field>

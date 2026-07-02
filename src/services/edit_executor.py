@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.services.edit_planner import EditPlan, infer_edit_plan_rules
+from src.services.chat_context import prepend_conversation_history
 from src.services.guardrails.output_sanitize import clamp_selection_replacement
 from src.services.latex_outline import (
     build_manuscript_outline,
@@ -174,6 +175,39 @@ def apply_plan_to_snippet(plan: EditPlan, original: str) -> str | None:
     return None
 
 
+def _validate_latex_document_structure(original: str, replacement: str) -> str | None:
+    """Block replacements that would corrupt a full .tex manuscript."""
+    orig = original.strip()
+    repl = replacement.strip()
+    if not repl:
+        return "Kết quả chỉnh sửa trống — đã chặn."
+
+    orig_has_begin = bool(re.search(r"\\begin\{document\}", orig, re.IGNORECASE))
+    repl_has_begin = bool(re.search(r"\\begin\{document\}", repl, re.IGNORECASE))
+    if orig_has_begin and not repl_has_begin:
+        return "Bản thảo sau chỉnh sửa thiếu \\begin{document} — đã chặn."
+
+    if orig_has_begin:
+        if len(re.findall(r"\\end\{document\}", repl, re.IGNORECASE)) != 1:
+            return "Cấu trúc \\end{document} không hợp lệ — đã chặn."
+        begin_match = re.search(r"\\begin\{document\}", repl, re.IGNORECASE)
+        if begin_match:
+            tail = repl[begin_match.end() :]
+            if re.search(r"\\documentclass\b", tail, re.IGNORECASE):
+                return "\\documentclass nằm sau \\begin{document} — đã chặn."
+        if len(re.findall(r"\\documentclass\b", repl, re.IGNORECASE)) > 1:
+            return "Nhiều lệnh \\documentclass — đã chặn."
+
+    min_len = max(80, int(len(orig) * 0.45))
+    if len(repl) < min_len:
+        return (
+            "Kết quả chỉnh sửa quá ngắn so với bản gốc — có thể bị cắt mất nội dung. "
+            "Hãy thu hẹp phạm vi (một section hoặc đoạn đã chọn)."
+        )
+
+    return None
+
+
 def validate_proposed_edit(
     latex: str,
     plan: EditPlan,
@@ -186,7 +220,7 @@ def validate_proposed_edit(
         return "Không phát hiện thay đổi nào trong bản thảo."
 
     span_ratio = (resolved.end - resolved.start) / max(len(latex), 1)
-    if plan.target_type == "latex_command" and span_ratio > 0.15:
+    if plan.target_type == "latex_command" and span_ratio > 0.6:
         return "Phạm vi chỉnh sửa quá rộng cho một lệnh LaTeX."
 
     if plan.target_type != "document":
@@ -205,6 +239,11 @@ def validate_proposed_edit(
     ):
         return "Yêu cầu liên quan tiêu đề nhưng phạm vi là cả file — đã chặn."
 
+    if resolved.apply_mode == "document" or plan.target_type == "document":
+        structural = _validate_latex_document_structure(latex, replacement)
+        if structural:
+            return structural
+
     return None
 
 
@@ -216,6 +255,7 @@ async def execute_edit_plan(
     *,
     provider: str | None,
     model: str | None,
+    conversation_history: list | None = None,
 ) -> str:
     deterministic = apply_plan_to_snippet(plan, resolved.original_text)
     if deterministic and deterministic != resolved.original_text:
@@ -241,6 +281,7 @@ async def execute_edit_plan(
         f"Replace ONLY this LaTeX snippet (return the revised snippet only):\n---\n"
         f"{resolved.original_text}\n---"
     )
+    user_content = prepend_conversation_history(user_content, conversation_history or [])
     response = await llm.ainvoke(
         [
             SystemMessage(content=system),
@@ -248,7 +289,12 @@ async def execute_edit_plan(
         ]
     )
     raw = (response.content or "").strip()
-    suggestion = clamp_selection_replacement(resolved.original_text, raw)
+    suggestion = clamp_selection_replacement(
+        resolved.original_text,
+        raw,
+        apply_mode=resolved.apply_mode,
+        query=query,
+    )
     return suggestion
 
 
@@ -273,10 +319,11 @@ def build_edit_payload(
     replacement: str,
     *,
     description: str = "Proposed edit",
+    file: str = "main.tex",
 ) -> dict:
     return {
         "id": str(uuid.uuid4()),
-        "file": "main.tex",
+        "file": file or "main.tex",
         "section": resolved.section,
         "apply_mode": resolved.apply_mode,
         "original_text": resolved.original_text,

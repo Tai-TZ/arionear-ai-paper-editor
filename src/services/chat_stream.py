@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar
 
-from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessageChunk
 
 from src.agents.nodes.academic_nodes import (
     citation_node,
@@ -19,10 +20,21 @@ from src.agents.nodes.academic_nodes import (
 from src.agents.state import AgentState
 from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
-from src.services.chat_context import build_chat_user_content, task_needs_manuscript
+from src.services.chat_context import (
+    build_chat_llm_messages,
+    build_chat_user_content,
+    chat_query_needs_manuscript_context,
+    task_needs_manuscript,
+)
 from src.services.chat_telemetry import ChatRunTracker
 from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
+from src.services.guardrails.request_guard import evaluate_user_request
+from src.services.guardrails.prompt_injection import (
+    injection_refusal,
+    looks_like_system_prompt_leak,
+)
 from src.services.intent_router import classify_intent
+from src.services.intent_rules import IntentResult
 from src.services.llm import REASONING_MODEL_TEMPERATURE, get_llm, is_reasoning_model
 from src.services.llm_errors import friendly_llm_error, looks_like_provider_error
 from src.services.llm_policy import resolve_llm_temperature
@@ -34,11 +46,35 @@ from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 from src.services.slash_commands import parse_slash_command
+from src.services.agent_latex import resolve_latex_sources
+from src.services.stream_i18n import (
+    parse_detail as format_parse_detail,
+    resolve_locale,
+    scope_detail as i18n_scope_detail,
+    state_label,
+    task_label,
+)
 from src.services.template_latex import generate_template
 
 AGENT_NAME = "Ario"
 EDIT_DONE_MSG = "Đã cập nhật main.tex — xem diff và Accept/Reject."
 STYLE_DONE_MSG = "Đã biên tập — xem diff và Accept/Reject."
+
+_AGENT_RESPONSE_VI: dict[str, str] = {
+    "No LaTeX source available to edit.": "Chưa có nội dung LaTeX để chỉnh sửa.",
+    "No edit instruction provided.": "Chưa có hướng dẫn chỉnh sửa.",
+    "Could not resolve edit scope.": "Không xác định được phạm vi chỉnh sửa trong bản thảo.",
+}
+
+_TASK_LABELS_EN: dict[str, str] = {
+    "style": "Style edit",
+    "edit": "LaTeX edit",
+    "structure": "Structure analysis",
+    "logic": "Logic check",
+    "citation": "Citation check",
+    "template": "IMRAD template",
+    "chat": "Chat reply",
+}
 
 _TASK_LABELS: dict[str, str] = {
     "style": "Biên tập văn phong",
@@ -51,6 +87,29 @@ _TASK_LABELS: dict[str, str] = {
 }
 
 T = TypeVar("T")
+
+AGENT_TASK_TIMEOUT_SEC = 90.0
+LOGIC_AUDIT_TIMEOUT_SEC = 180.0
+LOGIC_AUDIT_DEEP_TIMEOUT_SEC = 270.0
+
+
+class AgentTaskTimeoutError(Exception):
+    def __init__(self, task: str, timeout_sec: float) -> None:
+        self.task = task
+        self.timeout_sec = timeout_sec
+        super().__init__(task)
+
+
+def _agent_timeout_message(task: str, timeout_sec: float) -> str:
+    label = _TASK_LABELS.get(task, task)
+    label_en = _TASK_LABELS_EN.get(task, task)
+    sec = int(timeout_sec)
+    return (
+        f"{label} quá thời gian ({sec}s). "
+        "Thử lại với đoạn ngắn hơn, đổi model nhanh hơn, hoặc thu hẹp phạm vi (một section / vùng chọn).\n"
+        f"{label_en} timed out ({sec}s). "
+        "Retry with a shorter scope, a faster model, or a single section / selection."
+    )
 
 
 _KEEPALIVE_SSE = ": keepalive\n\n"
@@ -129,30 +188,27 @@ def _task_label(task: str) -> str:
     return _TASK_LABELS.get(task, task)
 
 
-def _scope_detail(prepared: dict[str, Any]) -> tuple[str, str]:
+def _localize_agent_response(msg: str) -> str:
+    stripped = (msg or "").strip()
+    if not stripped:
+        return stripped
+    return _AGENT_RESPONSE_VI.get(stripped, stripped)
+
+
+def _scope_detail(
+    prepared: dict[str, Any],
+    *,
+    locale: str = "vi",
+    active_file: str = "main.tex",
+    main_file: str = "main.tex",
+) -> tuple[str, str]:
     """Return (section_name, human detail) for the editing scope."""
-    section = str(prepared.get("section") or "").strip()
-    scope_label = str(prepared.get("scope_label") or "").strip()
-    if scope_label:
-        return section, scope_label
-
-    section_key = section.lower()
-    metadata_labels = {
-        "title": "Tiêu đề · \\title{...}",
-        "author": "Tác giả · \\author{...}",
-        "abstract": "Abstract · \\begin{abstract}",
-    }
-    if section_key in metadata_labels:
-        return section, metadata_labels[section_key]
-
-    text = str(prepared.get("original_text") or "")
-    word_count = len(text.split())
-    apply_mode = prepared.get("apply_mode", "document")
-    if section:
-        return section, f"Phần {section} · ~{word_count:,} từ".replace(",", ".")
-    if apply_mode == "document":
-        return "", f"Toàn bộ main.tex · ~{word_count:,} từ".replace(",", ".")
-    return "", f"Đoạn đã chọn · ~{word_count:,} từ".replace(",", ".")
+    return i18n_scope_detail(
+        resolve_locale(locale),
+        prepared,
+        active_file=active_file,
+        main_file=main_file,
+    )
 
 
 def _preview_edit_scope(query: str, latex: str, selection: str = "") -> tuple[str, str]:
@@ -165,19 +221,36 @@ async def _monitor_long_task(
     on_tick: Callable[[float], tuple[str, str]],
     *,
     interval: float = 2.0,
+    timeout_sec: float | None = None,
+    timeout_task: str = "",
+    cancel_event: asyncio.Event | None = None,
 ) -> AsyncIterator[str | T]:
     """Yield SSE strings on heartbeat; final yield is the coroutine result."""
     task = asyncio.create_task(coro)
     started = time.perf_counter()
     while True:
+        if cancel_event is not None and cancel_event.is_set():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            return
+        elapsed = time.perf_counter() - started
+        if timeout_sec is not None and elapsed >= timeout_sec:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            raise AgentTaskTimeoutError(timeout_task or "agent", timeout_sec)
         if task.done():
+            exc = task.exception()
+            if exc is not None:
+                raise exc
             yield task.result()
             return
         try:
             await asyncio.wait_for(asyncio.shield(task), timeout=interval)
         except TimeoutError:
-            elapsed = round(time.perf_counter() - started, 1)
-            state_evt, act_evt = on_tick(elapsed)
+            elapsed_round = round(elapsed, 1)
+            state_evt, act_evt = on_tick(elapsed_round)
             yield state_evt
             yield act_evt
             yield _KEEPALIVE_SSE
@@ -321,7 +394,70 @@ def _resolve_raw_latex(latex: str, session_id: str) -> str:
     return latex
 
 
-async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
+def _content_hash(content: str) -> str:
+    """djb2 hex — must match frontend contentFingerprint."""
+    hash_val = 5381
+    for ch in content:
+        hash_val = ((hash_val * 33) ^ ord(ch)) & 0xFFFFFFFF
+    return format(hash_val, "x")
+
+
+def _cache_active_file_content(
+    session_id: str,
+    active_file: str,
+    content: str,
+    content_hash: str | None,
+) -> None:
+    if not session_id or not active_file or not content.strip():
+        return
+    session = session_store.get(session_id)
+    if not session:
+        return
+    meta = dict(session.metadata or {})
+    active_files = dict(meta.get("active_files") or {})
+    active_files[active_file] = {
+        "content": content,
+        "hash": content_hash or _content_hash(content),
+    }
+    meta["active_files"] = active_files
+    session_store.update(session_id, metadata=meta)
+
+
+def _resolve_active_file_content(
+    request: ChatRequest,
+    session_id: str,
+    resolved_main: str,
+) -> str:
+    inline = (request.active_file_content or "").strip()
+    if inline:
+        return inline
+    main_file = (request.main_file or "main.tex").strip() or "main.tex"
+    active_file = (request.active_file or main_file).strip() or main_file
+    if active_file == main_file:
+        return resolved_main
+    if not session_id:
+        return ""
+    session = session_store.get(session_id)
+    if not session:
+        return ""
+    active_files = (session.metadata or {}).get("active_files") or {}
+    entry = active_files.get(active_file)
+    if not entry:
+        return ""
+    stored_hash = entry.get("hash")
+    if request.active_file_content_hash and stored_hash != request.active_file_content_hash:
+        return ""
+    return str(entry.get("content") or "")
+
+
+async def stream_chat(
+    request: ChatRequest,
+    *,
+    cancel_event: asyncio.Event | None = None,
+) -> AsyncIterator[str]:
+    def _cancelled() -> bool:
+        return cancel_event is not None and cancel_event.is_set()
+
     settings = get_settings()
     provider = normalize_llm_provider(request.llm_provider or settings.llm_provider) or settings.llm_provider
     model = request.llm_model or None
@@ -341,6 +477,12 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 latex_content=request.latex_content,
             )
             session_store.update(request.session_id, latex_content=request.latex_content)
+            if request.latex_content_hash:
+                session = session_store.get(request.session_id)
+                if session:
+                    meta = dict(session.metadata or {})
+                    meta["latex_content_hash"] = request.latex_content_hash
+                    session_store.update(request.session_id, metadata=meta)
 
         try:
             enforce_llm_quota_for_paper(request.session_id)
@@ -356,15 +498,25 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             else REASONING_MODEL_TEMPERATURE
         )
         session_id = request.session_id or ""
+        ui_locale = resolve_locale(request.locale)
         raw_latex = _resolve_raw_latex(request.latex_content, session_id)
+        resolved_active = _resolve_active_file_content(request, session_id, raw_latex)
+        if request.session_id and (request.active_file_content or "").strip():
+            active_path = (request.active_file or request.main_file or "main.tex").strip() or "main.tex"
+            _cache_active_file_content(
+                request.session_id,
+                active_path,
+                request.active_file_content,
+                request.active_file_content_hash,
+            )
         has_latex = bool(raw_latex.strip())
         has_selection = bool((request.selection or "").strip())
 
         state_evt, act_evt = _emit_state(
             "intent",
-            "Phân tích yêu cầu",
+            state_label(ui_locale, "intent_analyze"),
             status="active",
-            detail="Đang xác định tác vụ…",
+            detail=state_label(ui_locale, "intent_detail_active"),
         )
         yield state_evt
         yield act_evt
@@ -372,32 +524,59 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         slash_task, effective_message = parse_slash_command(request.message)
         explicit_task = request.task or slash_task
 
-        intent = await classify_intent(
+        guard_allowed, guard_refusal = evaluate_user_request(
             effective_message,
-            has_latex=has_latex,
-            has_selection=has_selection,
-            explicit_task=explicit_task,
-            provider=provider,
-            model=model,
+            locale=request.locale,
+            history=request.conversation_history,
         )
-        task = intent.action
-        tracker.task = task
+        request_blocked = not guard_allowed
 
-        trace = await tracker.stage("intent_classified", intent=task, scope=intent.scope)
+        if request_blocked:
+            task = "chat"
+            intent = IntentResult(action="chat", scope="document")
+        else:
+            intent = await classify_intent(
+                effective_message,
+                has_latex=has_latex,
+                has_selection=has_selection,
+                explicit_task=explicit_task,
+                provider=provider,
+                model=model,
+                conversation_history=request.conversation_history,
+            )
+            task = intent.action
+        tracker.task = task
+        main_latex, work_latex, main_file, active_file = resolve_latex_sources(
+            request,
+            task,
+            resolved_main=raw_latex,
+            resolved_active=resolved_active,
+        )
+
+        trace = await tracker.stage(
+            "intent_classified",
+            intent=task,
+            scope=intent.scope,
+            blocked=request_blocked,
+        )
         yield _sse("trace", trace)
 
-        if task == "edit":
+        preview_latex = work_latex if task in ("edit", "style") and work_latex.strip() else raw_latex
+        if request_blocked:
+            intent_detail = state_label(ui_locale, "request_guard_blocked")
+        elif task == "edit":
             _, scope_preview = _preview_edit_scope(
                 effective_message,
-                raw_latex,
+                preview_latex,
                 request.selection or "",
             )
-            intent_detail = f"{_task_label(task)} · {scope_preview}"
+            intent_detail = f"{task_label(ui_locale, task)} · {scope_preview}"
         else:
-            intent_detail = f"{_task_label(task)} · phạm vi {intent.scope}"
+            scope_word = state_label(ui_locale, "scope_suffix")
+            intent_detail = f"{task_label(ui_locale, task)} · {scope_word} {intent.scope}"
         state_evt, act_evt = _emit_state(
             "intent",
-            "Đã xác định ý định",
+            state_label(ui_locale, "intent_done"),
             status="done",
             detail=intent_detail,
             task=task,
@@ -408,8 +587,13 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
         latex = raw_latex
         sections: list[dict] = []
         cite_keys: list[str] = []
-        if task_needs_manuscript(task):
-            latex, sections, cite_keys = _parse_manuscript(raw_latex, session_id)
+        if not request_blocked and task_needs_manuscript(task):
+            if task in ("edit", "style"):
+                latex = work_latex
+                sections = parse_latex_sections(work_latex) if work_latex else []
+                cite_keys = extract_cite_keys(main_latex) if main_latex else []
+            else:
+                latex, sections, cite_keys = _parse_manuscript(main_latex, session_id)
             trace = await tracker.stage(
                 "manuscript_parsed",
                 sections=len(sections),
@@ -418,57 +602,89 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             )
             yield _sse("trace", trace)
 
-            parse_detail = (
-                f"{len(sections)} phần · {len(cite_keys)} trích dẫn · "
-                f"{len(latex):,} ký tự"
-            ).replace(",", ".")
+            parse_detail_str = format_parse_detail(ui_locale, len(sections), len(cite_keys), len(latex))
             state_evt, act_evt = _emit_state(
                 "parse",
-                "Đọc bản thảo",
+                state_label(ui_locale, "parse_done"),
                 status="done",
-                detail=parse_detail,
+                detail=parse_detail_str,
             )
             yield state_evt
             yield act_evt
 
-        yield _sse("activity", {"text": _activity_for_task(task, sections, cite_keys, request.selection)})
+        if not request_blocked:
+            yield _sse("activity", {"text": _activity_for_task(task, sections, cite_keys, request.selection)})
 
         settings = get_settings()
         strictness = request.integrity_strictness or settings.integrity_strictness
 
         apply_mode: str = intent.scope
-        if has_selection:
-            apply_mode = "selection"
-        elif task == "edit" and raw_latex.strip():
-            preview_prepared = prepare_edit_target(
-                {
-                    "query": effective_message,
-                    "latex": raw_latex,
-                    "selection": request.selection or "",
-                    "parsed_sections": [],
-                    "apply_mode": intent.scope,
-                },
-                effective_message,
-            )
-            preview_mode = preview_prepared.get("apply_mode")
-            if preview_mode == "selection":
+        state: AgentState
+        if request_blocked:
+            state = {
+                "query": effective_message,
+                "task": "chat",  # type: ignore[arg-type]
+                "session_id": request.session_id or "",
+                "latex": latex,
+                "main_latex": main_latex,
+                "selection": request.selection or "",
+                "parsed_sections": [],
+                "citation_keys": [],
+                "llm_provider": provider,
+                "llm_model": model or "",
+                "apply_mode": "document",
+                "integrity_strictness": strictness,
+                "active_file": active_file,
+                "main_file": main_file,
+                "conversation_history": [
+                    {"role": t.role, "content": t.content} for t in request.conversation_history
+                ],
+            }
+        else:
+            if has_selection:
                 apply_mode = "selection"
+            elif task == "edit" and preview_latex.strip():
+                preview_prepared = prepare_edit_target(
+                    {
+                        "query": effective_message,
+                        "latex": preview_latex,
+                        "selection": request.selection or "",
+                        "parsed_sections": [],
+                        "apply_mode": intent.scope,
+                        "selection_start": request.selection_start,
+                        "selection_end": request.selection_end,
+                    },
+                    effective_message,
+                )
+                preview_mode = preview_prepared.get("apply_mode")
+                if preview_mode == "selection":
+                    apply_mode = "selection"
 
-        state: AgentState = {
-            "query": effective_message,
-            "task": task,  # type: ignore[arg-type]
-            "session_id": request.session_id or "",
-            "latex": latex,
-            "selection": request.selection,
-            "parsed_sections": sections,
-            "citation_keys": cite_keys,
-            "llm_provider": provider,
-            "llm_model": model or "",
-            "apply_mode": apply_mode,
-            "integrity_strictness": strictness,
-        }
+            state = {
+                "query": effective_message,
+                "task": task,  # type: ignore[arg-type]
+                "session_id": request.session_id or "",
+                "latex": latex,
+                "main_latex": main_latex,
+                "selection": request.selection,
+                "parsed_sections": sections,
+                "citation_keys": cite_keys,
+                "llm_provider": provider,
+                "llm_model": model or "",
+                "apply_mode": apply_mode,
+                "integrity_strictness": strictness,
+                "active_file": active_file,
+                "main_file": main_file,
+                "conversation_history": [
+                    {"role": t.role, "content": t.content} for t in request.conversation_history
+                ],
+            }
+            if request.selection_start is not None:
+                state["selection_start"] = request.selection_start
+            if request.selection_end is not None:
+                state["selection_end"] = request.selection_end
 
-        get_llm(provider=provider, model=model, temperature=chat_temperature)
+            get_llm(provider=provider, model=model, temperature=chat_temperature)
 
         done_payload: dict[str, Any] = {
             "task": task,
@@ -485,7 +701,21 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             "logic_audit_report": {},
         }
 
-        if task == "chat":
+        if request_blocked:
+            trace = await tracker.stage("request_guard", task=task, blocked=True)
+            yield _sse("trace", trace)
+            state_evt, act_evt = _emit_state(
+                "llm",
+                "Hoàn tất trả lời",
+                status="done",
+                task=task,
+            )
+            yield state_evt
+            yield act_evt
+            yield _sse("token", {"delta": guard_refusal})
+            done_payload["response"] = guard_refusal
+
+        elif task == "chat":
             chat_system = build_system_prompt("chat")
             full_response: list[str] = []
             chat_llm = get_llm(
@@ -494,6 +724,9 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 thinking=False if provider == "zai" else None,
                 temperature=chat_temperature,
             )
+            chat_sections: list[dict] = []
+            if has_latex:
+                chat_sections = parse_latex_sections(raw_latex) if raw_latex else []
             state_evt, act_evt = _emit_state(
                 "llm",
                 "Đang trả lời",
@@ -507,19 +740,24 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield _sse("trace", trace)
             first_token = True
             provider_tokens: int | None = None
-            messages = [
-                SystemMessage(content=chat_system),
-                HumanMessage(
-                    content=build_chat_user_content(
-                        request.message,
-                        selection=request.selection or "",
-                        latex=latex,
-                        include_manuscript=False,
-                    )
+            user_content = build_chat_user_content(
+                request.message,
+                selection=request.selection or "",
+                latex=latex,
+                sections=chat_sections,
+                include_manuscript=chat_query_needs_manuscript_context(
+                    effective_message
                 ),
-            ]
+            )
+            messages = build_chat_llm_messages(
+                system=chat_system,
+                history=request.conversation_history,
+                user_content=user_content,
+            )
             try:
                 async for chunk in chat_llm.astream(messages):
+                    if _cancelled():
+                        return
                     if isinstance(chunk, AIMessageChunk):
                         reported = _usage_from_chunk(chunk)
                         if reported:
@@ -545,7 +783,10 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
                 await tracker.fail(message)
                 yield _sse("error", {"message": message})
                 return
-            done_payload["response"] = "".join(full_response).strip()
+            response_text = "".join(full_response).strip()
+            if looks_like_system_prompt_leak(response_text):
+                response_text = injection_refusal(request.locale)
+            done_payload["response"] = response_text
             done_payload["_provider_tokens"] = provider_tokens
             state_evt, act_evt = _emit_state(
                 "llm",
@@ -569,11 +810,27 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             trace = await tracker.stage("agent_start", task=task)
             yield _sse("trace", trace)
             prepared = prepare_edit_target(state, request.message)
-            section, scope_detail = _scope_detail(prepared)
+            section, scope_detail = _scope_detail(
+                prepared,
+                locale=request.locale or "vi",
+                active_file=active_file,
+                main_file=main_file,
+            )
             state_evt, act_evt = _emit_state(
                 "scope",
-                "Xác định phạm vi chỉnh sửa",
+                state_label(ui_locale, "scope_edit"),
                 status="done",
+                detail=scope_detail,
+                task=task,
+                section=section,
+            )
+            yield state_evt
+            yield act_evt
+
+            state_evt, act_evt = _emit_state(
+                "plan",
+                state_label(ui_locale, "plan_edit"),
+                status="active",
                 detail=scope_detail,
                 task=task,
                 section=section,
@@ -584,28 +841,37 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             def _edit_tick(elapsed: float) -> tuple[str, str]:
                 return _emit_state(
                     "llm",
-                    "Đang chỉnh sửa LaTeX",
+                    state_label(ui_locale, "llm_edit_active"),
                     status="active",
-                    detail=f"LLM đang xử lý · {elapsed:.0f}s",
+                    detail=f"{state_label(ui_locale, 'llm_processing')} · {elapsed:.0f}s",
                     task=task,
                     section=section,
                     elapsed_sec=elapsed,
                 )
 
             edit_result = None
-            async for event in _monitor_long_task(
-                edit_node({**prepared, "task": "edit"}),
-                _edit_tick,
-            ):
-                if isinstance(event, str):
-                    yield event
-                else:
-                    edit_result = event
+            try:
+                async for event in _monitor_long_task(
+                    edit_node({**prepared, "task": "edit"}),
+                    _edit_tick,
+                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_task="edit",
+                    cancel_event=cancel_event,
+                ):
+                    if isinstance(event, str):
+                        yield event
+                    else:
+                        edit_result = event
+            except AgentTaskTimeoutError as exc:
+                message = _agent_timeout_message(exc.task, exc.timeout_sec)
+                await tracker.fail(message)
+                yield _sse("error", {"message": message})
+                return
 
             edit_result = edit_result or {}
             state_evt, act_evt = _emit_state(
                 "llm",
-                "Hoàn tất chỉnh sửa",
+                state_label(ui_locale, "llm_edit_done"),
                 status="done",
                 task=task,
                 section=section,
@@ -613,21 +879,36 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield state_evt
             yield act_evt
             _merge_agent_into_done(done_payload, edit_result)
+            edit_done = (
+                "Updated — review the diff and Accept/Reject."
+                if ui_locale == "en"
+                else EDIT_DONE_MSG
+            )
             if edit_result.get("suggestion"):
-                respond = EDIT_DONE_MSG
+                respond = edit_done
             else:
-                respond = edit_result.get("error") or edit_result.get("response") or "Không có thay đổi."
-            yield _sse("token", {"delta": respond})
+                respond = _localize_agent_response(
+                    edit_result.get("error")
+                    or edit_result.get("response")
+                    or "Không có thay đổi."
+                )
+            for piece in _chunk_text(respond, size=12):
+                yield _sse("token", {"delta": piece})
             done_payload["response"] = respond
 
         elif task == "style":
             trace = await tracker.stage("agent_start", task=task)
             yield _sse("trace", trace)
             prepared = prepare_style_target(state, request.message)
-            section, scope_detail = _scope_detail(prepared)
+            section, scope_detail = _scope_detail(
+                prepared,
+                locale=request.locale or "vi",
+                active_file=active_file,
+                main_file=main_file,
+            )
             state_evt, act_evt = _emit_state(
                 "scope",
-                "Xác định phạm vi biên tập",
+                state_label(ui_locale, "scope_style"),
                 status="done",
                 detail=scope_detail,
                 task=task,
@@ -636,25 +917,39 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield state_evt
             yield act_evt
 
+            state_evt, act_evt = _emit_state(
+                "plan",
+                state_label(ui_locale, "plan_style"),
+                status="active",
+                detail=scope_detail,
+                task=task,
+                section=section,
+            )
+            yield state_evt
+            yield act_evt
+
             def _style_tick(elapsed: float) -> tuple[str, str]:
-                label = "Đang biên tập văn phong"
+                label = state_label(ui_locale, "llm_style_active")
                 if section:
-                    label = f"Đang biên tập {section}"
+                    label = f"{label} · {section}"
                 return _emit_state(
                     "llm",
                     label,
                     status="active",
-                    detail=f"LLM đang xử lý · {elapsed:.0f}s",
+                    detail=f"{state_label(ui_locale, 'llm_processing')} · {elapsed:.0f}s",
                     task=task,
                     section=section,
                     elapsed_sec=elapsed,
                 )
 
+            style_boot = state_label(ui_locale, "llm_style_active")
+            if section:
+                style_boot = f"{style_boot} · {section}"
             state_evt, act_evt = _emit_state(
                 "llm",
-                f"Đang biên tập {section}" if section else "Đang biên tập văn phong",
+                style_boot,
                 status="active",
-                detail="Khởi động LLM…",
+                detail=state_label(ui_locale, "llm_boot"),
                 task=task,
                 section=section,
             )
@@ -662,27 +957,36 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             yield act_evt
 
             style_result = None
-            async for event in _monitor_long_task(
-                style_node({**prepared, "task": "style"}),
-                _style_tick,
-            ):
-                if isinstance(event, str):
-                    yield event
-                else:
-                    style_result = event
+            try:
+                async for event in _monitor_long_task(
+                    style_node({**prepared, "task": "style"}),
+                    _style_tick,
+                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_task="style",
+                    cancel_event=cancel_event,
+                ):
+                    if isinstance(event, str):
+                        yield event
+                    else:
+                        style_result = event
+            except AgentTaskTimeoutError as exc:
+                message = _agent_timeout_message(exc.task, exc.timeout_sec)
+                await tracker.fail(message)
+                yield _sse("error", {"message": message})
+                return
 
             style_result = style_result or {}
 
             flags = style_result.get("integrity_flags") or []
             blocking = [f for f in flags if f.get("severity") == "error"]
             integrity_detail = (
-                f"{len(blocking)} vấn đề cần xem lại"
+                f"{len(blocking)} {state_label(ui_locale, 'integrity_blocking')}"
                 if blocking
-                else "Không phát hiện thay đổi số liệu"
+                else state_label(ui_locale, "integrity_ok")
             )
             state_evt, act_evt = _emit_state(
                 "integrity",
-                "Kiểm tra integrity guard",
+                state_label(ui_locale, "integrity_done"),
                 status="done",
                 detail=integrity_detail,
                 task=task,
@@ -693,7 +997,7 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
 
             state_evt, act_evt = _emit_state(
                 "llm",
-                "Hoàn tất biên tập",
+                state_label(ui_locale, "llm_style_done"),
                 status="done",
                 task=task,
                 section=section,
@@ -704,8 +1008,13 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             if style_result.get("suggestion"):
                 respond = STYLE_DONE_MSG
             else:
-                respond = style_result.get("error") or style_result.get("response") or "Không có thay đổi."
-            yield _sse("token", {"delta": respond})
+                respond = _localize_agent_response(
+                    style_result.get("error")
+                    or style_result.get("response")
+                    or "Không có thay đổi."
+                )
+            for piece in _chunk_text(respond, size=12):
+                yield _sse("token", {"delta": piece})
             done_payload["response"] = respond
 
         elif task == "structure":
@@ -723,7 +1032,36 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             )
             yield state_evt
             yield act_evt
-            structure_result = await structure_node(state)
+            structure_result = None
+
+            def _structure_tick(elapsed: float) -> tuple[str, str]:
+                return _emit_state(
+                    "scope",
+                    "Đang phân tích cấu trúc IMRAD",
+                    status="active",
+                    detail=f"Đang xử lý · {elapsed:.0f}s",
+                    task=task,
+                )
+
+            try:
+                async for event in _monitor_long_task(
+                    structure_node(state),
+                    _structure_tick,
+                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_task="structure",
+                    cancel_event=cancel_event,
+                ):
+                    if isinstance(event, str):
+                        yield event
+                    else:
+                        structure_result = event
+            except AgentTaskTimeoutError as exc:
+                message = _agent_timeout_message(exc.task, exc.timeout_sec)
+                await tracker.fail(message)
+                yield _sse("error", {"message": message})
+                return
+
+            structure_result = structure_result or {}
             state_evt, act_evt = _emit_state(
                 "scope",
                 "Hoàn tất phân tích cấu trúc",
@@ -787,8 +1125,28 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
 
             audit_task = asyncio.create_task(_run_logic_audit())
             logic_started = time.perf_counter()
+            logic_mode = request.logic_audit_mode or "quick"
+            logic_timeout = (
+                LOGIC_AUDIT_DEEP_TIMEOUT_SEC
+                if logic_mode == "deep"
+                else LOGIC_AUDIT_TIMEOUT_SEC
+            )
             logic_result: dict[str, Any] | None = None
             while logic_result is None:
+                if _cancelled():
+                    audit_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await audit_task
+                    return
+                elapsed_total = time.perf_counter() - logic_started
+                if elapsed_total >= logic_timeout:
+                    audit_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await audit_task
+                    message = _agent_timeout_message("logic", logic_timeout)
+                    await tracker.fail(message)
+                    yield _sse("error", {"message": message})
+                    return
                 if audit_task.done() and progress_queue.empty():
                     logic_result = await audit_task
                     break
@@ -858,23 +1216,43 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             state_evt, act_evt = _emit_state(
                 "scope",
                 "Quét trích dẫn",
-                status="active",
+                status="done",
                 detail=f"{len(keys)} cite key",
                 task=task,
             )
             yield state_evt
             yield act_evt
-            for i, key in enumerate(keys[:8], start=1):
-                state_evt, act_evt = _emit_state(
+
+            def _citation_tick(elapsed: float) -> tuple[str, str]:
+                return _emit_state(
                     "llm",
-                    f"Tra cứu trích dẫn [{i}/{len(keys)}]",
+                    "Đang kiểm tra trích dẫn",
                     status="active",
-                    detail=f"`{key}`",
+                    detail=f"Tra cứu metadata · {elapsed:.0f}s",
                     task=task,
+                    elapsed_sec=elapsed,
                 )
-                yield state_evt
-                yield act_evt
-            citation_result = await citation_node(state)
+
+            citation_result = None
+            try:
+                async for event in _monitor_long_task(
+                    citation_node(state),
+                    _citation_tick,
+                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_task="citation",
+                    cancel_event=cancel_event,
+                ):
+                    if isinstance(event, str):
+                        yield event
+                    else:
+                        citation_result = event
+            except AgentTaskTimeoutError as exc:
+                message = _agent_timeout_message(exc.task, exc.timeout_sec)
+                await tracker.fail(message)
+                yield _sse("error", {"message": message})
+                return
+
+            citation_result = citation_result or {}
             verified = sum(
                 1 for r in (citation_result.get("citation_results") or [])
                 if r.get("status") == "verified"

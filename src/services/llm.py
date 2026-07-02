@@ -23,6 +23,7 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
         "anthropic": settings.anthropic_default_model,
         "openrouter": settings.openrouter_default_model,
         "zai": settings.zai_default_model,
+        "google": settings.google_default_model,
     }
     return defaults.get(provider, settings.model_name)
 
@@ -33,6 +34,7 @@ def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
         "zai": settings.zai_api_key,
+        "google": settings.google_api_key,
     }
     key = keys.get(provider, "")
     if not key:
@@ -106,7 +108,7 @@ def get_llm(
     temperature: float | None = None,
     thinking: bool | None = None,
 ) -> BaseChatModel:
-    """Return a chat model for OpenAI, Anthropic, OpenRouter, or Z.AI (GLM)."""
+    """Return a chat model for OpenAI, Anthropic, OpenRouter, Z.AI (GLM), or Google (Gemini)."""
     settings = get_settings()
     provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
     model_name = _resolve_model(settings, provider, model)
@@ -174,6 +176,22 @@ def get_llm(
             timeout=request_timeout,
         )
 
+    if provider == "google":
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError as exc:
+            raise ImportError(
+                "Google Gemini requires langchain-google-genai. "
+                "Run: pip install langchain-google-genai (or pip install -r requirements.txt)"
+            ) from exc
+
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=_resolve_api_key(settings, "google"),
+            temperature=temp,
+            timeout=request_timeout,
+        )
+
     raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
@@ -216,6 +234,15 @@ ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
     ("glm-4.7-flash", "GLM-4.7 Flash · free"),
     ("glm-4.7-flashx", "GLM-4.7 FlashX"),
     ("glm-4.7", "GLM-4.7 · quality"),
+]
+
+GOOGLE_MODEL_CATALOG: list[tuple[str, str]] = [
+    ("gemini-2.5-flash", "Gemini 2.5 Flash · free"),
+    ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite · free"),
+    ("gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite · free"),
+    ("gemini-3.5-flash", "Gemini 3.5 Flash · fast"),
+    ("gemini-2.5-pro", "Gemini 2.5 Pro · quality"),
+    ("gemini-3.1-pro-preview", "Gemini 3.1 Pro · preview"),
 ]
 
 
@@ -266,6 +293,13 @@ def list_provider_catalog() -> list[dict]:
             settings.zai_default_model,
             ZAI_MODEL_CATALOG,
             bool(settings.zai_api_key.strip()),
+        ),
+        (
+            "google",
+            "Google (Gemini)",
+            settings.google_default_model,
+            GOOGLE_MODEL_CATALOG,
+            bool(settings.google_api_key.strip()),
         ),
     ]
     return [
@@ -326,6 +360,17 @@ def list_providers() -> list[dict]:
                 "name": "Z.AI (GLM)",
                 "default_model": default,
                 "models": _model_options(ZAI_MODEL_CATALOG, default),
+            }
+        )
+
+    if settings.google_api_key:
+        default = settings.google_default_model
+        providers.append(
+            {
+                "id": "google",
+                "name": "Google (Gemini)",
+                "default_model": default,
+                "models": _model_options(GOOGLE_MODEL_CATALOG, default),
             }
         )
 

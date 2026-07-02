@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agents.state import AgentState
 from src.config import get_settings
-from src.services.chat_context import build_chat_user_content
+from src.services.chat_context import build_chat_user_content, prepend_conversation_history
 from src.services.citations.verifier import verify_citations
 from src.services.edit_executor import (
     build_edit_payload,
@@ -18,7 +18,12 @@ from src.services.edit_executor import (
     resolve_edit_plan,
     validate_proposed_edit,
 )
-from src.services.edit_planner import infer_edit_plan_rules, plan_edit
+from src.services.edit_planner import infer_edit_plan_rules, is_vague_edit_query, plan_edit, VAGUE_EDIT_GUIDANCE
+from src.services.guardrails.request_guard import evaluate_user_request
+from src.services.guardrails.prompt_injection import (
+    injection_refusal,
+    looks_like_system_prompt_leak,
+)
 from src.services.guardrails.integrity import (
     build_diff,
     check_integrity,
@@ -203,6 +208,23 @@ def _normalize_suggestion(
     )
 
 
+def _resolve_edit_file(state: dict, *, apply_mode: str = "selection") -> str:
+    main_file = (state.get("main_file") or "main.tex").strip() or "main.tex"
+    active_file = (state.get("active_file") or main_file).strip() or main_file
+    if apply_mode == "document":
+        return main_file
+    if active_file != main_file:
+        return active_file
+    if (state.get("selection") or "").strip():
+        return active_file
+    return main_file
+
+
+def _conversation_history(state: dict) -> list:
+    history = state.get("conversation_history")
+    return history if isinstance(history, list) else []
+
+
 def prepare_edit_target(state: AgentState, query: str = "") -> dict:
     """Resolve edit scope from manuscript outline (rule-based preview)."""
     selection = (state.get("selection") or "").strip()
@@ -210,12 +232,22 @@ def prepare_edit_target(state: AgentState, query: str = "") -> dict:
     latex = (state.get("latex") or "").strip()
 
     if selection:
-        return {
+        prepared: dict = {
             **state,
             "original_text": selection,
             "apply_mode": "selection",
             "section": "selection",
         }
+        sel_start = state.get("selection_start")
+        sel_end = state.get("selection_end")
+        if (
+            isinstance(sel_start, int)
+            and isinstance(sel_end, int)
+            and sel_end > sel_start
+        ):
+            prepared["selection_start"] = sel_start
+            prepared["selection_end"] = sel_end
+        return prepared
 
     if not latex:
         return prepare_style_target(state, query)
@@ -287,6 +319,7 @@ def _finalize_edit_result(
         resolved,
         replacement,
         description=resolved.label,
+        file=_resolve_edit_file(prepared, apply_mode=resolved.apply_mode),
     )
     blocked = has_blocking_flags(flags)
     response = (
@@ -316,6 +349,13 @@ async def edit_node(state: AgentState) -> dict:
         return {"error": "No edit instruction provided."}
 
     selection = (state.get("selection") or "").strip()
+    if not selection and is_vague_edit_query(query):
+        return {
+            "edits": [],
+            "response": VAGUE_EDIT_GUIDANCE,
+            "analysis": "Edit blocked: vague scope.",
+        }
+
     prepared = prepare_edit_target(state, query)
     outline = build_manuscript_outline(latex_full)
     plan = await plan_edit(
@@ -324,6 +364,7 @@ async def edit_node(state: AgentState) -> dict:
         has_selection=bool(selection),
         provider=_provider(state),
         model=_model(state),
+        conversation_history=_conversation_history(state),
     )
     resolved = resolve_edit_plan(
         latex_full,
@@ -346,6 +387,7 @@ async def edit_node(state: AgentState) -> dict:
         resolved,
         provider=_provider(state),
         model=_model(state),
+        conversation_history=_conversation_history(state),
     )
     validation_error = validate_proposed_edit(
         latex_full,
@@ -424,6 +466,7 @@ async def style_node(state: AgentState) -> dict:
         )
     elif scope_note not in user_content:
         user_content = f"{scope_note}{user_content}"
+    user_content = prepend_conversation_history(user_content, _conversation_history(prepared))
 
     for attempt in range(max_retries + 1):
         extra = ""
@@ -482,6 +525,8 @@ async def style_node(state: AgentState) -> dict:
         if record:
             metadata["revision_id"] = record.id
 
+    style_file = _resolve_edit_file(prepared, apply_mode=str(apply_mode))
+
     if has_blocking_flags(flags):
         return {
             "original_text": original,
@@ -491,7 +536,7 @@ async def style_node(state: AgentState) -> dict:
             "edits": [
                 {
                     "id": str(uuid.uuid4()),
-                    "file": "main.tex",
+                    "file": style_file,
                     "section": prepared.get("section", ""),
                     "apply_mode": apply_mode,
                     "original_text": original,
@@ -511,7 +556,7 @@ async def style_node(state: AgentState) -> dict:
         "edits": [
             {
                 "id": str(uuid.uuid4()),
-                "file": "main.tex",
+                "file": style_file,
                 "section": prepared.get("section", ""),
                 "apply_mode": apply_mode,
                 "original_text": original,
@@ -589,7 +634,8 @@ async def structure_node(state: AgentState) -> dict:
     rule_suggestions = analyze_structure(sections)
     llm_suggestions: list[dict] = []
 
-    if sections:
+    has_rule_warnings = any(s.get("severity") == "warning" for s in rule_suggestions)
+    if sections and not has_rule_warnings:
         system = build_system_prompt("structure")
         llm = get_llm(provider=_provider(state), model=_model(state), temperature=resolve_llm_temperature(0.2))
         section_summary = format_sections_summary(sections)
@@ -655,6 +701,14 @@ async def chat_node(state: AgentState) -> dict:
     query = state.get("query", "")
     selection = state.get("selection", "")
     latex = state.get("latex", "")
+
+    allowed, refusal = evaluate_user_request(query)
+    if not allowed:
+        return {
+            "response": refusal,
+            "analysis": "Chat blocked: request guard.",
+        }
+
     system = build_system_prompt("chat")
 
     user_content = build_chat_user_content(
@@ -672,6 +726,8 @@ async def chat_node(state: AgentState) -> dict:
         ]
     )
     text = (response.content or "").strip()
+    if looks_like_system_prompt_leak(text):
+        text = injection_refusal()
 
     return {
         "response": text,

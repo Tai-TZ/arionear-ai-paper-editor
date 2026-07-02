@@ -12,6 +12,11 @@ LogicAuditMode = Literal["quick", "deep", "gate"]
 LogicAuditScope = Literal["selected", "full"]
 
 
+class ChatHistoryTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=8000)
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000)
     session_id: str | None = None
@@ -24,6 +29,24 @@ class ChatRequest(BaseModel):
     logic_audit_mode: LogicAuditMode | None = None
     logic_audit_scope: LogicAuditScope | None = None
     logic_audit_sections: list[str] | None = None
+    conversation_history: list[ChatHistoryTurn] = Field(default_factory=list, max_length=10)
+    active_file: str | None = Field(default=None, max_length=500)
+    main_file: str | None = Field(default=None, max_length=500)
+    active_file_content: str = Field(default="", max_length=500000)
+    latex_content_hash: str | None = Field(default=None, max_length=32)
+    active_file_content_hash: str | None = Field(default=None, max_length=32)
+    selection_start: int | None = Field(default=None, ge=0)
+    selection_end: int | None = Field(default=None, ge=0)
+    locale: Literal["vi", "en"] | None = None
+
+    @field_validator("conversation_history", mode="before")
+    @classmethod
+    def _trim_conversation_history(cls, value: object) -> object:
+        if not value:
+            return []
+        if not isinstance(value, list):
+            return value
+        return value[-10:]
 
     @field_validator("logic_audit_mode", mode="before")
     @classmethod
@@ -66,7 +89,7 @@ class ChatRequest(BaseModel):
             return normalize_llm_provider(value)
         return value
 
-    @field_validator("llm_model", "session_id", mode="before")
+    @field_validator("llm_model", "session_id", "active_file", "main_file", mode="before")
     @classmethod
     def _empty_optional_to_none(cls, value: object) -> object | None:
         if value == "":
