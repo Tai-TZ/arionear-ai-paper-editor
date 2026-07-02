@@ -18,12 +18,7 @@ from src.services.edit_executor import (
     resolve_edit_plan,
     validate_proposed_edit,
 )
-from src.services.edit_planner import infer_edit_plan_rules, is_vague_edit_query, plan_edit, VAGUE_EDIT_GUIDANCE
-from src.services.guardrails.request_guard import evaluate_user_request
-from src.services.guardrails.prompt_injection import (
-    injection_refusal,
-    looks_like_system_prompt_leak,
-)
+from src.services.edit_planner import VAGUE_EDIT_GUIDANCE, infer_edit_plan_rules, is_vague_edit_query, plan_edit
 from src.services.guardrails.integrity import (
     build_diff,
     check_integrity,
@@ -34,6 +29,11 @@ from src.services.guardrails.output_sanitize import (
     looks_like_chatty_output,
     sanitize_style_output,
 )
+from src.services.guardrails.prompt_injection import (
+    injection_refusal,
+    looks_like_system_prompt_leak,
+)
+from src.services.guardrails.request_guard import evaluate_user_request
 from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
 from src.services.llm import get_llm, resolve_heavy_edit_model
 from src.services.llm_policy import resolve_llm_temperature

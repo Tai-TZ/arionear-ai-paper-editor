@@ -5,7 +5,6 @@ import pytest
 from src.agents.nodes.academic_nodes import edit_node
 from src.services.edit_planner import EditPlan
 
-
 SAMPLE_LATEX = r"""
 \documentclass{article}
 \begin{document}

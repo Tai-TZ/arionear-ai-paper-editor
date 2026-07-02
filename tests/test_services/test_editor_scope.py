@@ -1,7 +1,6 @@
 from src.services.guardrails.editor_scope import (
     detect_off_topic_request,
     evaluate_editor_scope,
-    off_topic_refusal,
 )
 
 

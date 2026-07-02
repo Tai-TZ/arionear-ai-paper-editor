@@ -8,8 +8,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
 from src.agents.graph import agent
+from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
 from src.config import get_settings
 from src.db.engine import db_is_ready, is_db_enabled
 from src.models.schemas import (

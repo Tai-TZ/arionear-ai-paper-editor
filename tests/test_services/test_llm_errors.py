@@ -1,7 +1,7 @@
 from src.services.llm_errors import (
-    LLM_USER_ERROR_MSG,
     _PROVIDER_NO_KEY_MSG,
     _PROVIDER_RATE_LIMIT_MSG,
+    LLM_USER_ERROR_MSG,
     friendly_llm_error,
     looks_like_provider_error,
 )

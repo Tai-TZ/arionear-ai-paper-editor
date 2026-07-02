@@ -117,10 +117,9 @@ async def classify_intent(
 ) -> IntentResult:
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    from src.services.llm import get_llm
-
     from src.services.chat_context import format_conversation_history_for_router
     from src.services.guardrails.prompt_injection import wrap_untrusted_user_text
+    from src.services.llm import get_llm
 
     if explicit_task == "chat":
         return IntentResult(action="chat")

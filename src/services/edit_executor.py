@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.services.edit_planner import EditPlan, infer_edit_plan_rules
 from src.services.chat_context import prepend_conversation_history
+from src.services.edit_planner import EditPlan, infer_edit_plan_rules
 from src.services.guardrails.output_sanitize import clamp_selection_replacement
 from src.services.latex_outline import (
     build_manuscript_outline,

@@ -20,6 +20,7 @@ from src.agents.nodes.academic_nodes import (
 from src.agents.state import AgentState
 from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
+from src.services.agent_latex import resolve_latex_sources
 from src.services.chat_context import (
     build_chat_llm_messages,
     build_chat_user_content,
@@ -28,11 +29,11 @@ from src.services.chat_context import (
 )
 from src.services.chat_telemetry import ChatRunTracker
 from src.services.edit_executor import preview_edit_scope as resolve_preview_edit_scope
-from src.services.guardrails.request_guard import evaluate_user_request
 from src.services.guardrails.prompt_injection import (
     injection_refusal,
     looks_like_system_prompt_leak,
 )
+from src.services.guardrails.request_guard import evaluate_user_request
 from src.services.intent_router import classify_intent
 from src.services.intent_rules import IntentResult
 from src.services.llm import REASONING_MODEL_TEMPERATURE, get_llm, is_reasoning_model
@@ -46,13 +47,16 @@ from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 from src.services.slash_commands import parse_slash_command
-from src.services.agent_latex import resolve_latex_sources
 from src.services.stream_i18n import (
     parse_detail as format_parse_detail,
+)
+from src.services.stream_i18n import (
     resolve_locale,
-    scope_detail as i18n_scope_detail,
     state_label,
     task_label,
+)
+from src.services.stream_i18n import (
+    scope_detail as i18n_scope_detail,
 )
 from src.services.template_latex import generate_template
 
