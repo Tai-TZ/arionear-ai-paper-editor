@@ -71,6 +71,7 @@ import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import type { EditorSelectionContext, SelectionAnchor } from "@/lib/editor-selection-anchor";
 import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { canApplyPendingEdit, contentFingerprint } from "@/lib/pending-edit-utils";
+import { COMPILE_DEBOUNCE_MS, computeCompileFingerprint, isAgentFixableCompileError } from "./lib/editor-compile";
 import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import {
   Dialog,
@@ -89,7 +90,7 @@ import { createSmoothStream, type SmoothStreamController } from "@/lib/smooth-st
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
-import { mergeLogicSectionReport } from "@/lib/logic-audit";
+import { formatLogicAuditProgress, mergeLogicSectionReport, resolveLogicIssueLine } from "@/lib/logic-audit";
 import { buildCitationFixPrompt, findCiteKeyLine } from "@/lib/citation-prompts";
 import {
   buildEditRedoPrompt,
@@ -212,17 +213,19 @@ export function EditorWorkspace() {
   const [citationResults, setCitationResults] = useState<Record<string, unknown>[]>([]);
   const [citationSummary, setCitationSummary] = useState("");
   const [logicAuditReport, setLogicAuditReport] = useState<LogicAuditReport | null>(null);
+  const [gateAuditReport, setGateAuditReport] = useState<LogicAuditReport | null>(null);
   const [structureSuggestions, setStructureSuggestions] = useState<StructureSuggestion[]>([]);
   const [toolsTab, setToolsTab] = useState<ToolsTab>("info");
   const [scoreAuditLoading, setScoreAuditLoading] = useState(false);
   const [scoreAuditProgress, setScoreAuditProgress] = useState<string | null>(null);
   const [scoreAuditError, setScoreAuditError] = useState<string | null>(null);
   const scoreAuditAbortRef = useRef<AbortController | null>(null);
-  const lastAuditFingerprintRef = useRef<string | null>(null);
+  const lastPanelAuditFingerprintRef = useRef<string | null>(null);
+  const lastGateAuditFingerprintRef = useRef<string | null>(null);
   const scoreAuditAttemptedForRef = useRef<string | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [llmProvider, setLlmProvider] = useState<LLMProvider>("google");
-  const [llmModel, setLlmModel] = useState("gemini-2.5-flash");
+  const [llmModel, setLlmModel] = useState("gemini-3.1-flash-lite");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -236,7 +239,14 @@ export function EditorWorkspace() {
     context?: string;
     latex?: string;
   } | null>(null);
-
+  const lastCompiledFingerprintRef = useRef<string | null>(null);
+  const compileInFlightRef = useRef(false);
+  const pendingCompileRef = useRef<{ latexOverride?: string } | null>(null);
+  const compileDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pdfDataRef = useRef(pdfData);
+  const compileErrorRef = useRef(compileError);
+  pdfDataRef.current = pdfData;
+  compileErrorRef.current = compileError;
 
   useEffect(() => {
     let cancelled = false;
@@ -318,7 +328,11 @@ export function EditorWorkspace() {
         setAssets(project.assets ?? []);
         if (project.logicAuditReport?.sections?.length) {
           setLogicAuditReport(project.logicAuditReport);
-          lastAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
+          lastPanelAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
+        }
+        if (project.gateAuditReport?.sections?.length) {
+          setGateAuditReport(project.gateAuditReport);
+          lastGateAuditFingerprintRef.current = logicAuditFingerprint(project.latex);
         }
         bootChatThreadsRef.current = project.chatThreads ?? [];
         setBootState("ready");
@@ -435,17 +449,18 @@ export function EditorWorkspace() {
     [mainFile],
   );
 
-  const handleCompile = useCallback(async (latexOverride?: string) => {
-    const filesWithActive = persistActiveFile(
-      latexOverride ?? latex,
-      projectFiles,
-      persistableFile(projectFiles, activeFile),
-    );
-    setIsCompiling(true);
-    setCompileError(null);
-    setCompileWarning(null);
-    setCompileLog(null);
-    try {
+  const executeCompile = useCallback(
+    async (latexOverride?: string, { force = false }: { force?: boolean } = {}) => {
+      if (compileInFlightRef.current) {
+        pendingCompileRef.current = { latexOverride };
+        return;
+      }
+
+      const filesWithActive = persistActiveFile(
+        latexOverride ?? latex,
+        projectFiles,
+        persistableFile(projectFiles, activeFile),
+      );
       const payload = getCompilePayload({
         id: projectId ?? "",
         name: projectName,
@@ -457,32 +472,110 @@ export function EditorWorkspace() {
         createdAt: 0,
         updatedAt: 0,
       });
-      const result = await compileLatex(payload.latex, payload.assets, {
-        mainFile: payload.mainFile,
-        compiler: payload.compiler,
-        cacheId: projectId ?? undefined,
-      });
-      setCompileLog(result.log || null);
-      if (result.success && result.pdf_base64) {
-        const binary = atob(result.pdf_base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i += 1) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-        setPdfData(bytes);
-        setPdfBase64(result.pdf_base64);
-        setSynctexBase64(result.synctex_base64?.trim() || null);
-        setCompileWarning(result.warning?.trim() || null);
-      } else {
-        const detail = [result.error, result.log?.slice(-4000)].filter(Boolean).join("\n\n");
-        setCompileError(detail || "Compilation failed.");
+      const fingerprint = computeCompileFingerprint(payload);
+      if (
+        !force &&
+        fingerprint === lastCompiledFingerprintRef.current &&
+        pdfDataRef.current &&
+        !compileErrorRef.current
+      ) {
+        return;
       }
-    } catch (error) {
-      setCompileError(error instanceof Error ? error.message : "Compilation failed.");
-    } finally {
-      setIsCompiling(false);
+
+      compileInFlightRef.current = true;
+      setIsCompiling(true);
+      setCompileError(null);
+      setCompileWarning(null);
+      setCompileLog(null);
+      try {
+        const result = await compileLatex(payload.latex, payload.assets, {
+          mainFile: payload.mainFile,
+          compiler: payload.compiler,
+          cacheId: projectId ?? undefined,
+        });
+        setCompileLog(result.log || null);
+        if (result.success && result.pdf_base64) {
+          const binary = atob(result.pdf_base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          setPdfData(bytes);
+          setPdfBase64(result.pdf_base64);
+          setSynctexBase64(result.synctex_base64?.trim() || null);
+          setCompileWarning(result.warning?.trim() || null);
+          lastCompiledFingerprintRef.current = fingerprint;
+        } else {
+          const detail = [result.error, result.log?.slice(-4000)].filter(Boolean).join("\n\n");
+          setCompileError(detail || "Compilation failed.");
+        }
+      } catch (error) {
+        setCompileError(error instanceof Error ? error.message : "Compilation failed.");
+      } finally {
+        compileInFlightRef.current = false;
+        setIsCompiling(false);
+        const pending = pendingCompileRef.current;
+        pendingCompileRef.current = null;
+        if (pending) {
+          void executeCompile(pending.latexOverride);
+        }
+      }
+    },
+    [
+      latex,
+      assets,
+      projectFiles,
+      activeFile,
+      mainFile,
+      compiler,
+      projectId,
+      projectName,
+      persistActiveFile,
+      persistableFile,
+    ],
+  );
+
+  const scheduleCompile = useCallback(
+    (latexOverride?: string) => {
+      if (compileDebounceRef.current) {
+        clearTimeout(compileDebounceRef.current);
+      }
+      compileDebounceRef.current = setTimeout(() => {
+        compileDebounceRef.current = null;
+        void executeCompile(latexOverride);
+      }, COMPILE_DEBOUNCE_MS);
+    },
+    [executeCompile],
+  );
+
+  const handleCompile = useCallback(
+    (latexOverride?: string) => {
+      if (compileDebounceRef.current) {
+        clearTimeout(compileDebounceRef.current);
+        compileDebounceRef.current = null;
+      }
+      return executeCompile(latexOverride, { force: true });
+    },
+    [executeCompile],
+  );
+
+  useEffect(() => {
+    lastCompiledFingerprintRef.current = null;
+    pendingCompileRef.current = null;
+    if (compileDebounceRef.current) {
+      clearTimeout(compileDebounceRef.current);
+      compileDebounceRef.current = null;
     }
-  }, [latex, assets, projectFiles, activeFile, mainFile, compiler, projectId, projectName, persistActiveFile, persistableFile]);
+  }, [projectId]);
+
+  useEffect(
+    () => () => {
+      if (compileDebounceRef.current) {
+        clearTimeout(compileDebounceRef.current);
+      }
+    },
+    [],
+  );
 
   const chatSideEffects = useMemo<EditorChatSideEffects>(
     () => ({
@@ -492,7 +585,7 @@ export function EditorWorkspace() {
       setCitationResults,
       setCitationSummary,
       setStructureSuggestions,
-      lastAuditFingerprintRef,
+      lastPanelAuditFingerprintRef,
     }),
     [],
   );
@@ -522,8 +615,9 @@ export function EditorWorkspace() {
     setProjectFiles,
     persistActiveFile,
     refreshRevisions,
-    handleCompile,
+    scheduleCompile,
     setMobileChatOpen,
+    scoreAuditLoading,
     sideEffects: chatSideEffects,
   });
 
@@ -536,6 +630,8 @@ export function EditorWorkspace() {
     chatOpen,
     setChatOpen,
     chatLoading,
+    auditInProgress,
+    auditSectionProgress,
     chatStreamProgress,
     chatEndRef,
     chatSelectionContext,
@@ -567,6 +663,21 @@ export function EditorWorkspace() {
     persistActiveThreadNow,
     chatProps,
   } = chat;
+
+  const auditReportStale = useMemo(
+    () =>
+      Boolean(
+        logicAuditReport?.sections?.length &&
+          lastPanelAuditFingerprintRef.current &&
+          logicAuditFingerprint(mainLatexSource) !== lastPanelAuditFingerprintRef.current,
+      ),
+    [logicAuditReport, mainLatexSource],
+  );
+
+  const logicAuditProgressDetail = useMemo(
+    () => (auditInProgress ? formatLogicAuditProgress(chatStreamProgress) : null),
+    [auditInProgress, chatStreamProgress],
+  );
 
   useEffect(() => {
     chatHydratedForProjectRef.current = null;
@@ -612,7 +723,7 @@ export function EditorWorkspace() {
           toast.error(t.errors.syncFailed);
         });
         if (autoCompile) {
-          void handleCompile(latex);
+          scheduleCompile(latex);
         }
       })
       .catch(() => {
@@ -628,7 +739,7 @@ export function EditorWorkspace() {
     compiler,
     assets,
     autoCompile,
-    handleCompile,
+    scheduleCompile,
     persistActiveFile,
     persistableFile,
     persistActiveThreadNow,
@@ -681,12 +792,12 @@ export function EditorWorkspace() {
         const providerInfo = data.providers.find((p) => p.id === preferred);
         if (providerInfo) {
           // Use Gemini 2.5 Flash when available; otherwise fall back to provider default.
-          const geminiFlash = "gemini-2.5-flash";
+          const googleDefault = "gemini-3.1-flash-lite";
           if (
             preferred === "google" &&
-            providerInfo.models.some((m) => m.id === geminiFlash)
+            providerInfo.models.some((m) => m.id === googleDefault)
           ) {
-            setLlmModel(geminiFlash);
+            setLlmModel(googleDefault);
           } else {
             setLlmModel(providerInfo.default_model);
           }
@@ -707,10 +818,15 @@ export function EditorWorkspace() {
     return () => window.clearTimeout(timer);
   }, [bootState, projectId, autoSave, isDirty, latex, handleSave]);
 
-  const SCORE_AUDIT_TIMEOUT_MS = 90_000;
+  const logicAuditEngineAvailable = useMemo(
+    () => providers.some((p) => p.id === "google"),
+    [providers],
+  );
+
+  const SCORE_AUDIT_TIMEOUT_MS = 150_000;
 
   const runScoreGateAudit = useCallback(async () => {
-    if (!projectId || scoreAuditLoading) return;
+    if (!projectId || scoreAuditLoading || auditInProgress) return;
 
     scoreAuditAbortRef.current?.abort();
     const abort = new AbortController();
@@ -746,13 +862,10 @@ export function EditorWorkspace() {
       if (abort.signal.aborted) return;
       scoreAuditAttemptedForRef.current = logicAuditFingerprint(mainLatexSource);
       if (report?.sections?.length) {
-        setLogicAuditReport(report);
-        lastAuditFingerprintRef.current = logicAuditFingerprint(mainLatexSource);
+        setGateAuditReport(report);
+        lastGateAuditFingerprintRef.current = logicAuditFingerprint(mainLatexSource);
       } else {
-        setLogicAuditReport((prev) => {
-          const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
-          return prevMeta?.audit_mode === "gate" ? null : prev;
-        });
+        setGateAuditReport(null);
         setScoreAuditError(
           locale === "vi"
             ? "Không nhận được báo cáo phản biện — điểm dựa trên tiêu chí kỹ thuật."
@@ -763,10 +876,7 @@ export function EditorWorkspace() {
       if (abort.signal.aborted) return;
       const message =
         error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
-      setLogicAuditReport((prev) => {
-        const prevMeta = (prev as { meta?: Record<string, unknown> } | null)?.meta;
-        return prevMeta?.audit_mode === "gate" ? null : prev;
-      });
+      setGateAuditReport(null);
       setScoreAuditError(formatPaperScoreGateError(message));
     } finally {
       clearTimeout(timeoutId);
@@ -784,6 +894,7 @@ export function EditorWorkspace() {
     llmProvider,
     llmModel,
     locale,
+    auditInProgress,
   ]);
 
   useEffect(() => {
@@ -795,15 +906,15 @@ export function EditorWorkspace() {
       setScoreAuditProgress(null);
       return;
     }
-    if (!projectId || scoreAuditLoading) return;
+    if (!projectId || scoreAuditLoading || auditInProgress) return;
 
     const fingerprint = logicAuditFingerprint(mainLatexSource);
     if (scoreAuditAttemptedForRef.current === fingerprint) return;
     if (
       !needsScoreGateAudit(
         mainLatexSource,
-        logicAuditReport,
-        lastAuditFingerprintRef.current,
+        gateAuditReport,
+        lastGateAuditFingerprintRef.current,
       )
     ) {
       return;
@@ -813,8 +924,9 @@ export function EditorWorkspace() {
     exportOpen,
     projectId,
     mainLatexSource,
-    logicAuditReport,
+    gateAuditReport,
     scoreAuditLoading,
+    auditInProgress,
     runScoreGateAudit,
   ]);
 
@@ -1074,6 +1186,31 @@ export function EditorWorkspace() {
     [jumpToCitation, queueChatFollowUp],
   );
 
+  const jumpToLogicIssue = useCallback(
+    (sectionName: string, excerpt?: string) => {
+      const line = resolveLogicIssueLine(mainLatexSource, sectionName, excerpt);
+      if (mainFile !== activeFile) {
+        switchActiveFile(mainFile);
+      }
+      if (line) jumpToOutlineLine(line);
+    },
+    [mainLatexSource, mainFile, activeFile, switchActiveFile, jumpToOutlineLine],
+  );
+
+  const canJumpToLogicIssue = useCallback(
+    (sectionName: string, excerpt?: string) =>
+      resolveLogicIssueLine(mainLatexSource, sectionName, excerpt) != null,
+    [mainLatexSource],
+  );
+
+  const askArioLogicIssue = useCallback(
+    (prefill: string, sectionName: string, excerpt?: string) => {
+      jumpToLogicIssue(sectionName, excerpt);
+      queueChatFollowUp(prefill);
+    },
+    [jumpToLogicIssue, queueChatFollowUp],
+  );
+
   const canJumpToStructureSection = useCallback(
     (sectionName: string) => findSectionOutlineLine(mainLatexSource, sectionName) != null,
     [mainLatexSource],
@@ -1112,7 +1249,7 @@ export function EditorWorkspace() {
   }, [selectionPick, openQuickEditFromPick]);
 
   const handleAskArioFixCompile = useCallback(() => {
-    if (!compileError) return;
+    if (!compileError || !isAgentFixableCompileError(compileError)) return;
     const line = parseCompileErrorLine(compileError);
     setChatComposerMode("quick-edit");
     setChatSelectionContext(null);
@@ -1121,6 +1258,10 @@ export function EditorWorkspace() {
     if (line) setHighlightLine(line);
     openChatPanel();
   }, [compileError, openChatPanel, setChatInput]);
+
+  const canAskArioFixCompile = Boolean(
+    compileError && isAgentFixableCompileError(compileError),
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1341,7 +1482,15 @@ export function EditorWorkspace() {
                 onAskArioStructure={queueChatFollowUp}
                 onAskArioCitation={askArioCitation}
                 onRunLogicAudit={runLogicAuditFromPanel}
-                logicAuditLoading={chatLoading}
+                logicAuditLoading={auditInProgress}
+                logicAuditReportStale={auditReportStale}
+                logicAuditProgressDetail={logicAuditProgressDetail}
+                logicAuditSectionProgress={auditSectionProgress}
+                logicAuditEngineAvailable={logicAuditEngineAvailable}
+                onCancelLogicAudit={handleStopChat}
+                onJumpToLogicIssue={jumpToLogicIssue}
+                onAskArioLogic={askArioLogicIssue}
+                canJumpToLogicIssue={canJumpToLogicIssue}
                 onCitationsUpdated={(results, summary) => {
                   setCitationResults(results);
                   setCitationSummary(summary);
@@ -1367,7 +1516,7 @@ export function EditorWorkspace() {
                 }}
                 onSynctexHit={handleSynctexHit}
                 onCompile={() => void handleCompile()}
-                onAskArioFix={handleAskArioFixCompile}
+                onAskArioFix={canAskArioFixCompile ? handleAskArioFixCompile : undefined}
                 latexSource={mainLatexSource}
                 projectName={projectName}
               />
@@ -1479,7 +1628,7 @@ export function EditorWorkspace() {
             onCompilerChange={setCompiler}
             onSynctexHit={handleSynctexHit}
             onCompile={() => void handleCompile()}
-            onAskArioFix={handleAskArioFixCompile}
+            onAskArioFix={canAskArioFixCompile ? handleAskArioFixCompile : undefined}
             projectName={projectName}
             latexSource={mainLatexSource}
             mobile
@@ -1516,7 +1665,15 @@ export function EditorWorkspace() {
           onAskArioStructure={queueChatFollowUp}
           onAskArioCitation={askArioCitation}
           onRunLogicAudit={runLogicAuditFromPanel}
-          logicAuditLoading={chatLoading}
+          logicAuditLoading={auditInProgress}
+          logicAuditReportStale={auditReportStale}
+          logicAuditProgressDetail={logicAuditProgressDetail}
+          logicAuditSectionProgress={auditSectionProgress}
+          logicAuditEngineAvailable={logicAuditEngineAvailable}
+          onCancelLogicAudit={handleStopChat}
+          onJumpToLogicIssue={jumpToLogicIssue}
+          onAskArioLogic={askArioLogicIssue}
+          canJumpToLogicIssue={canJumpToLogicIssue}
           onCitationsUpdated={(results, summary) => {
             setCitationResults(results);
             setCitationSummary(summary);
@@ -1541,7 +1698,7 @@ export function EditorWorkspace() {
         pdfData={pdfData}
         compileError={compileError}
         citationResults={citationResults}
-        logicAuditReport={logicAuditReport}
+        logicAuditReport={gateAuditReport}
         auditLoading={scoreAuditLoading}
         auditProgress={scoreAuditProgress}
         auditError={scoreAuditError}

@@ -83,7 +83,9 @@ class Settings(BaseSettings):
     openrouter_default_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     openrouter_logic_audit_quick_model: str = "openai/gpt-4o-mini"
     zai_default_model: str = "glm-4.7-flash"
-    google_default_model: str = "gemini-2.5-flash"
+    google_default_model: str = "gemini-3.1-flash-lite"
+    google_logic_audit_quick_model: str = "gemini-2.5-flash"
+    google_logic_audit_deep_model: str = "gemini-3.5-flash"
 
     # LLM HTTP + logic-audit stream timeouts (seconds)
     llm_request_timeout_sec: float = Field(default=180.0, ge=30.0, le=900.0)
@@ -92,6 +94,9 @@ class Settings(BaseSettings):
     logic_audit_synth_timeout_sec: float = Field(default=120.0, ge=30.0, le=900.0)
     logic_audit_synth_timeout_reasoning_sec: float = Field(default=240.0, ge=60.0, le=900.0)
     logic_audit_gate_timeout_sec: float = Field(default=120.0, ge=30.0, le=900.0)
+    logic_audit_stream_timeout_max_sec: float = Field(default=900.0, ge=120.0, le=1800.0)
+    logic_audit_section_cooldown_sec: float = Field(default=0.4, ge=0.0, le=5.0)
+    logic_audit_persist_debounce_sec: float = Field(default=1.0, ge=0.0, le=10.0)
 
     # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
     # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).

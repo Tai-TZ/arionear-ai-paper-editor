@@ -7,6 +7,7 @@ full multi-persona debate to stay under ~30 s.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
 import uuid
@@ -23,6 +24,7 @@ from src.services.logic_audit.debate import (
     _strip_thinking_markup,
 )
 from src.services.logic_audit.language import resolve_audit_language
+from src.services.logic_audit.text_utils import infer_claim_text
 
 _GATE_SECTION_KEYS = ("abstract", "introduction", "intro", "conclusion", "discussion")
 _GATE_MAX_SECTIONS = 3
@@ -68,6 +70,7 @@ JSON schema:
           "id": "<uuid>",
           "type": "<claim_evidence_mismatch|unsupported_claim|internal_contradiction|unclear_reasoning|missing_citation>",
           "severity": "<critical|warning|info>",
+          "claim_text": "<short quoted claim from manuscript, if applicable>",
           "comment": "<concrete, actionable remark — 1–2 sentences — write in {comment_language}>",
           "suggested_action": "<clarify|add_citation|revise_claim|none>",
           "persona_sources": ["gate_reviewer"]
@@ -123,8 +126,11 @@ def _normalise_section(raw: dict[str, Any]) -> dict[str, Any]:
                 "id": str(item.get("id") or uuid.uuid4()),
                 "type": item.get("type") or "unclear_reasoning",
                 "severity": item.get("severity") or "warning",
-                "claim_text": "",
-                "evidence_text": "",
+                "claim_text": infer_claim_text(
+                    str(item.get("comment") or "").strip(),
+                    str(item.get("claim_text") or ""),
+                ),
+                "evidence_text": str(item.get("evidence_text") or "").strip()[:500],
                 "comment": str(item.get("comment") or "").strip()[:400],
                 "suggested_action": item.get("suggested_action") or "none",
                 "persona_sources": item.get("persona_sources") or ["gate_reviewer"],
@@ -148,6 +154,7 @@ async def run_paper_gate_skim(
     ui_language: str = "Vietnamese",
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict[str, Any]:
     """Run a single-call quick gate scan and return a chat-stream-compatible result dict.
 
@@ -194,13 +201,38 @@ async def run_paper_gate_skim(
 
     _progress("gate-llm", f"Đang phân tích {len(targets)} phần…")
 
-    llm = get_llm(provider=effective_provider, model=effective_model, temperature=0.3)
+    if cancel_event is not None and cancel_event.is_set():
+        return {
+            "logic_audit_report": {},
+            "response": "Logic audit đã hủy.",
+            "analysis": "gate:cancelled",
+        }
 
+    llm = get_llm(provider=effective_provider, model=effective_model, temperature=0.3, json_output=True)
+
+    timeout_sec = get_settings().logic_audit_gate_timeout_sec
+    invoke_task = asyncio.create_task(
+        llm.ainvoke([SystemMessage(content=system_prompt), HumanMessage(content=user_msg)])
+    )
+    started = asyncio.get_running_loop().time()
     try:
-        response = await asyncio.wait_for(
-            llm.ainvoke([SystemMessage(content=system_prompt), HumanMessage(content=user_msg)]),
-            timeout=get_settings().logic_audit_gate_timeout_sec,
-        )
+        while not invoke_task.done():
+            if cancel_event is not None and cancel_event.is_set():
+                invoke_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await invoke_task
+                return {
+                    "logic_audit_report": {},
+                    "response": "Logic audit đã hủy.",
+                    "analysis": "gate:cancelled",
+                }
+            if asyncio.get_running_loop().time() - started >= timeout_sec:
+                invoke_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await invoke_task
+                raise TimeoutError()
+            await asyncio.sleep(0.2)
+        response = await invoke_task
         raw_text = str(response.content or "")
     except TimeoutError as exc:
         _progress("gate-error", "Lỗi phân tích", detail="Timeout", status="error")

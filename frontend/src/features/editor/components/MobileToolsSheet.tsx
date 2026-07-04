@@ -26,6 +26,14 @@ export function MobileToolsSheet({
   onAskArioCitation,
   onRunLogicAudit,
   logicAuditLoading,
+  logicAuditReportStale = false,
+  logicAuditProgressDetail = null,
+  logicAuditSectionProgress = null,
+  logicAuditEngineAvailable = true,
+  onCancelLogicAudit,
+  onJumpToLogicIssue,
+  onAskArioLogic,
+  canJumpToLogicIssue,
   onCitationsUpdated,
 }: {
   onClose: () => void;
@@ -46,6 +54,14 @@ export function MobileToolsSheet({
   onAskArioCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
+  logicAuditReportStale?: boolean;
+  logicAuditProgressDetail?: string | null;
+  logicAuditSectionProgress?: { completed: number; total: number } | null;
+  logicAuditEngineAvailable?: boolean;
+  onCancelLogicAudit?: () => void;
+  onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
+  onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
 }) {
   const { locale } = useLocale();
@@ -83,6 +99,14 @@ export function MobileToolsSheet({
           onAskArioCitation={onAskArioCitation}
           onRunLogicAudit={onRunLogicAudit}
           logicAuditLoading={logicAuditLoading}
+          logicAuditReportStale={logicAuditReportStale}
+          logicAuditProgressDetail={logicAuditProgressDetail}
+          logicAuditSectionProgress={logicAuditSectionProgress}
+          logicAuditEngineAvailable={logicAuditEngineAvailable}
+          onCancelLogicAudit={onCancelLogicAudit}
+          onJumpToLogicIssue={onJumpToLogicIssue}
+          onAskArioLogic={onAskArioLogic}
+          canJumpToLogicIssue={canJumpToLogicIssue}
           onCitationsUpdated={onCitationsUpdated}
           onClose={onClose}
         />

@@ -283,7 +283,10 @@ async def test_stream_logic_audit_timeout_emits_error(monkeypatch):
         "src.services.chat_stream.enforce_llm_quota_for_paper",
         lambda *_args, **_kwargs: None,
     )
-    monkeypatch.setattr("src.services.chat_stream.LOGIC_AUDIT_TIMEOUT_SEC", 0.2)
+    monkeypatch.setattr(
+        "src.services.logic_audit.config.compute_logic_audit_timeout_sec",
+        lambda *_args, **_kwargs: 0.2,
+    )
 
     request = ChatRequest(
         message="/logic",
@@ -296,3 +299,40 @@ async def test_stream_logic_audit_timeout_emits_error(monkeypatch):
     assert error is not None
     assert "logic" in error["message"].lower()
     assert "timed out" in error["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_stream_logic_audit_rejects_concurrent_session(monkeypatch):
+    gate = asyncio.Event()
+
+    async def _slow_logic_audit(**_kwargs):
+        await gate.wait()
+
+    monkeypatch.setattr(
+        "src.services.logic_audit.runner.run_logic_audit",
+        _slow_logic_audit,
+    )
+    monkeypatch.setattr(
+        "src.services.chat_stream.enforce_llm_quota_for_paper",
+        lambda *_args, **_kwargs: None,
+    )
+
+    request = ChatRequest(
+        message="/logic",
+        task="logic",
+        session_id="busy-session-1",
+        latex_content="\\begin{document}\\section{A}Text\\end{document}",
+        logic_audit_mode="quick",
+    )
+
+    async def _first():
+        return await _collect_stream(request)
+
+    first = asyncio.create_task(_first())
+    await asyncio.sleep(0.05)
+    events = await _collect_stream(request)
+    gate.set()
+    await first
+    error = next((data for name, data in events if name == "error"), None)
+    assert error is not None
+    assert "đang chạy" in error["message"].lower()

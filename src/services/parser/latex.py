@@ -70,11 +70,18 @@ def parse_latex_sections(latex: str) -> list[dict]:
         start = match.end()
         next_section = SECTION_RE.search(latex, start)
         end = next_section.start() if next_section else len(latex)
+        body = latex[start:end].strip()
+        subsections = [
+            sub.group(1).strip()
+            for sub in SUBSECTION_RE.finditer(body)
+            if sub.group(1).strip()
+        ]
         sections.append(
             {
                 "name": name,
-                "content": latex[start:end].strip(),
+                "content": body,
                 "kind": "section",
+                "subsections": subsections,
             }
         )
     return sections

@@ -37,6 +37,7 @@ export type StoredProject = {
   compiler?: LatexCompiler;
   assets?: ProjectAsset[];
   logicAuditReport?: LogicAuditReport;
+  gateAuditReport?: LogicAuditReport;
   chatThreads?: ChatThread[];
   createdAt: number;
   updatedAt: number;

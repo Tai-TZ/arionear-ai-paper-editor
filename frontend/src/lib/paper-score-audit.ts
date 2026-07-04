@@ -1,16 +1,14 @@
 import type { LogicAuditReport } from "@/lib/api/academic";
 import { streamChat } from "@/lib/api/academic";
 import type { LLMProvider } from "@/lib/api/academic";
+import { contentFingerprint } from "@/lib/pending-edit-utils";
 
 // ---------------------------------------------------------------------------
 // Fingerprint — stable identifier for a latex document state
 // ---------------------------------------------------------------------------
 
 export function logicAuditFingerprint(latex: string): string {
-  const len = latex.length;
-  const head = latex.slice(0, 200);
-  const tail = latex.slice(-200);
-  return `${len}:${head}${tail}`;
+  return contentFingerprint(latex);
 }
 
 // ---------------------------------------------------------------------------

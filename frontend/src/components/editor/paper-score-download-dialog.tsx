@@ -230,6 +230,9 @@ export function PaperScoreDownloadDialog({
           <DialogDescription className="mt-2 max-w-2xl text-sm leading-relaxed text-background/75">
             {t.description}
           </DialogDescription>
+          <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-background/55">
+            {t.gatePeerReviewNote}
+          </p>
         </div>
 
         {/* Error banner — shown even during loading so user knows what happened */}

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Files, Loader2, Microscope, Play, Zap } from "lucide-react";
+import { Files, Loader2, Microscope, Play, Square, Zap } from "lucide-react";
 
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy, logicAuditModeHint } from "@/lib/editor-i18n";
 import {
+  buildLogicConflictAskPrompt,
+  buildLogicCrossSectionAskPrompt,
+  buildLogicWeakClaimAskPrompt,
   defaultQuickSectionSelection,
   listLogicAuditSectionOptions,
   type LogicAuditMode,
@@ -17,10 +20,31 @@ type LogicAuditPanelProps = {
   latex: string;
   report: LogicAuditReport | null;
   loading?: boolean;
+  reportStale?: boolean;
+  progressDetail?: string | null;
+  sectionProgress?: { completed: number; total: number } | null;
+  engineAvailable?: boolean;
   onRun: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
+  onCancel?: () => void;
+  onJumpToIssue?: (sectionName: string, excerpt?: string) => void;
+  onAskArio?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  canJumpToIssue?: (sectionName: string, excerpt?: string) => boolean;
 };
 
-export function LogicAuditPanel({ latex, report, loading = false, onRun }: LogicAuditPanelProps) {
+export function LogicAuditPanel({
+  latex,
+  report,
+  loading = false,
+  reportStale = false,
+  progressDetail = null,
+  sectionProgress = null,
+  engineAvailable = true,
+  onRun,
+  onCancel,
+  onJumpToIssue,
+  onAskArio,
+  canJumpToIssue,
+}: LogicAuditPanelProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale).logicAudit;
   const [mode, setMode] = useState<LogicAuditMode>("quick");
@@ -64,7 +88,17 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
     );
   };
 
-  const canRun = (auditFull || selected.length > 0) && !loading && sectionOptions.length > 0;
+  const canRun =
+    (auditFull || selected.length > 0) && !loading && sectionOptions.length > 0 && engineAvailable;
+  const partialReport = report?.meta?.partial === true;
+  const sectionsSkipped =
+    typeof report?.meta?.sections_skipped === "number" && report.meta.sections_skipped > 0
+      ? report.meta.sections_skipped
+      : 0;
+  const progressPct =
+    sectionProgress && sectionProgress.total > 0
+      ? Math.min(100, Math.round((sectionProgress.completed / sectionProgress.total) * 100))
+      : 0;
 
   const runButtonLabel = loading
     ? t.running
@@ -79,6 +113,36 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
   return (
     <div className="logic-audit-panel">
       <p className="mt-1 text-xs text-muted-foreground">{t.intro}</p>
+
+      {!engineAvailable ? (
+        <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t.engineUnavailable}
+        </p>
+      ) : null}
+
+      {reportStale ? (
+        <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t.staleReport}
+        </p>
+      ) : null}
+
+      {loading && (report?.sections?.length ?? 0) > 0 ? (
+        <p className="mt-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          {t.auditingInProgress}
+        </p>
+      ) : null}
+
+      {partialReport && !reportStale ? (
+        <p className="mt-3 rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          {t.partialReport}
+        </p>
+      ) : null}
+
+      {sectionsSkipped > 0 && !loading ? (
+        <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t.sectionsSkipped(sectionsSkipped)}
+        </p>
+      ) : null}
 
       <div className="logic-audit-mode-toggle mt-4 grid grid-cols-2 gap-2">
         {(
@@ -199,15 +263,46 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
         </p>
       )}
 
-      <button
-        type="button"
-        disabled={!canRun}
-        onClick={() => onRun(mode, scope, auditFull ? [] : selected)}
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
-        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-        {runButtonLabel}
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          disabled={!canRun}
+          onClick={() => onRun(mode, scope, auditFull ? [] : selected)}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+          {runButtonLabel}
+        </button>
+        {loading && onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50"
+          >
+            <Square className="h-3 w-3 fill-current" />
+            {t.cancel}
+          </button>
+        ) : null}
+      </div>
+
+      {loading && sectionProgress && sectionProgress.total > 0 ? (
+        <div className="mt-3 space-y-1">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>{t.sectionProgress(sectionProgress.completed, sectionProgress.total)}</span>
+            <span>{progressPct}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {loading && progressDetail ? (
+        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{progressDetail}</p>
+      ) : null}
 
       {report?.sections?.length ? (
         <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
@@ -228,35 +323,149 @@ export function LogicAuditPanel({ latex, report, loading = false, onRun }: Logic
               {(section.conflicts ?? []).length === 0 && !(section.weak_claims ?? []).length ? (
                 <p className="mt-2 text-xs text-muted-foreground">{t.noIssues}</p>
               ) : (
-                <ul className="mt-2 space-y-2">
-                  {(section.conflicts ?? []).map((c) => (
-                    <li key={c.id} className="text-xs">
-                      <span className="font-medium text-[color:var(--editorial-red)]">
-                        [{severityLabel(c.severity)}]
-                      </span>{" "}
-                      {c.comment}
-                    </li>
-                  ))}
-                  {(section.weak_claims ?? []).map((w, i) => (
-                    <li key={`weak-${i}`} className="text-xs text-muted-foreground">
-                      [{t.weak}] {w}
-                    </li>
-                  ))}
+                <ul className="mt-2 space-y-3">
+                  {(section.conflicts ?? []).map((c) => {
+                    const excerpt = c.claim_text?.trim() || undefined;
+                    const jumpable = canJumpToIssue?.(section.section, excerpt) ?? false;
+                    return (
+                      <li key={c.id} className="rounded-md border border-border/40 px-2 py-2 text-xs">
+                        <div>
+                          <span className="font-medium text-[color:var(--editorial-red)]">
+                            [{severityLabel(c.severity)}]
+                          </span>{" "}
+                          {c.comment}
+                        </div>
+                        {c.claim_text?.trim() ? (
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            <span className="font-medium text-foreground">{t.claimLabel}</span>{" "}
+                            {c.claim_text.trim()}
+                          </p>
+                        ) : null}
+                        {(onJumpToIssue || onAskArio) && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {onJumpToIssue && jumpable ? (
+                              <button
+                                type="button"
+                                className="text-[10px] text-primary hover:underline"
+                                onClick={() => onJumpToIssue(section.section, excerpt)}
+                              >
+                                {t.jumpToIssue}
+                              </button>
+                            ) : null}
+                            {onAskArio ? (
+                              <button
+                                type="button"
+                                className="text-[10px] text-primary hover:underline"
+                                onClick={() =>
+                                  onAskArio(
+                                    buildLogicConflictAskPrompt({
+                                      section: section.section,
+                                      comment: c.comment,
+                                      claimText: c.claim_text,
+                                    }),
+                                    section.section,
+                                    excerpt,
+                                  )
+                                }
+                              >
+                                {t.askArio}
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {(section.weak_claims ?? []).map((w, i) => {
+                    const jumpable = canJumpToIssue?.(section.section, w) ?? false;
+                    return (
+                      <li
+                        key={`weak-${i}`}
+                        className="rounded-md border border-dashed border-border/40 px-2 py-2 text-xs text-muted-foreground"
+                      >
+                        <div>
+                          [{t.weak}] {w}
+                        </div>
+                        {(onJumpToIssue || onAskArio) && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {onJumpToIssue && jumpable ? (
+                              <button
+                                type="button"
+                                className="text-[10px] text-primary hover:underline"
+                                onClick={() => onJumpToIssue(section.section, w)}
+                              >
+                                {t.jumpToIssue}
+                              </button>
+                            ) : null}
+                            {onAskArio ? (
+                              <button
+                                type="button"
+                                className="text-[10px] text-primary hover:underline"
+                                onClick={() =>
+                                  onAskArio(
+                                    buildLogicWeakClaimAskPrompt(section.section, w),
+                                    section.section,
+                                    w,
+                                  )
+                                }
+                              >
+                                {t.askArio}
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
           ))}
-          {(report.cross_section_conflicts ?? []).map((cross, i) => (
+          {(report.cross_section_conflicts ?? []).map((cross, i) => {
+            const firstSpan = cross.spans?.[0];
+            const jumpSection = firstSpan?.section ?? "Abstract";
+            const jumpExcerpt = firstSpan?.text?.trim() || undefined;
+            const jumpable = canJumpToIssue?.(jumpSection, jumpExcerpt) ?? false;
+            return (
             <div
               key={`cross-${i}`}
               className="rounded-md border border-dashed border-border/60 p-3 text-xs"
             >
               <span className="font-medium">{t.crossSection}</span> {cross.description}
+              {(jumpable || onAskArio) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {jumpable && onJumpToIssue ? (
+                    <button
+                      type="button"
+                      className="text-[10px] font-medium text-primary hover:underline"
+                      onClick={() => onJumpToIssue(jumpSection, jumpExcerpt)}
+                    >
+                      {t.jumpToIssue}
+                    </button>
+                  ) : null}
+                  {onAskArio ? (
+                    <button
+                      type="button"
+                      className="text-[10px] font-medium text-primary hover:underline"
+                      onClick={() =>
+                        onAskArio(
+                          buildLogicCrossSectionAskPrompt(cross.description, jumpSection),
+                          jumpSection,
+                          jumpExcerpt,
+                        )
+                      }
+                    >
+                      {t.askArio}
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
-        <p className="mt-4 text-xs text-muted-foreground">{t.chatHint}</p>
+        <p className="mt-4 text-xs text-muted-foreground">{t.panelNote}</p>
       )}
     </div>
   );

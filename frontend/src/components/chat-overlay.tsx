@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Check,
   Maximize2,
   Sparkles,
   Square,
@@ -393,8 +394,34 @@ export function ChatDock({
   );
 }
 
-function copyText(text: string) {
-  void navigator.clipboard?.writeText(text);
+function ChatCopyButton({ text, ariaLabel }: { text: string; ariaLabel: string }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCopy = useCallback(() => {
+    void navigator.clipboard?.writeText(text);
+    setCopied(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 1000);
+  }, [text]);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
+
+  return (
+    <button
+      type="button"
+      className={cn("chat-copy-btn", copied && "chat-copy-btn-copied")}
+      aria-label={ariaLabel}
+      onClick={handleCopy}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+    </button>
+  );
 }
 
 function assistantHasBody(message: ChatMessage): boolean {
@@ -459,14 +486,7 @@ export function ChatMessages({
             <div key={i} className="chat-message-row chat-user-row">
               <div className="chat-user-stack">
                 <div className="chat-bubble chat-bubble-user-dark">{m.content}</div>
-                <button
-                  type="button"
-                  className="chat-copy-btn"
-                  aria-label={t.chatDock.copyMessage}
-                  onClick={() => copyText(m.content)}
-                >
-                  <Copy className="h-3 w-3" />
-                </button>
+                <ChatCopyButton text={m.content} ariaLabel={t.chatDock.copyMessage} />
               </div>
             </div>
           );

@@ -684,7 +684,7 @@ export function PdfPreviewPanel({
         </div>
 
         <div className="flex items-center gap-1.5">
-          {!readOnly && compileLog && (
+          {!readOnly && compileLog && !searchOpen && (
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
@@ -759,7 +759,7 @@ export function PdfPreviewPanel({
 
           {readOnly ? (
             <span className="pdf-preview-toolbar-muted font-mono text-[11px]">{displayZoom}%</span>
-          ) : (
+          ) : !searchOpen ? (
             <select
               value={zoomMode === "fit" ? 100 : zoomMode}
               onChange={(e) => {
@@ -775,7 +775,7 @@ export function PdfPreviewPanel({
                 </option>
               ))}
             </select>
-          )}
+          ) : null}
         </div>
       </header>
 

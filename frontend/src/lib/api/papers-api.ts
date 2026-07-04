@@ -41,7 +41,18 @@ function toStoredProject(paper: PaperResponse): StoredProject {
   const mainFile = typeof metadata.mainFile === "string" ? metadata.mainFile : undefined;
   const compiler =
     typeof metadata.compiler === "string" ? (metadata.compiler as LatexCompiler) : undefined;
-  const logicAuditReport = parseLogicAuditReport(metadata.logic_audit_report);
+  const legacyReport = parseLogicAuditReport(metadata.logic_audit_report);
+  const gateFromDedicated = parseLogicAuditReport(metadata.logic_gate_audit_report);
+  let gateAuditReport = gateFromDedicated;
+  let logicAuditReport: LogicAuditReport | undefined;
+  if (legacyReport) {
+    const isGate = (legacyReport as { meta?: Record<string, unknown> }).meta?.audit_mode === "gate";
+    if (isGate) {
+      gateAuditReport = gateAuditReport ?? legacyReport;
+    } else {
+      logicAuditReport = legacyReport;
+    }
+  }
   const chatThreads = Array.isArray(metadata.chat_threads)
     ? (metadata.chat_threads as import("@/lib/project-store").ChatThread[])
     : undefined;
@@ -54,6 +65,7 @@ function toStoredProject(paper: PaperResponse): StoredProject {
     mainFile,
     compiler,
     logicAuditReport,
+    gateAuditReport,
     chatThreads,
     createdAt: parseApiDate(paper.created_at),
     updatedAt: parseApiDate(paper.updated_at),

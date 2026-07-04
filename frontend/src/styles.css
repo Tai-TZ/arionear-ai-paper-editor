@@ -5649,6 +5649,14 @@ html[lang="vi"] .hero-headline {
   color: var(--foreground);
 }
 
+.editor-shell .chat-copy-btn-copied {
+  color: hsl(142 71% 40%);
+}
+
+.editor-shell .chat-copy-btn-copied:hover {
+  color: hsl(142 71% 40%);
+}
+
 .editor-shell .chat-assistant-row {
   display: flex;
   gap: 0.625rem;

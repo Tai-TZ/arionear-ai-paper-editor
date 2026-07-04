@@ -76,3 +76,21 @@ def test_set_logic_audit_report_persists_in_metadata():
     session = session_store.get(session_id)
     assert session is not None
     assert session.metadata["logic_audit_report"]["sections"][0]["section"] == "Introduction"
+
+
+def test_set_logic_gate_audit_report_uses_dedicated_key():
+    session_id = str(uuid.uuid4())
+    session_store.create(session_id=session_id)
+    report = {
+        "summary": "gate",
+        "sections": [{"section": "Abstract", "conflicts": [], "weak_claims": []}],
+        "cross_section_conflicts": [],
+        "meta": {"audit_mode": "gate"},
+    }
+    session_store.set_logic_audit_report(session_id, report)
+
+    session = session_store.get(session_id)
+    assert session is not None
+    assert "logic_gate_audit_report" in session.metadata
+    assert session.metadata["logic_gate_audit_report"]["meta"]["audit_mode"] == "gate"
+    assert "logic_audit_report" not in session.metadata

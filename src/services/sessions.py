@@ -135,7 +135,9 @@ class InMemorySessionStore:
         session = self.get(session_id)
         if not session:
             return
-        session.metadata = {**(session.metadata or {}), "logic_audit_report": report}
+        audit_mode = (report.get("meta") or {}).get("audit_mode")
+        key = "logic_gate_audit_report" if audit_mode == "gate" else "logic_audit_report"
+        session.metadata = {**(session.metadata or {}), key: report}
         session.updated_at = _utcnow()
 
 

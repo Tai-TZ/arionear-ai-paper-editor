@@ -1,38 +1,57 @@
 from src.services.logic_audit.config import (
-    ZAI_LOGIC_AUDIT_DEEP_MODEL,
-    ZAI_LOGIC_AUDIT_QUICK_MODEL,
+    compute_logic_audit_timeout_sec,
     logic_audit_engine_label,
+    logic_audit_runtime_flags,
     resolve_logic_audit_llm,
     select_logic_targets,
+    split_section_text,
 )
 
 
-def test_resolve_logic_audit_quick_prefers_zai(monkeypatch):
+def test_logic_audit_runtime_flags_quick_full_throttles():
+    flags = logic_audit_runtime_flags("quick", "google", scope="full")
+    assert flags["section_concurrency"] == 1
+    assert flags["section_cooldown_sec"] >= 0
+
+
+def test_logic_audit_runtime_flags_quick_selected_parallel():
+    flags = logic_audit_runtime_flags("quick", "google", scope="selected")
+    assert flags["section_concurrency"] == 2
+    assert flags["section_cooldown_sec"] == 0
+
+
+def test_resolve_logic_audit_quick_prefers_google(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("LLM_PROVIDER", "openrouter")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
     monkeypatch.setenv("ZAI_API_KEY", "zai-test")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-test")
     provider, model = resolve_logic_audit_llm("quick", "openrouter")
-    assert provider == "zai"
-    assert model == ZAI_LOGIC_AUDIT_QUICK_MODEL
+    assert provider == "google"
+    assert model == "gemini-2.5-flash"
 
 
-def test_resolve_logic_audit_deep_uses_glm_quality(monkeypatch):
+def test_resolve_logic_audit_deep_uses_gemini_quality(monkeypatch):
     from src.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
     monkeypatch.setenv("ZAI_API_KEY", "zai-test")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-test")
     provider, model = resolve_logic_audit_llm("deep", "openrouter")
-    assert provider == "zai"
-    assert model == ZAI_LOGIC_AUDIT_DEEP_MODEL
+    assert provider == "google"
+    assert model == "gemini-3.5-flash"
 
 
-def test_logic_audit_engine_label():
-    assert logic_audit_engine_label("quick") == "GLM-4.7 Flash"
-    assert logic_audit_engine_label("deep") == "GLM-4.7"
+def test_logic_audit_engine_label(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-test")
+    assert logic_audit_engine_label("quick") == "Gemini 2.5 Flash"
+    assert logic_audit_engine_label("deep") == "Gemini 3.5 Flash"
 
 
 def test_persona_timeout_reads_settings(monkeypatch):
@@ -41,7 +60,7 @@ def test_persona_timeout_reads_settings(monkeypatch):
 
     get_settings.cache_clear()
     monkeypatch.setenv("LOGIC_AUDIT_PERSONA_TIMEOUT_SEC", "120")
-    assert _persona_timeout_sec("glm-4.7-flash") == 120.0
+    assert _persona_timeout_sec("gemini-2.5-flash") == 120.0
 
 
 def test_select_logic_targets_quick_defaults():
@@ -84,3 +103,50 @@ def test_select_logic_targets_deep_selected_one():
     )
     assert len(picked) == 1
     assert picked[0]["name"] == "Introduction"
+
+
+def test_compute_logic_audit_timeout_quick_selected(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    timeout = compute_logic_audit_timeout_sec("quick", "selected", 3)
+    assert timeout >= 240.0
+
+
+def test_compute_logic_audit_timeout_deep_full(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    timeout = compute_logic_audit_timeout_sec("deep", "full", 8, run_cross_section=True)
+    assert timeout >= 600.0
+    assert timeout <= 900.0
+
+
+def test_split_section_text_single_chunk():
+    text = "a" * 1000
+    assert split_section_text(text, 2000) == [text]
+
+
+def test_split_section_text_multiple_chunks_with_overlap():
+    text = "x" * 5000
+    chunks = split_section_text(text, 2000, max_chunks=2)
+    assert len(chunks) == 2
+    assert all(len(chunk) <= 2000 for chunk in chunks)
+
+
+def test_compute_logic_audit_timeout_with_chunked_targets(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    huge = "x" * 12_000
+    targets = [{"name": "Intro", "content": huge}]
+    flat = compute_logic_audit_timeout_sec(
+        "quick",
+        "selected",
+        1,
+        targets=targets,
+        section_char_limit=6000,
+        section_concurrency=2,
+    )
+    naive = compute_logic_audit_timeout_sec("quick", "selected", 1)
+    assert flat > naive

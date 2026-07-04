@@ -288,6 +288,8 @@ class DatabaseSessionStore:
             if not paper:
                 return
             meta = dict(paper.metadata_ or {})
-            meta["logic_audit_report"] = report
+            audit_mode = (report.get("meta") or {}).get("audit_mode")
+            key = "logic_gate_audit_report" if audit_mode == "gate" else "logic_audit_report"
+            meta[key] = report
             paper.metadata_ = meta
             paper.updated_at = _utcnow()

@@ -107,6 +107,7 @@ def get_llm(
     model: str | None = None,
     temperature: float | None = None,
     thinking: bool | None = None,
+    json_output: bool = False,
 ) -> BaseChatModel:
     """Return a chat model for OpenAI, Anthropic, OpenRouter, Z.AI (GLM), or Google (Gemini)."""
     settings = get_settings()
@@ -122,12 +123,16 @@ def get_llm(
     request_timeout = settings.llm_request_timeout_sec
 
     if provider == "openai":
+        openai_kwargs: dict = {}
+        if json_output:
+            openai_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
         return ChatOpenAI(
             model=model_name,
             api_key=_resolve_api_key(settings, "openai"),
             base_url=settings.openai_base_url,
             temperature=temp,
             timeout=request_timeout,
+            **openai_kwargs,
         )
 
     if provider == "anthropic":
@@ -156,6 +161,9 @@ def get_llm(
         if settings.openrouter_app_name:
             default_headers["X-Title"] = settings.openrouter_app_name
 
+        openrouter_kwargs: dict = {}
+        if json_output:
+            openrouter_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
         return ChatOpenAI(
             model=model_name,
             api_key=_resolve_api_key(settings, "openrouter"),
@@ -163,6 +171,7 @@ def get_llm(
             temperature=temp,
             default_headers=default_headers or None,
             timeout=request_timeout,
+            **openrouter_kwargs,
         )
 
     if provider == "zai":
@@ -190,6 +199,7 @@ def get_llm(
             google_api_key=_resolve_api_key(settings, "google"),
             temperature=temp,
             timeout=request_timeout,
+            response_mime_type="application/json" if json_output else None,
         )
 
     raise ValueError(f"Unsupported LLM provider: {provider}")
@@ -214,7 +224,6 @@ OPENROUTER_MODEL_CATALOG: list[tuple[str, str]] = [
     ("google/gemma-2-9b-it:free", "Gemma 2 9B · writing (free)"),
     ("meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B · fast drafts (free)"),
     ("openai/gpt-4o-mini", "GPT-4o Mini · fast & reliable"),
-    ("google/gemini-2.5-flash-preview", "Gemini 2.5 Flash · fast"),
     ("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku · precise"),
     ("qwen/qwen-2.5-72b-instruct", "Qwen 2.5 72B · academic"),
     ("deepseek/deepseek-chat-v3-0324", "DeepSeek V3 · quality"),
@@ -236,14 +245,15 @@ ZAI_MODEL_CATALOG: list[tuple[str, str]] = [
     ("glm-4.7", "GLM-4.7 · quality"),
 ]
 
-GOOGLE_MODEL_CATALOG: list[tuple[str, str]] = [
-    ("gemini-2.5-flash", "Gemini 2.5 Flash · free"),
+GOOGLE_CHAT_MODEL_CATALOG: list[tuple[str, str]] = [
     ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite · free"),
     ("gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite · free"),
-    ("gemini-3.5-flash", "Gemini 3.5 Flash · fast"),
-    ("gemini-2.5-pro", "Gemini 2.5 Pro · quality"),
-    ("gemini-3.1-pro-preview", "Gemini 3.1 Pro · preview"),
+    ("gemini-3-flash-preview", "Gemini 3 Flash · preview"),
 ]
+
+# Reserved for logic audit engine only — not exposed in the chat model dropdown.
+GOOGLE_LOGIC_AUDIT_QUICK_MODEL = "gemini-2.5-flash"
+GOOGLE_LOGIC_AUDIT_DEEP_MODEL = "gemini-3.5-flash"
 
 
 def _model_options(
@@ -298,7 +308,7 @@ def list_provider_catalog() -> list[dict]:
             "google",
             "Google (Gemini)",
             settings.google_default_model,
-            GOOGLE_MODEL_CATALOG,
+            GOOGLE_CHAT_MODEL_CATALOG,
             bool(settings.google_api_key.strip()),
         ),
     ]
@@ -370,7 +380,7 @@ def list_providers() -> list[dict]:
                 "id": "google",
                 "name": "Google (Gemini)",
                 "default_model": default,
-                "models": _model_options(GOOGLE_MODEL_CATALOG, default),
+                "models": _model_options(GOOGLE_CHAT_MODEL_CATALOG, default),
             }
         )
 

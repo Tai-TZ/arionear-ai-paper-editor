@@ -32,7 +32,8 @@ import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import { canApplyPendingEdit, contentFingerprint } from "@/lib/pending-edit-utils";
 import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";
-import { mergeLogicSectionReport } from "@/lib/logic-audit";
+import { formatLogicAuditProgress, logicAuditClientTimeoutMs, logicAuditTargetSectionCount, listLogicAuditSectionOptions, mergeLogicSectionReport } from "@/lib/logic-audit";
+import { parseLatexOutline } from "@/lib/latex-outline";
 import { buildEditRedoPrompt, type StructureSuggestion } from "@/lib/structure-suggestions";
 import { logicAuditFingerprint } from "@/lib/paper-score-audit";
 import type { ChatThread, ProjectFile, StoredChatMessage } from "@/lib/project-store";
@@ -65,7 +66,7 @@ export type EditorChatSideEffects = {
   setCitationResults: React.Dispatch<React.SetStateAction<Record<string, unknown>[]>>;
   setCitationSummary: React.Dispatch<React.SetStateAction<string>>;
   setStructureSuggestions: React.Dispatch<React.SetStateAction<StructureSuggestion[]>>;
-  lastAuditFingerprintRef: React.MutableRefObject<string | null>;
+  lastPanelAuditFingerprintRef: React.MutableRefObject<string | null>;
 };
 
 export type UseEditorChatOptions = {
@@ -93,8 +94,9 @@ export type UseEditorChatOptions = {
   setProjectFiles: React.Dispatch<React.SetStateAction<ProjectFile[]>>;
   persistActiveFile: (content: string, files: ProjectFile[], currentActive: string) => ProjectFile[];
   refreshRevisions: () => void;
-  handleCompile: (latexOverride?: string) => Promise<void>;
+  scheduleCompile: (latexOverride?: string) => void;
   setMobileChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  scoreAuditLoading?: boolean;
   sideEffects: EditorChatSideEffects;
 };
 
@@ -124,8 +126,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setProjectFiles,
     persistActiveFile,
     refreshRevisions,
-    handleCompile,
+    scheduleCompile,
     setMobileChatOpen,
+    scoreAuditLoading = false,
     sideEffects,
   } = options;
 
@@ -143,6 +146,11 @@ export function useEditorChat(options: UseEditorChatOptions) {
   const [chatInput, setChatInput] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [auditInProgress, setAuditInProgress] = useState(false);
+  const [auditSectionProgress, setAuditSectionProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
   const [chatStreamProgress, setChatStreamProgress] = useState<ChatStreamProgressSnapshot>(
     getChatStreamProgressSnapshot(),
   );
@@ -164,7 +172,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     sections: string[];
     userDisplay: string;
     message: string;
+    targetSectionCount: number;
   } | null>(null);
+  const logicAuditPartialCountRef = useRef(0);
 
   type ThreadPendingSnapshot = {
     pendingEdits: PendingEdit[] | null;
@@ -291,6 +301,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     if (!chatAbortRef.current) return;
     chatAbortRef.current.abort();
     setChatLoading(false);
+    setAuditInProgress(false);
+    setAuditSectionProgress(null);
     resetChatStreamProgress();
     setMessages((prev) => {
       const idx = prev.findLastIndex((m) => m.role === "assistant" && m.isStreaming);
@@ -470,7 +482,14 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
     const raw = launch?.message ?? ctx.chatInput.trim();
     if (!raw || ctx.chatLoading || !projectId) return;
+
+    const parsedPreview = launch
+      ? { task: "logic" as const, message: launch.message, command: "logic" as const }
+      : parseChatSlashCommand(raw, locale);
+    const isLogicAuditTask = Boolean(launch) || parsedPreview.task === "logic";
+
     if (
+      !isLogicAuditTask &&
       ctx.providers.length > 0 &&
       ctx.llmProvider &&
       ctx.llmModel &&
@@ -489,9 +508,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       });
     }
 
-    const parsed = launch
-      ? { task: "logic" as const, message: launch.message, command: "logic" as const }
-      : parseChatSlashCommand(raw, locale);
+    const parsed = parsedPreview;
     const text = parsed.message;
     const activeSelection = ctx.chatSelectionContext?.text ?? ctx.selection;
     const sentSelection = ctx.chatSelectionContext;
@@ -507,6 +524,18 @@ export function useEditorChat(options: UseEditorChatOptions) {
     const logicAuditScope =
       launch?.scope ?? parsed.logicAuditScope ?? (task === "logic" ? "selected" : undefined);
     const logicAuditSections = launch?.sections;
+    const sectionOptions = listLogicAuditSectionOptions(
+      parseLatexOutline(ctx.mainLatexSource),
+    );
+    const targetSectionCount = launch
+      ? launch.targetSectionCount
+      : logicAuditTargetSectionCount(
+          logicAuditMode ?? "quick",
+          logicAuditScope ?? "selected",
+          logicAuditSections?.length ?? 0,
+          sectionOptions.length,
+          sectionOptions,
+        );
     openChatPanel();
     chatAbortRef.current?.abort();
     const abort = new AbortController();
@@ -566,7 +595,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setChatComposerMode("normal");
     if (task === "logic") {
       sideEffects.setToolsOpen(true);
-      sideEffects.setLogicAuditReport({ sections: [], cross_section_conflicts: [] });
+      logicAuditPartialCountRef.current = 0;
+      setAuditSectionProgress({ completed: 0, total: targetSectionCount });
+      setAuditInProgress(true);
     }
     setChatLoading(true);
     const replacesPendingEdits =
@@ -597,7 +628,10 @@ export function useEditorChat(options: UseEditorChatOptions) {
       });
     });
 
-    const CHAT_STREAM_TIMEOUT_MS = 120_000;
+    const CHAT_STREAM_TIMEOUT_MS =
+      task === "logic"
+        ? logicAuditClientTimeoutMs(logicAuditMode ?? "quick", logicAuditScope ?? "selected")
+        : 120_000;
     let chatTimedOut = false;
     const chatTimeoutId = setTimeout(() => {
       if (!abort.signal.aborted) {
@@ -655,6 +689,17 @@ export function useEditorChat(options: UseEditorChatOptions) {
           },
           onState: (state: ChatAiStatePayload) => {
             pushChatStreamState(state);
+            if (
+              task === "logic" &&
+              state.step_id === "logic-cross" &&
+              state.status === "done"
+            ) {
+              setAuditSectionProgress((prev) =>
+                prev
+                  ? { ...prev, completed: Math.min(prev.total, prev.completed + 1) }
+                  : prev,
+              );
+            }
             if (isProgressNoiseStep(state.step_id)) return;
 
             const important = isImportantFeedEvent(state);
@@ -695,12 +740,19 @@ export function useEditorChat(options: UseEditorChatOptions) {
             chatSmoothStreamRef.current?.push(delta);
           },
           onReasoning: (delta) => {
+            if (task === "logic") return;
             patchAssistant((msg) => ({
               ...msg,
               reasoning: `${msg.reasoning ?? ""}${delta}`,
             }));
           },
           onLogicSection: (section) => {
+            logicAuditPartialCountRef.current += 1;
+            setAuditSectionProgress((prev) =>
+              prev
+                ? { ...prev, completed: logicAuditPartialCountRef.current }
+                : { completed: logicAuditPartialCountRef.current, total: targetSectionCount },
+            );
             flushSync(() => {
               sideEffects.setLogicAuditReport((prev) => mergeLogicSectionReport(prev, section));
               sideEffects.setToolsOpen(true);
@@ -825,9 +877,15 @@ export function useEditorChat(options: UseEditorChatOptions) {
               }
             }
             if (result.logic_audit_report?.sections?.length) {
-              sideEffects.setLogicAuditReport(result.logic_audit_report);
-              sideEffects.lastAuditFingerprintRef.current = logicAuditFingerprint(sentMainLatex);
-              sideEffects.setToolsOpen(true);
+              const isGate =
+                (result.logic_audit_report as { meta?: Record<string, unknown> }).meta
+                  ?.audit_mode === "gate";
+              if (!isGate) {
+                sideEffects.setLogicAuditReport(result.logic_audit_report);
+                sideEffects.lastPanelAuditFingerprintRef.current =
+                  logicAuditFingerprint(sentMainLatex);
+                sideEffects.setToolsOpen(true);
+              }
             }
             if (result.revision_id) {
               void refreshRevisions();
@@ -860,6 +918,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
       finishChatStreamProgress();
       syncChatStreamProgress();
       setChatLoading(false);
+      setAuditInProgress(false);
+      setAuditSectionProgress(null);
       chatAbortRef.current = null;
       setMessages((prev) => {
         const idx = prev.findLastIndex((m) => m.role === "assistant");
@@ -867,14 +927,19 @@ export function useEditorChat(options: UseEditorChatOptions) {
         const next = [...prev];
         const msg = next[idx] as ChatMessage;
         if (abort.signal.aborted) {
+          const partialSections = logicAuditPartialCountRef.current;
+          const partialContent =
+            task === "logic" && partialSections > 0
+              ? chatTimedOut
+                ? t.logicAudit.partialChatTimeout(partialSections)
+                : t.logicAudit.partialChatStopped(partialSections)
+              : chatTimedOut
+                ? t.chatStream.timeout
+                : t.chatStream.stopped;
           next[idx] = {
             ...msg,
             isStreaming: false,
-            content:
-              msg.content.trim() ||
-              (chatTimedOut
-                ? t.chatStream.timeout
-                : t.chatStream.stopped),
+            content: msg.content.trim() || partialContent,
           };
           persistActiveThreadNow(next);
           return next;
@@ -902,6 +967,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     t.llm.paidChatHint,
     t.chatStream.timeout,
     t.chatStream.stopped,
+    t.logicAudit.partialChatStopped,
+    t.logicAudit.partialChatTimeout,
     openChatPanel,
     persistActiveThreadNow,
     onChatPersistError,
@@ -941,14 +1008,23 @@ export function useEditorChat(options: UseEditorChatOptions) {
     scope: LogicAuditScope,
     sections: string[],
   ) => {
-    if (chatLoading || !projectId) return;
+    if (chatLoading || auditInProgress || scoreAuditLoading || !projectId) return;
     if (scope !== "full" && sections.length === 0) return;
     const full = scope === "full";
     const auditCopy = t.logicAudit.panelLaunch;
+    const sectionOptions = listLogicAuditSectionOptions(parseLatexOutline(mainLatexSource));
+    const targetSectionCount = logicAuditTargetSectionCount(
+      mode,
+      scope,
+      sections.length,
+      sectionOptions.length,
+      sectionOptions,
+    );
     logicAuditLaunchRef.current = {
       mode,
       scope,
       sections,
+      targetSectionCount,
       userDisplay: full
         ? mode === "deep"
           ? auditCopy.displayDeepFull
@@ -992,7 +1068,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setPendingSuggestion(null);
     reportRevisionAction(revisionId, "accepted");
     if (autoCompile && nextActiveLatex) {
-      void handleCompile(nextActiveLatex);
+      scheduleCompile(nextActiveLatex);
     }
     setMessages((prev) => [
       ...prev,
@@ -1014,7 +1090,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     recordNow,
     reportRevisionAction,
     autoCompile,
-    handleCompile,
+    scheduleCompile,
     t.pendingEdits.staleOnAccept,
     t.chatStream.acceptAppliedCompile,
     t.chatStream.acceptApplied,
@@ -1066,7 +1142,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setActiveEditId(remaining[0]?.id ?? null);
       reportRevisionAction(edit.revisionId, "accepted");
       if (autoCompile && nextLatex) {
-        void handleCompile(nextLatex);
+        scheduleCompile(nextLatex);
       }
     },
     [
@@ -1074,7 +1150,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       autoCompile,
       applyEditToProject,
       reportRevisionAction,
-      handleCompile,
+      scheduleCompile,
       resolveFileContent,
       mainFile,
       t.pendingEdits.staleOnAccept,
@@ -1137,7 +1213,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setPendingEdits(null);
     setActiveEditId(null);
     if (autoCompile && nextLatex !== latex) {
-      void handleCompile(nextLatex);
+      scheduleCompile(nextLatex);
     }
   }, [
     pendingEdits,
@@ -1149,7 +1225,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     recordNow,
     persistActiveFile,
     autoCompile,
-    handleCompile,
+    scheduleCompile,
     resolveFileContent,
     reportRevisionAction,
     t.pendingEdits.staleOnAccept,
@@ -1280,6 +1356,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     chatOpen,
     setChatOpen,
     chatLoading,
+    auditInProgress,
+    auditSectionProgress,
     chatStreamProgress,
     chatEndRef,
     chatSelectionContext,

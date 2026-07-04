@@ -32,6 +32,14 @@ export function ToolsPanel({
   onAskArioCitation,
   onRunLogicAudit,
   logicAuditLoading = false,
+  logicAuditReportStale = false,
+  logicAuditProgressDetail = null,
+  logicAuditSectionProgress = null,
+  logicAuditEngineAvailable = true,
+  onCancelLogicAudit,
+  onJumpToLogicIssue,
+  onAskArioLogic,
+  canJumpToLogicIssue,
   onCitationsUpdated,
   onClose,
 }: {
@@ -52,6 +60,14 @@ export function ToolsPanel({
   onAskArioCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
+  logicAuditReportStale?: boolean;
+  logicAuditProgressDetail?: string | null;
+  logicAuditSectionProgress?: { completed: number; total: number } | null;
+  logicAuditEngineAvailable?: boolean;
+  onCancelLogicAudit?: () => void;
+  onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
+  onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
 }) {
@@ -204,7 +220,15 @@ export function ToolsPanel({
               latex={latex}
               report={logicAuditReportProp}
               loading={logicAuditLoading}
+              reportStale={logicAuditReportStale}
+              progressDetail={logicAuditProgressDetail}
+              sectionProgress={logicAuditSectionProgress}
+              engineAvailable={logicAuditEngineAvailable}
               onRun={onRunLogicAudit}
+              onCancel={onCancelLogicAudit}
+              onJumpToIssue={onJumpToLogicIssue}
+              onAskArio={onAskArioLogic}
+              canJumpToIssue={canJumpToLogicIssue}
             />
           </div>
         ) : tab === "citations" ? (

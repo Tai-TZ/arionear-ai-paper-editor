@@ -93,8 +93,23 @@ _TASK_LABELS: dict[str, str] = {
 T = TypeVar("T")
 
 AGENT_TASK_TIMEOUT_SEC = 90.0
-LOGIC_AUDIT_TIMEOUT_SEC = 180.0
-LOGIC_AUDIT_DEEP_TIMEOUT_SEC = 270.0
+
+
+_logic_audit_busy: set[str] = set()
+_logic_audit_busy_guard = asyncio.Lock()
+
+
+async def _acquire_logic_audit_slot(session_id: str) -> bool:
+    async with _logic_audit_busy_guard:
+        if session_id in _logic_audit_busy:
+            return False
+        _logic_audit_busy.add(session_id)
+        return True
+
+
+async def _release_logic_audit_slot(session_id: str) -> None:
+    async with _logic_audit_busy_guard:
+        _logic_audit_busy.discard(session_id)
 
 
 class AgentTaskTimeoutError(Exception):
@@ -1082,136 +1097,238 @@ async def stream_chat(
             done_payload["response"] = respond
 
         elif task == "logic":
-            trace = await tracker.stage("agent_start", task=task)
-            yield _sse("trace", trace)
-            names = ", ".join(s["name"] for s in sections[:4]) if sections else "document"
-            state_evt, act_evt = _emit_state(
-                "logic-start",
-                "Logic audit — multi-agent",
-                status="active",
-                detail=names,
-                task=task,
-            )
-            yield state_evt
-            yield act_evt
+            session_key = (request.session_id or "").strip()
+            if session_key and not await _acquire_logic_audit_slot(session_key):
+                busy_msg = (
+                    "Một logic audit khác đang chạy trên dự án này "
+                    "(panel hoặc chấm điểm). Hủy hoặc đợi xong rồi thử lại."
+                )
+                await tracker.fail(busy_msg)
+                yield _sse("error", {"message": busy_msg})
+                return
+            try:
+                trace = await tracker.stage("agent_start", task=task)
+                yield _sse("trace", trace)
+                names = ", ".join(s["name"] for s in sections[:4]) if sections else "document"
+                state_evt, act_evt = _emit_state(
+                    "logic-start",
+                    "Logic audit — multi-agent",
+                    status="active",
+                    detail=names,
+                    task=task,
+                )
+                yield state_evt
+                yield act_evt
 
-            progress_queue: asyncio.Queue[tuple[str, ...]] = asyncio.Queue()
+                progress_queue: asyncio.Queue[tuple[str, ...]] = asyncio.Queue()
+                partial_sections: list[dict[str, Any]] = []
+                partial_report: dict[str, Any] | None = None
 
-            def _logic_progress(
-                step_id: str, label: str, detail: str, status: str
-            ) -> None:
-                progress_queue.put_nowait(("state", step_id, label, detail, status))
+                def _logic_progress(
+                    step_id: str, label: str, detail: str, status: str
+                ) -> None:
+                    progress_queue.put_nowait(("state", step_id, label, detail, status))
 
-            def _logic_reasoning(delta: str) -> None:
-                if delta:
-                    progress_queue.put_nowait(("reasoning", delta))
+                def _logic_reasoning(delta: str) -> None:
+                    if delta:
+                        progress_queue.put_nowait(("reasoning", delta))
 
-            def _logic_section(section: dict[str, Any]) -> None:
-                progress_queue.put_nowait(("logic_section", section))
+                def _logic_section(section: dict[str, Any]) -> None:
+                    progress_queue.put_nowait(("logic_section", section))
 
-            async def _run_logic_audit() -> dict[str, Any]:
-                from src.services.logic_audit.runner import run_logic_audit
+                async def _run_logic_audit() -> dict[str, Any]:
+                    from src.services.logic_audit.runner import run_logic_audit
 
-                return await run_logic_audit(
-                    latex=latex,
-                    sections=sections,
-                    query=effective_message,
-                    provider=provider,
-                    model=model,
-                    mode=request.logic_audit_mode or "quick",
-                    scope=request.logic_audit_scope or "selected",
-                    section_filter=request.logic_audit_sections,
-                    chat_provider=provider,
-                    on_progress=_logic_progress,
-                    on_reasoning=_logic_reasoning,
-                    on_section_complete=_logic_section,
+                    return await run_logic_audit(
+                        latex=latex,
+                        sections=sections,
+                        query=effective_message,
+                        provider=provider,
+                        model=model,
+                        mode=request.logic_audit_mode or "quick",
+                        scope=request.logic_audit_scope or "selected",
+                        section_filter=request.logic_audit_sections,
+                        chat_provider=provider,
+                        on_progress=_logic_progress,
+                        on_reasoning=_logic_reasoning,
+                        on_section_complete=_logic_section,
+                        cancel_event=cancel_event,
+                    )
+
+                audit_task = asyncio.create_task(_run_logic_audit())
+                logic_started = time.perf_counter()
+                logic_mode = request.logic_audit_mode or "quick"
+                logic_scope = request.logic_audit_scope or "selected"
+                from src.services.logic_audit.config import (
+                    compute_logic_audit_timeout_sec,
+                    logic_audit_runtime_flags,
+                    select_logic_targets,
+                )
+                from src.services.logic_audit.runner import (
+                    build_partial_audit_result,
+                    merge_logic_section_into_report,
+                    upsert_partial_section,
                 )
 
-            audit_task = asyncio.create_task(_run_logic_audit())
-            logic_started = time.perf_counter()
-            logic_mode = request.logic_audit_mode or "quick"
-            logic_timeout = (
-                LOGIC_AUDIT_DEEP_TIMEOUT_SEC
-                if logic_mode == "deep"
-                else LOGIC_AUDIT_TIMEOUT_SEC
-            )
-            logic_result: dict[str, Any] | None = None
-            while logic_result is None:
-                if _cancelled():
-                    audit_task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await audit_task
-                    return
-                elapsed_total = time.perf_counter() - logic_started
-                if elapsed_total >= logic_timeout:
-                    audit_task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await audit_task
-                    message = _agent_timeout_message("logic", logic_timeout)
-                    await tracker.fail(message)
-                    yield _sse("error", {"message": message})
-                    return
-                if audit_task.done() and progress_queue.empty():
-                    logic_result = await audit_task
-                    break
-                try:
-                    item = await asyncio.wait_for(progress_queue.get(), timeout=2.0)
-                    kind = item[0]
-                    if kind == "reasoning":
-                        yield _sse("reasoning", {"delta": item[1]})
-                        continue
-                    if kind == "logic_section":
-                        yield _sse("logic_section", {"section": item[1]})
-                        continue
-                    _, step_id, label, detail, status = item
-                    state_evt, act_evt = _emit_state(
-                        step_id,
-                        label,
-                        status=status,
-                        detail=detail,
-                        task=task,
-                    )
-                    yield state_evt
-                    yield act_evt
-                except TimeoutError:
-                    if audit_task.done():
-                        logic_result = audit_task.result()
+                logic_flags = logic_audit_runtime_flags(logic_mode, provider, scope=logic_scope)
+                logic_targets = select_logic_targets(
+                    sections,
+                    mode=logic_mode,
+                    scope=logic_scope,
+                    section_filter=request.logic_audit_sections,
+                    max_sections=logic_flags["max_sections"],
+                )
+                logic_timeout = compute_logic_audit_timeout_sec(
+                    logic_mode,
+                    logic_scope,
+                    len(logic_targets) if logic_targets else 1,
+                    run_cross_section=logic_flags["run_cross_section"],
+                    targets=logic_targets,
+                    section_char_limit=logic_flags["section_char_limit"],
+                    section_concurrency=logic_flags["section_concurrency"],
+                )
+                logic_result: dict[str, Any] | None = None
+                persist_pending_report: dict[str, Any] | None = None
+                persist_after = 0.0
+                persist_debounce = get_settings().logic_audit_persist_debounce_sec
+                while logic_result is None:
+                    if (
+                        persist_pending_report
+                        and persist_debounce > 0
+                        and time.perf_counter() >= persist_after
+                    ):
+                        if request.session_id:
+                            session_store.set_logic_audit_report(
+                                request.session_id,
+                                persist_pending_report,
+                            )
+                        persist_pending_report = None
+                        persist_after = 0.0
+                    elif (
+                        persist_pending_report
+                        and persist_debounce <= 0
+                        and request.session_id
+                    ):
+                        session_store.set_logic_audit_report(
+                            request.session_id,
+                            persist_pending_report,
+                        )
+                        persist_pending_report = None
+                    if _cancelled():
+                        audit_task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await audit_task
+                        if partial_sections:
+                            logic_result = build_partial_audit_result(
+                                partial_sections,
+                                mode=logic_mode,
+                                reason="cancelled",
+                            )
+                            break
+                        return
+                    elapsed_total = time.perf_counter() - logic_started
+                    if elapsed_total >= logic_timeout:
+                        audit_task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await audit_task
+                        if partial_sections:
+                            logic_result = build_partial_audit_result(
+                                partial_sections,
+                                timeout_sec=logic_timeout,
+                                mode=logic_mode,
+                            )
+                            break
+                        message = _agent_timeout_message("logic", logic_timeout)
+                        await tracker.fail(message)
+                        yield _sse("error", {"message": message})
+                        return
+                    if audit_task.done() and progress_queue.empty():
+                        logic_result = await audit_task
                         break
-                    elapsed = round(time.perf_counter() - logic_started, 0)
-                    state_evt, _ = _emit_state(
-                        "logic-heartbeat",
-                        "Đang chờ model LLM",
-                        status="active",
-                        detail=f"{elapsed:.0f}s",
-                        task=task,
-                        elapsed_sec=elapsed,
-                    )
-                    yield state_evt
-                    yield _KEEPALIVE_SSE
+                    try:
+                        item = await asyncio.wait_for(progress_queue.get(), timeout=2.0)
+                        kind = item[0]
+                        if kind == "reasoning":
+                            continue
+                        if kind == "logic_section":
+                            section_payload = item[1]
+                            if isinstance(section_payload, dict):
+                                upsert_partial_section(partial_sections, section_payload)
+                                partial_report = merge_logic_section_into_report(
+                                    partial_report,
+                                    section_payload,
+                                    mode=logic_mode,
+                                    scope=logic_scope,
+                                )
+                                if request.session_id and partial_report:
+                                    if persist_debounce > 0:
+                                        persist_pending_report = partial_report
+                                        persist_after = (
+                                            time.perf_counter() + persist_debounce
+                                        )
+                                    else:
+                                        session_store.set_logic_audit_report(
+                                            request.session_id,
+                                            partial_report,
+                                        )
+                            yield _sse("logic_section", {"section": item[1]})
+                            continue
+                        _, step_id, label, detail, status = item
+                        state_evt, act_evt = _emit_state(
+                            step_id,
+                            label,
+                            status=status,
+                            detail=detail,
+                            task=task,
+                        )
+                        yield state_evt
+                        yield act_evt
+                    except TimeoutError:
+                        if audit_task.done():
+                            logic_result = audit_task.result()
+                            break
+                        elapsed = round(time.perf_counter() - logic_started, 0)
+                        state_evt, _ = _emit_state(
+                            "logic-heartbeat",
+                            "Đang chờ model LLM",
+                            status="active",
+                            detail=f"{elapsed:.0f}s",
+                            task=task,
+                            elapsed_sec=elapsed,
+                        )
+                        yield state_evt
+                        yield _KEEPALIVE_SSE
 
-            logic_result = logic_result or {}
-            conflict_count = sum(
-                len(sec.get("conflicts") or [])
-                for sec in (logic_result.get("logic_audit_report") or {}).get("sections") or []
-            )
-            state_evt, act_evt = _emit_state(
-                "scope",
-                "Hoàn tất logic audit",
-                status="done",
-                detail=f"{conflict_count} vấn đề (comment-only)",
-                task=task,
-            )
-            yield state_evt
-            yield act_evt
-            _merge_agent_into_done(done_payload, logic_result)
-            respond = logic_result.get("response", "")
-            # Structured report is in logic_audit_report — avoid streaming huge markdown
-            # (character-by-character tokens + ReactMarkdown freeze the browser).
-            done_payload["response"] = respond
-            if request.session_id:
-                report = logic_result.get("logic_audit_report")
-                if isinstance(report, dict) and report:
-                    session_store.set_logic_audit_report(request.session_id, report)
+                logic_result = logic_result or {}
+                if persist_pending_report and request.session_id:
+                    session_store.set_logic_audit_report(
+                        request.session_id,
+                        persist_pending_report,
+                    )
+                    persist_pending_report = None
+                conflict_count = sum(
+                    len(sec.get("conflicts") or [])
+                    for sec in (logic_result.get("logic_audit_report") or {}).get("sections") or []
+                )
+                state_evt, act_evt = _emit_state(
+                    "scope",
+                    "Hoàn tất logic audit",
+                    status="done",
+                    detail=f"{conflict_count} vấn đề (comment-only)",
+                    task=task,
+                )
+                yield state_evt
+                yield act_evt
+                _merge_agent_into_done(done_payload, logic_result)
+                respond = logic_result.get("response", "")
+                done_payload["response"] = respond
+                if request.session_id:
+                    report = logic_result.get("logic_audit_report")
+                    if isinstance(report, dict) and report:
+                        session_store.set_logic_audit_report(request.session_id, report)
+            finally:
+                if session_key:
+                    await _release_logic_audit_slot(session_key)
 
         elif task == "citation":
             trace = await tracker.stage("agent_start", task=task)

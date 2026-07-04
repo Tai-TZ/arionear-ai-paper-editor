@@ -24,6 +24,10 @@ LogicProgressFn = Callable[[str, str, str, str], None]
 LogicReasoningFn = Callable[[str], None]
 LogicSectionFn = Callable[[dict], None]
 
+
+class LogicAuditCancelledError(Exception):
+    """Raised when logic audit is cancelled mid-stream."""
+
 PERSONA_LABELS: dict[str, str] = {
     "novice_reader": "Độc giả mới",
     "critical_reviewer": "Reviewer khắt khe",
@@ -66,6 +70,10 @@ def _report(
 ) -> None:
     if on_progress:
         on_progress(step_id, label, detail, status)
+
+
+def _is_cancelled(cancel_event: asyncio.Event | None) -> bool:
+    return cancel_event is not None and cancel_event.is_set()
 
 
 def _strip_thinking_markup(text: str) -> str:
@@ -139,12 +147,15 @@ async def _stream_llm_text(
     timeout: float | None,
     on_reasoning: LogicReasoningFn | None = None,
     prefer_json: bool = False,
+    cancel_event: asyncio.Event | None = None,
 ) -> str:
     content_parts: list[str] = []
     reasoning_parts: list[str] = []
 
     async def _consume() -> None:
         async for chunk in llm.astream(messages):
+            if _is_cancelled(cancel_event):
+                raise LogicAuditCancelledError()
             content_delta, reasoning_delta = extract_llm_stream_deltas(chunk)
             if reasoning_delta:
                 reasoning_parts.append(reasoning_delta)
@@ -153,16 +164,28 @@ async def _stream_llm_text(
             if content_delta:
                 content_parts.append(content_delta)
 
-    if timeout:
-        await asyncio.wait_for(_consume(), timeout=timeout)
-    else:
-        await _consume()
+    try:
+        if timeout:
+            await asyncio.wait_for(_consume(), timeout=timeout)
+        else:
+            await _consume()
+    except LogicAuditCancelledError:
+        raise
+    except TimeoutError:
+        raise
+    except asyncio.CancelledError:
+        raise LogicAuditCancelledError() from None
 
     return _resolve_llm_response_text(
         "".join(content_parts),
         "".join(reasoning_parts),
         prefer_json=prefer_json,
     )
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "429" in text or "rate limit" in text or "resource exhausted" in text
 
 
 async def _invoke_persona(
@@ -174,31 +197,49 @@ async def _invoke_persona(
     provider: str | None,
     model: str | None = None,
     on_reasoning: LogicReasoningFn | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> tuple[str, str]:
     """Run one debate persona; returns (role_name, response_text)."""
+    if _is_cancelled(cancel_event):
+        return role_name, ""
     system = render_template(role_prompts.get("system", ""), **variables)
     user = render_template(role_prompts.get("user", ""), **variables)
     timeout = _persona_timeout_sec(model)
     messages = [SystemMessage(content=system), HumanMessage(content=user)]
-    try:
-        text = await _stream_llm_text(
-            llm,
-            messages,
-            provider=provider,
-            timeout=timeout,
-            on_reasoning=on_reasoning,
-        )
-        return role_name, text
-    except Exception as exc:
-        detail = str(exc).strip() or type(exc).__name__
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        if _is_cancelled(cancel_event):
+            return role_name, ""
+        try:
+            text = await _stream_llm_text(
+                llm,
+                messages,
+                provider=provider,
+                timeout=timeout,
+                on_reasoning=on_reasoning,
+                cancel_event=cancel_event,
+            )
+            if text.strip():
+                return role_name, text
+        except LogicAuditCancelledError:
+            return role_name, ""
+        except Exception as exc:
+            last_exc = exc
+        if attempt == 0:
+            if _is_cancelled(cancel_event):
+                return role_name, ""
+            delay = 8.0 if last_exc is not None and _is_rate_limit_error(last_exc) else 1.5
+            await asyncio.sleep(delay)
+    if last_exc is not None:
+        detail = str(last_exc).strip() or type(last_exc).__name__
         logger.warning(
             "Logic audit persona '%s' failed after %.0fs (%s): %s",
             role_name,
             timeout,
-            type(exc).__name__,
+            type(last_exc).__name__,
             detail,
         )
-        return role_name, ""
+    return role_name, ""
 
 
 async def multi_perspective_generate(
@@ -211,6 +252,7 @@ async def multi_perspective_generate(
     on_reasoning: LogicReasoningFn | None = None,
     progress_key: str = "",
     sequential: bool = False,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict[str, str]:
     """Run debate personas; sequential mode avoids rate limits and improves depth on reasoning models."""
     if not roles:
@@ -225,6 +267,8 @@ async def multi_perspective_generate(
     section_name = variables.get("section_name", "")
 
     async def run_one(name: str, step_id: str, persona_label: str, prompts: dict[str, str]):
+        if _is_cancelled(cancel_event):
+            return name, ""
         _report(
             on_progress,
             step_id,
@@ -240,6 +284,7 @@ async def multi_perspective_generate(
             provider=provider,
             model=effective_model,
             on_reasoning=on_reasoning,
+            cancel_event=cancel_event,
         )
         _report(
             on_progress,
@@ -263,14 +308,28 @@ async def multi_perspective_generate(
 
     if sequential:
         for name, step_id, persona_label, prompts in items:
+            if _is_cancelled(cancel_event):
+                break
             role_name, text = await run_one(name, step_id, persona_label, prompts)
             if text.strip():
                 results[role_name] = text
     else:
-        pairs = await asyncio.gather(
-            *[run_one(name, step_id, persona_label, prompts) for name, step_id, persona_label, prompts in items]
-        )
-        results = {name: text for name, text in pairs if text.strip()}
+        tasks = [
+            asyncio.create_task(run_one(name, step_id, persona_label, prompts))
+            for name, step_id, persona_label, prompts in items
+        ]
+        try:
+            for finished in asyncio.as_completed(tasks):
+                if _is_cancelled(cancel_event):
+                    break
+                role_name, text = await finished
+                if text.strip():
+                    results[role_name] = text
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     return results
 
@@ -286,8 +345,11 @@ async def synthesize_perspectives(
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
     progress_key: str = "",
+    cancel_event: asyncio.Event | None = None,
 ) -> str:
     """Merge persona outputs — adapted from ARC _synthesize_perspectives."""
+    if _is_cancelled(cancel_event):
+        return ""
     section_name = variables.get("section_name", "")
     step_id = f"{progress_key}synthesize" if progress_key else "synthesize"
     _report(
@@ -308,35 +370,50 @@ async def synthesize_perspectives(
         provider=provider,  # type: ignore[arg-type]
         model=model,
         temperature=_resolve_llm_temperature(model, 0.1),
+        json_output=True,
     )
     timeout = _synth_timeout_sec(model)
     messages = [SystemMessage(content=system), HumanMessage(content=user)]
-    try:
-        text = await _stream_llm_text(
-            llm,
-            messages,
-            provider=provider,
-            timeout=timeout,
-            on_reasoning=on_reasoning,
-            prefer_json=True,
-        )
-    except Exception as exc:
-        detail = str(exc).strip() or type(exc).__name__
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        if _is_cancelled(cancel_event):
+            return ""
+        try:
+            text = await _stream_llm_text(
+                llm,
+                messages,
+                provider=provider,
+                timeout=timeout,
+                on_reasoning=on_reasoning,
+                prefer_json=True,
+                cancel_event=cancel_event,
+            )
+            if text.strip():
+                _report(
+                    on_progress,
+                    step_id,
+                    "Tổng hợp JSON",
+                    detail=f"Hoàn tất · {section_name}",
+                    status="done",
+                )
+                return text
+        except LogicAuditCancelledError:
+            return ""
+        except Exception as exc:
+            last_exc = exc
+        if attempt == 0:
+            if _is_cancelled(cancel_event):
+                return ""
+            await asyncio.sleep(8.0 if last_exc is not None and _is_rate_limit_error(last_exc) else 1.5)
+    if last_exc is not None:
+        detail = str(last_exc).strip() or type(last_exc).__name__
         logger.warning(
             "Logic audit synthesize failed (%s): %s",
-            type(exc).__name__,
+            type(last_exc).__name__,
             detail,
         )
-        _report(on_progress, step_id, "Tổng hợp JSON", detail="Thất bại", status="done")
-        return ""
-    _report(
-        on_progress,
-        step_id,
-        "Tổng hợp JSON",
-        detail=f"Hoàn tất · {section_name}",
-        status="done",
-    )
-    return text
+    _report(on_progress, step_id, "Tổng hợp JSON", detail="Thất bại", status="done")
+    return ""
 
 
 def load_debate_roles() -> dict[str, dict[str, str]]:

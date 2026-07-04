@@ -143,6 +143,15 @@ export type EditorCopy = {
   };
   logicAudit: {
     intro: string;
+    staleReport: string;
+    partialReport: string;
+    cancel: string;
+    auditingInProgress: string;
+    jumpToIssue: string;
+    askArio: string;
+    claimLabel: string;
+    partialChatStopped: (count: number) => string;
+    partialChatTimeout: (count: number) => string;
     modeQuick: string;
     modeDeep: string;
     modeQuickSubtitle: string;
@@ -164,13 +173,16 @@ export type EditorCopy = {
     runDeep: string;
     runQuickFull: string;
     runDeepFull: string;
-    chatHint: string;
+    panelNote: string;
+    sectionsSkipped: (count: number) => string;
     noIssues: string;
     severityCritical: string;
     severityWarning: string;
     severityInfo: string;
     crossSection: string;
     weak: string;
+    engineUnavailable: string;
+    sectionProgress: (completed: number, total: number) => string;
     panelLaunch: {
       displayQuick: string;
       displayQuickFull: string;
@@ -215,6 +227,7 @@ export type EditorCopy = {
     gradeFailing: string;
     gradeEvaluating: string;
     hintLoading: string;
+    gatePeerReviewNote: string;
   };
   mobile: {
     files: string;
@@ -429,23 +442,37 @@ const EN: EditorCopy = {
   logicAudit: {
     intro:
       "Comment-only — does not auto-edit the manuscript. Audit modes use a dedicated engine, independent of the chat provider.",
-    modeQuick: "Quick (Z.AI GLM-4.7 Flash)",
-    modeDeep: "Deep (GLM-4.7)",
-    modeQuickSubtitle: "Z.AI · GLM-4.7 Flash",
-    modeDeepSubtitle: "Z.AI · GLM-4.7",
+    staleReport:
+      "Manuscript changed since this audit — run again for up-to-date results.",
+    partialReport:
+      "Partial audit — stopped early (timeout or cancel). Re-run for remaining sections.",
+    cancel: "Cancel audit",
+    auditingInProgress:
+      "New audit running — previous results stay visible until sections update.",
+    jumpToIssue: "Go to line",
+    askArio: "Ask Ario",
+    claimLabel: "Claim:",
+    partialChatStopped: (count) =>
+      `Logic audit stopped — **${count}** section(s) already scanned. See **Logic Audit** tab for details.`,
+    partialChatTimeout: (count) =>
+      `Logic audit timed out — **${count}** section(s) scanned. See **Logic Audit** tab; try fewer sections or Quick mode.`,
+    modeQuick: "Quick",
+    modeDeep: "Deep",
+    modeQuickSubtitle: "2–3 sections · fast scan",
+    modeDeepSubtitle: "1 section · in-depth",
     scanFull: "Scan entire manuscript",
     scanFullHintQuick: (count) =>
       `All sections in the manuscript (max 20 parts, currently ${count}).`,
     scanFullHintDeep: (count) =>
-      `All sections — deep GLM-4.7 pass (max 8 parts, currently ${count}).`,
+      `All sections — deep Gemini 3.5 Flash pass (max 8 parts, currently ${count}).`,
     hintQuickSelected:
-      "Quick scan of 2–3 sections via GLM-4.7 Flash — ~2–3 min. Independent of chat provider.",
+      "Quick scan of 2–3 sections via Gemini 2.5 Flash — ~1–2 min. Independent of chat provider.",
     hintDeepSelected:
-      "Deep scan of 1 section via GLM-4.7 — ~3–5 min. Independent of chat provider.",
+      "Deep scan of 1 section via Gemini 3.5 Flash — ~2–4 min. Independent of chat provider.",
     hintQuickFull:
-      "Full-manuscript scan (max 20 sections) via GLM-4.7 Flash — usually ~5–10 min.",
+      "Full-manuscript scan (max 20 sections) via Gemini 2.5 Flash — usually ~3–8 min.",
     hintDeepFull:
-      "Full-manuscript deep scan (max 8 sections) via GLM-4.7 — may take 10–20 min.",
+      "Full-manuscript deep scan (max 8 sections) via Gemini 3.5 Flash — may take 8–15 min.",
     pickOneSection: "Pick 1 section",
     pickSections: "Pick sections to scan",
     selectAll: "Select all",
@@ -456,13 +483,18 @@ const EN: EditorCopy = {
     runDeep: "Run Deep audit",
     runQuickFull: "Run Quick · full manuscript",
     runDeepFull: "Run Deep · full manuscript",
-    chatHint: 'Or chat: "/logic" · "/logic full" · "/logic deep".',
+    panelNote: "Uses a dedicated Gemini engine (GOOGLE_API_KEY) — independent of chat provider.",
+    sectionsSkipped: (count) =>
+      `${count} section(s) could not be scanned (API timeout or empty persona response).`,
     noIssues: "No clear issues found.",
     severityCritical: "CRITICAL",
     severityWarning: "WARNING",
     severityInfo: "SUGGESTION",
     crossSection: "Cross-section:",
     weak: "WEAK",
+    engineUnavailable:
+      "Logic audit needs Google (Gemini) configured on the server — add GOOGLE_API_KEY in Settings.",
+    sectionProgress: (completed, total) => `Sections scanned: ${completed}/${total}`,
     panelLaunch: {
       displayQuick: "Logic audit · Quick",
       displayQuickFull: "Logic audit · Quick · full manuscript",
@@ -511,6 +543,8 @@ const EN: EditorCopy = {
     gradeFailing: "Failing",
     gradeEvaluating: "Evaluating…",
     hintLoading: "Ario is reading the full manuscript…",
+    gatePeerReviewNote:
+      "Quick skim for scoring only — open the Logic Audit tab for full multi-agent review.",
   },
   mobile: {
     files: "Files",
@@ -733,23 +767,37 @@ const VI: EditorCopy = {
   logicAudit: {
     intro:
       "Chỉ nhận xét — không tự sửa bản thảo. Chế độ audit dùng engine riêng, không phụ thuộc provider trong chat.",
-    modeQuick: "Nhanh (Z.AI GLM-4.7 Flash)",
-    modeDeep: "Sâu (GLM-4.7)",
-    modeQuickSubtitle: "Z.AI · GLM-4.7 Flash",
-    modeDeepSubtitle: "Z.AI · GLM-4.7",
+    staleReport:
+      "Bản thảo đã thay đổi sau lần audit này — chạy lại để có kết quả mới nhất.",
+    partialReport:
+      "Audit chưa hoàn tất — dừng sớm (timeout hoặc hủy). Chạy lại để quét phần còn lại.",
+    cancel: "Hủy audit",
+    auditingInProgress:
+      "Đang audit mới — kết quả cũ vẫn hiển thị cho đến khi có section cập nhật.",
+    jumpToIssue: "Tới dòng",
+    askArio: "Nhờ Ario",
+    claimLabel: "Khẳng định:",
+    partialChatStopped: (count) =>
+      `Logic audit đã dừng — **${count}** phần đã quét. Xem tab **Logic Audit** để biết chi tiết.`,
+    partialChatTimeout: (count) =>
+      `Logic audit timeout — **${count}** phần đã quét. Xem tab **Logic Audit**; thử ít section hơn hoặc chế độ Nhanh.`,
+    modeQuick: "Nhanh",
+    modeDeep: "Sâu",
+    modeQuickSubtitle: "2–3 phần · quét nhanh",
+    modeDeepSubtitle: "1 phần · soi sâu",
     scanFull: "Quét toàn bộ bài",
     scanFullHintQuick: (count) =>
       `Tất cả section trong bản thảo (tối đa 20 phần, hiện có ${count}).`,
     scanFullHintDeep: (count) =>
-      `Tất cả section — GLM-4.7 sâu (tối đa 8 phần, hiện có ${count}).`,
+      `Tất cả section — Gemini 3.5 Flash sâu (tối đa 8 phần, hiện có ${count}).`,
     hintQuickSelected:
-      "Quét nhanh 2–3 phần bằng GLM-4.7 Flash — ~2–3 phút. Không phụ thuộc provider chat.",
+      "Quét nhanh 2–3 phần bằng Gemini 2.5 Flash — ~1–2 phút. Không phụ thuộc provider chat.",
     hintDeepSelected:
-      "Soi sâu 1 phần bằng GLM-4.7 — ~3–5 phút. Không phụ thuộc provider chat.",
+      "Soi sâu 1 phần bằng Gemini 3.5 Flash — ~2–4 phút. Không phụ thuộc provider chat.",
     hintQuickFull:
-      "Quét toàn bộ bài (tối đa 20 phần) bằng GLM-4.7 Flash — thường ~5–10 phút.",
+      "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 2.5 Flash — thường ~3–8 phút.",
     hintDeepFull:
-      "Quét toàn bộ bài (tối đa 8 phần) bằng GLM-4.7 — có thể mất 10–20 phút.",
+      "Quét toàn bộ bài (tối đa 8 phần) bằng Gemini 3.5 Flash — có thể mất 8–15 phút.",
     pickOneSection: "Chọn 1 phần",
     pickSections: "Chọn phần quét",
     selectAll: "Chọn tất cả",
@@ -760,13 +808,18 @@ const VI: EditorCopy = {
     runDeep: "Chạy Deep audit",
     runQuickFull: "Chạy Quick · toàn bộ bài",
     runDeepFull: "Chạy Deep · toàn bộ bài",
-    chatHint: 'Hoặc chat: "/logic" · "/logic full" · "/logic deep".',
+    panelNote: "Dùng engine Gemini riêng (GOOGLE_API_KEY) — không phụ thuộc provider chat.",
+    sectionsSkipped: (count) =>
+      `${count} phần không quét được (timeout API hoặc persona không phản hồi).`,
     noIssues: "Không có vấn đề rõ ràng.",
     severityCritical: "NGHIÊM TRỌNG",
     severityWarning: "CẢNH BÁO",
     severityInfo: "GỢI Ý",
     crossSection: "Liên section:",
     weak: "YẾU",
+    engineUnavailable:
+      "Logic audit cần Google (Gemini) trên server — thêm GOOGLE_API_KEY trong Cài đặt.",
+    sectionProgress: (completed, total) => `Đã quét: ${completed}/${total} phần`,
     panelLaunch: {
       displayQuick: "Logic audit · Quick",
       displayQuickFull: "Logic audit · Quick · toàn bộ",
@@ -815,6 +868,8 @@ const VI: EditorCopy = {
     gradeFailing: "Chưa đạt",
     gradeEvaluating: "Đang đánh giá…",
     hintLoading: "Ario đang đọc lướt toàn bộ bài…",
+    gatePeerReviewNote:
+      "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
   },
   mobile: {
     files: "Tệp",

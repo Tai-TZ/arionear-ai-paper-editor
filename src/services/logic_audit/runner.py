@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
 import uuid
@@ -11,6 +12,7 @@ from src.services.logic_audit.config import (
     logic_audit_runtime_flags,
     resolve_logic_audit_llm,
     select_logic_targets,
+    split_section_text,
 )
 from src.services.logic_audit.debate import (
     LogicProgressFn,
@@ -24,6 +26,7 @@ from src.services.logic_audit.debate import (
 )
 from src.services.logic_audit.language import clean_section_display_name, resolve_audit_language
 from src.services.logic_audit.schemas import LogicAuditReport
+from src.services.logic_audit.text_utils import infer_claim_text
 from src.services.prompts import format_sections_summary, get_prompt
 
 
@@ -76,7 +79,7 @@ def _fallback_from_perspectives(perspectives: dict[str, str], section_name: str)
                     "id": str(uuid.uuid4()),
                     "type": "unclear_reasoning",
                     "severity": "warning",
-                    "claim_text": "",
+                    "claim_text": infer_claim_text(line),
                     "evidence_text": "",
                     "comment": line[:500],
                     "suggested_action": "clarify",
@@ -110,12 +113,16 @@ def _normalize_section_payload(data: dict[str, Any], section_name: str) -> dict[
     for item in conflicts:
         if not isinstance(item, dict):
             continue
+        claim = infer_claim_text(
+            str(item.get("comment") or "").strip(),
+            str(item.get("claim_text") or ""),
+        )
         normalized.append(
             {
                 "id": str(item.get("id") or uuid.uuid4()),
                 "type": item.get("type") or "unclear_reasoning",
                 "severity": item.get("severity") or "warning",
-                "claim_text": str(item.get("claim_text") or "")[:500],
+                "claim_text": claim,
                 "evidence_text": str(item.get("evidence_text") or "")[:500],
                 "comment": str(item.get("comment") or "").strip(),
                 "suggested_action": item.get("suggested_action") or "none",
@@ -179,6 +186,53 @@ def _cap_section_payload(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def merge_section_audit_payloads(
+    payloads: list[dict[str, Any]],
+    section_name: str,
+) -> dict[str, Any]:
+    """Merge chunk-level audit payloads for one section, deduplicating issues."""
+    merged: dict[str, Any] = {
+        "section": section_name,
+        "conflicts": [],
+        "weak_claims": [],
+        "consensus_notes": [],
+    }
+    seen: set[str] = set()
+    for payload in payloads:
+        for note in payload.get("consensus_notes") or []:
+            key = str(note)[:120].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            merged["consensus_notes"].append(str(note))
+        for item in payload.get("conflicts") or []:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("comment") or item.get("claim_text") or "")[:120].lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged["conflicts"].append(item)
+        for weak in payload.get("weak_claims") or []:
+            key = str(weak)[:120].lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged["weak_claims"].append(str(weak))
+    return _cap_section_payload(merged)
+
+
+def upsert_partial_section(sections: list[dict[str, Any]], section: dict[str, Any]) -> list[dict[str, Any]]:
+    """Replace or append a section in a partial audit section list."""
+    section_name = section.get("section")
+    idx = next((i for i, item in enumerate(sections) if item.get("section") == section_name), -1)
+    if idx >= 0:
+        sections[idx] = section
+    else:
+        sections.append(section)
+    return sections
+
+
 def format_chat_summary(report: LogicAuditReport) -> str:
     """Short chat message — full detail lives in logic_audit_report for the side panel."""
     section_count = len(report.sections)
@@ -193,6 +247,109 @@ def format_chat_summary(report: LogicAuditReport) -> str:
         f"Logic audit hoàn tất — **{total}** vấn đề trong **{section_count}** phần "
         f"(comment-only, không tự sửa bản thảo).\n\n"
         "Mở tab **Logic Audit** bên phải để xem danh sách theo từng section."
+    )
+
+
+def merge_logic_section_into_report(
+    report: dict[str, Any] | None,
+    section: dict[str, Any],
+    *,
+    mode: str | None = None,
+    scope: str | None = None,
+    auditing: bool = True,
+) -> dict[str, Any]:
+    """Merge one completed section into a logic_audit_report dict."""
+    base: dict[str, Any] = dict(report) if report else {
+        "sections": [],
+        "cross_section_conflicts": [],
+        "summary": "",
+        "integrity_mode": "comment_only",
+        "meta": {},
+    }
+    sections = list(base.get("sections") or [])
+    section_name = section.get("section")
+    idx = next((i for i, item in enumerate(sections) if item.get("section") == section_name), -1)
+    if idx >= 0:
+        sections[idx] = section
+    else:
+        sections.append(section)
+    base["sections"] = sections
+    meta = dict(base.get("meta") or {})
+    if mode:
+        meta["audit_mode"] = mode
+    if scope:
+        meta["audit_scope"] = scope
+    if auditing:
+        meta["auditing"] = True
+    base["meta"] = meta
+    return base
+
+
+def build_partial_audit_result(
+    sections: list[dict[str, Any]],
+    *,
+    timeout_sec: float | None = None,
+    mode: str,
+    reason: str = "timeout",
+) -> dict[str, Any]:
+    total = sum(
+        len(sec.get("conflicts") or []) + len(sec.get("weak_claims") or [])
+        for sec in sections
+    )
+    cancelled = reason == "cancelled"
+    if cancelled:
+        summary = (
+            f"Logic audit đã hủy — {len(sections)} phần đã quét (comment-only)."
+        )
+        response = (
+            f"Logic audit đã hủy — **{total}** vấn đề trong **{len(sections)}** phần đã quét.\n\n"
+            "Mở tab **Logic Audit** để xem chi tiết phần đã hoàn thành."
+        )
+        analysis = "Logic audit partial — cancelled."
+    else:
+        timeout_label = int(timeout_sec or 0)
+        summary = (
+            f"Logic audit dừng sớm — {len(sections)} phần đã quét "
+            f"(timeout {timeout_label}s, comment-only)."
+        )
+        response = (
+            f"Logic audit dừng sớm (timeout {timeout_label}s) — **{total}** vấn đề "
+            f"trong **{len(sections)}** phần đã quét.\n\n"
+            "Mở tab **Logic Audit** để xem chi tiết. Thử ít section hơn hoặc chế độ Nhanh."
+        )
+        analysis = "Logic audit partial — stream timeout."
+    report = {
+        "sections": sections,
+        "cross_section_conflicts": [],
+        "summary": summary,
+        "integrity_mode": "comment_only",
+        "meta": {
+            "partial": True,
+            "cancelled": cancelled,
+            "timeout_sec": timeout_sec,
+            "audit_mode": mode,
+        },
+    }
+    return {
+        "logic_audit_report": report,
+        "response": response,
+        "analysis": analysis,
+    }
+
+
+def format_audit_failure_response(mode: str) -> str:
+    from src.config import get_settings
+
+    settings = get_settings()
+    engine = logic_audit_engine_label(mode)
+    if not settings.google_api_key.strip():
+        return (
+            "Logic audit cần GOOGLE_API_KEY trong .env (engine Gemini riêng). "
+            "Thêm key rồi restart backend."
+        )
+    return (
+        f"Logic audit chưa hoàn thành — timeout hoặc lỗi API ({engine}). "
+        "Thử Nhanh với 1–2 section, hoặc kiểm tra quota Google AI."
     )
 
 
@@ -211,8 +368,12 @@ async def run_logic_audit(
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
     on_section_complete: LogicSectionFn | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict[str, Any]:
     """Multi-agent logic audit — comment-only, no draft mutation."""
+
+    def _cancelled() -> bool:
+        return cancel_event is not None and cancel_event.is_set()
     normalized_mode = (mode or "quick").strip().lower()
     if normalized_mode == "gate":
         from src.services.logic_audit.paper_gate_skim import run_paper_gate_skim
@@ -227,6 +388,7 @@ async def run_logic_audit(
             ui_language="Vietnamese",
             on_progress=on_progress,
             on_reasoning=on_reasoning,
+            cancel_event=cancel_event,
         )
 
     flags = logic_audit_runtime_flags(mode, provider, scope=scope)
@@ -251,6 +413,7 @@ async def run_logic_audit(
     persona_sequential = flags["persona_sequential"]
     section_char_limit = flags["section_char_limit"]
     section_concurrency = flags["section_concurrency"]
+    section_cooldown_sec = float(flags.get("section_cooldown_sec") or 0.0)
     run_cross_section = flags["run_cross_section"]
     targets = select_logic_targets(
         sections,
@@ -281,35 +444,77 @@ async def run_logic_audit(
         )
 
     async def _audit_one_section(index: int, section: dict) -> dict[str, Any] | None:
+        if _cancelled():
+            return None
         section_name = clean_section_display_name(str(section.get("name") or "Section"))
-        section_text = str(section.get("content") or "")[:section_char_limit]
+        full_text = str(section.get("content") or "")
+        max_chunks = 3 if flags["mode"] == "deep" else 2
+        chunks = split_section_text(full_text, section_char_limit, max_chunks=max_chunks)
+        if not chunks:
+            return None
         progress_key = f"s{index}-"
-        if on_progress:
-            on_progress(
-                f"logic-section-{index}",
-                f"Quét phần [{index}/{len(targets)}]: {section_name}",
-                f"~{len(section_text):,} ký tự".replace(",", "."),
-                "active",
+        chunk_payloads: list[dict[str, Any]] = []
+
+        for chunk_idx, section_text in enumerate(chunks, start=1):
+            if _cancelled():
+                break
+            chunk_detail = (
+                f"~{len(section_text):,} ký tự · đoạn {chunk_idx}/{len(chunks)}".replace(",", ".")
+                if len(chunks) > 1
+                else f"~{len(section_text):,} ký tự".replace(",", ".")
             )
-        variables = {
-            "section_name": section_name,
-            "section_text": section_text,
-            "manuscript_outline": outline,
-            "cross_section_context": outline,
-            "query": query,
-            "audit_language": audit_language,
-        }
-        perspectives = await multi_perspective_generate(
-            roles,
-            variables,
-            provider=provider,
-            model=model,
-            on_progress=on_progress,
-            on_reasoning=on_reasoning,
-            progress_key=progress_key,
-            sequential=persona_sequential,
-        )
-        if not perspectives:
+            if on_progress:
+                on_progress(
+                    f"logic-section-{index}",
+                    f"Quét phần [{index}/{len(targets)}]: {section_name}",
+                    chunk_detail,
+                    "active",
+                )
+            variables = {
+                "section_name": section_name,
+                "section_text": section_text,
+                "manuscript_outline": outline,
+                "cross_section_context": outline,
+                "query": query,
+                "audit_language": audit_language,
+            }
+            perspectives = await multi_perspective_generate(
+                roles,
+                variables,
+                provider=provider,
+                model=model,
+                on_progress=on_progress,
+                on_reasoning=on_reasoning,
+                progress_key=f"{progress_key}c{chunk_idx}-",
+                sequential=persona_sequential,
+                cancel_event=cancel_event,
+            )
+            if _cancelled():
+                break
+            if not perspectives:
+                continue
+
+            raw = await synthesize_perspectives(
+                perspectives,
+                system_template=synth_system,
+                user_template=synth_user,
+                variables=variables,
+                provider=provider,
+                model=model,
+                on_progress=on_progress,
+                on_reasoning=on_reasoning,
+                progress_key=f"{progress_key}c{chunk_idx}-",
+                cancel_event=cancel_event,
+            )
+            if _cancelled():
+                break
+            payload = _extract_json_object(raw) or {}
+            normalized = _normalize_section_payload(payload, section_name)
+            if _section_issue_count(normalized) == 0 and _perspectives_have_substance(perspectives):
+                normalized = _fallback_from_perspectives(perspectives, section_name)
+            chunk_payloads.append(normalized)
+
+        if not chunk_payloads:
             if on_progress:
                 on_progress(
                     f"logic-section-{index}",
@@ -319,22 +524,7 @@ async def run_logic_audit(
                 )
             return None
 
-        raw = await synthesize_perspectives(
-            perspectives,
-            system_template=synth_system,
-            user_template=synth_user,
-            variables=variables,
-            provider=provider,
-            model=model,
-            on_progress=on_progress,
-            on_reasoning=on_reasoning,
-            progress_key=progress_key,
-        )
-        payload = _extract_json_object(raw) or {}
-        normalized = _normalize_section_payload(payload, section_name)
-        if _section_issue_count(normalized) == 0 and _perspectives_have_substance(perspectives):
-            normalized = _fallback_from_perspectives(perspectives, section_name)
-        normalized = _cap_section_payload(normalized)
+        normalized = merge_section_audit_payloads(chunk_payloads, section_name)
         issue_n = _section_issue_count(normalized)
         if on_progress:
             on_progress(
@@ -359,14 +549,57 @@ async def run_logic_audit(
 
     sem = asyncio.Semaphore(section_concurrency)
 
-    async def _bounded(index: int, section: dict) -> dict[str, Any] | None:
+    async def _bounded(index: int, section: dict) -> tuple[int, dict[str, Any] | None]:
+        if _cancelled():
+            return index, None
         async with sem:
-            return await _audit_one_section(index, section)
+            if _cancelled():
+                return index, None
+            result = await _audit_one_section(index, section)
+            if section_cooldown_sec > 0 and not _cancelled():
+                await asyncio.sleep(section_cooldown_sec)
+            return index, result
 
-    section_results = await asyncio.gather(
-        *[_bounded(index, section) for index, section in enumerate(targets, start=1)]
-    )
-    audit_sections = [result for result in section_results if result]
+    section_tasks = [
+        asyncio.create_task(_bounded(index, section))
+        for index, section in enumerate(targets, start=1)
+    ]
+    section_results: dict[int, dict[str, Any]] = {}
+    try:
+        for finished in asyncio.as_completed(section_tasks):
+            if _cancelled():
+                for task in section_tasks:
+                    if not task.done():
+                        task.cancel()
+                break
+            try:
+                result_index, result = await finished
+            except asyncio.CancelledError:
+                continue
+            if result:
+                section_results[result_index] = result
+    finally:
+        for task in section_tasks:
+            if not task.done():
+                task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.gather(*section_tasks, return_exceptions=True)
+
+    audit_sections = [section_results[i] for i in sorted(section_results.keys())]
+    sections_skipped = max(0, len(targets) - len(section_results))
+
+    if _cancelled():
+        if audit_sections:
+            return build_partial_audit_result(
+                audit_sections,
+                mode=flags["mode"],
+                reason="cancelled",
+            )
+        return {
+            "logic_audit_report": {},
+            "response": "Logic audit đã hủy.",
+            "analysis": "Logic audit cancelled.",
+        }
 
     cross_section: list[dict[str, Any]] = []
     abstract = next((s for s in sections if str(s.get("name", "")).lower() == "abstract"), None)
@@ -374,7 +607,7 @@ async def run_logic_audit(
         (s for s in sections if "conclusion" in str(s.get("name", "")).lower()),
         None,
     )
-    if abstract and conclusion and run_cross_section:
+    if abstract and conclusion and run_cross_section and not _cancelled():
         abs_text = str(abstract.get("content") or "")[:1500]
         con_text = str(conclusion.get("content") or "")[:1500]
         if abs_text and con_text:
@@ -403,6 +636,7 @@ async def run_logic_audit(
                     on_reasoning=on_reasoning,
                     progress_key="cross-",
                     sequential=persona_sequential,
+                    cancel_event=cancel_event,
                 )
                 if perspectives:
                     raw = await synthesize_perspectives(
@@ -415,6 +649,7 @@ async def run_logic_audit(
                         on_progress=on_progress,
                         on_reasoning=on_reasoning,
                         progress_key="cross-",
+                        cancel_event=cancel_event,
                     )
                     payload = _extract_json_object(raw) or {}
                     cross_payload = _normalize_section_payload(payload, "Abstract vs Conclusion")
@@ -460,10 +695,7 @@ async def run_logic_audit(
     if not audit_sections and targets:
         return {
             "logic_audit_report": {},
-            "response": (
-                "Logic audit chưa hoàn thành — model LLM quá chậm, timeout hoặc lỗi API. "
-                "Kiểm tra ZAI_API_KEY trong .env và thử lại (Quick · GLM-4.7 Flash)."
-            ),
+            "response": format_audit_failure_response(flags["mode"]),
             "analysis": "Logic audit: all persona calls failed or timed out.",
         }
 
@@ -477,6 +709,7 @@ async def run_logic_audit(
         meta={
             "personas": list(roles.keys()),
             "sections_scanned": len(audit_sections),
+            "sections_skipped": sections_skipped,
             "provider": provider or "",
             "model": model or "",
             "parallel_sections": section_concurrency,
