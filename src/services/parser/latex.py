@@ -34,7 +34,7 @@ def find_section_for_query(query: str, sections: list[dict]) -> dict | None:
         "methods": ["methods", "methodology", "phương pháp", "phuong phap", "materials and methods"],
         "results": ["results", "kết quả", "ket qua"],
         "discussion": ["discussion", "thảo luận", "thao luan"],
-        "conclusion": ["conclusion", "kết luận", "ket luan"],
+        "conclusion": ["conclusion", "conclustion", "kết luận", "ket luan"],
     }
 
     for section in sections:

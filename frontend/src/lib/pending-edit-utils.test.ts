@@ -33,7 +33,7 @@ describe("pending-edit-utils", () => {
       selectionEnd: 10,
       sourceFingerprint: contentFingerprint(original),
     };
-    const touched = "Alpha BETA gamma";
+    const touched = "Alpha beta GAMMA";
     expect(isPendingEditStale(edit, touched)).toBe(false);
   });
 });

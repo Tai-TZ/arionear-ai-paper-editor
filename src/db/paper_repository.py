@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session, joinedload
 
-from src.db.engine import get_db
+from src.db.engine import get_db, retry_on_lock_timeout
 from src.db.models import (
     AiSession,
     Citation,
@@ -122,6 +122,7 @@ def _ensure_ai_session(db: Session, paper: Paper, task: TaskType = TaskType.CHAT
 class DatabaseSessionStore:
     """PostgreSQL-backed store mapping PaperSession API → papers + related tables."""
 
+    @retry_on_lock_timeout()
     def create(
         self,
         session_id: str | None = None,
@@ -176,6 +177,7 @@ class DatabaseSessionStore:
             return existing
         return self.create(session_id, name, latex_content, metadata)
 
+    @retry_on_lock_timeout()
     def update(
         self,
         session_id: str,
@@ -197,6 +199,7 @@ class DatabaseSessionStore:
             db.flush()
             return _paper_to_session(_load_paper(db, paper.id) or paper)
 
+    @retry_on_lock_timeout()
     def add_revision(
         self,
         session_id: str,
@@ -229,6 +232,7 @@ class DatabaseSessionStore:
                 created_at=record.created_at,
             )
 
+    @retry_on_lock_timeout()
     def set_revision_action(
         self, session_id: str, revision_id: str, action: str
     ) -> RevisionRecord | None:
@@ -254,6 +258,7 @@ class DatabaseSessionStore:
                         )
             return None
 
+    @retry_on_lock_timeout()
     def set_citation_registry(self, session_id: str, registry: list[dict]) -> None:
         with get_db() as db:
             paper = _load_paper(db, _parse_uuid(session_id))
@@ -282,6 +287,7 @@ class DatabaseSessionStore:
                 )
             paper.updated_at = _utcnow()
 
+    @retry_on_lock_timeout()
     def set_logic_audit_report(self, session_id: str, report: dict) -> None:
         with get_db() as db:
             paper = _load_paper(db, _parse_uuid(session_id))

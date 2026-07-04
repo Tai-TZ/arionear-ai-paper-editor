@@ -35,7 +35,7 @@ from src.services.guardrails.prompt_injection import (
 )
 from src.services.guardrails.request_guard import evaluate_user_request
 from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
-from src.services.llm import get_llm, resolve_heavy_edit_model
+from src.services.llm import extract_llm_text, get_llm, resolve_heavy_edit_model
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     analyze_structure,
@@ -490,7 +490,7 @@ async def style_node(state: AgentState) -> dict:
         response = await llm.ainvoke(messages)
         suggestion = _normalize_suggestion(
             original,
-            (response.content or "").strip(),
+            extract_llm_text(response),
             section=str(section_label),
             apply_mode=str(apply_mode),
         )
@@ -651,7 +651,7 @@ async def structure_node(state: AgentState) -> dict:
                     HumanMessage(content=user_content),
                 ]
             )
-            content = (response.content or "").strip()
+            content = extract_llm_text(response)
             if content.startswith("["):
                 llm_suggestions = json.loads(content)
         except Exception as exc:
@@ -725,7 +725,7 @@ async def chat_node(state: AgentState) -> dict:
             HumanMessage(content=user_content),
         ]
     )
-    text = (response.content or "").strip()
+    text = extract_llm_text(response)
     if looks_like_system_prompt_leak(text):
         text = injection_refusal()
 

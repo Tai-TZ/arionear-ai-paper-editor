@@ -15,7 +15,7 @@ from src.services.latex_outline import (
     find_latex_command_block,
     find_section_span,
 )
-from src.services.llm import get_llm, resolve_heavy_edit_model
+from src.services.llm import extract_llm_text, get_llm, resolve_heavy_edit_model
 from src.services.llm_errors import looks_like_provider_error
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.prompts import build_system_prompt, render_user_prompt
@@ -295,7 +295,7 @@ async def execute_edit_plan(
             break
         except Exception as exc:
             last_exc = exc
-            if attempt == 0 and looks_like_provider_error(exc):
+            if attempt == 0 and looks_like_provider_error(str(exc)):
                 delay = 8.0 if "429" in str(exc) else 2.0
                 await asyncio.sleep(delay)
                 continue
@@ -303,7 +303,7 @@ async def execute_edit_plan(
     else:
         assert last_exc is not None
         raise last_exc
-    raw = (response.content or "").strip()
+    raw = extract_llm_text(response)
     suggestion = clamp_selection_replacement(
         resolved.original_text,
         raw,

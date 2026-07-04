@@ -382,6 +382,16 @@
   --editor-surface-hover: oklch(0.94 0.01 90);
   --editor-latex-diff-bg: #ffffff;
   --editor-latex-diff-text: #000000;
+  --editor-diff-del-bg: rgb(254 202 202 / 55%);
+  --editor-diff-del-text: #000000;
+  --editor-diff-ins-bg: rgb(187 247 208 / 55%);
+  --editor-diff-ins-text: #000000;
+  --editor-diff-del-num: #b91c1c;
+  --editor-diff-ins-num: #15803d;
+  --editor-diff-inline-del-bg: oklch(0.94 0.04 25);
+  --editor-diff-inline-del-text: oklch(0.42 0.12 25);
+  --editor-diff-inline-ins-bg: oklch(0.95 0.05 145);
+  --editor-diff-inline-ins-text: oklch(0.38 0.1 145);
   font-family: var(--font-sans-ui);
   font-feature-settings: "cv11", "ss01", "ss03";
   -webkit-font-smoothing: antialiased;
@@ -432,6 +442,22 @@
   --editor-surface-hover: oklch(0.24 0.01 90);
   --editor-latex-diff-bg: oklch(0.14 0.01 90);
   --editor-latex-diff-text: oklch(0.88 0.005 90);
+  --editor-diff-del-bg: oklch(0.28 0.05 25 / 92%);
+  --editor-diff-del-text: oklch(0.9 0.04 25);
+  --editor-diff-ins-bg: oklch(0.28 0.05 155 / 92%);
+  --editor-diff-ins-text: oklch(0.9 0.04 155);
+  --editor-diff-del-num: oklch(0.72 0.12 25);
+  --editor-diff-ins-num: oklch(0.72 0.12 155);
+  --editor-diff-inline-del-bg: oklch(0.32 0.06 25 / 88%);
+  --editor-diff-inline-del-text: oklch(0.88 0.06 25);
+  --editor-diff-inline-ins-bg: oklch(0.32 0.06 155 / 88%);
+  --editor-diff-inline-ins-text: oklch(0.88 0.06 155);
+  --chat-assistant-bg: oklch(0.22 0.01 90);
+  --chat-assistant-border: oklch(0.36 0.01 90 / 55%);
+  --chat-assistant-shadow: oklch(0 0 0 / 26%);
+  --chat-code-bg: oklch(0.3 0.012 90);
+  --chat-code-border: oklch(0.42 0.012 90 / 60%);
+  --chat-state-base: oklch(0.24 0.01 90);
 }
 
 .dark .editor-shell .chat-dock {
@@ -492,6 +518,29 @@
   color: var(--editor-latex-diff-text);
 }
 
+.dark .editor-shell .latex-diff-shell .latex-diff-line-del {
+  background: var(--editor-diff-del-bg);
+  color: var(--editor-diff-del-text);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-diff-line-ins {
+  background: var(--editor-diff-ins-bg);
+  color: var(--editor-diff-ins-text);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-diff-line-eq {
+  background: transparent;
+  color: var(--editor-latex-diff-text);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-line-num-del {
+  color: var(--editor-diff-del-num);
+}
+
+.dark .editor-shell .latex-diff-shell .latex-line-num-ins {
+  color: var(--editor-diff-ins-num);
+}
+
 .dark .editor-shell .latex-diff-shell .latex-tok-comment {
   color: var(--editor-latex-tok-comment);
 }
@@ -508,6 +557,36 @@
 .dark .editor-shell .latex-diff-shell .latex-tok-text,
 .dark .editor-shell .latex-diff-shell .latex-tok-brace {
   color: var(--editor-latex-tok-text);
+}
+
+.dark .editor-shell .diff-del {
+  background: var(--editor-diff-inline-del-bg);
+  color: var(--editor-diff-inline-del-text);
+  text-decoration-color: oklch(0.65 0.1 25 / 75%);
+}
+
+.dark .editor-shell .diff-ins {
+  background: var(--editor-diff-inline-ins-bg);
+  color: var(--editor-diff-inline-ins-text);
+}
+
+.dark .editor-shell .diff-legend-del {
+  background: var(--editor-diff-inline-del-bg);
+  color: var(--editor-diff-inline-del-text);
+}
+
+.dark .editor-shell .diff-legend-ins {
+  background: var(--editor-diff-inline-ins-bg);
+  color: var(--editor-diff-inline-ins-text);
+}
+
+.dark .editor-shell .latex-line-num-change {
+  color: oklch(0.72 0.1 250);
+  background: oklch(0.28 0.04 250 / 55%);
+}
+
+.dark .editor-shell .latex-code-row-change {
+  background: oklch(0.24 0.03 250 / 45%);
 }
 
 .editor-shell,
@@ -4855,18 +4934,19 @@ html[lang="vi"] .hero-headline {
   min-width: 0;
 }
 
-/* AI loading state (kokonutui-style, wired to SSE progress) */
+/* AI loading state — editorial "margin note" style, wired to SSE progress */
 .editor-shell .ai-loading-state {
   width: 100%;
-  border-radius: 0.625rem;
-  border: 1px solid color-mix(in oklch, var(--primary) 18%, transparent);
-  background: color-mix(in oklch, var(--primary) 6%, oklch(1 0 0));
-  padding: 0.5rem 0.625rem;
+  border: none;
+  border-radius: 0;
+  border-left: 2px solid color-mix(in oklch, var(--chat-accent) 42%, transparent);
+  background: transparent;
+  padding: 0.125rem 0 0.125rem 0.875rem;
 }
 
 .editor-shell .ai-loading-state--compact {
   margin-bottom: 0;
-  padding: 0.375rem 0.5rem;
+  padding: 0.0625rem 0 0.0625rem 0.75rem;
 }
 
 .editor-shell .ai-loading-state-head {
@@ -4883,9 +4963,10 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .ai-loading-state-status {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.3;
-  color: color-mix(in oklch, var(--chat-text) 88%, transparent);
+  letter-spacing: 0.01em;
+  color: var(--chat-text);
 }
 
 .editor-shell .ai-loading-spinner {
@@ -4903,50 +4984,35 @@ html[lang="vi"] .hero-headline {
 .editor-shell .ai-loading-spinner-svg {
   height: 100%;
   width: 100%;
+  transform-origin: center;
+  animation: ai-loading-spin 1.5s linear infinite;
 }
 
-.editor-shell .ai-loading-spinner-rings circle {
-  transform-origin: 120px 120px;
+.editor-shell .ai-loading-track {
+  fill: none;
+  stroke: color-mix(in oklch, var(--chat-accent) 16%, transparent);
+  stroke-width: 3;
 }
 
-.editor-shell .ai-loading-spinner-rings circle:nth-child(1) {
-  animation: ai-loading-rotate-cw 8s linear infinite;
-}
-.editor-shell .ai-loading-spinner-rings circle:nth-child(2) {
-  animation: ai-loading-rotate-ccw 8s linear infinite;
-  animation-delay: 0.2s;
-}
-.editor-shell .ai-loading-spinner-rings circle:nth-child(3) {
-  animation: ai-loading-rotate-cw 8s linear infinite;
-  animation-delay: 0.3s;
-}
-.editor-shell .ai-loading-spinner-rings circle:nth-child(4) {
-  animation: ai-loading-rotate-ccw 8s linear infinite;
-}
-.editor-shell .ai-loading-spinner-rings circle:nth-child(5) {
-  animation: ai-loading-rotate-cw 8s linear infinite;
-  animation-delay: 0.2s;
-}
-.editor-shell .ai-loading-spinner-rings circle:nth-child(6) {
-  animation: ai-loading-rotate-ccw 8s linear infinite;
-  animation-delay: 0.3s;
+.editor-shell .ai-loading-arc {
+  fill: none;
+  stroke: var(--chat-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 0.4s ease;
 }
 
-@keyframes ai-loading-rotate-cw {
-  from {
-    transform: rotate(0deg);
-  }
+@keyframes ai-loading-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes ai-loading-rotate-ccw {
-  from {
-    transform: rotate(360deg);
-  }
-  to {
-    transform: rotate(0deg);
+@media (prefers-reduced-motion: reduce) {
+  .editor-shell .ai-loading-spinner-svg {
+    animation: none;
   }
 }
 
@@ -4956,9 +5022,8 @@ html[lang="vi"] .hero-headline {
 
 .editor-shell .ai-loading-state-feed {
   overflow: hidden;
-  border-radius: 0.375rem;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.625rem;
+  font-family: var(--font-sans-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 0.6875rem;
   scroll-behavior: smooth;
 }
 
@@ -4966,16 +5031,7 @@ html[lang="vi"] .hero-headline {
   display: flex;
   height: 28px;
   align-items: center;
-  padding: 0 0.375rem;
-}
-
-.editor-shell .ai-loading-state-line-num {
-  width: 1.25rem;
-  flex-shrink: 0;
-  padding-right: 0.5rem;
-  text-align: right;
-  user-select: none;
-  color: var(--chat-muted);
+  padding: 0;
 }
 
 .editor-shell .ai-loading-state-line-text {
@@ -4984,8 +5040,7 @@ html[lang="vi"] .hero-headline {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--chat-text);
-  opacity: 0.88;
+  color: var(--chat-muted);
 }
 
 .editor-shell .ai-loading-state-feed-fade {
@@ -4994,11 +5049,10 @@ html[lang="vi"] .hero-headline {
   top: 0;
   right: 0;
   left: 0;
-  height: 40%;
-  border-radius: 0.375rem 0.375rem 0 0;
+  height: 45%;
   background: linear-gradient(
     to bottom,
-    color-mix(in oklch, var(--card) 88%, transparent) 0%,
+    var(--chat-assistant-bg, oklch(0.96 0.008 90)) 0%,
     transparent 100%
   );
 }
@@ -5668,9 +5722,10 @@ html[lang="vi"] .hero-headline {
   flex: 1;
   border-radius: 1rem;
   border-bottom-left-radius: 0.25rem;
-  background: oklch(0.96 0.008 90);
+  background: var(--chat-assistant-bg, oklch(0.96 0.008 90));
+  border: 1px solid var(--chat-assistant-border, transparent);
   padding: 0.5rem 0.875rem;
-  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 6%);
+  box-shadow: 0 1px 2px var(--chat-assistant-shadow, oklch(0.2 0.02 255 / 6%));
 }
 
 .editor-shell .chat-assistant-text {
@@ -5707,8 +5762,8 @@ html[lang="vi"] .hero-headline {
   font-size: 0.78em;
   padding: 0.08rem 0.35rem;
   border-radius: 0.375rem;
-  background: oklch(0.94 0.01 90);
-  border: 1px solid oklch(0.88 0.012 90 / 70%);
+  background: var(--chat-code-bg, oklch(0.94 0.01 90));
+  border: 1px solid var(--chat-code-border, oklch(0.88 0.012 90 / 70%));
 }
 
 .editor-shell .chat-assistant-text pre {
@@ -5744,7 +5799,7 @@ html[lang="vi"] .hero-headline {
   margin-bottom: 0.625rem;
   border-radius: 0.625rem;
   border: 1px solid color-mix(in oklch, var(--primary) 18%, transparent);
-  background: color-mix(in oklch, var(--primary) 6%, oklch(1 0 0));
+  background: color-mix(in oklch, var(--primary) 6%, var(--chat-state-base, oklch(1 0 0)));
   padding: 0.5rem 0.625rem;
 }
 
@@ -6318,15 +6373,15 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .diff-del {
-  background: oklch(0.94 0.04 25);
-  color: oklch(0.42 0.12 25);
+  background: var(--editor-diff-inline-del-bg);
+  color: var(--editor-diff-inline-del-text);
   text-decoration: line-through;
   text-decoration-color: oklch(0.55 0.14 25 / 70%);
 }
 
 .editor-shell .diff-ins {
-  background: oklch(0.95 0.05 145);
-  color: oklch(0.38 0.1 145);
+  background: var(--editor-diff-inline-ins-bg);
+  color: var(--editor-diff-inline-ins-text);
 }
 
 .editor-shell .latex-line-num-change {
@@ -6357,13 +6412,13 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .diff-legend-del {
-  background: oklch(0.94 0.04 25);
-  color: oklch(0.42 0.12 25);
+  background: var(--editor-diff-inline-del-bg);
+  color: var(--editor-diff-inline-del-text);
 }
 
 .editor-shell .diff-legend-ins {
-  background: oklch(0.95 0.05 145);
-  color: oklch(0.38 0.1 145);
+  background: var(--editor-diff-inline-ins-bg);
+  color: var(--editor-diff-inline-ins-text);
 }
 
 /* LaTeX diff view — light background, red/green line highlights (same palette as editor) */
@@ -6382,11 +6437,11 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .latex-diff-shell .latex-line-num-ins {
-  color: #15803d;
+  color: var(--editor-diff-ins-num);
 }
 
 .editor-shell .latex-diff-shell .latex-line-num-del {
-  color: #b91c1c;
+  color: var(--editor-diff-del-num);
 }
 
 .editor-shell .latex-diff-shell .latex-line-num-eq {
@@ -6400,19 +6455,19 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .latex-diff-shell .latex-diff-line-del {
-  background: rgb(254 202 202 / 55%);
-  color: #000000;
+  background: var(--editor-diff-del-bg);
+  color: var(--editor-diff-del-text);
   text-decoration: none;
 }
 
 .editor-shell .latex-diff-shell .latex-diff-line-ins {
-  background: rgb(187 247 208 / 55%);
-  color: #000000;
+  background: var(--editor-diff-ins-bg);
+  color: var(--editor-diff-ins-text);
 }
 
 .editor-shell .latex-diff-shell .latex-diff-line-eq {
   background: transparent;
-  color: #000000;
+  color: var(--editor-latex-diff-text);
 }
 
 .editor-shell .latex-diff-shell .latex-tok-comment {

@@ -295,6 +295,7 @@ export type EditorCopy = {
     rejectScopeDocument: string;
     rejectScopeStyle: string;
     rejectScopeAllEdits: string;
+    resyncFailed: string;
   };
   errors: {
     saveFailed: string;
@@ -623,6 +624,8 @@ const EN: EditorCopy = {
     rejectScopeDocument: "entire manuscript",
     rejectScopeStyle: "style edit",
     rejectScopeAllEdits: "pending edits",
+    resyncFailed:
+      "Could not sync manuscript with the server — reload the project and try again.",
   },
   errors: {
     saveFailed: "Could not save the project — check your connection and try again.",
@@ -954,6 +957,8 @@ const VI: EditorCopy = {
     rejectScopeDocument: "toàn bộ bản thảo",
     rejectScopeStyle: "biên tập văn phong",
     rejectScopeAllEdits: "các gợi ý chỉnh sửa",
+    resyncFailed:
+      "Không đồng bộ được bản thảo với server — tải lại dự án và thử lại.",
   },
   errors: {
     saveFailed: "Không lưu được dự án — kiểm tra kết nối và thử lại.",

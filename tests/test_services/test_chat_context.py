@@ -40,6 +40,8 @@ def test_is_casual_chat_greetings():
     assert _is_casual_chat("hello")
     assert _is_casual_chat("hú")
     assert _is_casual_chat("chào")
+    assert _is_casual_chat("chào bạn")
+    assert _is_casual_chat("rất tốt")
     assert _is_casual_chat("bạn là ai")
     assert not _is_casual_chat("chỉnh sửa abstract cho học thuật hơn")
 

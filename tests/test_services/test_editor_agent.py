@@ -106,8 +106,13 @@ def test_infer_followup_after_user_edit_message():
 def test_greeting_after_edit_is_not_edit_followup():
     history = [{"role": "assistant", "content": "Đã cập nhật main.tex — xem diff và Accept/Reject."}]
     assert not looks_like_edit_followup("chào", history)
+    assert not looks_like_edit_followup("chào bạn", history)
+    assert not looks_like_edit_followup("rất tốt", history)
     assert infer_followup_intent("chào", history, has_selection=False) is None
+    assert infer_followup_intent("chào bạn", history, has_selection=False) is None
+    assert infer_followup_intent("rất tốt", history, has_selection=False) is None
     assert fallback_intent("chào", has_latex=True, has_selection=False).action == "chat"
+    assert fallback_intent("chào bạn", has_latex=True, has_selection=False).action == "chat"
 
 
 def test_classify_intent_greeting_after_edit_is_chat():
@@ -119,6 +124,15 @@ def test_classify_intent_greeting_after_edit_is_chat():
     result = asyncio.run(
         classify_intent(
             "chào",
+            has_latex=True,
+            has_selection=False,
+            conversation_history=history,
+        )
+    )
+    assert result.action == "chat"
+    result = asyncio.run(
+        classify_intent(
+            "chào bạn",
             has_latex=True,
             has_selection=False,
             conversation_history=history,

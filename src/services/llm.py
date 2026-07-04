@@ -66,9 +66,28 @@ def resolve_heavy_edit_model(
     return effective
 
 
+def _text_from_llm_content(raw: object) -> str:
+    """Normalize AIMessage.content — Gemini may return a list of content blocks."""
+    if raw is None:
+        return ""
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, list):
+        parts: list[str] = []
+        for part in raw:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                text = part.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return str(raw)
+
+
 def extract_llm_text(response: object) -> str:
     """Merge visible content and reasoning_content (reasoning / thinking models)."""
-    content = str(getattr(response, "content", None) or "").strip()
+    content = _text_from_llm_content(getattr(response, "content", None)).strip()
     if content:
         return content
     extra = getattr(response, "additional_kwargs", None) or {}
@@ -81,19 +100,8 @@ def extract_llm_text(response: object) -> str:
 
 def extract_llm_stream_deltas(chunk: object) -> tuple[str, str]:
     """Return (content_delta, reasoning_delta) from a streaming chunk."""
-    content_delta = ""
+    content_delta = _text_from_llm_content(getattr(chunk, "content", None))
     reasoning_delta = ""
-    raw_content = getattr(chunk, "content", None)
-    if isinstance(raw_content, str):
-        content_delta = raw_content
-    elif isinstance(raw_content, list):
-        for part in raw_content:
-            if isinstance(part, str):
-                content_delta += part
-            elif isinstance(part, dict):
-                text = part.get("text")
-                if isinstance(text, str):
-                    content_delta += text
     extra = getattr(chunk, "additional_kwargs", None) or {}
     if isinstance(extra, dict):
         reasoning = extra.get("reasoning_content")

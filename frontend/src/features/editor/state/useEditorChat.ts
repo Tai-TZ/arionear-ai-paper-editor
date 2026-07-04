@@ -5,13 +5,16 @@ import { editorCopy } from "@/lib/editor-i18n";
 import {
   appendImportantFeedLine,
   applyAiState,
+  CHAT_CONTENT_RESYNC_CODE,
   filterDisplaySteps,
   isImportantFeedEvent,
   isProgressNoiseActivity,
   isProgressNoiseStep,
   revisionAction,
   streamChat,
+  syncSession,
   type ChatAiStatePayload,
+  type ChatResult,
   type LLMProvider,
   type LogicAuditReport,
   type ProviderInfo,
@@ -29,7 +32,7 @@ import {
 } from "@/lib/chat-stream-progress";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
 import { clampSelectionReplacement } from "@/lib/inline-suggestion";
-import { isSelectedModelPaid } from "@/lib/llm-model-tier";
+import { pickFirstFreeModel } from "@/lib/llm-model-tier";
 import { canApplyPendingEdit, contentFingerprint } from "@/lib/pending-edit-utils";
 import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";
 import { agentChatStreamTimeoutMs } from "@/lib/agent-chat-timeout";
@@ -38,7 +41,14 @@ import { buildEditRedoPrompt, type StructureSuggestion } from "@/lib/structure-s
 import { logicAuditFingerprint } from "@/lib/paper-score-audit";
 import type { ChatThread, ProjectFile, StoredChatMessage } from "@/lib/project-store";
 import type { UiLanguage, ResearcherProfile } from "@/lib/researcher-profile";
-import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
+import {
+  listLogicAuditSectionOptions,
+  logicAuditClientTimeoutMs,
+  logicAuditTargetSectionCount,
+  mergeLogicSectionReport,
+  type LogicAuditMode,
+  type LogicAuditScope,
+} from "@/lib/logic-audit";
 import { createSmoothStream, type SmoothStreamController } from "@/lib/smooth-stream";
 import { toast } from "sonner";
 import type { PendingEdit, PendingSuggestion, ToolsTab } from "../types";
@@ -71,6 +81,7 @@ export type EditorChatSideEffects = {
 
 export type UseEditorChatOptions = {
   projectId: string | undefined;
+  projectName: string;
   locale: UiLanguage;
   latex: string;
   mainFile: string;
@@ -99,6 +110,8 @@ export type UseEditorChatOptions = {
   compileNow?: (latexOverride?: string) => void | Promise<unknown>;
   /** Called when compile is triggered right after accepting an edit (for PDF feedback). */
   onCompileAfterEdit?: () => void;
+  /** Called after the user accepts an agent edit (persist project when auto-save is on). */
+  onAfterEditAccepted?: () => void;
   setMobileChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   scoreAuditLoading?: boolean;
   sideEffects: EditorChatSideEffects;
@@ -107,6 +120,7 @@ export type UseEditorChatOptions = {
 export function useEditorChat(options: UseEditorChatOptions) {
   const {
     projectId,
+    projectName,
     locale,
     latex,
     mainFile,
@@ -133,6 +147,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     scheduleCompile,
     compileNow,
     onCompileAfterEdit,
+    onAfterEditAccepted,
     setMobileChatOpen,
     scoreAuditLoading = false,
     sideEffects,
@@ -200,6 +215,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     [autoCompile, compileNow, onCompileAfterEdit, scheduleCompile],
   );
 
+  const skipNextEditPersistRef = useRef(true);
+
   const flushPendingEditsToThread = useCallback((): ChatThread[] => {
     const threadId = activeChatIdRef.current;
     if (!threadId) return chatThreadsRef.current;
@@ -240,7 +257,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     llmProvider: "" as LLMProvider | "",
     llmModel: "",
     providers: [] as ProviderInfo[],
-    integrityStrictness: "strict" as ResearcherProfile["integrityStrictness"],
+    integrityStrictness: "strict" as ResearcherProfile["integrity_strictness"],
   });
 
   sendCtxRef.current = {
@@ -509,17 +526,6 @@ export function useEditorChat(options: UseEditorChatOptions) {
         : parseChatSlashCommand(raw, locale);
     const isLogicAuditTask = Boolean(logicLaunch) || parsedPreview.task === "logic";
 
-    if (
-      !isLogicAuditTask &&
-      ctx.providers.length > 0 &&
-      ctx.llmProvider &&
-      ctx.llmModel &&
-      isSelectedModelPaid(ctx.providers, ctx.llmProvider, ctx.llmModel)
-    ) {
-      toast.message(t.llm.paidChatHint);
-      return;
-    }
-
     const tCopy = editorCopy(locale);
     if (!activeChatIdRef.current) {
       const initial = makeThread(tCopy.sidebar.defaultChatTitle);
@@ -665,275 +671,312 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
     const mainHash = contentFingerprint(sentMainLatex);
     const activeHash = contentFingerprint(sentActiveLatex);
-    const latexPayload = buildChatLatexPayload(
-      sentMainLatex,
-      sentActiveLatex,
-      sentActiveFile,
-      sentMainFile,
-      latexSyncRef.current,
-    );
+
+    const streamCallbacks = (resyncRef: { required: boolean }) => ({
+      onActivity: (activityText: string) => {
+        if (isProgressNoiseActivity(activityText)) return;
+        pushChatStreamActivity(activityText);
+      },
+      onState: (state: ChatAiStatePayload) => {
+        pushChatStreamState(state);
+        if (
+          task === "logic" &&
+          state.step_id === "logic-cross" &&
+          state.status === "done"
+        ) {
+          setAuditSectionProgress((prev) =>
+            prev
+              ? { ...prev, completed: Math.min(prev.total, prev.completed + 1) }
+              : prev,
+          );
+        }
+        if (isProgressNoiseStep(state.step_id)) return;
+
+        const important = isImportantFeedEvent(state);
+        const applyUpdate = () => {
+          patchAssistant((msg) => {
+            const aiSteps = applyAiState(msg.aiSteps ?? [], state);
+            const active = filterDisplaySteps(aiSteps).find((s) => s.status === "active");
+            const activities = important
+              ? appendImportantFeedLine(msg.activities ?? [], state)
+              : (msg.activities ?? []);
+            return {
+              ...msg,
+              activities,
+              aiSteps,
+              streamLabel:
+                state.status === "active" && state.detail
+                  ? `${state.label} — ${state.detail}`
+                  : active?.label ?? state.label,
+              streamElapsedSec:
+                typeof state.elapsed_sec === "number"
+                  ? state.elapsed_sec
+                  : msg.streamElapsedSec,
+            };
+          });
+          syncChatStreamProgress();
+        };
+
+        if (important) {
+          flushSync(applyUpdate);
+        } else {
+          applyUpdate();
+        }
+      },
+      onToken: (delta: string) => {
+        const progress = getChatStreamProgressSnapshot();
+        const isLogicAudit = progress.steps.some((s) => s.id.startsWith("logic-"));
+        if (isLogicAudit) return;
+        chatSmoothStreamRef.current?.push(delta);
+      },
+      onReasoning: (delta: string) => {
+        if (task === "logic") return;
+        patchAssistant((msg) => ({
+          ...msg,
+          reasoning: `${msg.reasoning ?? ""}${delta}`,
+        }));
+      },
+      onLogicSection: (section: NonNullable<LogicAuditReport["sections"]>[number]) => {
+        logicAuditPartialCountRef.current += 1;
+        setAuditSectionProgress((prev) =>
+          prev
+            ? { ...prev, completed: logicAuditPartialCountRef.current }
+            : { completed: logicAuditPartialCountRef.current, total: targetSectionCount },
+        );
+        flushSync(() => {
+          sideEffects.setLogicAuditReport((prev) => mergeLogicSectionReport(prev, section));
+          sideEffects.setToolsOpen(true);
+        });
+      },
+      onDone: (result: ChatResult) => {
+        chatSmoothStreamRef.current?.flush();
+        const progress = getChatStreamProgressSnapshot();
+        const finalSteps = filterDisplaySteps(
+          progress.steps.length ? progress.steps : [],
+        );
+        const hasLogicReport = Boolean(result.logic_audit_report?.sections?.length);
+        patchAssistant((msg) => ({
+          ...msg,
+          content: result.response || (hasLogicReport ? "" : msg.content),
+          isStreaming: false,
+          isError: false,
+          aiSteps: filterDisplaySteps(msg.aiSteps ?? []).length
+            ? filterDisplaySteps(msg.aiSteps ?? [])
+            : finalSteps,
+          activities: msg.activities?.length ? msg.activities : progress.activities,
+        }));
+        const edits = (result.edits ?? []).filter(
+          (e) => e?.replacement_text && e?.original_text,
+        );
+        const selectionAnchor =
+          sentSelection &&
+          sentSelection.end > sentSelection.start
+            ? sentSelection
+            : null;
+        const contentForEditFile = (filePath: string) =>
+          fileSnapshotsAtSend.get(filePath) ??
+          (filePath === sentActiveFile
+            ? sentActiveLatex
+            : filePath === sentMainFile
+              ? sentMainLatex
+              : "");
+        if (edits.length > 0) {
+          const mapped: PendingEdit[] = edits.map((e) => {
+            const editFile = e.file || sentMainFile;
+            const fileContent = contentForEditFile(editFile);
+            const hasBackendAnchor =
+              e.selection_start != null &&
+              e.selection_end != null &&
+              e.selection_end > e.selection_start;
+            const anchor =
+              hasBackendAnchor
+                ? { start: e.selection_start!, end: e.selection_end! }
+                : editFile === sentActiveFile
+                  ? selectionAnchor
+                  : null;
+            return {
+              id: e.id,
+              file: editFile,
+              section: e.section,
+              applyMode: (e.apply_mode ?? result.apply_mode ?? "selection") as
+                | "selection"
+                | "document",
+              originalText: anchor
+                ? fileContent.slice(anchor.start, anchor.end)
+                : e.original_text,
+              replacementText: anchor
+                ? clampSelectionReplacement(
+                    fileContent.slice(anchor.start, anchor.end),
+                    e.replacement_text,
+                  )
+                : e.replacement_text,
+              description: e.description,
+              flags: result.integrity_flags ?? [],
+              revisionId: result.revision_id || undefined,
+              accepted: false,
+              selectionStart: anchor?.start,
+              selectionEnd: anchor?.end,
+              sourceFingerprint: contentFingerprint(
+                fileSnapshotsAtSend.get(editFile) ?? fileContent,
+              ),
+            };
+          });
+          setPendingEdits(mapped);
+          setActiveEditId(mapped[0]?.id ?? null);
+        } else if (result.suggestion && result.original_text) {
+          const suggestionFile = sentActiveFile;
+          const fileContent = contentForEditFile(suggestionFile);
+          setPendingSuggestion({
+            file: suggestionFile,
+            originalText: selectionAnchor?.text ?? result.original_text,
+            suggestion: selectionAnchor
+              ? clampSelectionReplacement(selectionAnchor.text, result.suggestion)
+              : result.suggestion,
+            diff: result.diff ?? "",
+            flags: result.integrity_flags ?? [],
+            applyMode: selectionAnchor
+              ? "selection"
+              : (result.apply_mode ?? "selection"),
+            revisionId: result.revision_id || undefined,
+            selectionStart: selectionAnchor?.start,
+            selectionEnd: selectionAnchor?.end,
+            sourceFingerprint: contentFingerprint(
+              fileSnapshotsAtSend.get(suggestionFile) ?? fileContent,
+            ),
+          });
+        }
+        if (result.citation_results?.length) {
+          sideEffects.setCitationResults(result.citation_results);
+          sideEffects.setCitationSummary(result.response || result.analysis || "");
+          const unverified = result.citation_results.filter(
+            (r) => r?.status !== "verified",
+          ).length;
+          if (unverified > 0) {
+            sideEffects.setToolsTab("citations");
+            sideEffects.setToolsOpen(true);
+          }
+        }
+        if (result.structure_suggestions?.length) {
+          sideEffects.setStructureSuggestions(result.structure_suggestions as StructureSuggestion[]);
+          const actionable = result.structure_suggestions.filter(
+            (s) => s?.severity === "warning" || s?.severity === "error",
+          );
+          if (actionable.length > 0) {
+            sideEffects.setToolsTab("structure");
+            sideEffects.setToolsOpen(true);
+          }
+        }
+        if (result.logic_audit_report?.sections?.length) {
+          const isGate =
+            (result.logic_audit_report as { meta?: Record<string, unknown> }).meta
+              ?.audit_mode === "gate";
+          if (!isGate) {
+            sideEffects.setLogicAuditReport(result.logic_audit_report);
+            sideEffects.lastPanelAuditFingerprintRef.current =
+              logicAuditFingerprint(sentMainLatex);
+            sideEffects.setToolsOpen(true);
+          }
+        }
+        if (result.revision_id) {
+          void refreshRevisions();
+        }
+      },
+      onError: (message: string, meta?: { code?: string; reason?: string }) => {
+        if (
+          meta?.code === CHAT_CONTENT_RESYNC_CODE &&
+          !abort.signal.aborted
+        ) {
+          resyncRef.required = true;
+          return;
+        }
+        chatSmoothStreamRef.current?.dispose();
+        chatSmoothStreamRef.current = null;
+        patchAssistant((msg) => ({
+          ...msg,
+          content: message,
+          isStreaming: false,
+          isError: true,
+        }));
+      },
+    });
 
     try {
-      await streamChat(
-        text,
-        {
-          sessionId: projectId,
-          latexContent: latexPayload.latexContent,
-          latexContentHash: latexPayload.latexContentHash,
-          activeFileContent: latexPayload.activeFileContent,
-          activeFileContentHash: latexPayload.activeFileContentHash,
-          activeFile: sentActiveFile,
-          mainFile: sentMainFile,
-          selection: activeSelection,
-          selectionStart: sentSelection?.start,
-          selectionEnd: sentSelection?.end,
-          locale,
-          task,
-          llm_provider: ctx.llmProvider,
-          llm_model: ctx.llmModel || undefined,
-          integrity_strictness: ctx.integrityStrictness,
-          ...(task === "logic" && logicAuditMode
-            ? { logic_audit_mode: logicAuditMode }
-            : {}),
-          ...(task === "logic" && logicAuditScope
-            ? { logic_audit_scope: logicAuditScope }
-            : {}),
-          ...(task === "logic" &&
-          logicAuditScope !== "full" &&
-          logicAuditSections?.length
-            ? { logic_audit_sections: logicAuditSections }
-            : {}),
-          conversationHistory,
-        },
-        {
-          onActivity: (activityText) => {
-            if (isProgressNoiseActivity(activityText)) return;
-            pushChatStreamActivity(activityText);
-          },
-          onState: (state: ChatAiStatePayload) => {
-            pushChatStreamState(state);
-            if (
-              task === "logic" &&
-              state.step_id === "logic-cross" &&
-              state.status === "done"
-            ) {
-              setAuditSectionProgress((prev) =>
-                prev
-                  ? { ...prev, completed: Math.min(prev.total, prev.completed + 1) }
-                  : prev,
-              );
-            }
-            if (isProgressNoiseStep(state.step_id)) return;
+      await syncSession(projectId, projectName, sentMainLatex).catch(() => {});
 
-            const important = isImportantFeedEvent(state);
-            const applyUpdate = () => {
-              patchAssistant((msg) => {
-                const aiSteps = applyAiState(msg.aiSteps ?? [], state);
-                const active = filterDisplaySteps(aiSteps).find((s) => s.status === "active");
-                const activities = important
-                  ? appendImportantFeedLine(msg.activities ?? [], state)
-                  : (msg.activities ?? []);
-                return {
-                  ...msg,
-                  activities,
-                  aiSteps,
-                  streamLabel:
-                    state.status === "active" && state.detail
-                      ? `${state.label} — ${state.detail}`
-                      : active?.label ?? state.label,
-                  streamElapsedSec:
-                    typeof state.elapsed_sec === "number"
-                      ? state.elapsed_sec
-                      : msg.streamElapsedSec,
-                };
-              });
-              syncChatStreamProgress();
-            };
+      let streamCompleted = false;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const forceFullPayload = attempt > 0;
+        const resyncRef = { required: false };
+        const syncState = forceFullPayload ? resetChatLatexSync() : latexSyncRef.current;
+        const latexPayload = buildChatLatexPayload(
+          sentMainLatex,
+          sentActiveLatex,
+          sentActiveFile,
+          sentMainFile,
+          syncState,
+          forceFullPayload,
+        );
 
-            if (important) {
-              flushSync(applyUpdate);
-            } else {
-              applyUpdate();
-            }
+        await streamChat(
+          text,
+          {
+            sessionId: projectId,
+            latexContent: latexPayload.latexContent,
+            latexContentHash: latexPayload.latexContentHash,
+            activeFileContent: latexPayload.activeFileContent,
+            activeFileContentHash: latexPayload.activeFileContentHash,
+            activeFile: sentActiveFile,
+            mainFile: sentMainFile,
+            selection: activeSelection,
+            selectionStart: sentSelection?.start,
+            selectionEnd: sentSelection?.end,
+            locale,
+            task,
+            llm_provider: ctx.llmProvider || undefined,
+            llm_model: ctx.llmModel || undefined,
+            integrity_strictness: ctx.integrityStrictness,
+            ...(task === "logic" && logicAuditMode
+              ? { logic_audit_mode: logicAuditMode }
+              : {}),
+            ...(task === "logic" && logicAuditScope
+              ? { logic_audit_scope: logicAuditScope }
+              : {}),
+            ...(task === "logic" &&
+            logicAuditScope !== "full" &&
+            logicAuditSections?.length
+              ? { logic_audit_sections: logicAuditSections }
+              : {}),
+            conversationHistory,
           },
-          onToken: (delta) => {
-            const progress = getChatStreamProgressSnapshot();
-            const isLogicAudit = progress.steps.some((s) => s.id.startsWith("logic-"));
-            if (isLogicAudit) return;
-            chatSmoothStreamRef.current?.push(delta);
-          },
-          onReasoning: (delta) => {
-            if (task === "logic") return;
-            patchAssistant((msg) => ({
-              ...msg,
-              reasoning: `${msg.reasoning ?? ""}${delta}`,
-            }));
-          },
-          onLogicSection: (section) => {
-            logicAuditPartialCountRef.current += 1;
-            setAuditSectionProgress((prev) =>
-              prev
-                ? { ...prev, completed: logicAuditPartialCountRef.current }
-                : { completed: logicAuditPartialCountRef.current, total: targetSectionCount },
-            );
-            flushSync(() => {
-              sideEffects.setLogicAuditReport((prev) => mergeLogicSectionReport(prev, section));
-              sideEffects.setToolsOpen(true);
-            });
-          },
-          onDone: (result) => {
-            chatSmoothStreamRef.current?.flush();
-            const progress = getChatStreamProgressSnapshot();
-            const finalSteps = filterDisplaySteps(
-              progress.steps.length ? progress.steps : [],
-            );
-            const hasLogicReport = Boolean(result.logic_audit_report?.sections?.length);
-            patchAssistant((msg) => ({
-              ...msg,
-              content: result.response || (hasLogicReport ? "" : msg.content),
-              isStreaming: false,
-              isError: false,
-              aiSteps: filterDisplaySteps(msg.aiSteps ?? []).length
-                ? filterDisplaySteps(msg.aiSteps ?? [])
-                : finalSteps,
-              activities: msg.activities?.length ? msg.activities : progress.activities,
-            }));
-            const edits = (result.edits ?? []).filter(
-              (e) => e?.replacement_text && e?.original_text,
-            );
-            const selectionAnchor =
-              sentSelection &&
-              sentSelection.end > sentSelection.start
-                ? sentSelection
-                : null;
-            const contentForEditFile = (filePath: string) =>
-              fileSnapshotsAtSend.get(filePath) ??
-              (filePath === sentActiveFile
-                ? sentActiveLatex
-                : filePath === sentMainFile
-                  ? sentMainLatex
-                  : "");
-            if (edits.length > 0) {
-              const mapped: PendingEdit[] = edits.map((e) => {
-                const editFile = e.file || sentMainFile;
-                const fileContent = contentForEditFile(editFile);
-                const hasBackendAnchor =
-                  e.selection_start != null &&
-                  e.selection_end != null &&
-                  e.selection_end > e.selection_start;
-                const anchor =
-                  hasBackendAnchor
-                    ? { start: e.selection_start!, end: e.selection_end! }
-                    : editFile === sentActiveFile
-                      ? selectionAnchor
-                      : null;
-                return {
-                  id: e.id,
-                  file: editFile,
-                  section: e.section,
-                  applyMode: (e.apply_mode ?? result.apply_mode ?? "selection") as
-                    | "selection"
-                    | "document",
-                  originalText: anchor
-                    ? fileContent.slice(anchor.start, anchor.end)
-                    : e.original_text,
-                  replacementText: anchor
-                    ? clampSelectionReplacement(
-                        fileContent.slice(anchor.start, anchor.end),
-                        e.replacement_text,
-                      )
-                    : e.replacement_text,
-                  description: e.description,
-                  flags: result.integrity_flags ?? [],
-                  revisionId: result.revision_id || undefined,
-                  accepted: false,
-                  selectionStart: anchor?.start,
-                  selectionEnd: anchor?.end,
-                  sourceFingerprint: contentFingerprint(
-                    fileSnapshotsAtSend.get(editFile) ?? fileContent,
-                  ),
-                };
-              });
-              setPendingEdits(mapped);
-              setActiveEditId(mapped[0]?.id ?? null);
-            } else if (result.suggestion && result.original_text) {
-              const suggestionFile = sentActiveFile;
-              const fileContent = contentForEditFile(suggestionFile);
-              setPendingSuggestion({
-                file: suggestionFile,
-                originalText: selectionAnchor?.text ?? result.original_text,
-                suggestion: selectionAnchor
-                  ? clampSelectionReplacement(selectionAnchor.text, result.suggestion)
-                  : result.suggestion,
-                diff: result.diff ?? "",
-                flags: result.integrity_flags ?? [],
-                applyMode: selectionAnchor
-                  ? "selection"
-                  : (result.apply_mode ?? "selection"),
-                revisionId: result.revision_id || undefined,
-                selectionStart: selectionAnchor?.start,
-                selectionEnd: selectionAnchor?.end,
-                sourceFingerprint: contentFingerprint(
-                  fileSnapshotsAtSend.get(suggestionFile) ?? fileContent,
-                ),
-              });
-            }
-            if (result.citation_results?.length) {
-              sideEffects.setCitationResults(result.citation_results);
-              sideEffects.setCitationSummary(result.response || result.analysis || "");
-              const unverified = result.citation_results.filter(
-                (r) => r?.status !== "verified",
-              ).length;
-              if (unverified > 0) {
-                sideEffects.setToolsTab("citations");
-                sideEffects.setToolsOpen(true);
-              }
-            }
-            if (result.structure_suggestions?.length) {
-              sideEffects.setStructureSuggestions(result.structure_suggestions as StructureSuggestion[]);
-              const actionable = result.structure_suggestions.filter(
-                (s) => s?.severity === "warning" || s?.severity === "error",
-              );
-              if (actionable.length > 0) {
-                sideEffects.setToolsTab("structure");
-                sideEffects.setToolsOpen(true);
-              }
-            }
-            if (result.logic_audit_report?.sections?.length) {
-              const isGate =
-                (result.logic_audit_report as { meta?: Record<string, unknown> }).meta
-                  ?.audit_mode === "gate";
-              if (!isGate) {
-                sideEffects.setLogicAuditReport(result.logic_audit_report);
-                sideEffects.lastPanelAuditFingerprintRef.current =
-                  logicAuditFingerprint(sentMainLatex);
-                sideEffects.setToolsOpen(true);
-              }
-            }
-            if (result.revision_id) {
-              void refreshRevisions();
-            }
-          },
-          onError: (message) => {
-            chatSmoothStreamRef.current?.dispose();
-            chatSmoothStreamRef.current = null;
-            patchAssistant((msg) => ({
-              ...msg,
-              content: message,
-              isStreaming: false,
-              isError: true,
-            }));
-          },
-        },
-        abort.signal,
-      );
-      latexSyncRef.current = nextChatLatexSync(
-        latexSyncRef.current,
-        mainHash,
-        activeHash,
-        sentActiveFile,
-        latexPayload,
-      );
+          streamCallbacks(resyncRef),
+          abort.signal,
+        );
+
+        if (resyncRef.required && attempt === 0 && !abort.signal.aborted) {
+          latexSyncRef.current = resetChatLatexSync();
+          continue;
+        }
+
+        if (!resyncRef.required) {
+          latexSyncRef.current = nextChatLatexSync(
+            latexSyncRef.current,
+            mainHash,
+            activeHash,
+            sentActiveFile,
+            latexPayload,
+          );
+        }
+        streamCompleted = true;
+        break;
+      }
+      if (!streamCompleted && !abort.signal.aborted) {
+        patchAssistant((msg) => ({
+          ...msg,
+          content: t.chatStream.resyncFailed,
+          isStreaming: false,
+          isError: true,
+        }));
+      }
     } finally {
       clearTimeout(chatTimeoutId);
       chatSmoothStreamRef.current?.dispose();
@@ -987,9 +1030,10 @@ export function useEditorChat(options: UseEditorChatOptions) {
   }, [
     locale,
     projectId,
-    t.llm.paidChatHint,
+    projectName,
     t.chatStream.timeout,
     t.chatStream.stopped,
+    t.chatStream.resyncFailed,
     t.logicAudit.partialChatStopped,
     t.logicAudit.partialChatTimeout,
     openChatPanel,
@@ -1122,6 +1166,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     const revisionId = pendingSuggestion.revisionId;
     setPendingSuggestion(null);
     reportRevisionAction(revisionId, "accepted");
+    onAfterEditAccepted?.();
     if (autoCompile && nextActiveLatex) {
       runCompileAfterEdit(nextActiveLatex);
     }
@@ -1149,6 +1194,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     t.pendingEdits.staleOnAccept,
     t.chatStream.acceptAppliedCompile,
     t.chatStream.acceptApplied,
+    onAfterEditAccepted,
   ]);
 
   const handleRejectSuggestion = useCallback(() => {
@@ -1196,6 +1242,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setPendingEdits(remaining.length ? remaining : null);
       setActiveEditId(remaining[0]?.id ?? null);
       reportRevisionAction(edit.revisionId, "accepted");
+      onAfterEditAccepted?.();
       if (nextLatex) {
         runCompileAfterEdit(nextLatex);
       }
@@ -1208,6 +1255,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       resolveFileContent,
       mainFile,
       t.pendingEdits.staleOnAccept,
+      onAfterEditAccepted,
     ],
   );
 
@@ -1266,6 +1314,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setProjectFiles(files);
     setPendingEdits(null);
     setActiveEditId(null);
+    onAfterEditAccepted?.();
     if (nextLatex !== latex) {
       runCompileAfterEdit(nextLatex);
     }
@@ -1281,6 +1330,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     runCompileAfterEdit,
     resolveFileContent,
     reportRevisionAction,
+    onAfterEditAccepted,
     t.pendingEdits.staleOnAccept,
     t.pendingEdits.staleWarning,
   ]);
@@ -1302,6 +1352,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
   const hydrateChatFromProject = useCallback(
     (rawThreads: ChatThread[] | undefined): ChatThread[] => {
+      skipNextEditPersistRef.current = true;
       const persisted = (rawThreads ?? []).filter(isPersistedThread);
       if (persisted.length) {
         setChatThreads(persisted);
@@ -1322,6 +1373,13 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
   useEffect(() => {
     if (!projectId || !activeChatId) return;
+    // Hydration sets activeChatId, which fires this effect with no real
+    // inline-edit change to persist. Skip that run to avoid a redundant
+    // PATCH /papers on open (which otherwise races the session sync write).
+    if (skipNextEditPersistRef.current) {
+      skipNextEditPersistRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       const updated = flushPendingEditsToThread();
       if (getPersistedThreads(updated).length > 0) {
@@ -1357,7 +1415,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     (p: LLMProvider) => {
       setLlmProvider(p);
       const info = providers.find((x) => x.id === p);
-      if (info) setLlmModel(info.default_model);
+      if (info) setLlmModel(pickFirstFreeModel(info));
     },
     [providers, setLlmProvider, setLlmModel],
   );

@@ -74,7 +74,10 @@ export function slashCommandInsert(cmd: SlashCommandDef): string {
 }
 
 const CASUAL_GREETING_RE =
-  /^(?:h+u+l+o+|hello|hi|hey|chào|chao|xin\s*chào|yo|hú|hu|hì|helo|good\s*(?:morning|afternoon|evening)|thanks?|thank\s*you|cảm\s*ơn|cam\s*on|ok(?:ay)?|oke|ừ|uh|ah|test|thử|thu)\s*[!?.…]*$/i;
+  /^(?:h+u+l+o+|hello(?:\s+(?:there|everyone|bao))?|hi(?:\s+(?:there|everyone|bao))?|hey|chào(?:\s+(?:bạn|ban|nhé|nhe|anh|chị|chi|em|mọi\s+người|moi\s+nguoi))?|chao|xin\s*chào|yo|hú|hu|hì|helo|good\s*(?:morning|afternoon|evening)|thanks?|thank\s*you|cảm\s*ơn|cam\s*on|ok(?:ay)?|oke|ừ|uh|ah|test|thử|thu)\s*[!?.…]*$/i;
+
+const CASUAL_ACKNOWLEDGMENT_RE =
+  /^(?:rất\s+tốt|rat\s+tot|good(?:\s+(?:job|work))?|nice|great|perfect|tuyệt|tuyet|ổn|on|được|duoc)\s*[!?.…]*$/i;
 
 const CASUAL_CONVERSATIONAL_RE =
   /bạn\s+là\s+ai|who\s+are\s+you|what\s+can\s+you\s+do|giúp\s+tôi\s+gì|help\s+me|bạn\s+biết\s+gì/i;
@@ -84,6 +87,7 @@ export function isCasualChatMessage(message: string): boolean {
   const q = message.trim();
   if (!q) return true;
   if (CASUAL_GREETING_RE.test(q)) return true;
+  if (CASUAL_ACKNOWLEDGMENT_RE.test(q)) return true;
   return CASUAL_CONVERSATIONAL_RE.test(q);
 }
 
