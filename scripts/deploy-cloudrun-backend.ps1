@@ -233,7 +233,7 @@ try {
         --port 8000 `
         --memory 4Gi `
         --cpu 4 `
-        --concurrency 90 `
+        --concurrency 30 `
         --timeout 300 `
         --max-instances 15 `
         --set-secrets ($secretBindings -join ",") `

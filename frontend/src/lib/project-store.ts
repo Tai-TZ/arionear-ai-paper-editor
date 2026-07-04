@@ -20,10 +20,27 @@ export type StoredChatMessage = {
   isError?: boolean;
 };
 
+export type StoredPendingEdit = {
+  id: string;
+  file: string;
+  section?: string;
+  applyMode: "selection" | "document";
+  originalText: string;
+  replacementText: string;
+  description?: string;
+  flags: { code: string; message: string; severity: string }[];
+  revisionId?: string;
+  selectionStart?: number;
+  selectionEnd?: number;
+  sourceFingerprint?: string;
+};
+
 export type ChatThread = {
   id: string;
   title: string;
   messages: StoredChatMessage[];
+  pendingEdits?: StoredPendingEdit[];
+  activeEditId?: string | null;
   createdAt: number;
   updatedAt: number;
 };

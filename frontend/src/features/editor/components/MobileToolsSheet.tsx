@@ -23,6 +23,7 @@ export function MobileToolsSheet({
   onJumpToStructureSection,
   canJumpToStructureSection,
   onAskArioStructure,
+  onApplyStructureFix,
   onAskArioCitation,
   onRunLogicAudit,
   logicAuditLoading,
@@ -51,6 +52,7 @@ export function MobileToolsSheet({
   onJumpToStructureSection: (sectionName: string) => void;
   canJumpToStructureSection: (sectionName: string) => boolean;
   onAskArioStructure: (prefill: string) => void;
+  onApplyStructureFix?: (suggestion: StructureSuggestion) => void;
   onAskArioCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
@@ -96,6 +98,7 @@ export function MobileToolsSheet({
           onJumpToStructureSection={onJumpToStructureSection}
           canJumpToStructureSection={canJumpToStructureSection}
           onAskArioStructure={onAskArioStructure}
+          onApplyStructureFix={onApplyStructureFix}
           onAskArioCitation={onAskArioCitation}
           onRunLogicAudit={onRunLogicAudit}
           logicAuditLoading={logicAuditLoading}

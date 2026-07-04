@@ -116,6 +116,7 @@ export type EditorCopy = {
     structureEmpty: string;
     structureJump: string;
     structureAskArio: string;
+    structureApplyFix: string;
     structureUnknownSection: string;
     citationAskArio: string;
     citationFixAll: string;
@@ -246,6 +247,8 @@ export type EditorCopy = {
     placeholderQuickEdit: string;
     placeholderSelection: string;
     placeholderDefault: string;
+    hintEditScope: string;
+    hintPendingEdits: string;
     llmHint: string;
     closeChat: string;
     collapseChat: string;
@@ -286,6 +289,8 @@ export type EditorCopy = {
     timeout: string;
     acceptApplied: string;
     acceptAppliedCompile: string;
+    compileAfterEditOk: string;
+    compileAfterEditFail: string;
     rejectSuggestionHint: string;
     rejectScopeDocument: string;
     rejectScopeStyle: string;
@@ -413,6 +418,7 @@ const EN: EditorCopy = {
     structureEmpty: "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
     structureJump: "Jump in editor",
     structureAskArio: "Ask Ario",
+    structureApplyFix: "Apply fix",
     structureUnknownSection: "Manuscript",
     citationAskArio: "Ask Ario",
     citationFixAll: "Fix unverified citations",
@@ -563,6 +569,8 @@ const EN: EditorCopy = {
     placeholderQuickEdit: "Describe how to edit the selected passage…",
     placeholderSelection: "Ask about the selected region…",
     placeholderDefault: "Ask Ario… or type / for commands",
+    hintEditScope: "Tip: select text or say e.g. «edit Abstract» for precise edits.",
+    hintPendingEdits: "You have pending diffs — Accept/Reject above, or ask for changes.",
     llmHint: "No LLM provider — add OPENROUTER_API_KEY or ZAI_API_KEY to .env",
     closeChat: "Close chat",
     collapseChat: "Collapse chat",
@@ -608,6 +616,8 @@ const EN: EditorCopy = {
     timeout: "AI task timed out — try a shorter scope or a faster model.",
     acceptApplied: "Applied to the draft. Press Ctrl+S to save.",
     acceptAppliedCompile: "Applied to the draft. Compiling PDF…",
+    compileAfterEditOk: "PDF updated — compile succeeded.",
+    compileAfterEditFail: "Edit applied but PDF compile failed — use «Ask Ario to fix».",
     rejectSuggestionHint:
       "Suggestion rejected. A follow-up prompt is in the chat box — refine your request and send again.",
     rejectScopeDocument: "entire manuscript",
@@ -738,6 +748,7 @@ const VI: EditorCopy = {
     structureEmpty: "Chưa có gợi ý cấu trúc. Chạy /structure trong chat để phân tích bản thảo.",
     structureJump: "Xem trong editor",
     structureAskArio: "Nhờ Ario sửa",
+    structureApplyFix: "Sửa ngay",
     structureUnknownSection: "Bản thảo",
     citationAskArio: "Nhờ Ario sửa",
     citationFixAll: "Sửa trích dẫn chưa xác minh",
@@ -888,6 +899,8 @@ const VI: EditorCopy = {
     placeholderQuickEdit: "Mô tả cách sửa đoạn đã chọn…",
     placeholderSelection: "Hỏi về vùng đã chọn…",
     placeholderDefault: "Hỏi Ario… hoặc gõ / để chọn lệnh",
+    hintEditScope: "Gợi ý: bôi đen đoạn hoặc nói rõ «sửa Abstract» để chỉnh đúng phần.",
+    hintPendingEdits: "Còn diff chờ duyệt — Accept/Reject ở trên, hoặc nhắn chỉnh tiếp.",
     llmHint:
       "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
     closeChat: "Đóng chat",
@@ -934,6 +947,8 @@ const VI: EditorCopy = {
     timeout: "Tác vụ AI quá thời gian — thử lại với đoạn ngắn hơn hoặc đổi model.",
     acceptApplied: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file.",
     acceptAppliedCompile: "Đã áp dụng thay đổi vào bản thảo. Đang compile PDF…",
+    compileAfterEditOk: "PDF đã cập nhật — compile thành công.",
+    compileAfterEditFail: "Đã áp dụng sửa nhưng compile lỗi — dùng «Nhờ Ario sửa».",
     rejectSuggestionHint:
       "Đã từ chối gợi ý. Mình đã gợi ý câu lệnh trong ô chat — bổ sung yêu cầu rồi gửi lại nhé.",
     rejectScopeDocument: "toàn bộ bản thảo",

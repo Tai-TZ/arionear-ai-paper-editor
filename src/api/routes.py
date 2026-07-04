@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gzip
+import hashlib
 import subprocess
 import uuid
 
@@ -36,7 +38,10 @@ from src.models.schemas import (
 )
 from src.services.chat_stream import AGENT_NAME, flush_sse_stream, stream_chat
 from src.services.citations.verifier import verify_citations
+from src.services.compile_policy import CompileRateLimitedError, check_compile_rate_limit
 from src.services.latex_compile import (
+    AssetResyncRequiredError,
+    CompileBudgetExceededError,
     compile_latex,
     compile_status,
     parse_synctex_inverse_disambiguated,
@@ -381,10 +386,25 @@ async def get_compile_status():
 
 
 @router.post("/compile", response_model=CompileResponse)
-async def compile_manuscript(body: CompileRequest):
+async def compile_manuscript(request: Request):
     try:
+        client_key = _compile_client_key(request)
+        check_compile_rate_limit(client_key)
+        raw = await request.body()
+        if request.headers.get("content-encoding", "").lower() == "gzip":
+            raw = gzip.decompress(raw)
+        body = CompileRequest.model_validate_json(raw)
         result = await asyncio.to_thread(compile_latex, body)
         return result
+    except CompileRateLimitedError as e:
+        raise HTTPException(status_code=429, detail=str(e)) from e
+    except AssetResyncRequiredError as e:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ASSET_RESYNC_REQUIRED", "assets": e.names},
+        ) from e
+    except CompileBudgetExceededError as e:
+        raise HTTPException(status_code=504, detail=str(e)) from e
     except subprocess.TimeoutExpired as e:
         raise HTTPException(status_code=504, detail="LaTeX compilation timed out.") from e
     except Exception as e:
@@ -392,6 +412,19 @@ async def compile_manuscript(body: CompileRequest):
         tb = traceback.format_exc()
         print(f"[COMPILE_ERROR] {tb}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
+
+
+def _compile_client_key(request: Request) -> str:
+    auth = request.headers.get("authorization", "").strip()
+    if auth.lower().startswith("bearer "):
+        digest = hashlib.sha256(auth[7:].strip().encode("utf-8")).hexdigest()[:32]
+        return f"auth:{digest}"
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return f"ip:{forwarded.split(',')[0].strip()}"
+    if request.client and request.client.host:
+        return f"ip:{request.client.host}"
+    return "ip:unknown"
 
 
 @router.post("/compile/synctex", response_model=SyncTeXLookupResponse)

@@ -139,6 +139,8 @@ function ShareViewerPage() {
       const result = await compileLatex(payload.latex, payload.assets, {
         mainFile: payload.mainFile,
         compiler: payload.compiler,
+        cacheId: token,
+        mode: "full",
       });
       setCompileLog(result.log || null);
       if (result.success && result.pdf_base64) {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 import uuid
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from src.services.latex_outline import (
     find_section_span,
 )
 from src.services.llm import get_llm, resolve_heavy_edit_model
+from src.services.llm_errors import looks_like_provider_error
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.prompts import build_system_prompt, render_user_prompt
 
@@ -282,12 +284,25 @@ async def execute_edit_plan(
         f"{resolved.original_text}\n---"
     )
     user_content = prepend_conversation_history(user_content, conversation_history or [])
-    response = await llm.ainvoke(
-        [
-            SystemMessage(content=system),
-            HumanMessage(content=user_content),
-        ]
-    )
+    messages = [
+        SystemMessage(content=system),
+        HumanMessage(content=user_content),
+    ]
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            response = await llm.ainvoke(messages)
+            break
+        except Exception as exc:
+            last_exc = exc
+            if attempt == 0 and looks_like_provider_error(exc):
+                delay = 8.0 if "429" in str(exc) else 2.0
+                await asyncio.sleep(delay)
+                continue
+            raise
+    else:
+        assert last_exc is not None
+        raise last_exc
     raw = (response.content or "").strip()
     suggestion = clamp_selection_replacement(
         resolved.original_text,

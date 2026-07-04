@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEditRedoPrompt,
   buildStructureAskPrompt,
+  buildStructureEditMessage,
   findSectionOutlineLine,
 } from "@/lib/structure-suggestions";
 
@@ -24,6 +25,16 @@ Hello
     });
     expect(prompt).toContain("/template");
     expect(prompt).toContain("Abstract");
+  });
+
+  it("builds direct edit message for structure fix", () => {
+    const msg = buildStructureEditMessage({
+      type: "length",
+      section: "Methods",
+      message: "too short",
+    });
+    expect(msg).toContain("Methods");
+    expect(msg).not.toContain("/edit");
   });
 
   it("builds edit redo prompt", () => {

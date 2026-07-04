@@ -92,6 +92,17 @@ def test_infer_followup_intent_short_refinement():
     assert result.action == "style"
 
 
+def test_infer_followup_after_user_edit_message():
+    history = [
+        {"role": "user", "content": "/edit sửa phần Abstract cho ngắn hơn"},
+        {"role": "assistant", "content": "Đã cập nhật — xem diff."},
+    ]
+    assert looks_like_edit_followup("hay hơn nữa", history)
+    result = infer_followup_intent("hay hơn nữa", history, has_selection=False)
+    assert result is not None
+    assert result.action in ("edit", "style")
+
+
 def test_greeting_after_edit_is_not_edit_followup():
     history = [{"role": "assistant", "content": "Đã cập nhật main.tex — xem diff và Accept/Reject."}]
     assert not looks_like_edit_followup("chào", history)

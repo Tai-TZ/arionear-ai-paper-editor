@@ -1,5 +1,6 @@
 import { resolveApiBase } from "./base-url";
 import { getAccessToken, logoutUser } from "@/lib/auth-store";
+import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
 import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 
@@ -81,6 +82,7 @@ export function isImportantFeedEvent(state: ChatAiStatePayload): boolean {
   if (state.step_id.endsWith("-synthesize") && state.status !== "done") return false;
   if (state.status === "done") return true;
   if (state.step_id === "logic-start") return true;
+  if (state.step_id === "edit-scope" && state.status === "done") return true;
   return false;
 }
 
@@ -710,8 +712,11 @@ export async function verifyCitations(
 
 export type CompileAssetPayload = {
   name: string;
-  content_base64: string;
+  content_base64?: string;
+  content_hash?: string;
 };
+
+export type CompileMode = "full" | "fast";
 
 export type LatexCompiler = "auto" | "pdflatex" | "xelatex" | "lualatex" | "latex";
 
@@ -743,6 +748,38 @@ export type CompileStatus = {
   engines?: CompileEnginesInfo;
 };
 
+const COMPILE_GZIP_MIN_BYTES = 32_768;
+
+async function postCompileBody(body: Record<string, unknown>): Promise<Response> {
+  const json = JSON.stringify(body);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...authHeaders(),
+  };
+  let payload: BodyInit = json;
+  if (typeof CompressionStream !== "undefined" && json.length >= COMPILE_GZIP_MIN_BYTES) {
+    const compressed = await new Response(
+      new Blob([json]).stream().pipeThrough(new CompressionStream("gzip")),
+    ).arrayBuffer();
+    payload = compressed;
+    headers["Content-Encoding"] = "gzip";
+  }
+  return fetch(`${API_BASE}/compile`, {
+    method: "POST",
+    headers,
+    body: payload,
+  });
+}
+
+function isAssetResyncDetail(detail: unknown): detail is { code: string; assets?: string[] } {
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    "code" in detail &&
+    (detail as { code: string }).code === "ASSET_RESYNC_REQUIRED"
+  );
+}
+
 export async function compileLatex(
   latex: string,
   assets: { name: string; dataUrl: string }[],
@@ -750,23 +787,71 @@ export async function compileLatex(
     mainFile?: string;
     compiler?: LatexCompiler;
     cacheId?: string;
+    mode?: CompileMode;
+    knownAssetHashes?: Record<string, string>;
+    forceFullAssets?: boolean;
   },
 ): Promise<CompileResult> {
-  return apiFetch("/compile", {
-    method: "POST",
-    body: JSON.stringify({
-      latex,
-      main_file: options?.mainFile ?? "main.tex",
-      compiler: options?.compiler ?? "auto",
-      cache_id: options?.cacheId ?? null,
-      assets: assets.map(
-        (asset): CompileAssetPayload => ({
-          name: asset.name,
-          content_base64: asset.dataUrl,
-        }),
-      ),
+  const cacheId = options?.cacheId ?? null;
+  const mode = options?.mode ?? "full";
+  const assetHashes = await buildCompileAssetHashes(assets);
+  const known = options?.knownAssetHashes ?? {};
+  const useDelta = Boolean(cacheId) && !options?.forceFullAssets;
+
+  const buildPayload = (delta: boolean): Record<string, unknown> => ({
+    latex,
+    main_file: options?.mainFile ?? "main.tex",
+    compiler: options?.compiler ?? "auto",
+    cache_id: cacheId,
+    mode,
+    assets: assets.map((asset): CompileAssetPayload => {
+      const hash = assetHashes[asset.name];
+      if (delta && useDelta && known[asset.name] === hash) {
+        return { name: asset.name, content_hash: hash };
+      }
+      return { name: asset.name, content_base64: asset.dataUrl };
     }),
   });
+
+  const send = async (delta: boolean): Promise<CompileResult> => {
+    let res: Response;
+    try {
+      res = await postCompileBody(buildPayload(delta));
+    } catch {
+      throw new Error(COMPILE_CONNECTION_MSG);
+    }
+    if (res.status === 401) {
+      logoutUser();
+    }
+    if (res.status === 409) {
+      let detail: unknown = res.statusText;
+      try {
+        const body = await res.json();
+        detail = body.detail ?? detail;
+      } catch {
+        /* ignore */
+      }
+      if (isAssetResyncDetail(detail) && delta) {
+        return send(false);
+      }
+      throw new Error(mapApiHttpError(res.status, detail));
+    }
+    if (!res.ok) {
+      let detail: unknown = res.statusText;
+      try {
+        const body = await res.json();
+        detail = body.detail ?? detail;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(mapApiHttpError(res.status, detail));
+    }
+    return res.json() as Promise<CompileResult>;
+  };
+
+  const result = await send(Boolean(cacheId) && !options?.forceFullAssets);
+  (result as CompileResult & { assetHashes?: Record<string, string> }).assetHashes = assetHashes;
+  return result;
 }
 
 export async function fetchCompileStatus(): Promise<CompileStatus> {

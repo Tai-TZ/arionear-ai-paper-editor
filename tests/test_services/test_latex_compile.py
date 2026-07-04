@@ -17,6 +17,8 @@ def _clear_compile_workspaces():
         for workspace in lc._workspaces.values():
             shutil.rmtree(workspace.path, ignore_errors=True)
         lc._workspaces.clear()
+    with lc._pdf_cache_lock:
+        lc._pdf_cache.clear()
 
 
 def test_detect_compiler_defaults_to_pdflatex():
@@ -135,7 +137,9 @@ def test_assets_fingerprint_changes_with_asset_content():
 
 def test_workspace_cache_key_scopes_by_project():
     assets_key = "abc123"
-    assert lc._workspace_cache_key("proj-1", assets_key) != lc._workspace_cache_key("proj-2", assets_key)
+    assert lc._workspace_cache_key("proj-1", assets_key) == "proj:proj-1"
+    assert lc._workspace_cache_key("proj-2", assets_key) == "proj:proj-2"
+    assert lc._workspace_cache_key(None, assets_key) == f"ephemeral:{assets_key}"
 
 
 def test_compile_minimal_document_when_pdflatex_available():
@@ -149,3 +153,86 @@ def test_compile_minimal_document_when_pdflatex_available():
     assert result.success is True
     assert result.pdf_base64
     assert result.compiler == "pdflatex"
+
+
+def test_compile_reuses_workspace_with_hash_only_assets():
+    if not lc.find_pdflatex():
+        return
+    from src.models.schemas import CompileAssetFile
+
+    tex = r"\documentclass{article}\begin{document}Hello\end{document}"
+    asset = CompileAssetFile(name="extra.tex", content_base64="ZGE=")
+    first = lc.compile_latex(
+        CompileRequest(latex=tex, compiler="pdflatex", cache_id="proj-delta", assets=[asset]),
+    )
+    assert first.success is True
+    asset_hash = lc._file_content_hash(
+        lc._workspaces["proj:proj-delta"].path / "extra.tex",
+    )
+    second = lc.compile_latex(
+        CompileRequest(
+            latex=r"\documentclass{article}\begin{document}Hello again\end{document}",
+            compiler="pdflatex",
+            cache_id="proj-delta",
+            assets=[CompileAssetFile(name="extra.tex", content_hash=asset_hash)],
+        ),
+    )
+    assert second.success is True
+
+
+def test_compile_pdf_cache_returns_without_rerunning_tex():
+    if not lc.find_pdflatex():
+        return
+    req = CompileRequest(
+        latex=r"\documentclass{article}\begin{document}Cache me\end{document}",
+        compiler="pdflatex",
+        cache_id="proj-cache",
+    )
+    first = lc.compile_latex(req)
+    assert first.success is True
+
+    original_run = lc._run_compile_attempts
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("compile should have been served from cache")
+
+    lc._run_compile_attempts = boom
+    try:
+        second = lc.compile_latex(req)
+        assert second.success is True
+        assert second.pdf_base64 == first.pdf_base64
+    finally:
+        lc._run_compile_attempts = original_run
+
+
+def test_asset_resync_when_hash_only_missing():
+    from src.models.schemas import CompileAssetFile
+
+    with pytest.raises(lc.AssetResyncRequiredError):
+        lc._acquire_workspace(
+            "proj-missing",
+            [CompileAssetFile(name="fig.png", content_hash="a" * 64)],
+            assets_key="deadbeef",
+        )
+
+
+def test_build_tex_cmd_omits_enable_installer_on_posix(monkeypatch):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: False)
+    cmd = lc._build_tex_cmd("/usr/bin/pdflatex", "main.tex", synctex=True)
+    assert "--enable-installer" not in cmd
+    assert cmd[-1] == "main.tex"
+
+
+def test_build_tex_cmd_includes_enable_installer_on_miktex(monkeypatch):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: True)
+    cmd = lc._build_tex_cmd("pdflatex", "main.tex", synctex=False)
+    assert "--enable-installer" in cmd
+
+
+def test_compile_budget_exceeded():
+    import time
+
+    lc._set_compile_budget(time.monotonic() - 1)
+    with pytest.raises(lc.CompileBudgetExceededError):
+        lc._assert_compile_budget()
+    lc._clear_compile_budget()

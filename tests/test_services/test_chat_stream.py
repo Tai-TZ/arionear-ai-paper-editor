@@ -6,8 +6,8 @@ import json
 import pytest
 
 from src.models.schemas import ChatRequest
+from src.services.agent_timeouts import AGENT_TASK_TIMEOUT_SEC
 from src.services.chat_stream import (
-    AGENT_TASK_TIMEOUT_SEC,
     AgentTaskTimeoutError,
     _agent_timeout_message,
     _localize_agent_response,
@@ -219,7 +219,7 @@ async def test_stream_edit_no_latex_returns_vietnamese(monkeypatch):
 async def test_agent_timeout_message_mentions_task():
     msg = _agent_timeout_message("edit", AGENT_TASK_TIMEOUT_SEC)
     assert "chỉnh sửa" in msg.lower()
-    assert "90" in msg
+    assert "120" in msg
 
 
 @pytest.mark.asyncio
@@ -255,7 +255,10 @@ async def test_stream_edit_timeout_emits_error(monkeypatch):
         "src.services.chat_stream.enforce_llm_quota_for_paper",
         lambda *_args, **_kwargs: None,
     )
-    monkeypatch.setattr("src.services.chat_stream.AGENT_TASK_TIMEOUT_SEC", 0.2)
+    monkeypatch.setattr(
+        "src.services.chat_stream.compute_agent_task_timeout_sec",
+        lambda *_a, **_k: 0.2,
+    )
 
     request = ChatRequest(
         message="/edit sửa abstract",

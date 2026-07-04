@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-bibtex-extra \
     texlive-science \
+    texlive-publishers \
     texlive-xetex \
     texlive-luatex \
     latexmk \

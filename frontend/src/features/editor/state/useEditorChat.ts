@@ -32,7 +32,7 @@ import { clampSelectionReplacement } from "@/lib/inline-suggestion";
 import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import { canApplyPendingEdit, contentFingerprint } from "@/lib/pending-edit-utils";
 import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";
-import { formatLogicAuditProgress, logicAuditClientTimeoutMs, logicAuditTargetSectionCount, listLogicAuditSectionOptions, mergeLogicSectionReport } from "@/lib/logic-audit";
+import { agentChatStreamTimeoutMs } from "@/lib/agent-chat-timeout";
 import { parseLatexOutline } from "@/lib/latex-outline";
 import { buildEditRedoPrompt, type StructureSuggestion } from "@/lib/structure-suggestions";
 import { logicAuditFingerprint } from "@/lib/paper-score-audit";
@@ -95,6 +95,10 @@ export type UseEditorChatOptions = {
   persistActiveFile: (content: string, files: ProjectFile[], currentActive: string) => ProjectFile[];
   refreshRevisions: () => void;
   scheduleCompile: (latexOverride?: string) => void;
+  /** Immediate compile (bypass debounce) — used after accepting agent edits. */
+  compileNow?: (latexOverride?: string) => void | Promise<unknown>;
+  /** Called when compile is triggered right after accepting an edit (for PDF feedback). */
+  onCompileAfterEdit?: () => void;
   setMobileChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   scoreAuditLoading?: boolean;
   sideEffects: EditorChatSideEffects;
@@ -127,6 +131,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     persistActiveFile,
     refreshRevisions,
     scheduleCompile,
+    compileNow,
+    onCompileAfterEdit,
     setMobileChatOpen,
     scoreAuditLoading = false,
     sideEffects,
@@ -163,6 +169,10 @@ export function useEditorChat(options: UseEditorChatOptions) {
   const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
   const [pendingEdits, setPendingEdits] = useState<PendingEdit[] | null>(null);
   const [activeEditId, setActiveEditId] = useState<string | null>(null);
+  const pendingEditsRef = useRef<PendingEdit[] | null>(null);
+  pendingEditsRef.current = pendingEdits;
+  const activeEditIdRef = useRef<string | null>(null);
+  activeEditIdRef.current = activeEditId;
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const latexSyncRef = useRef<ChatLatexSyncState>(resetChatLatexSync());
@@ -174,21 +184,47 @@ export function useEditorChat(options: UseEditorChatOptions) {
     message: string;
     targetSectionCount: number;
   } | null>(null);
+  const agentEditLaunchRef = useRef<{ message: string; userDisplay: string } | null>(null);
   const logicAuditPartialCountRef = useRef(0);
 
-  type ThreadPendingSnapshot = {
-    pendingEdits: PendingEdit[] | null;
-    pendingSuggestion: PendingSuggestion | null;
-    activeEditId: string | null;
-  };
+  const runCompileAfterEdit = useCallback(
+    (latexOverride?: string) => {
+      if (!autoCompile) return;
+      onCompileAfterEdit?.();
+      if (compileNow) {
+        void compileNow(latexOverride);
+        return;
+      }
+      scheduleCompile(latexOverride);
+    },
+    [autoCompile, compileNow, onCompileAfterEdit, scheduleCompile],
+  );
 
-  const EMPTY_THREAD_PENDING: ThreadPendingSnapshot = {
-    pendingEdits: null,
-    pendingSuggestion: null,
-    activeEditId: null,
-  };
+  const flushPendingEditsToThread = useCallback((): ChatThread[] => {
+    const threadId = activeChatIdRef.current;
+    if (!threadId) return chatThreadsRef.current;
+    const edits = pendingEditsRef.current;
+    const editId = activeEditIdRef.current;
+    const updated = chatThreadsRef.current.map((th) =>
+      th.id === threadId
+        ? {
+            ...th,
+            pendingEdits: edits?.length ? edits : undefined,
+            activeEditId: editId ?? undefined,
+            updatedAt: Date.now(),
+          }
+        : th,
+    );
+    chatThreadsRef.current = updated;
+    setChatThreads(updated);
+    return updated;
+  }, []);
 
-  const threadPendingRef = useRef<Map<string, ThreadPendingSnapshot>>(new Map());
+  const restorePendingFromThread = useCallback((threadId: string) => {
+    const thread = chatThreadsRef.current.find((th) => th.id === threadId);
+    setPendingEdits(thread?.pendingEdits?.length ? thread.pendingEdits : null);
+    setActiveEditId(thread?.activeEditId ?? null);
+  }, []);
 
   const sendCtxRef = useRef({
     chatInput: "",
@@ -237,25 +273,6 @@ export function useEditorChat(options: UseEditorChatOptions) {
     },
     [projectId, refreshRevisions, t.errors.revisionFailed],
   );
-
-  const snapshotThreadPending = useCallback(
-    (threadId: string) => {
-      if (!threadId) return;
-      threadPendingRef.current.set(threadId, {
-        pendingEdits,
-        pendingSuggestion,
-        activeEditId,
-      });
-    },
-    [pendingEdits, pendingSuggestion, activeEditId],
-  );
-
-  const restoreThreadPending = useCallback((threadId: string) => {
-    const snap = threadPendingRef.current.get(threadId) ?? EMPTY_THREAD_PENDING;
-    setPendingEdits(snap.pendingEdits);
-    setPendingSuggestion(snap.pendingSuggestion);
-    setActiveEditId(snap.activeEditId);
-  }, []);
 
   // ── Chat thread helpers ──────────────────────────────────────────────────
 
@@ -320,11 +337,11 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
   const handleNewChat = useCallback(() => {
     handleStopChat();
-    snapshotThreadPending(activeChatIdRef.current);
+    flushPendingEditsToThread();
     if (!threadHasUserMessages(messages)) {
       setMessages(makeInitialMessages(locale));
       setChatInput("");
-      restoreThreadPending(activeChatIdRef.current);
+      restorePendingFromThread(activeChatIdRef.current);
       return;
     }
     const tCopy = editorCopy(locale);
@@ -338,14 +355,14 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setActiveChatId(newThread.id);
     setMessages(makeInitialMessages(locale));
     setChatInput("");
-    restoreThreadPending(newThread.id);
+    restorePendingFromThread(newThread.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, locale, handleStopChat, snapshotThreadPending, restoreThreadPending]);
+  }, [messages, locale, handleStopChat, flushPendingEditsToThread, restorePendingFromThread]);
 
   const handleSwitchChat = useCallback((id: string) => {
     if (id === activeChatIdRef.current) return;
     handleStopChat();
-    snapshotThreadPending(activeChatIdRef.current);
+    flushPendingEditsToThread();
     const snapshotted = snapshotActiveThread(
       chatThreadsRef.current,
       activeChatIdRef.current,
@@ -360,12 +377,12 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setChatThreads(merged);
     setActiveChatId(id);
     setMessages(restoreMessages(target));
-    restoreThreadPending(id);
+    restorePendingFromThread(id);
     if (projectId && getPersistedThreads(merged).length > 0) {
       persistChatThreads(projectId, merged, onChatPersistError);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, projectId, handleStopChat, snapshotThreadPending, restoreThreadPending, onChatPersistError]);
+  }, [messages, projectId, handleStopChat, flushPendingEditsToThread, restorePendingFromThread, onChatPersistError]);
 
   const handleRenameChat = useCallback((id: string, title: string) => {
     const updated = chatThreadsRef.current.map((th) =>
@@ -382,7 +399,6 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
   const handleDeleteChat = useCallback((id: string) => {
     handleStopChat();
-    threadPendingRef.current.delete(id);
     const tCopy = editorCopy(locale);
     const filtered = chatThreadsRef.current.filter((th) => th.id !== id);
     const persisted = getPersistedThreads(filtered);
@@ -391,7 +407,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setChatThreads([newThread]);
       setActiveChatId(newThread.id);
       setMessages(makeInitialMessages(locale));
-      restoreThreadPending(newThread.id);
+      restorePendingFromThread(newThread.id);
       if (projectId) persistChatThreads(projectId, [], onChatPersistError);
       return;
     }
@@ -400,11 +416,11 @@ export function useEditorChat(options: UseEditorChatOptions) {
       const next = persisted[0];
       setActiveChatId(next.id);
       setMessages(restoreMessages(next));
-      restoreThreadPending(next.id);
+      restorePendingFromThread(next.id);
     }
     if (projectId) persistChatThreads(projectId, persisted, onChatPersistError);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, locale, handleStopChat, restoreThreadPending, onChatPersistError]);
+  }, [projectId, locale, handleStopChat, restorePendingFromThread, onChatPersistError]);
 
   // Debounced backup save while typing / streaming
   useEffect(() => {
@@ -419,6 +435,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
   useEffect(() => {
     if (!projectId) return;
     const flushOnLeave = () => {
+      flushPendingEditsToThread();
       persistActiveThreadNow(messagesRef.current);
     };
     window.addEventListener("beforeunload", flushOnLeave);
@@ -427,7 +444,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       window.removeEventListener("beforeunload", flushOnLeave);
       window.removeEventListener("pagehide", flushOnLeave);
     };
-  }, [projectId, persistActiveThreadNow]);
+  }, [projectId, persistActiveThreadNow, flushPendingEditsToThread]);
 
 
 
@@ -477,16 +494,20 @@ export function useEditorChat(options: UseEditorChatOptions) {
 
   const handleSend = useCallback(async () => {
     const ctx = sendCtxRef.current;
-    const launch = logicAuditLaunchRef.current;
-    if (launch) logicAuditLaunchRef.current = null;
+    const logicLaunch = logicAuditLaunchRef.current;
+    if (logicLaunch) logicAuditLaunchRef.current = null;
+    const editLaunch = agentEditLaunchRef.current;
+    if (editLaunch) agentEditLaunchRef.current = null;
 
-    const raw = launch?.message ?? ctx.chatInput.trim();
+    const raw = logicLaunch?.message ?? editLaunch?.message ?? ctx.chatInput.trim();
     if (!raw || ctx.chatLoading || !projectId) return;
 
-    const parsedPreview = launch
-      ? { task: "logic" as const, message: launch.message, command: "logic" as const }
-      : parseChatSlashCommand(raw, locale);
-    const isLogicAuditTask = Boolean(launch) || parsedPreview.task === "logic";
+    const parsedPreview = logicLaunch
+      ? { task: "logic" as const, message: logicLaunch.message, command: "logic" as const }
+      : editLaunch
+        ? { task: "edit" as const, message: editLaunch.message, command: "edit" as const }
+        : parseChatSlashCommand(raw, locale);
+    const isLogicAuditTask = Boolean(logicLaunch) || parsedPreview.task === "logic";
 
     if (
       !isLogicAuditTask &&
@@ -518,17 +539,19 @@ export function useEditorChat(options: UseEditorChatOptions) {
         ? ("edit" as const)
         : parsed.task ?? undefined;
     const userDisplay =
-      launch?.userDisplay ?? (parsed.command ? `/${parsed.command} · ${text}` : raw);
+      logicLaunch?.userDisplay ??
+      editLaunch?.userDisplay ??
+      (parsed.command ? `/${parsed.command} · ${text}` : raw);
     const logicAuditMode =
-      launch?.mode ?? parsed.logicAuditMode ?? (task === "logic" ? "quick" : undefined);
+      logicLaunch?.mode ?? parsed.logicAuditMode ?? (task === "logic" ? "quick" : undefined);
     const logicAuditScope =
-      launch?.scope ?? parsed.logicAuditScope ?? (task === "logic" ? "selected" : undefined);
-    const logicAuditSections = launch?.sections;
+      logicLaunch?.scope ?? parsed.logicAuditScope ?? (task === "logic" ? "selected" : undefined);
+    const logicAuditSections = logicLaunch?.sections;
     const sectionOptions = listLogicAuditSectionOptions(
       parseLatexOutline(ctx.mainLatexSource),
     );
-    const targetSectionCount = launch
-      ? launch.targetSectionCount
+    const targetSectionCount = logicLaunch
+      ? logicLaunch.targetSectionCount
       : logicAuditTargetSectionCount(
           logicAuditMode ?? "quick",
           logicAuditScope ?? "selected",
@@ -631,7 +654,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     const CHAT_STREAM_TIMEOUT_MS =
       task === "logic"
         ? logicAuditClientTimeoutMs(logicAuditMode ?? "quick", logicAuditScope ?? "selected")
-        : 120_000;
+        : agentChatStreamTimeoutMs(task, ctx.llmModel || undefined);
     let chatTimedOut = false;
     const chatTimeoutId = setTimeout(() => {
       if (!abort.signal.aborted) {
@@ -1042,6 +1065,38 @@ export function useEditorChat(options: UseEditorChatOptions) {
     void handleSend();
   };
 
+  const runAgentEdit = useCallback(
+    (message: string, userDisplay?: string) => {
+      if (chatLoading || auditInProgress || !projectId) return;
+      const section = message.trim();
+      if (!section) return;
+      agentEditLaunchRef.current = {
+        message: section,
+        userDisplay: userDisplay ?? `/${locale === "vi" ? "edit" : "edit"} · ${section}`,
+      };
+      openChatPanel();
+      void handleSend();
+    },
+    [chatLoading, auditInProgress, projectId, locale, openChatPanel, handleSend],
+  );
+
+  const composerHint = useMemo(() => {
+    if (chatLoading || chatInput.trim()) return null;
+    if (pendingEdits?.length) return t.chatDock.hintPendingEdits;
+    if (chatSelectionContext?.text?.trim() || selection.trim()) return null;
+    if (chatComposerMode === "quick-edit") return null;
+    return t.chatDock.hintEditScope;
+  }, [
+    chatLoading,
+    chatInput,
+    pendingEdits,
+    chatSelectionContext,
+    selection,
+    chatComposerMode,
+    t.chatDock.hintPendingEdits,
+    t.chatDock.hintEditScope,
+  ]);
+
   const handleAcceptSuggestion = useCallback(() => {
     if (!pendingSuggestion) return;
     const fileContent = resolveFileContent(pendingSuggestion.file || mainFile);
@@ -1068,7 +1123,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setPendingSuggestion(null);
     reportRevisionAction(revisionId, "accepted");
     if (autoCompile && nextActiveLatex) {
-      scheduleCompile(nextActiveLatex);
+      runCompileAfterEdit(nextActiveLatex);
     }
     setMessages((prev) => [
       ...prev,
@@ -1090,7 +1145,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     recordNow,
     reportRevisionAction,
     autoCompile,
-    scheduleCompile,
+    runCompileAfterEdit,
     t.pendingEdits.staleOnAccept,
     t.chatStream.acceptAppliedCompile,
     t.chatStream.acceptApplied,
@@ -1141,16 +1196,15 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setPendingEdits(remaining.length ? remaining : null);
       setActiveEditId(remaining[0]?.id ?? null);
       reportRevisionAction(edit.revisionId, "accepted");
-      if (autoCompile && nextLatex) {
-        scheduleCompile(nextLatex);
+      if (nextLatex) {
+        runCompileAfterEdit(nextLatex);
       }
     },
     [
       pendingEdits,
-      autoCompile,
       applyEditToProject,
       reportRevisionAction,
-      scheduleCompile,
+      runCompileAfterEdit,
       resolveFileContent,
       mainFile,
       t.pendingEdits.staleOnAccept,
@@ -1212,8 +1266,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setProjectFiles(files);
     setPendingEdits(null);
     setActiveEditId(null);
-    if (autoCompile && nextLatex !== latex) {
-      scheduleCompile(nextLatex);
+    if (nextLatex !== latex) {
+      runCompileAfterEdit(nextLatex);
     }
   }, [
     pendingEdits,
@@ -1224,8 +1278,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     applySingleEdit,
     recordNow,
     persistActiveFile,
-    autoCompile,
-    scheduleCompile,
+    runCompileAfterEdit,
     resolveFileContent,
     reportRevisionAction,
     t.pendingEdits.staleOnAccept,
@@ -1255,6 +1308,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
         const first = persisted[0];
         setActiveChatId(first.id);
         setMessages(restoreMessages(first));
+        restorePendingFromThread(first.id);
         return persisted;
       }
       const initial = makeThread(editorCopy(locale).sidebar.defaultChatTitle);
@@ -1263,8 +1317,26 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setMessages(makeInitialMessages(locale));
       return [];
     },
-    [locale],
+    [locale, restorePendingFromThread],
   );
+
+  useEffect(() => {
+    if (!projectId || !activeChatId) return;
+    const timer = setTimeout(() => {
+      const updated = flushPendingEditsToThread();
+      if (getPersistedThreads(updated).length > 0) {
+        persistChatThreads(projectId, updated, onChatPersistError);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [
+    pendingEdits,
+    activeEditId,
+    activeChatId,
+    projectId,
+    flushPendingEditsToThread,
+    onChatPersistError,
+  ]);
 
   useEffect(() => {
     if (!pendingSuggestion) return;
@@ -1318,6 +1390,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       pendingSuggestion,
       onAcceptSuggestion: handleAcceptSuggestion,
       onRejectSuggestion: handleRejectSuggestion,
+      composerHint,
     }),
     [
       messages,
@@ -1342,6 +1415,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       pendingSuggestion,
       handleAcceptSuggestion,
       handleRejectSuggestion,
+      composerHint,
     ],
   );
 
@@ -1385,6 +1459,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     handleAcceptAllEdits,
     handleRejectAllEdits,
     runLogicAuditFromPanel,
+    runAgentEdit,
     hydrateChatFromProject,
     persistActiveThreadNow,
     chatProps,

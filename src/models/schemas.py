@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.config import LLMProvider, normalize_llm_provider
 
@@ -222,7 +223,23 @@ class ProvidersResponse(BaseModel):
 
 class CompileAssetFile(BaseModel):
     name: str = Field(..., min_length=1, max_length=512)
-    content_base64: str = Field(..., min_length=1, max_length=50_000_000)
+    content_base64: str | None = Field(default=None, max_length=50_000_000)
+    content_hash: str | None = Field(
+        default=None,
+        min_length=64,
+        max_length=64,
+        description="sha256 hex digest; omit content_base64 when workspace already has this file.",
+    )
+
+    @model_validator(mode="after")
+    def content_or_hash(self) -> CompileAssetFile:
+        has_content = bool(self.content_base64 and self.content_base64.strip())
+        has_hash = bool(self.content_hash and self.content_hash.strip())
+        if not has_content and not has_hash:
+            raise ValueError("Each asset must include content_base64 or content_hash")
+        if has_hash and not re.fullmatch(r"[a-f0-9]{64}", self.content_hash.strip().lower()):
+            raise ValueError("content_hash must be a sha256 hex digest")
+        return self
 
 
 class CompileEnginesInfo(BaseModel):
@@ -235,6 +252,9 @@ class CompileEnginesInfo(BaseModel):
     bibtex: str | None = None
 
 
+CompileMode = Literal["full", "fast"]
+
+
 class CompileRequest(BaseModel):
     latex: str = Field(..., min_length=1, max_length=500_000)
     main_file: str = Field(default="main.tex", max_length=512)
@@ -244,6 +264,10 @@ class CompileRequest(BaseModel):
         default=None,
         max_length=128,
         description="Stable project id so incremental compile workspaces do not leak across projects.",
+    )
+    mode: CompileMode = Field(
+        default="full",
+        description="fast: skip synctex and use lighter compile passes for preview.",
     )
 
 

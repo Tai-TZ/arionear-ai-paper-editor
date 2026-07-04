@@ -105,6 +105,21 @@ def _turn_role(turn: object) -> str:
     return ""
 
 
+def _last_user_turn_was_edit(history: list | None) -> bool:
+    if not history:
+        return False
+    for turn in reversed(history[-8:]):
+        if _turn_role(turn) != "user":
+            continue
+        lower = _turn_content(turn).lower()
+        return bool(
+            "/edit" in lower
+            or re.search(r"chỉnh\s*sửa|sửa\s+phần|\bedit\b", lower)
+            or _IMPROVE_RE.search(lower)
+        )
+    return False
+
+
 def looks_like_edit_followup(query: str, history: list | None) -> bool:
     if is_casual_chat(query):
         return False
@@ -114,6 +129,10 @@ def looks_like_edit_followup(query: str, history: list | None) -> bool:
     if not q:
         return False
     if _FOLLOWUP_SHORT_RE.match(q):
+        return True
+    if _last_user_turn_was_edit(history) and (
+        _IMPROVE_RE.search(q) or _MANUSCRIPT_SECTION_RE.search(q) or len(q) <= 100
+    ):
         return True
     last_assistant = ""
     for turn in history[-6:]:

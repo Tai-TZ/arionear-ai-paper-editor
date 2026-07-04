@@ -12,12 +12,18 @@ export type CompilePayloadLike = {
 };
 
 /** Stable fingerprint of everything sent to the compile API. */
-export function computeCompileFingerprint(payload: CompilePayloadLike): string {
+export function computeCompileFingerprint(
+  payload: CompilePayloadLike,
+  assetHashes?: Record<string, string>,
+): string {
   const parts = [payload.compiler, payload.mainFile, payload.latex];
   const sortedAssets = [...payload.assets].sort((a, b) => a.name.localeCompare(b.name));
   for (const asset of sortedAssets) {
     parts.push(asset.name);
-    if (/\.(tex|bib)$/i.test(asset.name)) {
+    const hash = assetHashes?.[asset.name];
+    if (hash) {
+      parts.push(hash);
+    } else if (/\.(tex|bib)$/i.test(asset.name)) {
       parts.push(asset.dataUrl);
     } else {
       parts.push(String(asset.dataUrl.length));

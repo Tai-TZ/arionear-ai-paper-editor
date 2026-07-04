@@ -98,6 +98,12 @@ class Settings(BaseSettings):
     logic_audit_section_cooldown_sec: float = Field(default=0.4, ge=0.0, le=5.0)
     logic_audit_persist_debounce_sec: float = Field(default=1.0, ge=0.0, le=10.0)
 
+    # LaTeX compile (Cloud Run request timeout is typically 300s)
+    compile_rate_limit_per_min: int = Field(default=30, ge=1, le=200)
+    compile_pass_timeout_sec: int = Field(default=120, ge=30, le=600)
+    compile_latexmk_timeout_sec: int = Field(default=180, ge=60, le=600)
+    compile_total_budget_sec: int = Field(default=280, ge=60, le=900)
+
     # Database — Prisma CLI uses DATABASE_URL (prisma+postgres:// Accelerate).
     # FastAPI/SQLAlchemy requires DIRECT_DATABASE_URL (postgresql:// TCP).
     database_url: str = ""

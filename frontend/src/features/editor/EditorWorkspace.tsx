@@ -28,6 +28,7 @@ import {
   appendImportantFeedLine,
   applyAiState,
   compileLatex,
+  type CompileMode,
   fetchCitationRegistry,
   fetchProviders,
   fetchRevisions,
@@ -70,7 +71,7 @@ import type { ChatMessage } from "@/components/chat-overlay";
 import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import type { EditorSelectionContext, SelectionAnchor } from "@/lib/editor-selection-anchor";
 import { clampSelectionReplacement } from "@/lib/inline-suggestion";
-import { canApplyPendingEdit, contentFingerprint } from "@/lib/pending-edit-utils";
+import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
 import { COMPILE_DEBOUNCE_MS, computeCompileFingerprint, isAgentFixableCompileError } from "./lib/editor-compile";
 import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import {
@@ -94,6 +95,7 @@ import { formatLogicAuditProgress, mergeLogicSectionReport, resolveLogicIssueLin
 import { buildCitationFixPrompt, findCiteKeyLine } from "@/lib/citation-prompts";
 import {
   buildEditRedoPrompt,
+  buildStructureEditMessage,
   findSectionOutlineLine,
   type StructureSuggestion,
 } from "@/lib/structure-suggestions";
@@ -240,8 +242,14 @@ export function EditorWorkspace() {
     latex?: string;
   } | null>(null);
   const lastCompiledFingerprintRef = useRef<string | null>(null);
+  const knownCompileAssetHashesRef = useRef<Record<string, string>>({});
   const compileInFlightRef = useRef(false);
-  const pendingCompileRef = useRef<{ latexOverride?: string } | null>(null);
+  const pendingCompileRef = useRef<{
+    latexOverride?: string;
+    force?: boolean;
+    mode?: CompileMode;
+  } | null>(null);
+  const compileAfterEditRef = useRef(false);
   const compileDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pdfDataRef = useRef(pdfData);
   const compileErrorRef = useRef(compileError);
@@ -450,9 +458,19 @@ export function EditorWorkspace() {
   );
 
   const executeCompile = useCallback(
-    async (latexOverride?: string, { force = false }: { force?: boolean } = {}) => {
+    async (
+      latexOverride?: string,
+      { force = false, mode }: { force?: boolean; mode?: CompileMode } = {},
+    ) => {
       if (compileInFlightRef.current) {
-        pendingCompileRef.current = { latexOverride };
+        const nextMode: CompileMode =
+          mode ?? (force || compileAfterEditRef.current ? "full" : "fast");
+        const prev = pendingCompileRef.current;
+        pendingCompileRef.current = {
+          latexOverride,
+          force: force || prev?.force,
+          mode: force ? "full" : (prev?.mode ?? nextMode),
+        };
         return;
       }
 
@@ -472,15 +490,25 @@ export function EditorWorkspace() {
         createdAt: 0,
         updatedAt: 0,
       });
-      const fingerprint = computeCompileFingerprint(payload);
+      const assetHashes = await buildCompileAssetHashes(payload.assets);
+      const compileMode: CompileMode =
+        mode ?? (force || compileAfterEditRef.current ? "full" : "fast");
+      const fingerprint = computeCompileFingerprint(payload, assetHashes);
       if (
         !force &&
         fingerprint === lastCompiledFingerprintRef.current &&
         pdfDataRef.current &&
         !compileErrorRef.current
       ) {
+        if (compileAfterEditRef.current) {
+          compileAfterEditRef.current = false;
+          toast.success(t.chatStream.compileAfterEditOk);
+        }
         return;
       }
+
+      const feedbackAfterEdit = compileAfterEditRef.current;
+      let compileOk: boolean | null = null;
 
       compileInFlightRef.current = true;
       setIsCompiling(true);
@@ -492,6 +520,8 @@ export function EditorWorkspace() {
           mainFile: payload.mainFile,
           compiler: payload.compiler,
           cacheId: projectId ?? undefined,
+          mode: compileMode,
+          knownAssetHashes: knownCompileAssetHashesRef.current,
         });
         setCompileLog(result.log || null);
         if (result.success && result.pdf_base64) {
@@ -505,19 +535,34 @@ export function EditorWorkspace() {
           setSynctexBase64(result.synctex_base64?.trim() || null);
           setCompileWarning(result.warning?.trim() || null);
           lastCompiledFingerprintRef.current = fingerprint;
+          knownCompileAssetHashesRef.current = assetHashes;
+          compileOk = true;
         } else {
           const detail = [result.error, result.log?.slice(-4000)].filter(Boolean).join("\n\n");
           setCompileError(detail || "Compilation failed.");
+          compileOk = false;
         }
       } catch (error) {
         setCompileError(error instanceof Error ? error.message : "Compilation failed.");
+        compileOk = false;
       } finally {
         compileInFlightRef.current = false;
         setIsCompiling(false);
+        if (feedbackAfterEdit && compileOk !== null) {
+          compileAfterEditRef.current = false;
+          if (compileOk) {
+            toast.success(t.chatStream.compileAfterEditOk);
+          } else {
+            toast.error(t.chatStream.compileAfterEditFail);
+          }
+        }
         const pending = pendingCompileRef.current;
         pendingCompileRef.current = null;
         if (pending) {
-          void executeCompile(pending.latexOverride);
+          void executeCompile(pending.latexOverride, {
+            force: pending.force,
+            mode: pending.mode,
+          });
         }
       }
     },
@@ -532,8 +577,14 @@ export function EditorWorkspace() {
       projectName,
       persistActiveFile,
       persistableFile,
+      t.chatStream.compileAfterEditOk,
+      t.chatStream.compileAfterEditFail,
     ],
   );
+
+  const markCompileAfterEdit = useCallback(() => {
+    compileAfterEditRef.current = true;
+  }, []);
 
   const scheduleCompile = useCallback(
     (latexOverride?: string) => {
@@ -561,6 +612,7 @@ export function EditorWorkspace() {
 
   useEffect(() => {
     lastCompiledFingerprintRef.current = null;
+    knownCompileAssetHashesRef.current = {};
     pendingCompileRef.current = null;
     if (compileDebounceRef.current) {
       clearTimeout(compileDebounceRef.current);
@@ -616,6 +668,8 @@ export function EditorWorkspace() {
     persistActiveFile,
     refreshRevisions,
     scheduleCompile,
+    compileNow: handleCompile,
+    onCompileAfterEdit: markCompileAfterEdit,
     setMobileChatOpen,
     scoreAuditLoading,
     sideEffects: chatSideEffects,
@@ -659,10 +713,27 @@ export function EditorWorkspace() {
     handleAcceptSuggestion,
     handleRejectSuggestion,
     runLogicAuditFromPanel,
+    runAgentEdit,
     hydrateChatFromProject,
     persistActiveThreadNow,
     chatProps,
   } = chat;
+
+  const applyStructureFix = useCallback(
+    (suggestion: StructureSuggestion) => {
+      const section = (suggestion.section ?? "").trim();
+      const message = buildStructureEditMessage(suggestion);
+      const display = section
+        ? locale === "vi"
+          ? `/edit · Sửa ngay: ${section}`
+          : `/edit · Apply fix: ${section}`
+        : `/edit · ${message.slice(0, 56)}`;
+      runAgentEdit(message, display);
+      setMobileToolsOpen(false);
+      openChatPanel();
+    },
+    [runAgentEdit, locale, openChatPanel],
+  );
 
   const auditReportStale = useMemo(
     () =>
@@ -982,6 +1053,8 @@ export function EditorWorkspace() {
       }
 
       setAssets(updated.assets ?? mergedAssets);
+      knownCompileAssetHashesRef.current = {};
+      lastCompiledFingerprintRef.current = null;
       void syncSession(projectId, nextName, mainContent);
     },
     [
@@ -1480,6 +1553,7 @@ export function EditorWorkspace() {
                 onJumpToStructureSection={jumpToStructureSection}
                 canJumpToStructureSection={canJumpToStructureSection}
                 onAskArioStructure={queueChatFollowUp}
+                onApplyStructureFix={applyStructureFix}
                 onAskArioCitation={askArioCitation}
                 onRunLogicAudit={runLogicAuditFromPanel}
                 logicAuditLoading={auditInProgress}
@@ -1663,6 +1737,7 @@ export function EditorWorkspace() {
           onJumpToStructureSection={jumpToStructureSection}
           canJumpToStructureSection={canJumpToStructureSection}
           onAskArioStructure={queueChatFollowUp}
+          onApplyStructureFix={applyStructureFix}
           onAskArioCitation={askArioCitation}
           onRunLogicAudit={runLogicAuditFromPanel}
           logicAuditLoading={auditInProgress}

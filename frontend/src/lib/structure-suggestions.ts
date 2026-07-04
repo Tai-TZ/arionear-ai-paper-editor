@@ -39,6 +39,26 @@ export function buildStructureAskPrompt(suggestion: StructureSuggestion): string
   return `/structure ${detail || `Cải thiện phần ${section}`}`;
 }
 
+/** Direct edit instruction for one-click structure fixes (task=edit, no slash). */
+export function buildStructureEditMessage(suggestion: StructureSuggestion): string {
+  const section = (suggestion.section ?? "").trim() || "bài báo";
+  const detail = (suggestion.message ?? "").trim();
+  const type = (suggestion.type ?? "").toLowerCase();
+
+  if (type === "missing") {
+    return `Thêm section ${section} theo khung IMRAD trong main.tex`;
+  }
+  if (type === "length") {
+    return `Mở rộng phần ${section} cho đủ nội dung học thuật${detail ? `: ${detail}` : ""}`;
+  }
+  if (type === "misplaced") {
+    return `Sắp xếp lại cấu trúc phần ${section}${detail ? ` — ${detail}` : ""}`;
+  }
+  return detail
+    ? `Cải thiện phần ${section}: ${detail}`
+    : `Cải thiện phần ${section} theo gợi ý cấu trúc`;
+}
+
 export function buildEditRedoPrompt(opts: {
   section?: string;
   description?: string;

@@ -29,6 +29,7 @@ export function ToolsPanel({
   onJumpToStructureSection,
   canJumpToStructureSection,
   onAskArioStructure,
+  onApplyStructureFix,
   onAskArioCitation,
   onRunLogicAudit,
   logicAuditLoading = false,
@@ -57,6 +58,7 @@ export function ToolsPanel({
   onJumpToStructureSection: (sectionName: string) => void;
   canJumpToStructureSection: (sectionName: string) => boolean;
   onAskArioStructure: (prefill: string) => void;
+  onApplyStructureFix?: (suggestion: StructureSuggestion) => void;
   onAskArioCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
@@ -210,6 +212,7 @@ export function ToolsPanel({
               suggestions={structureSuggestions}
               onJumpToSection={onJumpToStructureSection}
               onAskArio={onAskArioStructure}
+              onApplyFix={onApplyStructureFix}
               canJump={canJumpToStructureSection}
             />
           </div>

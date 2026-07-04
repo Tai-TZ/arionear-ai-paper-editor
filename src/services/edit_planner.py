@@ -304,17 +304,32 @@ async def plan_edit(
     router_provider, planner_model = resolve_editor_aux_llm()
 
     llm = get_llm(provider=router_provider, model=planner_model, temperature=0)
-    try:
-        response = await asyncio.wait_for(
-            llm.ainvoke(
-                [
-                    SystemMessage(content=system),
-                    HumanMessage(content=context),
-                ]
-            ),
-            timeout=PLANNER_TIMEOUT_SEC,
-        )
-    except Exception:
+    response = None
+    for attempt in range(2):
+        try:
+            response = await asyncio.wait_for(
+                llm.ainvoke(
+                    [
+                        SystemMessage(content=system),
+                        HumanMessage(content=context),
+                    ]
+                ),
+                timeout=PLANNER_TIMEOUT_SEC,
+            )
+            break
+        except Exception:
+            if attempt == 0:
+                await asyncio.sleep(2.0)
+                continue
+            return ruled or EditPlan(
+                target_type="latex_command",
+                target_id="title",
+                operation="replace_snippet",
+                confidence=0.5,
+                label="Tiêu đề · \\title{...}",
+            )
+
+    if response is None:
         return ruled or EditPlan(
             target_type="latex_command",
             target_id="title",

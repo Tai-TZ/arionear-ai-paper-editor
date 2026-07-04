@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Sparkles } from "lucide-react";
+import { ArrowRight, MapPin, Sparkles, Wrench } from "lucide-react";
 
 import type { StructureSuggestion } from "@/lib/structure-suggestions";
 import { buildStructureAskPrompt } from "@/lib/structure-suggestions";
@@ -9,6 +9,7 @@ type StructureSuggestionsPanelProps = {
   suggestions: StructureSuggestion[];
   onJumpToSection: (sectionName: string) => void;
   onAskArio: (prefill: string) => void;
+  onApplyFix?: (suggestion: StructureSuggestion) => void;
   canJump: (sectionName: string) => boolean;
 };
 
@@ -26,6 +27,7 @@ export function StructureSuggestionsPanel({
   suggestions,
   onJumpToSection,
   onAskArio,
+  onApplyFix,
   canJump,
 }: StructureSuggestionsPanelProps) {
   const { locale } = useLocale();
@@ -75,6 +77,16 @@ export function StructureSuggestionsPanel({
                   >
                     <MapPin className="h-3 w-3" />
                     {t.tools.structureJump}
+                  </button>
+                ) : null}
+                {onApplyFix ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/15"
+                    onClick={() => onApplyFix(item)}
+                  >
+                    <Wrench className="h-3 w-3" />
+                    {t.tools.structureApplyFix}
                   </button>
                 ) : null}
                 <button

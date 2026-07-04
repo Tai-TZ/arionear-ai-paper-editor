@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from src.config import get_settings
 from src.models.schemas import (
     CompileEnginesInfo,
     CompileRequest,
@@ -45,7 +46,43 @@ _WINDOWS_MIKTEX_BIN = (
 _LOG_LIMIT = 200_000
 _WORKSPACE_TTL_SEC = 2 * 60 * 60
 _WORKSPACE_MAX = 24
+_PDF_CACHE_TTL_SEC = 30 * 60
+_PDF_CACHE_MAX = 32
 _LATEX_INTERACTION = "batchmode"
+_COMPILE_ARTIFACT_SUFFIXES = {
+    ".log",
+    ".aux",
+    ".out",
+    ".toc",
+    ".lof",
+    ".lot",
+    ".pdf",
+    ".synctex.gz",
+    ".fls",
+    ".fdb_latexmk",
+    ".bbl",
+    ".blg",
+    ".bcf",
+    ".run.xml",
+    ".idx",
+    ".ilg",
+    ".ind",
+    ".nav",
+    ".snm",
+    ".vrb",
+}
+
+
+class AssetResyncRequiredError(Exception):
+    """Raised when hash-only assets are missing or stale in the compile workspace."""
+
+    def __init__(self, names: list[str]):
+        self.names = names
+        super().__init__(f"ASSET_RESYNC_REQUIRED:{','.join(names)}")
+
+
+class CompileBudgetExceededError(Exception):
+    """Raised when a compile exceeds the configured wall-clock budget."""
 
 
 @dataclass
@@ -56,6 +93,8 @@ class _CachedWorkspace:
 
 _workspaces: dict[str, _CachedWorkspace] = {}
 _workspace_lock = threading.Lock()
+_pdf_cache: dict[str, tuple[CompileResponse, float]] = {}
+_pdf_cache_lock = threading.Lock()
 
 
 def _find_executable(name: str) -> str | None:
@@ -224,6 +263,8 @@ def _copy_latex_stubs(work_dir: Path, latex: str) -> None:
 
 def _miktex_env(*, allow_package_install: bool = True) -> dict[str, str]:
     env = os.environ.copy()
+    if not _is_miktex():
+        return env
     if allow_package_install:
         env["MIKTEX_ENABLE_INSTALLER"] = "1"
         env["MIKTEX_ALLOW_UNATTENDED"] = "1"
@@ -232,19 +273,129 @@ def _miktex_env(*, allow_package_install: bool = True) -> dict[str, str]:
     return env
 
 
+def _is_miktex() -> bool:
+    return os.name == "nt"
+
+
+def _pass_timeout_sec() -> int:
+    return get_settings().compile_pass_timeout_sec
+
+
+def _latexmk_timeout_sec() -> int:
+    return get_settings().compile_latexmk_timeout_sec
+
+
+def _build_tex_cmd(engine: str, main_file: str, *, synctex: bool) -> list[str]:
+    cmd = [engine, f"-interaction={_LATEX_INTERACTION}"]
+    if synctex:
+        cmd.append("-synctex=1")
+    if _is_miktex():
+        cmd.append("--enable-installer")
+    cmd.append(main_file)
+    return cmd
+
+
+_compile_budget_local = threading.local()
+
+
+def _set_compile_budget(deadline: float | None) -> None:
+    _compile_budget_local.deadline = deadline
+
+
+def _assert_compile_budget() -> None:
+    deadline = getattr(_compile_budget_local, "deadline", None)
+    if deadline is not None and time.monotonic() > deadline:
+        raise CompileBudgetExceededError("LaTeX compilation exceeded time budget.")
+
+
+def _clear_compile_budget() -> None:
+    _compile_budget_local.deadline = None
+
+
+def _file_content_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _assets_fingerprint(assets: list) -> str:
     digest = hashlib.sha256()
     for asset in sorted(assets, key=lambda item: item.name.lower()):
         digest.update(asset.name.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(asset.content_base64.encode("utf-8"))
+        if asset.content_base64 and asset.content_base64.strip():
+            digest.update(asset.content_base64.encode("utf-8"))
+        elif asset.content_hash:
+            digest.update(asset.content_hash.strip().lower().encode("utf-8"))
         digest.update(b"\0")
     return digest.hexdigest()
 
 
 def _workspace_cache_key(cache_id: str | None, assets_key: str) -> str:
     project = (cache_id or "").strip()
-    return f"{project}:{assets_key}" if project else assets_key
+    if project:
+        return f"proj:{project}"
+    return f"ephemeral:{assets_key}"
+
+
+def _workspace_content_digest(
+    work_dir: Path,
+    *,
+    latex: str,
+    compiler: str,
+    mode: str,
+    main_file: str,
+) -> str:
+    digest = hashlib.sha256()
+    digest.update(compiler.encode("utf-8"))
+    digest.update(mode.encode("utf-8"))
+    digest.update(main_file.encode("utf-8"))
+    digest.update(latex.encode("utf-8"))
+    for path in sorted(work_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(work_dir).as_posix()
+        if any(rel.endswith(suffix) for suffix in _COMPILE_ARTIFACT_SUFFIXES):
+            continue
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _prune_pdf_cache(now: float | None = None) -> None:
+    now = now or time.monotonic()
+    with _pdf_cache_lock:
+        expired = [key for key, (_, ts) in _pdf_cache.items() if now - ts > _PDF_CACHE_TTL_SEC]
+        for key in expired:
+            _pdf_cache.pop(key, None)
+        overflow = len(_pdf_cache) - _PDF_CACHE_MAX
+        if overflow <= 0:
+            return
+        for key in sorted(_pdf_cache, key=lambda item: _pdf_cache[item][1])[:overflow]:
+            _pdf_cache.pop(key, None)
+
+
+def _get_cached_pdf(cache_key: str) -> CompileResponse | None:
+    now = time.monotonic()
+    _prune_pdf_cache(now)
+    with _pdf_cache_lock:
+        cached = _pdf_cache.get(cache_key)
+        if not cached:
+            return None
+        response, ts = cached
+        if now - ts > _PDF_CACHE_TTL_SEC:
+            _pdf_cache.pop(cache_key, None)
+            return None
+        return response.model_copy(deep=True)
+
+
+def _store_cached_pdf(cache_key: str, response: CompileResponse) -> None:
+    if not response.success or not response.pdf_base64:
+        return
+    now = time.monotonic()
+    _prune_pdf_cache(now)
+    with _pdf_cache_lock:
+        _pdf_cache[cache_key] = (response.model_copy(deep=True), now)
 
 
 def _prune_workspaces(now: float | None = None) -> None:
@@ -266,25 +417,50 @@ def _prune_workspaces(now: float | None = None) -> None:
         shutil.rmtree(workspace.path, ignore_errors=True)
 
 
-def _acquire_workspace(assets_key: str, assets: list) -> tuple[Path, bool]:
+def _acquire_workspace(
+    cache_id: str | None,
+    assets: list,
+    *,
+    assets_key: str,
+) -> tuple[Path, bool]:
+    workspace_key = _workspace_cache_key(cache_id, assets_key)
+    resync: list[str] = []
+
     with _workspace_lock:
         _prune_workspaces()
-        cached = _workspaces.get(assets_key)
+        cached = _workspaces.get(workspace_key)
         if cached and cached.path.is_dir():
             cached.last_used = time.monotonic()
-            return cached.path, False
-
-        work_dir = Path(tempfile.mkdtemp(prefix="arionear-latex-"))
-        _workspaces[assets_key] = _CachedWorkspace(path=work_dir, last_used=time.monotonic())
-        fresh = True
+            work_dir = cached.path
+            fresh = False
+        else:
+            work_dir = Path(tempfile.mkdtemp(prefix="arionear-latex-"))
+            _workspaces[workspace_key] = _CachedWorkspace(path=work_dir, last_used=time.monotonic())
+            fresh = True
 
     for asset in assets:
         rel = _safe_asset_path(asset.name)
         if rel is None:
             continue
         dest = work_dir / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(_decode_asset_payload(asset.content_base64))
+        payload = (asset.content_base64 or "").strip()
+        if payload:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(_decode_asset_payload(payload))
+            continue
+
+        expected = (asset.content_hash or "").strip().lower()
+        if not expected:
+            resync.append(asset.name)
+            continue
+        if not dest.is_file():
+            resync.append(asset.name)
+            continue
+        if _file_content_hash(dest) != expected:
+            resync.append(asset.name)
+
+    if resync:
+        raise AssetResyncRequiredError(resync)
 
     _mirror_figure_assets_to_root(work_dir)
     return work_dir, fresh
@@ -302,9 +478,11 @@ def _needs_full_toolchain(latex: str) -> bool:
     return False
 
 
-def _max_direct_passes(latex: str) -> int:
+def _max_direct_passes(latex: str, *, fast: bool = False) -> int:
     if _needs_full_toolchain(latex):
         return 0
+    if fast:
+        return 1
     if re.search(
         r"\\(?:label|ref|eqref|pageref|autoref|cref|Cref|tableofcontents|listoffigures|listoftables)\b",
         latex,
@@ -386,11 +564,13 @@ _DROPPABLE_PACKAGES = {
 }
 
 
-def _strip_droppable_packages(latex: str) -> str:
+def _strip_droppable_packages(latex: str, extra: set[str] | None = None) -> str:
+    droppable = _DROPPABLE_PACKAGES | (extra or set())
+
     def _replace(m: re.Match) -> str:
         names_str = m.group(1)
         names = [n.strip() for n in names_str.split(",")]
-        kept = [n for n in names if n not in _DROPPABLE_PACKAGES]
+        kept = [n for n in names if n not in droppable]
         if not kept:
             return ""
         if len(kept) == len(names):
@@ -520,6 +700,7 @@ def _run_subprocess(
     *,
     allow_package_install: bool = True,
 ) -> tuple[int, str]:
+    _assert_compile_budget()
     result = subprocess.run(
         cmd,
         cwd=work_dir,
@@ -553,6 +734,7 @@ def _run_latexmk(
     main_file: str,
     *,
     allow_package_install: bool = True,
+    synctex: bool = True,
 ) -> tuple[int, str]:
     latexmk = find_latexmk()
     if not latexmk:
@@ -561,14 +743,14 @@ def _run_latexmk(
         latexmk,
         *_latexmk_compiler_flag(compiler),
         f"-interaction={_LATEX_INTERACTION}",
-        "-synctex=1",
-        "-halt-on-error",
-        main_file,
     ]
+    if synctex:
+        cmd.append("-synctex=1")
+    cmd.extend(["-halt-on-error", main_file])
     return _run_subprocess(
         cmd,
         work_dir,
-        timeout=600,
+        timeout=_latexmk_timeout_sec(),
         allow_package_install=allow_package_install,
     )
 
@@ -580,18 +762,13 @@ def _run_tex_pass(
     main_file: str,
     *,
     allow_package_install: bool = True,
+    synctex: bool = True,
 ) -> tuple[int, str]:
-    cmd = [
-        engine,
-        f"-interaction={_LATEX_INTERACTION}",
-        "-synctex=1",
-        "--enable-installer",
-        main_file,
-    ]
+    cmd = _build_tex_cmd(engine, main_file, synctex=synctex)
     return _run_subprocess(
         cmd,
         work_dir,
-        timeout=600,
+        timeout=_pass_timeout_sec(),
         allow_package_install=allow_package_install,
     )
 
@@ -647,6 +824,7 @@ def _direct_compile(
     passes: int,
     *,
     allow_package_install: bool = True,
+    synctex: bool = True,
 ) -> list[str]:
     logs: list[str] = []
     engine = find_tex_engine(compiler)
@@ -663,6 +841,7 @@ def _direct_compile(
             work_dir,
             main_file,
             allow_package_install=allow_package_install,
+            synctex=synctex,
         )
         logs.append(log)
         if code != 0 and not pdf_path.is_file():
@@ -680,6 +859,8 @@ def _manual_compile(
     main_latex: str,
     *,
     allow_package_install: bool = True,
+    synctex: bool = True,
+    fast: bool = False,
 ) -> list[str]:
     logs: list[str] = []
     engine = find_tex_engine(compiler)
@@ -690,6 +871,7 @@ def _manual_compile(
     jobname = _jobname(main_file)
     needs_bibtex = bool(_extract_bib_files(main_latex)) and not uses_biblatex(main_latex)
     needs_biber = uses_biblatex(main_latex)
+    post_bib_passes = 1 if fast else 2
 
     def tex_passes() -> None:
         code, log = _run_tex_pass(
@@ -698,17 +880,19 @@ def _manual_compile(
             work_dir,
             main_file,
             allow_package_install=allow_package_install,
+            synctex=synctex,
         )
         logs.append(log)
         if code != 0 and not (work_dir / f"{jobname}.pdf").exists():
             return
-        if _needs_rerun(log):
+        if _needs_rerun(log) and not fast:
             code, log = _run_tex_pass(
                 compiler,
                 engine,
                 work_dir,
                 main_file,
                 allow_package_install=allow_package_install,
+                synctex=synctex,
             )
             logs.append(log)
 
@@ -719,13 +903,14 @@ def _manual_compile(
         if biber:
             code, log = _run_biber(work_dir, jobname, allow_package_install=allow_package_install)
             logs.append(log)
-            for _ in range(2):
+            for _ in range(post_bib_passes):
                 code, log = _run_tex_pass(
                     compiler,
                     engine,
                     work_dir,
                     main_file,
                     allow_package_install=allow_package_install,
+                    synctex=synctex,
                 )
                 logs.append(log)
         else:
@@ -741,13 +926,14 @@ def _manual_compile(
                 allow_package_install=allow_package_install,
             )
             logs.append(log)
-            for _ in range(2):
+            for _ in range(post_bib_passes):
                 code, log = _run_tex_pass(
                     compiler,
                     engine,
                     work_dir,
                     main_file,
                     allow_package_install=allow_package_install,
+                    synctex=synctex,
                 )
                 logs.append(log)
 
@@ -796,12 +982,14 @@ def _run_compile_attempts(
     all_tex: str,
     *,
     allow_package_install: bool,
+    fast: bool = False,
+    synctex: bool = True,
 ) -> list[str]:
     logs: list[str] = []
     jobname = _jobname(main_file)
     pdf_path = work_dir / f"{jobname}.pdf"
 
-    direct_passes = _max_direct_passes(all_tex)
+    direct_passes = _max_direct_passes(all_tex, fast=fast)
     if direct_passes > 0:
         logs.extend(
             _direct_compile(
@@ -810,16 +998,32 @@ def _run_compile_attempts(
                 main_file,
                 direct_passes,
                 allow_package_install=allow_package_install,
+                synctex=synctex,
             )
         )
         if pdf_path.is_file():
             return logs
+
+    if _needs_full_toolchain(all_tex):
+        logs.extend(
+            _manual_compile(
+                compiler,
+                work_dir,
+                main_file,
+                all_tex,
+                allow_package_install=allow_package_install,
+                synctex=synctex,
+                fast=fast,
+            )
+        )
+        return logs
 
     latexmk_code, latexmk_log = _run_latexmk(
         compiler,
         work_dir,
         main_file,
         allow_package_install=allow_package_install,
+        synctex=synctex,
     )
     if latexmk_code >= 0 and latexmk_log:
         logs.append(latexmk_log)
@@ -832,6 +1036,8 @@ def _run_compile_attempts(
                 main_file,
                 all_tex,
                 allow_package_install=allow_package_install,
+                synctex=synctex,
+                fast=fast,
             )
         )
 
@@ -839,9 +1045,21 @@ def _run_compile_attempts(
 
 
 def compile_latex(request: CompileRequest) -> CompileResponse:
+    settings = get_settings()
+    _set_compile_budget(time.monotonic() + settings.compile_total_budget_sec)
+    try:
+        return _compile_latex_impl(request)
+    finally:
+        _clear_compile_budget()
+
+
+def _compile_latex_impl(request: CompileRequest) -> CompileResponse:
     main_file = request.main_file.strip() or "main.tex"
     compiler = detect_compiler(request.latex, request.compiler)
     engine_path = find_tex_engine(compiler)
+    compile_mode = request.mode or "full"
+    fast = compile_mode == "fast"
+    synctex = compile_mode == "full"
 
     if not engine_path:
         return CompileResponse(
@@ -858,11 +1076,12 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
     warnings: list[str] = []
     jobname = _jobname(main_file)
 
-    assets_key = _workspace_cache_key(
+    assets_key = _assets_fingerprint(request.assets)
+    work_dir, fresh_workspace = _acquire_workspace(
         request.cache_id,
-        _assets_fingerprint(request.assets),
+        request.assets,
+        assets_key=assets_key,
     )
-    work_dir, fresh_workspace = _acquire_workspace(assets_key, request.assets)
     allow_package_install = fresh_workspace
     asset_names = {Path(a.name).name for a in request.assets}
 
@@ -888,6 +1107,19 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
     all_tex = _collect_all_tex_sources(prepared, work_dir, main_file)
     _ensure_bibliography(work_dir, all_tex)
 
+    pdf_cache_key = _workspace_content_digest(
+        work_dir,
+        latex=prepared,
+        compiler=compiler,
+        mode=compile_mode,
+        main_file=main_file,
+    )
+    cached_pdf = _get_cached_pdf(pdf_cache_key)
+    if cached_pdf is not None:
+        if warnings and not cached_pdf.warning:
+            cached_pdf.warning = "\n".join(warnings)
+        return cached_pdf
+
     logs.extend(
         _run_compile_attempts(
             compiler,
@@ -895,6 +1127,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
             main_file,
             all_tex,
             allow_package_install=allow_package_install,
+            fast=fast,
+            synctex=synctex,
         )
     )
 
@@ -907,6 +1141,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
                 main_file,
                 all_tex,
                 allow_package_install=True,
+                fast=fast,
+                synctex=synctex,
             )
         )
 
@@ -914,9 +1150,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
         merged = "\n".join(logs)
         missing_sty = _extract_missing_sty(merged)
         if missing_sty and missing_sty not in _DROPPABLE_PACKAGES:
-            _DROPPABLE_PACKAGES.add(missing_sty)
             warnings.append(f"Package `{missing_sty}` not available — removed for preview.")
-            retry_tex = _strip_droppable_packages(prepared)
+            retry_tex = _strip_droppable_packages(prepared, extra={missing_sty})
             main_path.write_text(retry_tex, encoding="utf-8")
             all_tex = _collect_all_tex_sources(retry_tex, work_dir, main_file)
             logs.clear()
@@ -927,6 +1162,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
                     main_file,
                     all_tex,
                     allow_package_install=True,
+                    fast=fast,
+                    synctex=synctex,
                 )
             )
 
@@ -940,9 +1177,9 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
             compiler=compiler,
         )
 
-    synctex_b64 = _read_synctex_gz(work_dir, jobname)
+    synctex_b64 = _read_synctex_gz(work_dir, jobname) if synctex else ""
     merged_log = "\n".join(logs)
-    return CompileResponse(
+    response = CompileResponse(
         success=True,
         pdf_base64=base64.b64encode(pdf_path.read_bytes()).decode("ascii"),
         log=merged_log[-_LOG_LIMIT:],
@@ -952,6 +1189,8 @@ def compile_latex(request: CompileRequest) -> CompileResponse:
         synctex_base64=synctex_b64,
         main_file=main_file,
     )
+    _store_cached_pdf(pdf_cache_key, response)
+    return response
 
 
 def find_synctex() -> str | None:

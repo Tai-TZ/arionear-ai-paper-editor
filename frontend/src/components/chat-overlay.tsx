@@ -71,6 +71,7 @@ type ChatDockProps = {
   selectionContext?: EditorSelectionContext | null;
   onClearSelectionContext?: () => void;
   streamProgress?: ChatStreamProgressSnapshot;
+  composerHint?: string | null;
 };
 
 export function ChatOverlay(props: ChatDockProps) {
@@ -98,6 +99,7 @@ export function ChatDock({
   selectionContext = null,
   onClearSelectionContext,
   streamProgress: streamProgressProp,
+  composerHint = null,
 }: ChatDockProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
@@ -319,6 +321,12 @@ export function ChatDock({
             activity={liveActivity}
             waitElapsedSec={waitElapsedSec}
           />
+        )}
+
+        {composerHint && !chatLoading && (
+          <p className="chat-composer-hint px-3 pb-1 text-[11px] leading-snug text-muted-foreground">
+            {composerHint}
+          </p>
         )}
 
         {composerMode === "quick-edit" && (

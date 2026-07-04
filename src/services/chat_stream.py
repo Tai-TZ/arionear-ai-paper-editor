@@ -21,6 +21,7 @@ from src.agents.state import AgentState
 from src.config import get_settings, normalize_llm_provider
 from src.models.schemas import ChatRequest
 from src.services.agent_latex import resolve_latex_sources
+from src.services.agent_timeouts import compute_agent_task_timeout_sec
 from src.services.chat_context import (
     build_chat_llm_messages,
     build_chat_user_content,
@@ -91,8 +92,6 @@ _TASK_LABELS: dict[str, str] = {
 }
 
 T = TypeVar("T")
-
-AGENT_TASK_TIMEOUT_SEC = 90.0
 
 
 _logic_audit_busy: set[str] = set()
@@ -835,11 +834,21 @@ async def stream_chat(
                 active_file=active_file,
                 main_file=main_file,
             )
+            scope_label = str(prepared.get("scope_label") or scope_detail or "").strip()
+            original_text = str(prepared.get("original_text") or "")
+            char_hint = (
+                f"~{len(original_text):,} ký tự".replace(",", ".")
+                if original_text
+                else ""
+            )
+            scope_preview_detail = (
+                f"{scope_label} · {char_hint}" if scope_label and char_hint else scope_label or char_hint
+            )
             state_evt, act_evt = _emit_state(
-                "scope",
+                "edit-scope",
                 state_label(ui_locale, "scope_edit"),
                 status="done",
-                detail=scope_detail,
+                detail=scope_preview_detail or scope_detail,
                 task=task,
                 section=section,
             )
@@ -873,7 +882,7 @@ async def stream_chat(
                 async for event in _monitor_long_task(
                     edit_node({**prepared, "task": "edit"}),
                     _edit_tick,
-                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_sec=compute_agent_task_timeout_sec("edit", model),
                     timeout_task="edit",
                     cancel_event=cancel_event,
                 ):
@@ -980,7 +989,7 @@ async def stream_chat(
                 async for event in _monitor_long_task(
                     style_node({**prepared, "task": "style"}),
                     _style_tick,
-                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_sec=compute_agent_task_timeout_sec("style", model),
                     timeout_task="style",
                     cancel_event=cancel_event,
                 ):
@@ -1066,7 +1075,7 @@ async def stream_chat(
                 async for event in _monitor_long_task(
                     structure_node(state),
                     _structure_tick,
-                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_sec=compute_agent_task_timeout_sec("structure", model),
                     timeout_task="structure",
                     cancel_event=cancel_event,
                 ):
@@ -1359,7 +1368,7 @@ async def stream_chat(
                 async for event in _monitor_long_task(
                     citation_node(state),
                     _citation_tick,
-                    timeout_sec=AGENT_TASK_TIMEOUT_SEC,
+                    timeout_sec=compute_agent_task_timeout_sec("citation", model),
                     timeout_task="citation",
                     cancel_event=cancel_event,
                 ):
