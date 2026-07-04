@@ -8,12 +8,17 @@ import pytest
 from src.models.schemas import ChatRequest
 from src.services.agent_timeouts import AGENT_TASK_TIMEOUT_SEC
 from src.services.chat_stream import (
+    CONTENT_RESYNC_CODE,
     AgentTaskTimeoutError,
+    ContentResyncRequiredError,
     _agent_timeout_message,
+    _content_hash,
     _localize_agent_response,
     _merge_agent_into_done,
     _monitor_long_task,
+    _resolve_active_file_content,
     _scope_detail,
+    _validate_main_latex_cache,
     stream_chat,
 )
 from src.services.intent_rules import IntentResult
@@ -339,3 +344,71 @@ async def test_stream_logic_audit_rejects_concurrent_session(monkeypatch):
     error = next((data for name, data in events if name == "error"), None)
     assert error is not None
     assert "đang chạy" in error["message"].lower()
+
+
+def test_validate_main_latex_cache_rejects_empty_session_with_hash():
+    request = ChatRequest(
+        message="hello",
+        session_id="hash-only-test",
+        latex_content="",
+        latex_content_hash="abc123",
+    )
+    with pytest.raises(ContentResyncRequiredError) as exc:
+        _validate_main_latex_cache(request, "")
+    assert exc.value.reason == "main_cache_miss"
+
+
+def test_validate_main_latex_cache_rejects_stale_hash():
+    latex = r"\begin{document}old\end{document}"
+    request = ChatRequest(
+        message="hello",
+        session_id="stale-hash-test",
+        latex_content="",
+        latex_content_hash="deadbeef",
+    )
+    with pytest.raises(ContentResyncRequiredError) as exc:
+        _validate_main_latex_cache(request, latex)
+    assert exc.value.reason == "main_hash_mismatch"
+
+
+def test_validate_main_latex_cache_accepts_matching_hash():
+    latex = r"\begin{document}ok\end{document}"
+    request = ChatRequest(
+        message="hello",
+        session_id="good-hash-test",
+        latex_content="",
+        latex_content_hash=_content_hash(latex),
+    )
+    _validate_main_latex_cache(request, latex)
+
+
+def test_resolve_active_file_raises_when_aux_cache_missing():
+    request = ChatRequest(
+        message="/edit fix intro",
+        session_id="aux-miss-test",
+        active_file="chapters/intro.tex",
+        main_file="main.tex",
+        active_file_content_hash="abc123",
+    )
+    with pytest.raises(ContentResyncRequiredError) as exc:
+        _resolve_active_file_content(request, "aux-miss-test", r"\begin{document}\end{document}")
+    assert exc.value.reason == "active_cache_miss"
+
+
+@pytest.mark.asyncio
+async def test_stream_hash_only_empty_session_emits_resync(monkeypatch):
+    monkeypatch.setattr(
+        "src.services.chat_stream.enforce_llm_quota_for_paper",
+        lambda *_args, **_kwargs: None,
+    )
+
+    request = ChatRequest(
+        message="hello",
+        session_id="stream-resync-test",
+        latex_content="",
+        latex_content_hash="abc123",
+    )
+    events = await _collect_stream(request)
+    error = next((data for name, data in events if name == "error"), None)
+    assert error is not None
+    assert error.get("code") == CONTENT_RESYNC_CODE

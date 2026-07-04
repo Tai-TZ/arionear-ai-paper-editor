@@ -3,6 +3,7 @@ import { getAccessToken, logoutUser } from "@/lib/auth-store";
 import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
 import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
+import { contentFingerprint } from "@/lib/pending-edit-utils";
 
 const API_BASE = resolveApiBase();
 
@@ -315,7 +316,30 @@ export async function fetchProviders(): Promise<{
   return fetchDedupe("providers", () => apiFetch("/providers"), 60_000);
 }
 
-export async function syncSession(
+type SessionSyncRecord = {
+  syncedHash: string | null;
+  syncedName: string | null;
+  inflight: Promise<void> | null;
+};
+
+const sessionSyncById = new Map<string, SessionSyncRecord>();
+
+function sessionSyncRecord(sessionId: string): SessionSyncRecord {
+  let record = sessionSyncById.get(sessionId);
+  if (!record) {
+    record = { syncedHash: null, syncedName: null, inflight: null };
+    sessionSyncById.set(sessionId, record);
+  }
+  return record;
+}
+
+/** Drop cached sync state when switching projects (fresh page load starts empty). */
+export function invalidateSessionSync(sessionId?: string) {
+  if (sessionId) sessionSyncById.delete(sessionId);
+  else sessionSyncById.clear();
+}
+
+async function patchOrCreateSession(
   sessionId: string,
   name: string,
   latexContent: string,
@@ -337,6 +361,52 @@ export async function syncSession(
   }
 }
 
+/**
+ * Sync LaTeX to the agent session cache (server-side papers row for AI).
+ * Skips when content hash unchanged; coalesces concurrent calls per session.
+ * Call on editor boot and before chat — not on every autosave.
+ */
+export async function syncSession(
+  sessionId: string,
+  name: string,
+  latexContent: string,
+  options?: { force?: boolean },
+): Promise<void> {
+  const hash = contentFingerprint(latexContent);
+  const record = sessionSyncRecord(sessionId);
+
+  if (
+    !options?.force &&
+    record.syncedHash === hash &&
+    record.syncedName === name &&
+    !record.inflight
+  ) {
+    return;
+  }
+
+  if (record.inflight) {
+    await record.inflight.catch(() => {});
+    if (
+      !options?.force &&
+      record.syncedHash === hash &&
+      record.syncedName === name
+    ) {
+      return;
+    }
+  }
+
+  const run = patchOrCreateSession(sessionId, name, latexContent).then(() => {
+    record.syncedHash = hash;
+    record.syncedName = name;
+  });
+
+  record.inflight = run.finally(() => {
+    if (record.inflight === run) record.inflight = null;
+  });
+
+  await record.inflight;
+}
+
 export type StreamChatCallbacks = {
   onActivity: (text: string) => void;
   onState?: (state: ChatAiStatePayload) => void;
@@ -344,8 +414,11 @@ export type StreamChatCallbacks = {
   onLogicSection?: (section: NonNullable<LogicAuditReport["sections"]>[number]) => void;
   onToken: (delta: string) => void;
   onDone: (result: ChatResult) => void;
-  onError: (message: string) => void;
+  onError: (message: string, meta?: { code?: string; reason?: string }) => void;
 };
+
+/** SSE error code — server cache miss/stale; client should retry with full LaTeX body. */
+export const CHAT_CONTENT_RESYNC_CODE = "content_resync_required";
 
 function normalizeSseText(text: string): string {
   return text.replace(/\r\n/g, "\n");
@@ -447,6 +520,10 @@ function createSseDispatcher(callbacks: StreamChatCallbacks): {
             typeof payload.message === "string"
               ? streamErrorMessage(payload.message)
               : streamErrorMessage("UNKNOWN"),
+            {
+              code: typeof payload.code === "string" ? payload.code : undefined,
+              reason: typeof payload.reason === "string" ? payload.reason : undefined,
+            },
           );
           break;
         default:

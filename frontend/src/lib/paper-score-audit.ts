@@ -1,5 +1,5 @@
 import type { LogicAuditReport } from "@/lib/api/academic";
-import { streamChat } from "@/lib/api/academic";
+import { streamChat, syncSession } from "@/lib/api/academic";
 import type { LLMProvider } from "@/lib/api/academic";
 import { contentFingerprint } from "@/lib/pending-edit-utils";
 
@@ -98,6 +98,8 @@ export async function runQuickLogicAuditForScore(
     signal,
     onProgress,
   } = opts;
+
+  await syncSession(sessionId, "", latex).catch(() => {});
 
   return new Promise<LogicAuditReport | null>((resolve, reject) => {
     let settled = false;

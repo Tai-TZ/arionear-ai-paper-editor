@@ -16,7 +16,7 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.config import get_settings
-from src.services.llm import get_llm
+from src.services.llm import extract_llm_text, get_llm
 from src.services.logic_audit.config import resolve_logic_audit_llm
 from src.services.logic_audit.debate import (
     LogicProgressFn,
@@ -233,7 +233,7 @@ async def run_paper_gate_skim(
                 raise TimeoutError()
             await asyncio.sleep(0.2)
         response = await invoke_task
-        raw_text = str(response.content or "")
+        raw_text = extract_llm_text(response)
     except TimeoutError as exc:
         _progress("gate-error", "Lỗi phân tích", detail="Timeout", status="error")
         raise RuntimeError("Gate skim LLM timed out.") from exc

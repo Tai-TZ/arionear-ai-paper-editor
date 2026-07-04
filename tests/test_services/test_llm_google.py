@@ -45,6 +45,27 @@ def test_provider_catalog_always_lists_google(google_llm_env):
     assert google["name"] == "Google (Gemini)"
 
 
+def test_extract_llm_text_gemini_list_blocks():
+    from types import SimpleNamespace
+
+    from src.services.llm import extract_llm_text
+
+    response = SimpleNamespace(
+        content=[{"type": "text", "text": "\\section{Intro}Hello"}],
+        additional_kwargs={},
+    )
+    assert extract_llm_text(response) == "\\section{Intro}Hello"
+
+
+def test_extract_llm_text_string_content():
+    from types import SimpleNamespace
+
+    from src.services.llm import extract_llm_text
+
+    response = SimpleNamespace(content="plain text", additional_kwargs={})
+    assert extract_llm_text(response) == "plain text"
+
+
 def test_get_llm_google_json_output(google_llm_env, monkeypatch):
     captured: dict = {}
 

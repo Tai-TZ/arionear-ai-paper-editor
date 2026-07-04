@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar
@@ -61,9 +62,21 @@ from src.services.stream_i18n import (
 )
 from src.services.template_latex import generate_template
 
+logger = logging.getLogger(__name__)
+
 AGENT_NAME = "Ario"
+CONTENT_RESYNC_CODE = "content_resync_required"
 EDIT_DONE_MSG = "Đã cập nhật main.tex — xem diff và Accept/Reject."
 STYLE_DONE_MSG = "Đã biên tập — xem diff và Accept/Reject."
+
+
+class ContentResyncRequiredError(Exception):
+    """Client sent hash-only payload but server cache is missing or stale."""
+
+    def __init__(self, message: str, *, reason: str = "cache_miss") -> None:
+        self.message = message
+        self.reason = reason
+        super().__init__(message)
 
 _AGENT_RESPONSE_VI: dict[str, str] = {
     "No LaTeX source available to edit.": "Chưa có nội dung LaTeX để chỉnh sửa.",
@@ -441,6 +454,27 @@ def _cache_active_file_content(
     session_store.update(session_id, metadata=meta)
 
 
+def _validate_main_latex_cache(request: ChatRequest, resolved_main: str) -> None:
+    """Reject hash-only requests when session manuscript is missing or stale."""
+    inline = (request.latex_content or "").strip()
+    if inline:
+        return
+    expected_hash = (request.latex_content_hash or "").strip().lower()
+    if not expected_hash:
+        return
+    if not resolved_main.strip():
+        raise ContentResyncRequiredError(
+            "Manuscript cache is empty on the server. Re-send the project content.",
+            reason="main_cache_miss",
+        )
+    actual_hash = _content_hash(resolved_main)
+    if actual_hash != expected_hash:
+        raise ContentResyncRequiredError(
+            "Manuscript cache is stale. Re-send the project content.",
+            reason="main_hash_mismatch",
+        )
+
+
 def _resolve_active_file_content(
     request: ChatRequest,
     session_id: str,
@@ -453,19 +487,38 @@ def _resolve_active_file_content(
     active_file = (request.active_file or main_file).strip() or main_file
     if active_file == main_file:
         return resolved_main
+    expected_hash = (request.active_file_content_hash or "").strip().lower()
     if not session_id:
-        return ""
+        raise ContentResyncRequiredError(
+            f"Active file cache missing for {active_file}. Re-send file content.",
+            reason="active_cache_miss",
+        )
     session = session_store.get(session_id)
     if not session:
-        return ""
+        raise ContentResyncRequiredError(
+            f"Active file cache missing for {active_file}. Re-send file content.",
+            reason="active_cache_miss",
+        )
     active_files = (session.metadata or {}).get("active_files") or {}
     entry = active_files.get(active_file)
     if not entry:
-        return ""
-    stored_hash = entry.get("hash")
-    if request.active_file_content_hash and stored_hash != request.active_file_content_hash:
-        return ""
-    return str(entry.get("content") or "")
+        raise ContentResyncRequiredError(
+            f"Active file cache missing for {active_file}. Re-send file content.",
+            reason="active_cache_miss",
+        )
+    stored_hash = str(entry.get("hash") or "").strip().lower()
+    if expected_hash and stored_hash != expected_hash:
+        raise ContentResyncRequiredError(
+            f"Active file cache stale for {active_file}. Re-send file content.",
+            reason="active_hash_mismatch",
+        )
+    content = str(entry.get("content") or "")
+    if not content.strip():
+        raise ContentResyncRequiredError(
+            f"Active file cache empty for {active_file}. Re-send file content.",
+            reason="active_cache_miss",
+        )
+    return content
 
 
 async def stream_chat(
@@ -517,8 +570,21 @@ async def stream_chat(
         )
         session_id = request.session_id or ""
         ui_locale = resolve_locale(request.locale)
-        raw_latex = _resolve_raw_latex(request.latex_content, session_id)
-        resolved_active = _resolve_active_file_content(request, session_id, raw_latex)
+        try:
+            raw_latex = _resolve_raw_latex(request.latex_content, session_id)
+            _validate_main_latex_cache(request, raw_latex)
+            resolved_active = _resolve_active_file_content(request, session_id, raw_latex)
+        except ContentResyncRequiredError as exc:
+            await tracker.fail(exc.message)
+            yield _sse(
+                "error",
+                {
+                    "message": exc.message,
+                    "code": CONTENT_RESYNC_CODE,
+                    "reason": exc.reason,
+                },
+            )
+            return
         if request.session_id and (request.active_file_content or "").strip():
             active_path = (request.active_file or request.main_file or "main.tex").strip() or "main.tex"
             _cache_active_file_content(
@@ -1446,10 +1512,12 @@ async def stream_chat(
         await tracker.fail(message)
         yield _sse("error", {"message": message})
     except ValueError as e:
+        logger.exception("chat_stream failed (task=%s): %s", tracker.task, e)
         message = friendly_llm_error(e)
         await tracker.fail(message)
         yield _sse("error", {"message": message})
     except Exception as e:
+        logger.exception("chat_stream failed (task=%s): %s", tracker.task, e)
         message = friendly_llm_error(e)
         await tracker.fail(message)
         yield _sse("error", {"message": message})

@@ -42,3 +42,11 @@ export function isSelectedModelPaid(
   const model = provider?.models.find((m) => m.id === llmModel);
   return isPaidModel(llmModel, model?.label ?? null);
 }
+
+/** First non-paid model for platform-billed providers; falls back to default_model. */
+export function pickFirstFreeModel(provider: ProviderInfo): string {
+  const free = provider.models.find(
+    (m) => !isModelPaidForProvider(provider.id, m.id, m.label),
+  );
+  return free?.id ?? provider.default_model;
+}

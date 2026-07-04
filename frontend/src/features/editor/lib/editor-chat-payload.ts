@@ -21,10 +21,23 @@ export function buildChatLatexPayload(
   activeFile: string,
   mainFile: string,
   sync: ChatLatexSyncState,
+  forceFull = false,
 ): ChatLatexPayload {
   const mainHash = contentFingerprint(mainLatex);
   const activeHash = contentFingerprint(activeLatex);
   const sameFile = activeFile === mainFile;
+
+  if (forceFull) {
+    return {
+      latexContent: mainLatex,
+      latexContentHash: mainHash,
+      activeFileContent: sameFile ? undefined : activeLatex,
+      activeFileContentHash: sameFile ? undefined : activeHash,
+      skipMainBody: false,
+      skipActiveBody: false,
+    };
+  }
+
   const skipMainBody = sync.mainHash === mainHash;
   const skipActiveBody = sameFile
     ? skipMainBody

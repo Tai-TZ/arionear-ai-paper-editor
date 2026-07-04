@@ -8,7 +8,6 @@ import { editorCopy } from "@/lib/editor-i18n";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import type { ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
-import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 
 export function MobileChatSheet({
   onClose,
@@ -55,9 +54,7 @@ export function MobileChatSheet({
   const canUseLlm = Boolean(
     providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
   );
-  const paidModelSelected =
-    canUseLlm && isSelectedModelPaid(providers!, llmProvider!, llmModel!);
-  const chatDisabled = !canUseLlm || paidModelSelected;
+  const chatDisabled = !canUseLlm;
 
   useEffect(() => {
     if (chatComposerMode !== "quick-edit" || chatDisabled) return;
@@ -67,13 +64,11 @@ export function MobileChatSheet({
 
   const placeholder = !canUseLlm
     ? t.chatDock.placeholderNoProvider
-    : paidModelSelected
-      ? t.llm.paidChatPlaceholder
-      : chatComposerMode === "quick-edit"
-        ? t.chatDock.placeholderQuickEdit
-        : chatSelectionContext
-          ? t.chatDock.placeholderSelection
-          : t.chatDock.placeholderDefault;
+    : chatComposerMode === "quick-edit"
+      ? t.chatDock.placeholderQuickEdit
+      : chatSelectionContext
+        ? t.chatDock.placeholderSelection
+        : t.chatDock.placeholderDefault;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col md:hidden">
@@ -152,11 +147,6 @@ export function MobileChatSheet({
               <p className="chat-dock-llm-hint">{t.chatDock.llmHint}</p>
             )}
           </div>
-          {paidModelSelected && (
-            <p className="chat-paid-model-hint mb-2" role="status">
-              {t.llm.paidChatHint}
-            </p>
-          )}
           <ChatInput
             ref={chatInputRef}
             chatInput={chatInput}

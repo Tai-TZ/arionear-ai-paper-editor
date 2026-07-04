@@ -43,11 +43,26 @@ _TEMPLATE_RE = re.compile(
     re.IGNORECASE,
 )
 _GREETING_CHAT_RE = re.compile(
-  r"^(?:h+u+l+o+|hello|hi|hey|chào|chao|xin\s*chào|yo|"
-  r"hú|hu|hì|helo|good\s*(?:morning|afternoon|evening)|"
-  r"thanks?|thank\s*you|cảm\s*ơn|cam\s*on|"
-  r"ok(?:ay)?|oke|ừ|uh|ah|"
-  r"test|thử|thu)\s*[!?.…]*$",
+    r"^(?:h+u+l+o+|"
+    r"hello(?:\s+(?:there|everyone|bao))?|"
+    r"hi(?:\s+(?:there|everyone|bao))?|"
+    r"hey|"
+    r"chào(?:\s+(?:bạn|ban|nhé|nhe|anh|chị|chi|em|"
+    r"mọi\s+người|moi\s+nguoi))?|"
+    r"chao|xin\s*chào|yo|"
+    r"hú|hu|hì|helo|good\s*(?:morning|afternoon|evening)|"
+    r"thanks?|thank\s*you|cảm\s*ơn|cam\s*on|"
+    r"ok(?:ay)?|oke|ừ|uh|ah|"
+    r"test|thử|thu)\s*[!?.…]*$",
+    re.IGNORECASE,
+)
+_ACKNOWLEDGMENT_CHAT_RE = re.compile(
+    r"^(?:rất\s+tốt|rat\s+tot|good(?:\s+(?:job|work))?|nice|great|perfect|"
+    r"tuyệt|tuyet|ổn|on|được|duoc)\s*[!?.…]*$",
+    re.IGNORECASE,
+)
+_EDIT_FOLLOWUP_SIGNAL_RE = re.compile(
+    r"chỉnh|sửa|\bedit\b|viết\s+lại|rewrite|thử\s+lại|try\s+again|continue|tiếp",
     re.IGNORECASE,
 )
 _CONVERSATIONAL_CHAT_RE = re.compile(
@@ -86,7 +101,20 @@ def is_casual_chat(query: str) -> bool:
         return True
     if _GREETING_CHAT_RE.match(q):
         return True
+    if _ACKNOWLEDGMENT_CHAT_RE.match(q):
+        return True
     return _CONVERSATIONAL_CHAT_RE.search(q) is not None
+
+
+def _has_edit_followup_signal(query: str) -> bool:
+    q = query.strip()
+    if not q:
+        return False
+    if _FOLLOWUP_SHORT_RE.match(q):
+        return True
+    if _IMPROVE_RE.search(q):
+        return True
+    return _EDIT_FOLLOWUP_SIGNAL_RE.search(q) is not None
 
 
 def _turn_content(turn: object) -> str:
@@ -131,7 +159,10 @@ def looks_like_edit_followup(query: str, history: list | None) -> bool:
     if _FOLLOWUP_SHORT_RE.match(q):
         return True
     if _last_user_turn_was_edit(history) and (
-        _IMPROVE_RE.search(q) or _MANUSCRIPT_SECTION_RE.search(q) or len(q) <= 100
+        _IMPROVE_RE.search(q)
+        or _MANUSCRIPT_SECTION_RE.search(q)
+        or _FOLLOWUP_SHORT_RE.match(q)
+        or _EDIT_FOLLOWUP_SIGNAL_RE.search(q)
     ):
         return True
     last_assistant = ""
@@ -153,7 +184,7 @@ def looks_like_edit_followup(query: str, history: list | None) -> bool:
             "chỉnh sửa",
         )
     ):
-        return len(q) <= 120
+        return _has_edit_followup_signal(q)
     return False
 
 

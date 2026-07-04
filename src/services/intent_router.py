@@ -119,7 +119,7 @@ async def classify_intent(
 
     from src.services.chat_context import format_conversation_history_for_router
     from src.services.guardrails.prompt_injection import wrap_untrusted_user_text
-    from src.services.llm import get_llm
+    from src.services.llm import extract_llm_text, get_llm
 
     if explicit_task == "chat":
         return IntentResult(action="chat")
@@ -185,7 +185,7 @@ async def classify_intent(
     except Exception:
         return fallback_intent(query, has_latex, has_selection)
 
-    parsed = parse_intent_payload(str(response.content or ""))
+    parsed = parse_intent_payload(extract_llm_text(response))
     if parsed:
         if parsed.action in ("edit", "style", "template") and not has_latex:
             return IntentResult(action="chat")

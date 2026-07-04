@@ -24,7 +24,6 @@ import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/ch
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
-import { isSelectedModelPaid } from "@/lib/llm-model-tier";
 import { AiLoadingState } from "@/components/ai-loading-state";
 import { cn } from "@/lib/utils";
 
@@ -214,10 +213,7 @@ export function ChatDock({
       onModelChange,
   );
 
-  const paidModelSelected =
-    canUseLlm && isSelectedModelPaid(providers!, llmProvider!, llmModel!);
-
-  const chatDisabled = !canUseLlm || paidModelSelected;
+  const chatDisabled = !canUseLlm;
 
   const handleSend = () => {
     if (!chatInput.trim() || chatLoading || chatDisabled) return;
@@ -230,13 +226,11 @@ export function ChatDock({
 
   const placeholder = !canUseLlm
     ? t.chatDock.placeholderNoProvider
-    : paidModelSelected
-      ? t.llm.paidChatPlaceholder
-      : composerMode === "quick-edit"
-        ? t.chatDock.placeholderQuickEdit
-        : selectionContext
-          ? t.chatDock.placeholderSelection
-          : t.chatDock.placeholderDefault;
+    : composerMode === "quick-edit"
+      ? t.chatDock.placeholderQuickEdit
+      : selectionContext
+        ? t.chatDock.placeholderSelection
+        : t.chatDock.placeholderDefault;
 
   return (
     <aside
@@ -379,12 +373,6 @@ export function ChatDock({
             <p className="chat-dock-llm-hint">{t.chatDock.llmHint}</p>
           )}
         </div>
-
-        {paidModelSelected && (
-          <p className="chat-paid-model-hint" role="status">
-            {t.llm.paidChatHint}
-          </p>
-        )}
 
         <ChatInput
           ref={chatInputRef}

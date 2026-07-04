@@ -1,15 +1,61 @@
 from __future__ import annotations
 
-from collections.abc import Generator
+import functools
+import random
+import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
+from typing import TypeVar
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from src.config import get_settings
 from src.db.models import Base
+
+_T = TypeVar("_T")
+
+# psycopg2 raises SQLSTATE 55P03 (lock_not_available) when a statement is
+# cancelled after waiting past ``lock_timeout``.
+_LOCK_TIMEOUT_PGCODE = "55P03"
+
+
+def _is_lock_timeout(exc: BaseException) -> bool:
+    orig = getattr(exc, "orig", None)
+    if getattr(orig, "pgcode", None) == _LOCK_TIMEOUT_PGCODE:
+        return True
+    return "lock timeout" in str(exc).lower()
+
+
+def retry_on_lock_timeout(
+    attempts: int = 3, base_delay: float = 0.1
+) -> Callable[[Callable[..., _T]], Callable[..., _T]]:
+    """Retry a self-contained DB write that hit a Postgres ``lock_timeout``.
+
+    Only for idempotent unit-of-work functions that open their own transaction
+    (e.g. via ``with get_db()``): each retry runs a fresh transaction after the
+    previous one has already rolled back. Non-lock errors propagate immediately.
+    """
+
+    def decorator(fn: Callable[..., _T]) -> Callable[..., _T]:
+        @functools.wraps(fn)
+        def wrapper(*args: object, **kwargs: object) -> _T:
+            for attempt in range(attempts):
+                try:
+                    return fn(*args, **kwargs)
+                except OperationalError as exc:
+                    if attempt < attempts - 1 and _is_lock_timeout(exc):
+                        time.sleep(base_delay * (2**attempt) + random.uniform(0, base_delay))
+                        continue
+                    raise
+            raise AssertionError("unreachable")  # pragma: no cover
+
+        return wrapper
+
+    return decorator
 
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None

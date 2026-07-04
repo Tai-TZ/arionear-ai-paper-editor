@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { ChatAiStep } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
@@ -46,43 +46,29 @@ function resolveStatus(
   return "Đang kiểm tra bài viết";
 }
 
-function LoadingAnimation({ progress, maskId }: { progress: number; maskId: string }) {
+const RING_RADIUS = 15;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+function LoadingAnimation({ progress }: { progress: number }) {
+  const arc = Math.max(0.04, progress / 100) * RING_CIRCUMFERENCE;
   return (
     <div className="ai-loading-spinner" aria-hidden>
       <svg
         aria-label={`Tiến trình: ${Math.round(progress)}%`}
         className="ai-loading-spinner-svg"
         fill="none"
-        viewBox="0 0 240 240"
+        viewBox="0 0 36 36"
         xmlns="http://www.w3.org/2000/svg"
       >
         <title>Tiến trình xử lý</title>
-        <defs>
-          <mask id={maskId}>
-            <rect fill="black" height="240" width="240" />
-            <circle
-              cx="120"
-              cy="120"
-              fill="white"
-              r="120"
-              strokeDasharray={`${(progress / 100) * 754}, 754`}
-              transform="rotate(-90 120 120)"
-            />
-          </mask>
-        </defs>
-        <g
-          className="ai-loading-spinner-rings"
-          mask={`url(#${maskId})`}
-          strokeDasharray="18% 40%"
-          strokeWidth="16"
-        >
-          <circle cx="120" cy="120" opacity="0.95" r="150" stroke="#FF2E7E" />
-          <circle cx="120" cy="120" opacity="0.95" r="130" stroke="#00E5FF" />
-          <circle cx="120" cy="120" opacity="0.95" r="110" stroke="#4ADE80" />
-          <circle cx="120" cy="120" opacity="0.95" r="90" stroke="#FFA726" />
-          <circle cx="120" cy="120" opacity="0.95" r="70" stroke="#FFEB3B" />
-          <circle cx="120" cy="120" opacity="0.95" r="50" stroke="#FF4081" />
-        </g>
+        <circle className="ai-loading-track" cx="18" cy="18" r={RING_RADIUS} />
+        <circle
+          className="ai-loading-arc"
+          cx="18"
+          cy="18"
+          r={RING_RADIUS}
+          strokeDasharray={`${arc} ${RING_CIRCUMFERENCE}`}
+        />
       </svg>
     </div>
   );
@@ -95,7 +81,6 @@ export function AiLoadingState({
   waitElapsedSec = null,
   compact = false,
 }: AiLoadingStateProps) {
-  const maskId = useId().replace(/:/g, "");
   const feedRef = useRef<HTMLDivElement>(null);
   const displaySteps = useMemo(() => filterDisplaySteps(steps), [steps]);
   const feedLines = useMemo(() => {
@@ -129,7 +114,7 @@ export function AiLoadingState({
       aria-atomic="false"
     >
       <div className="ai-loading-state-head">
-        <LoadingAnimation progress={progress} maskId={maskId} />
+        <LoadingAnimation progress={progress} />
         <span className="ai-loading-state-status">{statusWithElapsed}…</span>
       </div>
 
@@ -142,7 +127,6 @@ export function AiLoadingState({
           <div>
             {lines.map((text, index) => (
               <div className="ai-loading-state-line" key={`feed-${index}-${text}`}>
-                <div className="ai-loading-state-line-num">{index + 1}</div>
                 <div className="ai-loading-state-line-text">{text}</div>
               </div>
             ))}

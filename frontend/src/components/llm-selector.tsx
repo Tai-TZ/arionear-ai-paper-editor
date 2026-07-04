@@ -145,7 +145,13 @@ export function LlmSelector({
                 const free = isFreeModel(m.id, parsed.tier);
                 const paid = isModelPaidForProvider(llmProvider, m.id, m.label);
                 return (
-                  <DropdownMenuRadioItem key={m.id} value={m.id} className="text-sm py-2">
+                  <DropdownMenuRadioItem
+                    key={m.id}
+                    value={m.id}
+                    disabled={paid}
+                    title={paid ? t.llm.paidChatHint : undefined}
+                    className="text-sm py-2"
+                  >
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="font-medium leading-tight">{parsed.name}</span>

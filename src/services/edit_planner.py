@@ -261,7 +261,7 @@ async def plan_edit(
 ) -> EditPlan:
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    from src.services.llm import get_llm
+    from src.services.llm import extract_llm_text, get_llm
 
     ruled = infer_edit_plan_rules(query, outline, has_selection=has_selection)
     if ruled:
@@ -338,7 +338,7 @@ async def plan_edit(
             label="Tiêu đề · \\title{...}",
         )
 
-    parsed = parse_edit_plan_payload(str(response.content or ""))
+    parsed = parse_edit_plan_payload(extract_llm_text(response))
     if parsed and parsed.confidence >= 0.5:
         if parsed.target_type == "document" and not _DOCUMENT_HINTS.search(query):
             parsed = None
