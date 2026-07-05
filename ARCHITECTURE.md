@@ -598,7 +598,7 @@ cd frontend && bun run dev
 | **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export | Deferred |
 | **GO PRODUCT** | Demo Day → maintenance, pitch deck, video demo | In progress (09/07) |
 
-Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Gate 3 evidence: **[REPORT_GATE3.md](./REPORT_GATE3.md)**
+Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Gate 3 evidence: **[eval/results/gate3_summary.md](./eval/results/gate3_summary.md)**
 
 ---
 
@@ -641,6 +641,6 @@ frontend/src/
 - [AutoResearchReferee.md](./AutoResearchReferee.md) — phân tích ARC & quyết định adopt/adapt/drop
 - [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map
 - [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) — guardrail layers L1–L4
-- [REPORT_GATE3.md](./REPORT_GATE3.md) — Gate 3 eval metrics & production evidence
+- [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) — Gate 3 eval metrics & production evidence
 - [README.md](./README.md) — hướng dẫn chạy dự án
 - [WORKLOG.md](./WORKLOG.md) · [JOURNAL.md](./JOURNAL.md) — team deliverables log
