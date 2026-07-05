@@ -9,7 +9,7 @@ import {
   Copy,
   Check,
   Maximize2,
-  Sparkles,
+  PencilLine,
   Square,
   X,
 } from "lucide-react";
@@ -325,7 +325,7 @@ export function ChatDock({
 
         {composerMode === "quick-edit" && (
           <div className="chat-quick-edit-banner" role="status">
-            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <PencilLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>{t.chatDock.quickEditBanner}</span>
           </div>
         )}

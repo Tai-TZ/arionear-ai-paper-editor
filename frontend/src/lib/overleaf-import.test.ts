@@ -20,8 +20,8 @@ describe("importOverleafZip", () => {
     const result = await importOverleafZip(file);
     expect(result.mainFile).toBe("main.tex");
     expect(result.name).toBe("EfficientNetV2");
-    expect(result.files).toHaveLength(1);
-    expect(result.assets.some((a) => a.name === "refs.bib")).toBe(true);
+    expect(result.files).toHaveLength(2);
+    expect(result.files.some((f) => f.path === "refs.bib")).toBe(true);
   });
 
   it("strips single root folder from Overleaf export", async () => {
@@ -57,8 +57,8 @@ describe("importOverleafZip", () => {
       "Predict.png": strToU8([137, 80, 78, 71]),
     });
     const result = await importOverleafZip(file);
-    expect(result.files).toHaveLength(1);
+    expect(result.files).toHaveLength(2);
     expect(result.assets.filter((a) => /\.(png|jpg)$/i.test(a.name))).toHaveLength(5);
-    expect(result.assets.some((a) => a.name === "references.bib")).toBe(true);
+    expect(result.files.some((f) => f.path === "references.bib")).toBe(true);
   });
 });

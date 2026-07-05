@@ -32,6 +32,9 @@ def _mock_db_with_subscription(*, tier: UserTier = UserTier.FREE, turns_used: in
 
     db = MagicMock()
     query = MagicMock()
+    locked = MagicMock()
+    locked.first.return_value = sub
+    query.filter.return_value.with_for_update.return_value = locked
     query.filter.return_value.first.return_value = sub
     db.query.return_value = query
     return db, sub
@@ -85,6 +88,16 @@ def test_record_defense_turn_increments():
 
     assert sub.defense_turns_used == 2
     db.flush.assert_called()
+
+
+def test_record_defense_turn_blocks_when_exhausted():
+    user = MagicMock(id=uuid.uuid4())
+    db, sub = _mock_db_with_subscription(tier=UserTier.FREE, turns_used=FREE_DEFENSE_TURNS)
+
+    with pytest.raises(QuotaExceededError):
+        record_defense_turn(db, user)
+
+    assert sub.defense_turns_used == FREE_DEFENSE_TURNS
 
 
 def test_get_or_create_subscription_creates_when_missing():

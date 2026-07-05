@@ -58,5 +58,11 @@
     "query": "polish introduction academically",
     "has_latex": true,
     "expected_action": "style"
+  },
+  {
+    "id": "INT-11",
+    "query": "giúp tôi rút gọn phần introduction nhé",
+    "has_latex": true,
+    "expected_action": "edit"
   }
 ]

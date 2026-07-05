@@ -1,7 +1,10 @@
 """Defense / mock-viva agent endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import asyncio
+import contextlib
+
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -26,6 +29,7 @@ def defense_quota_endpoint(
 @router.post("/defense/stream")
 async def defense_stream_endpoint(
     request: DefenseRequest,
+    http_request: Request,
     user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     """
@@ -33,11 +37,38 @@ async def defense_stream_endpoint(
 
     Requires authentication (Bearer token). Events: activity, token, done, error.
     """
+    cancel = asyncio.Event()
+
+    async def watch_disconnect() -> None:
+        while not cancel.is_set():
+            if await http_request.is_disconnected():
+                cancel.set()
+                return
+            await asyncio.sleep(0.2)
+
+    async def stream_with_disconnect():
+        watcher = asyncio.create_task(watch_disconnect())
+        agen = stream_defense(request, user_id=user.id, cancel_event=cancel)
+        try:
+            async for chunk in flush_sse_stream(agen):
+                if cancel.is_set():
+                    break
+                yield chunk
+        finally:
+            cancel.set()
+            watcher.cancel()
+            with contextlib.suppress(Exception):
+                await agen.aclose()
+            with contextlib.suppress(asyncio.CancelledError):
+                await watcher
+
     return StreamingResponse(
-        flush_sse_stream(stream_defense(request, user_id=user.id)),
+        stream_with_disconnect(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "Content-Encoding": "identity",
         },
     )

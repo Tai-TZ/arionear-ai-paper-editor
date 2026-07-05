@@ -10,7 +10,6 @@ import {
   Pencil,
   FolderOpen,
   FileArchive,
-  Sparkles,
   Trash2,
   Loader2,
   BookOpen,
@@ -28,8 +27,8 @@ import {
   updatePaper,
 } from "@/lib/api/papers-api";
 import {
-  BLANK_LATEX,
-  SAMPLE_LATEX,
+  blankLatexForLocale,
+  sampleLatexForLocale,
   formatTimeAgo,
   formatProjectDateTime,
   isTexFile,
@@ -157,7 +156,7 @@ function ProjectsPage() {
     setCreatingLabel(t.creatingSample);
     setNewMenuOpen(false);
     try {
-      const project = await createPaper("IEEE IMRaD (Sample)", SAMPLE_LATEX);
+      const project = await createPaper(t.sampleProjectName, sampleLatexForLocale(locale));
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
@@ -171,7 +170,7 @@ function ProjectsPage() {
     setCreatingLabel(t.creatingBlank);
     setNewMenuOpen(false);
     try {
-      const project = await createPaper("IEEE IMRaD Project", BLANK_LATEX);
+      const project = await createPaper(t.blankProjectName, blankLatexForLocale(locale));
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
@@ -355,7 +354,7 @@ function ProjectsPage() {
                     onClick={() => runWithNotice(() => void handleCreateSample())}
                     className="projects-menu-item"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <BookOpen className="h-3.5 w-3.5" />
                     {t.sampleProject}
                   </button>
                   {SHOW_PROJECTS_IMPORT ? (
@@ -517,7 +516,7 @@ function EmptyProjects({
 
         <button type="button" onClick={onSample} disabled={disabled} className="projects-empty-card">
           <div className="icon-box">
-            <Sparkles className="h-5 w-5" strokeWidth={1.5} />
+            <BookOpen className="h-5 w-5" strokeWidth={1.5} />
           </div>
           <h3>{t.sampleProject}</h3>
           <p>{t.emptySampleHint}</p>

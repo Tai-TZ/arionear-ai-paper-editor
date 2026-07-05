@@ -12,6 +12,7 @@ import {
 import {
   inferProjectName,
   isBinaryProjectAsset,
+  isBibFile,
   isImageAssetFile,
   isLatexSupportAssetFile,
   isTexFile,
@@ -221,12 +222,24 @@ export async function importOverleafZip(file: File): Promise<OverleafImportResul
     files.push({ path: normalizedPath, content });
   };
 
+  const addTextFile = (path: string, content: string) => {
+    const normalizedPath = normalizeAssetName(path);
+    if (!normalizedPath || seenFilePaths.has(normalizedPath.toLowerCase())) return;
+    seenFilePaths.add(normalizedPath.toLowerCase());
+    files.push({ path: normalizedPath, content });
+  };
+
   for (const [rawPath, bytes] of rawEntries) {
     const path = pathMap.get(rawPath) ?? normalizeAssetName(rawPath);
     if (!path || shouldSkipPath(path)) continue;
 
     if (isTexLikePath(path)) {
       addTexFile(path, decodeTex(bytes));
+      continue;
+    }
+
+    if (isBibFile(path)) {
+      addTextFile(path, decodeTex(bytes));
       continue;
     }
 

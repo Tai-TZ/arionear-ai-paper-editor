@@ -37,6 +37,8 @@ type ProjectsCopy = {
   deleteTitle: string;
   creatingSample: string;
   creatingBlank: string;
+  sampleProjectName: string;
+  blankProjectName: string;
   uploading: string;
   importingZip: string;
   importingZipDetail: string;
@@ -92,6 +94,8 @@ const EN: ProjectsCopy = {
   deleteTitle: "Delete project",
   creatingSample: "Creating sample project…",
   creatingBlank: "Creating blank project…",
+  sampleProjectName: "IEEE IMRaD (Sample)",
+  blankProjectName: "IEEE IMRaD Project",
   uploading: "Uploading project…",
   importingZip: "Importing Overleaf ZIP…",
   importingZipDetail: "Extracting files and uploading to your account…",
@@ -151,6 +155,8 @@ const VI: ProjectsCopy = {
   deleteTitle: "Xóa dự án",
   creatingSample: "Đang tạo dự án mẫu…",
   creatingBlank: "Đang tạo dự án trống…",
+  sampleProjectName: "IEEE IMRaD (Mẫu)",
+  blankProjectName: "Bài báo IEEE IMRaD",
   uploading: "Đang tải dự án…",
   importingZip: "Đang nhập Overleaf ZIP…",
   importingZipDetail: "Đang giải nén và tải lên tài khoản của bạn…",

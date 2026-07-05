@@ -216,7 +216,34 @@ def assert_defense_allowed(db: Session, user: User) -> None:
 
 
 def record_defense_turn(db: Session, user: User) -> None:
-    """Increment the defense turn counter for the given user."""
-    sub = _subscription_for_user(db, user.id)
+    """Atomically increment defense turn counter when still under daily limit."""
+    sub = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.user_id == user.id)
+        .with_for_update()
+        .first()
+    )
+    if sub is None:
+        sub = UserSubscription(
+            user_id=user.id,
+            tier=UserTier.FREE,
+            defense_turns_used=0,
+            turns_reset_at=datetime.now(UTC),
+        )
+        db.add(sub)
+        db.flush()
+    _maybe_reset_daily_quota(sub)
+    limit = PLAN_LIMITS[sub.tier]
+    if sub.defense_turns_used >= limit:
+        tier_label = sub.tier.lower()
+        if tier_label == "pro":
+            raise QuotaExceededError(
+                f"PRO_QUOTA_EXCEEDED:You have used all {limit} Pro defense turns for today. "
+                "Your quota resets at 23:59:59."
+            )
+        raise QuotaExceededError(
+            f"FREE_QUOTA_EXCEEDED:You have used all {FREE_DEFENSE_TURNS} free defense turns for today. "
+            "Upgrade to Pro for 50 turns per day."
+        )
     sub.defense_turns_used += 1
     db.flush()

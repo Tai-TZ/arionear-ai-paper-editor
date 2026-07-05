@@ -92,7 +92,12 @@ const BUILTIN_ASSET_URLS: Record<string, string> = {
 const STORAGE_KEY = "arionear-projects";
 const DEFAULT_MAIN_FILE = "main.tex";
 
-export const SAMPLE_LATEX = `\\documentclass[journal]{IEEEtran}
+/** XeLaTeX + fontspec so Vietnamese diacritics compile reliably. */
+const VIETNAMESE_PREAMBLE = `\\usepackage{fontspec}
+\\setmainfont{Latin Modern Roman}
+`;
+
+export const SAMPLE_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\usepackage{amsmath,amssymb,amsfonts}
 \\usepackage{graphicx}
@@ -136,7 +141,54 @@ Summarize contributions and outline practical next steps for readers and future 
 
 \\end{document}`;
 
-export const BLANK_LATEX = `\\documentclass[journal]{IEEEtran}
+export const SAMPLE_LATEX_VI = `\\documentclass[journal]{IEEEtran}
+
+${VIETNAMESE_PREAMBLE}\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
+
+\\begin{document}
+
+\\title{Bài báo mẫu IEEE (IMRaD)}
+\\author{Tên tác giả}
+
+\\maketitle
+
+\\begin{abstract}
+Bản mẫu này theo bố cục tạp chí IEEEtran với các phần IMRaD.
+Dùng để khám phá biên dịch, xem trước PDF và các công cụ biên tập của Arionear trước khi thay thế toàn bộ nội dung mẫu bằng nghiên cứu của bạn.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+IEEEtran, IMRaD, bài báo khoa học, LaTeX, tạp chí.
+\\end{IEEEkeywords}
+
+\\section{Giới thiệu}
+Bài báo khoa học cần cấu trúc rõ ràng và nhất quán.
+Phần Giới thiệu nêu vấn đề nghiên cứu, công trình liên quan và đóng góp chính của bài báo.
+
+\\section{Phương pháp}
+Mô tả bộ dữ liệu, thiết lập thực nghiệm và các chỉ số đánh giá tại đây.
+Giữ quy trình có thể tái lập và phù hợp với các kết luận sẽ trình bày ở phần Kết quả.
+
+\\section{Kết quả}
+Trình bày các phát hiện chính bằng bảng hoặc hình minh họa khi cần.
+Thay các câu mẫu này bằng số liệu và kết quả đo được từ nghiên cứu của bạn.
+
+\\section{Thảo luận}
+Diễn giải kết quả, nêu hạn chế và so sánh với các công trình liên quan.
+Tránh đưa ra khẳng định mới không được hỗ trợ ở phần Kết quả.
+
+\\section{Kết luận}
+Tóm tắt đóng góp và hướng phát triển tiếp theo cho độc giả.
+
+\\end{document}`;
+
+/** Default sample — Vietnamese for demo. */
+export const SAMPLE_LATEX = SAMPLE_LATEX_VI;
+
+export const BLANK_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\usepackage{amsmath,amssymb,amsfonts}
 \\usepackage{graphicx}
@@ -174,6 +226,56 @@ export const BLANK_LATEX = `\\documentclass[journal]{IEEEtran}
 % TODO: Summary and future work.
 
 \\end{document}`;
+
+export const BLANK_LATEX_VI = `\\documentclass[journal]{IEEEtran}
+
+${VIETNAMESE_PREAMBLE}\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
+
+\\begin{document}
+
+\\title{Bài báo chưa đặt tên}
+\\author{Tên tác giả}
+
+\\maketitle
+
+\\begin{abstract}
+% TODO: Tóm tắt mục tiêu, phương pháp và kết quả chính.
+\\end{abstract}
+
+\\begin{IEEEkeywords}
+% TODO: Thêm 3–5 từ khóa.
+\\end{IEEEkeywords}
+
+\\section{Giới thiệu}
+% TODO: Bối cảnh, mục tiêu và đóng góp.
+
+\\section{Phương pháp}
+% TODO: Dữ liệu, quy trình và thiết lập đánh giá.
+
+\\section{Kết quả}
+% TODO: Trình bày phát hiện chính (giữ số liệu chính xác).
+
+\\section{Thảo luận}
+% TODO: Diễn giải kết quả và liên hệ công trình trước.
+
+\\section{Kết luận}
+% TODO: Tóm tắt và hướng phát triển.
+
+\\end{document}`;
+
+/** Default blank — Vietnamese for demo. */
+export const BLANK_LATEX = BLANK_LATEX_VI;
+
+export function sampleLatexForLocale(lang: "vi" | "en"): string {
+  return lang === "vi" ? SAMPLE_LATEX_VI : SAMPLE_LATEX_EN;
+}
+
+export function blankLatexForLocale(lang: "vi" | "en"): string {
+  return lang === "vi" ? BLANK_LATEX_VI : BLANK_LATEX_EN;
+}
 
 function readAll(): StoredProject[] {
   if (typeof window === "undefined") return [];

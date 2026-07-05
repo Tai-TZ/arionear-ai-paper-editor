@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-06-29 16:01:04 UTC",
+  "timestamp": "2026-07-05 12:28:35 UTC",
   "api_url": "https://api.arionear.id.vn",
   "frontend_url": "https://arionear.id.vn",
   "offline": {
     "intent": {
       "metric": "intent_routing_accuracy",
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "value": 1.0,
       "cases": [
         {
@@ -77,6 +77,13 @@
           "query": "polish introduction academically",
           "expected": "style",
           "actual": "style",
+          "pass": true
+        },
+        {
+          "id": "INT-11",
+          "query": "giúp tôi rút gọn phần introduction nhé",
+          "expected": "edit",
+          "actual": "edit",
           "pass": true
         }
       ]
@@ -163,12 +170,12 @@
     "health": {
       "status": 200,
       "latency_ms": [
-        207.55859999917448,
-        120.8178999950178,
-        137.99580000340939
+        15620.537900000272,
+        237.64570000093954,
+        265.25580000088667
       ],
-      "p50_ms": 138.0,
-      "p95_ms": 207.6,
+      "p50_ms": 265.3,
+      "p95_ms": 15620.5,
       "body": {
         "status": "ok",
         "env": "production",
@@ -177,7 +184,7 @@
     },
     "compile_status": {
       "status": 200,
-      "latency_s": 0.147,
+      "latency_s": 0.155,
       "body": {
         "available": true,
         "engine": "/usr/bin/pdflatex",
@@ -194,11 +201,31 @@
     },
     "compile_minimal": {
       "status": 200,
-      "latency_s": 0.476,
+      "latency_s": 0.485,
       "success": true,
       "pdf_bytes": 18372,
       "error": ""
     },
+    "llm_chat": [
+      {
+        "id": "LIVE-CHAT",
+        "task": "chat",
+        "status": 401,
+        "latency_s": 0.167,
+        "has_response": false,
+        "integrity_flags": []
+      },
+      {
+        "id": "LIVE-STYLE",
+        "task": "style",
+        "status": 401,
+        "latency_s": 0.14,
+        "has_response": false,
+        "integrity_flags": []
+      }
+    ],
+    "chat_latency_p50_s": 0.167,
+    "style_latency_p50_s": 0.14,
     "compile_success_rate": 1.0
   },
   "measured": {
@@ -206,10 +233,10 @@
     "edit_scope_accuracy": 1.0,
     "guardrail_block_rate": 0.5,
     "numeric_drift_detection_rate": 1.0,
-    "chat_latency_p50_s": null,
-    "style_latency_p50_s": null,
+    "chat_latency_p50_s": 0.167,
+    "style_latency_p50_s": 0.14,
     "compile_success_rate": 1.0,
-    "health_latency_p95_ms": 207.6,
+    "health_latency_p95_ms": 15620.5,
     "cost_per_active_user_month_usd": 1.2
   },
   "comparison": [
@@ -250,6 +277,24 @@
       "baseline_description": "No numeric drift checks on AI suggestions"
     },
     {
+      "metric": "chat_latency_p50_s",
+      "arionear": 0.167,
+      "baseline": 8.0,
+      "unit": "seconds",
+      "delta": 7.833,
+      "improved_vs_baseline": true,
+      "baseline_description": "Unscoped chat with full manuscript injected every turn"
+    },
+    {
+      "metric": "style_latency_p50_s",
+      "arionear": 0.14,
+      "baseline": 6.0,
+      "unit": "seconds",
+      "delta": 5.86,
+      "improved_vs_baseline": true,
+      "baseline_description": "Style edit on full document without selection scoping"
+    },
+    {
       "metric": "compile_success_rate",
       "arionear": 1.0,
       "baseline": 0.7,
@@ -260,11 +305,11 @@
     },
     {
       "metric": "health_latency_p95_ms",
-      "arionear": 207.6,
+      "arionear": 15620.5,
       "baseline": 800,
       "unit": "milliseconds",
-      "delta": 592.4,
-      "improved_vs_baseline": true,
+      "delta": -14820.5,
+      "improved_vs_baseline": false,
       "baseline_description": "Cold-start serverless without warm instance"
     },
     {

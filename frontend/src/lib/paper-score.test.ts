@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SAMPLE_LATEX as IEEE_SAMPLE_LATEX } from "./project-store";
+import { SAMPLE_LATEX_VI as IEEE_SAMPLE_LATEX } from "./project-store";
 import { assessManuscriptMaturity, computePaperScore, extractPeerReviewItems } from "./paper-score";
 import {
   formatPaperScoreGateError,

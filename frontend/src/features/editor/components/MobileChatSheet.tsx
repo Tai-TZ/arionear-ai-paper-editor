@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type React from "react";
-import { Sparkles, X } from "lucide-react";
+import { PencilLine, X } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { ChatInput, ChatMessages, arioAvatar, type ChatMessage } from "@/components/chat-overlay";
 import { LlmSelector } from "@/components/llm-selector";
@@ -101,7 +101,7 @@ export function MobileChatSheet({
         <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
           {chatComposerMode === "quick-edit" && (
             <div className="chat-quick-edit-banner mb-2" role="status">
-              <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <PencilLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{t.chatDock.quickEditBanner}</span>
             </div>
           )}

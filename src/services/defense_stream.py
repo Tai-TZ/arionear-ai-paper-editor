@@ -216,6 +216,7 @@ async def stream_defense(
     request: DefenseRequest,
     *,
     user_id: uuid.UUID | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> AsyncIterator[str]:
     """
     Main SSE generator for the defense agent.
@@ -295,25 +296,35 @@ async def stream_defense(
     use_stripper = any(t.role == "user" for t in request.conversation_history)
     stream_fn = _stream_tokens_sanitized if use_stripper else _stream_tokens
 
+    def _cancelled() -> bool:
+        return cancel_event is not None and cancel_event.is_set()
+
     # Stream tokens
     assembled: list[str] = []
     try:
         async for delta in stream_fn(llm, messages):
+            if _cancelled():
+                return
             assembled.append(delta)
             yield _sse("token", {"delta": delta})
             # keepalive every ~50 tokens to prevent proxy timeouts
             if len(assembled) % 50 == 0:
                 yield _KEEPALIVE_SSE
     except Exception as exc:
+        if _cancelled():
+            return
         err_msg = friendly_llm_error(exc)
         yield _sse("error", {"message": err_msg})
+        return
+
+    if _cancelled():
         return
 
     full_response = strip_defense_boilerplate_opening("".join(assembled)) if use_stripper else "".join(assembled)
     full_response = prepare_defense_council_markdown(full_response, request.latex_content)
     yield _sse("done", {"response": full_response})
 
-    if user_id is not None and full_response.strip() and db_is_ready():
+    if user_id is not None and full_response.strip() and db_is_ready() and not _cancelled():
         try:
             with get_db() as db:
                 user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()

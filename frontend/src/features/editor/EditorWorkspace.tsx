@@ -656,8 +656,9 @@ export function EditorWorkspace() {
                       <EditorSelectionToolbar
                         context={selectionPick.context}
                         anchor={selectionPick.anchor}
-                        onAddToChat={handleAddSelectionToChat}
-                        onQuickEdit={handleQuickEditSelection}
+                        copy={t.selectionToolbar}
+                        onAskSelection={handleAddSelectionToChat}
+                        onEditSelection={handleQuickEditSelection}
                         onDismiss={() => setSelectionPick(null)}
                       />
                     )}

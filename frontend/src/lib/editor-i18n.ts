@@ -244,6 +244,16 @@ export type EditorCopy = {
     tools: string;
     chats: string;
   };
+  selectionToolbar: {
+    ariaLabel: string;
+    line: (line: number) => string;
+    lineRange: (start: number, end: number) => string;
+    askSelection: string;
+    askSelectionTitle: string;
+    editSelection: string;
+    editSelectionTitle: string;
+    dismiss: string;
+  };
   chatDock: {
     openChat: string;
     quickEditBanner: string;
@@ -584,15 +594,25 @@ const EN: EditorCopy = {
     tools: "Tools",
     chats: "Chats",
   },
+  selectionToolbar: {
+    ariaLabel: "Selection actions",
+    line: (line) => `L${line}`,
+    lineRange: (start, end) => `L${start}–${end}`,
+    askSelection: "Ask",
+    askSelectionTitle: "Ask about this passage (explain, review, chat)",
+    editSelection: "Edit",
+    editSelectionTitle: "Edit this passage in the manuscript",
+    dismiss: "Dismiss",
+  },
   chatDock: {
     openChat: "Open chat",
-    quickEditBanner: "Quick Edit — edit the selected region in the editor",
+    quickEditBanner: "Edit mode — changes apply only to the highlighted passage",
     selectionLine: (line) => `Line ${line}`,
     selectionLineRange: (start, end) => `Lines ${start}–${end}`,
     clearSelection: "Clear selection",
     placeholderNoProvider: "Configure an API key to use chat",
-    placeholderQuickEdit: "Describe how to edit the selected passage…",
-    placeholderSelection: "Ask about the selected region…",
+    placeholderQuickEdit: "How should this passage be edited?",
+    placeholderSelection: "Ask or explain this passage…",
     placeholderDefault: "Ask Ario… or type / for commands",
     hintEditScope: "Tip: select text or say e.g. «edit Abstract» for precise edits.",
     hintPendingEdits: "You have pending diffs — Accept/Reject above, or ask for changes.",
@@ -933,15 +953,25 @@ const VI: EditorCopy = {
     tools: "Công cụ",
     chats: "Hội thoại",
   },
+  selectionToolbar: {
+    ariaLabel: "Thao tác vùng chọn",
+    line: (line) => `D${line}`,
+    lineRange: (start, end) => `D${start}–${end}`,
+    askSelection: "Hỏi",
+    askSelectionTitle: "Hỏi về đoạn này (giải thích, nhận xét, trò chuyện)",
+    editSelection: "Sửa",
+    editSelectionTitle: "Sửa đoạn này trong bài viết",
+    dismiss: "Đóng",
+  },
   chatDock: {
     openChat: "Mở chat",
-    quickEditBanner: "Quick Edit — chỉnh sửa vùng đã chọn trong editor",
+    quickEditBanner: "Chế độ sửa — chỉ thay đổi vùng đã bôi đen",
     selectionLine: (line) => `Dòng ${line}`,
     selectionLineRange: (start, end) => `Dòng ${start}–${end}`,
     clearSelection: "Bỏ vùng chọn",
     placeholderNoProvider: "Cấu hình API key để dùng chat",
-    placeholderQuickEdit: "Mô tả cách sửa đoạn đã chọn…",
-    placeholderSelection: "Hỏi về vùng đã chọn…",
+    placeholderQuickEdit: "Bạn muốn sửa đoạn này thế nào?",
+    placeholderSelection: "Hỏi hoặc giải thích đoạn này…",
     placeholderDefault: "Hỏi Ario… hoặc gõ / để chọn lệnh",
     hintEditScope: "Gợi ý: bôi đen đoạn hoặc nói rõ «sửa Abstract» để chỉnh đúng phần.",
     hintPendingEdits: "Còn diff chờ duyệt — Accept/Reject ở trên, hoặc nhắn chỉnh tiếp.",

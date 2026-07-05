@@ -361,7 +361,8 @@ export function useEditorProject({
       const isLikelyBlank =
         projectFiles.length <= 1 &&
         (mainFile === "main.tex" || mainFile === activeFile) &&
-        (latex.trim().length < 400 || /\\title\{Untitled\}/.test(latex));
+        (latex.trim().length < 400 ||
+          /\\title\{(?:Untitled(?: Manuscript)?|Bài báo chưa đặt tên)\}/.test(latex));
 
       const mergedFiles = replaceProject
         ? imported.files

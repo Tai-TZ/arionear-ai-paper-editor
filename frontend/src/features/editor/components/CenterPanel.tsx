@@ -265,8 +265,9 @@ export function CenterPanel({
             <EditorSelectionToolbar
               context={selectionPick.context}
               anchor={selectionPick.anchor}
-              onAddToChat={onAddSelectionToChat}
-              onQuickEdit={onQuickEditSelection}
+              copy={t.selectionToolbar}
+              onAskSelection={onAddSelectionToChat}
+              onEditSelection={onQuickEditSelection}
               onDismiss={onDismissSelectionToolbar}
             />
           )}

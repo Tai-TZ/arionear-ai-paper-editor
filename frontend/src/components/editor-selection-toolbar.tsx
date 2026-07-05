@@ -1,67 +1,120 @@
-import { MessageSquarePlus, Sparkles, X } from "lucide-react";
+import { MessageCircle, PencilLine, X } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 
-import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
+import type { EditorSelectionContext, SelectionAnchor } from "@/lib/editor-selection-anchor";
+import type { editorCopy } from "@/lib/editor-i18n";
+
+type SelectionToolbarCopy = ReturnType<typeof editorCopy>["selectionToolbar"];
 
 function preventBlur(e: React.MouseEvent) {
   e.preventDefault();
 }
 
+function editShortcutLabel(): string {
+  if (typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.platform)) {
+    return "⌘K";
+  }
+  return "Ctrl+K";
+}
+
 type EditorSelectionToolbarProps = {
   context: EditorSelectionContext;
-  anchor: { top: number; left: number };
-  onAddToChat: () => void;
-  onQuickEdit: () => void;
+  anchor: SelectionAnchor;
+  copy: SelectionToolbarCopy;
+  onAskSelection: () => void;
+  onEditSelection: () => void;
   onDismiss: () => void;
 };
 
 export function EditorSelectionToolbar({
   context,
   anchor,
-  onAddToChat,
-  onQuickEdit,
+  copy,
+  onAskSelection,
+  onEditSelection,
   onDismiss,
 }: EditorSelectionToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [placement, setPlacement] = useState<"below" | "above">("below");
+
   const lineLabel =
     context.lineStart === context.lineEnd
-      ? `dòng ${context.lineStart}`
-      : `dòng ${context.lineStart}–${context.lineEnd}`;
+      ? copy.line(context.lineStart)
+      : copy.lineRange(context.lineStart, context.lineEnd);
+
+  useLayoutEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+
+    const parent = el.offsetParent as HTMLElement | null;
+    const parentW = parent?.clientWidth ?? 0;
+    const parentH = parent?.clientHeight ?? 0;
+    const toolbarW = el.offsetWidth;
+    const toolbarH = el.offsetHeight;
+    const gap = 6;
+
+    const fitsBelow = anchor.bottom + gap + toolbarH <= parentH - 4;
+    const nextPlacement = fitsBelow ? "below" : "above";
+    const top =
+      nextPlacement === "below"
+        ? anchor.bottom + gap
+        : Math.max(4, anchor.top - gap - toolbarH);
+
+    const minLeft = toolbarW / 2 + 8;
+    const maxLeft = Math.max(minLeft, parentW - toolbarW / 2 - 8);
+    const left = Math.min(maxLeft, Math.max(minLeft, anchor.left));
+
+    setPlacement(nextPlacement);
+    setCoords({ top, left });
+  }, [anchor.bottom, anchor.top, anchor.left, lineLabel]);
+
+  const shortcut = editShortcutLabel();
 
   return (
     <div
+      ref={toolbarRef}
       className="editor-selection-toolbar"
-      style={{
-        top: Math.max(8, anchor.top - 8),
-        left: anchor.left,
-      }}
+      data-placement={placement}
+      style={
+        coords
+          ? { top: coords.top, left: coords.left, visibility: "visible" }
+          : { top: anchor.bottom + 6, left: anchor.left, visibility: "hidden" }
+      }
       role="toolbar"
-      aria-label="Tùy chọn vùng chọn"
+      aria-label={copy.ariaLabel}
     >
-      <span className="editor-selection-toolbar-meta">{lineLabel}</span>
+      <span className="editor-selection-toolbar-meta" title={lineLabel}>
+        {lineLabel}
+      </span>
+      <span className="editor-selection-toolbar-divider" aria-hidden />
       <button
         type="button"
         className="editor-selection-toolbar-btn"
         onMouseDown={preventBlur}
-        onClick={onAddToChat}
+        onClick={onAskSelection}
+        title={copy.askSelectionTitle}
       >
-        <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden />
-        Add to chat
+        <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{copy.askSelection}</span>
       </button>
       <button
         type="button"
         className="editor-selection-toolbar-btn editor-selection-toolbar-btn-primary"
         onMouseDown={preventBlur}
-        onClick={onQuickEdit}
+        onClick={onEditSelection}
+        title={`${copy.editSelectionTitle} (${shortcut})`}
       >
-        <Sparkles className="h-3.5 w-3.5" aria-hidden />
-        Quick Edit
-        <kbd className="editor-selection-kbd">Ctrl+K</kbd>
+        <PencilLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{copy.editSelection}</span>
+        <kbd className="editor-selection-kbd">{shortcut}</kbd>
       </button>
       <button
         type="button"
         className="editor-selection-toolbar-icon"
         onMouseDown={preventBlur}
         onClick={onDismiss}
-        aria-label="Đóng"
+        aria-label={copy.dismiss}
       >
         <X className="h-3.5 w-3.5" />
       </button>

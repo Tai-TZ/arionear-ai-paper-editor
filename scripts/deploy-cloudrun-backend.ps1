@@ -148,6 +148,10 @@ $BackendBaseUrl = if ($BackendCustomDomain) { $BackendCustomDomain } else { $Bac
 
 $llmProvider = Get-DotEnvValue "LLM_PROVIDER"
 if (-not $llmProvider) { $llmProvider = "openrouter" }
+$defenseLlmProvider = Get-DotEnvValue "DEFENSE_LLM_PROVIDER"
+if (-not $defenseLlmProvider) { $defenseLlmProvider = "google" }
+$defenseLlmModel = Get-DotEnvValue "DEFENSE_LLM_MODEL"
+if (-not $defenseLlmModel) { $defenseLlmModel = "gemini-3.1-flash-lite" }
 
 $googleClientId      = Get-DotEnvValue "GOOGLE_CLIENT_ID"
 $googleOauthRedirect = "$BackendBaseUrl/api/v1/auth/google/callback"
@@ -188,6 +192,8 @@ if ($googleApiKey) {
 $envVars = @(
     "APP_ENV=production",
     "LLM_PROVIDER=$llmProvider",
+    "DEFENSE_LLM_PROVIDER=$defenseLlmProvider",
+    "DEFENSE_LLM_MODEL=$defenseLlmModel",
     # Allow requests from frontend + API custom domain + raw Cloud Run URL
     "CORS_ORIGINS=$FrontendUrl,$BackendCustomDomain,$BackendUrl",
     "FRONTEND_BASE_URL=$FrontendUrl",

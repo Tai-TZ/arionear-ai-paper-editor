@@ -7,8 +7,12 @@ export type EditorSelectionContext = {
 };
 
 export type SelectionAnchor = {
+  /** Top of the line containing the selection end (px, textarea-local). */
   top: number;
+  /** Bottom of the line containing the selection end (px, textarea-local). */
+  bottom: number;
   left: number;
+  lineHeight: number;
 };
 
 function lineColAtOffset(value: string, offset: number): { line: number; col: number } {
@@ -43,9 +47,12 @@ export function getSelectionAnchor(
   const paddingTop = parseFloat(style.paddingTop) || 0;
   const paddingLeft = parseFloat(style.paddingLeft) || 0;
 
+  const top = paddingTop + (line - 1) * lineHeight - textarea.scrollTop;
   return {
-    top: paddingTop + (line - 1) * lineHeight - textarea.scrollTop,
+    top,
+    bottom: top + lineHeight,
     left: paddingLeft + measurePrefixWidth(textarea, lineText) - textarea.scrollLeft,
+    lineHeight,
   };
 }
 
