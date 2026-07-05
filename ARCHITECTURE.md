@@ -2,11 +2,13 @@
 
 **Dự án:** Arionear · AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *Closer to Publication*  
-**Phiên bản tài liệu:** 2.1 · **Cập nhật:** 13/06/2026
+**Phiên bản tài liệu:** 3.0 · **Cập nhật:** 06/07/2026
 
 > Kiến trúc dựa trên phân tích [AutoResearchReferee.md](./AutoResearchReferee.md) (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
-Tài liệu này mô tả **kiến trúc mục tiêu** và **trạng thái triển khai Phase 1 MVP** (đã code). Các mục đánh dấu *(planned)* chưa có trong repo.
+Tài liệu này mô tả **kiến trúc đã triển khai** tại Gate 3 (production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
+
+**Production URLs:** https://arionear.id.vn · https://api.arionear.id.vn
 
 ---
 
@@ -16,47 +18,53 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 
 | Khía cạnh | Mô tả |
 |-----------|--------|
-| **Input** | Bản thảo LaTeX có sẵn *(DOCX/PDF parser — planned)* |
-| **Output** | Bản thảo cải thiện + báo cáo integrity/citation + gợi ý cấu trúc |
-| **Vai trò AI** | Editor (Ario) — human luôn approve cuối |
+| **Input** | Bản thảo LaTeX (upload, Overleaf ZIP, template gallery) *(DOCX/PDF parser — planned)* |
+| **Output** | Bản thảo cải thiện + báo cáo integrity/citation + logic audit + publication score |
+| **Vai trò AI** | Editor (Ario) + Defense Council — human luôn approve cuối |
 | **Khác ARC** | ARC sinh bài từ ý tưởng; Arionear **không** chạy thí nghiệm, **không** PIVOT hướng nghiên cứu |
 
 **Stack hiện tại:**
 
 | Layer | Công nghệ |
 |-------|-----------|
-| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Bun |
-| Backend | FastAPI, Python 3.11+, LangGraph |
-| LLM | OpenAI · Anthropic · OpenRouter (chọn trong editor hoặc `.env`) |
-| Session store | localStorage (frontend) + in-memory API (backend) |
-| Database | Prisma + PostgreSQL |
-| DevOps | Docker, GitHub Actions (`.github/workflows/ci.yml`), AI Usage Logging hooks (`.cursor/hooks.json`) |
+| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Bun, PDF.js |
+| Backend | FastAPI, Python 3.11+, LangGraph, SQLAlchemy |
+| LLM | Z.AI (GLM) · Google (Gemini) · OpenAI · Anthropic · OpenRouter — chọn trong editor hoặc `.env` |
+| Persistence | PostgreSQL (Prisma schema + SQLAlchemy) · in-memory session cache · frontend localStorage cache |
+| Compile | TeX Live server-side (`latex_compile.py`), SyncTeX, delta asset compile, PDF cache |
+| Auth | JWT (email/password + Google SSO) · god admin provisioning |
+| Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout |
+| Observability | Inngest (optional), AI Usage Logging hooks (`.cursor/hooks.json`) |
+| DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `arionear.id.vn` |
 
 ---
 
-## 2. Kiến trúc tổng thể (4 tầng)
+## 2. Kiến trúc tổng thể (đã triển khai — Gate 3)
 
-Sơ đồ dưới đây gồm cả thành phần **đã triển khai** (Phase 1) và **mục tiêu** *(planned — in nghiêng trong mermaid label)*.
+> **Quy ước sơ đồ:** Chỉ gồm thành phần **đã code và chạy production** (✅). Tính năng roadmap *(planned P2)* không vẽ vào đây — xem [§12 Roadmap](#12-roadmap-tóm-tắt). `Researcher` là actor (người dùng), không phải module phần mềm.
 
 ```mermaid
 flowchart TB
     subgraph UL["USER LAYER"]
         U([Researcher])
-        UP[Upload LaTeX + figures<br/>DOCX/PDF planned]
-        UF[Chat intent<br/>Style · Structure · Citation · Template]
+        UP[Upload LaTeX + figures<br/>Overleaf ZIP · Templates ✅]
+        UF[Chat intent<br/>Style · Edit · Structure · Citation · Template · Logic ✅]
+        DF[Defense Mode<br/>Mock viva Q&A ✅]
     end
 
     subgraph PL["PROCESSING LAYER"]
         DP[Document Parser<br/>LaTeX backend ✅]
-        PSS[Paper Session Store<br/>in-memory + localStorage ✅]
-        RE[Routing Engine ✅]
+        PSS[Paper Store<br/>PostgreSQL + session cache ✅]
+        RE[Intent Router<br/>rules + LLM classifier ✅]
         SA[Style Agent ✅]
+        ED[Edit Agent ✅]
         TN[Template Generator ✅]
         ST[Structure Analyzer ✅]
-        LA[Logic Audit Panel<br/>planned P2]
+        LA[Logic Audit Panel ✅]
         CV[Citation Verifier ✅]
-        PR[Peer-Review Response Agent<br/>planned P2]
+        DC[Defense Council ✅]
         AIM[Academic Integrity Monitor ✅]
+        PS[Publication Score Gate ✅]
     end
 
     subgraph HGL["HUMAN GATE LAYER — C7 adapt"]
@@ -67,71 +75,82 @@ flowchart TB
         RD[Revised draft ✅]
         IR[Integrity flags ✅]
         CR[Citation Verification Report ✅]
-        RR[Reviewer Response drafts<br/>planned P2]
-        AL[Audit Log<br/>partial — L4]
+        LR[Logic Audit Report ✅]
+        DR[Defense transcript ✅]
+        AL[Audit Log ✅]
     end
 
     subgraph INF["INFRASTRUCTURE"]
-        API[FastAPI REST + SSE ✅]
-        LG[LangGraph Orchestrator ✅]
-        LLM[LLM Service<br/>OpenAI / Anthropic / OpenRouter]
-        DB[(PostgreSQL<br/>Prisma)]
-        EXT[External APIs<br/>arXiv · CrossRef · Semantic Scholar ✅<br/>OpenAlex planned]
+        API[FastAPI REST + SSE + WebSocket ✅]
+        LG[LangGraph + chat_stream ✅]
+        LLM[LLM Providers<br/>Z.AI · Google · OpenAI · Anthropic · OpenRouter ✅]
+        DB[(PostgreSQL ✅)]
+        EXT[External APIs<br/>arXiv · CrossRef · Semantic Scholar ✅]
+        ADM[Admin Console ✅]
+        BIL[Billing / Quotas ✅]
     end
 
     U --> UP --> DP
     UF --> RE
+    DF --> DC
     DP --> PSS --> RE
-    RE --> SA & ST & CV & TN
-    RE -.-> LA & PR
-    SA & ST & CV & TN --> AIM
+    RE --> SA & ED & ST & CV & TN & LA
+    SA & ED & ST & CV & TN --> AIM
+    LA --> AIM
     AIM --> DIFF
-    DIFF --> RD & IR & CR
-    DIFF -.-> RR & AL
-    API --> LG --> SA & ST & CV & TN
+    DIFF --> RD & IR & CR & LR & AL
+    DIFF --> PS
+    DC --> DR
+    API --> LG --> SA & ED & ST & CV & TN & LA
     LG --> LLM
+    DC --> LLM
     CV --> EXT
     PSS --> DB
     API --> PSS
+    API --> ADM & BIL
 ```
+
+**Chưa vẽ vào sơ đồ (planned P2):** Peer-Review Response Agent, Reviewer Response drafts, OpenAlex, DOCX/PDF parser.
 
 ---
 
 ## 3. Luồng người dùng end-to-end
 
-Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Template IMRAD chạy qua stream path; sync `/chat` dùng LangGraph graph.
+Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /chat` dùng LangGraph graph (ít dùng hơn). Defense dùng `POST /api/v1/defense/stream`.
 
 ```mermaid
 sequenceDiagram
     actor R as Researcher
-    participant FE as Frontend Editor
+    participant FE as EditorWorkspace
     participant API as FastAPI
-    participant LG as LangGraph / Stream
+    participant IR as Intent Router
+    participant AG as Agent / Stream
     participant AIM as Integrity Monitor
     participant LLM as LLM Provider
-    participant SS as Session Store
+    participant DB as PostgreSQL
 
-    R->>FE: Upload / edit LaTeX
-    FE->>FE: Persist project (localStorage)
-    FE->>API: PATCH /api/v1/sessions/{id} (best-effort sync)
-    R->>FE: Gửi chat ("cải thiện intro", "sườn bài mẫu", …)
-    FE->>API: POST /api/v1/chat/stream (SSE)
-    API->>LG: Detect intent → route task
-    LG-->>FE: event: activity (tiến trình)
-    LG->>LLM: Prompt C9 + guardrail L1
-    LLM-->>LG: Suggestion / response
-    LG->>AIM: L2 validate (numeric drift, length, semantic)
-    alt Vi phạm blocking flag
-        AIM-->>LG: Reject → retry / safe fallback
+    R->>FE: Mở project (papers API)
+    FE->>DB: GET/PATCH /papers/{id} (bearer JWT)
+    FE->>API: syncSession() best-effort
+    R->>FE: Chat ("rút gọn intro", "sườn IMRaD", …)
+    FE->>API: POST /chat/stream (SSE, bearer)
+    API->>IR: classify_intent (rules → LLM fallback)
+    IR-->>FE: event: activity
+    AG->>LLM: Prompt C9 + guardrail L1
+    LLM-->>AG: Suggestion / edits[]
+    AG->>AIM: L2 validate (numeric drift, length)
+    alt Blocking flag
+        AIM-->>AG: Reject → safe fallback
     else OK
-        AIM-->>API: suggestion, diff, flags, apply_mode
+        AIM-->>API: suggestion, diff, edits, flags
     end
     API-->>FE: event: token + event: done
-    FE->>R: Diff đỏ/xanh trong editor + Accept / Reject
+    FE->>R: Diff đỏ/xanh + Accept / Reject
     R->>FE: Accept
-    FE->>FE: Apply vào main.tex (Ctrl+S để lưu)
+    FE->>DB: PATCH paper (coalesced saves)
+    FE->>API: POST /compile (delta assets, gzip)
+    API-->>FE: PDF base64 + SyncTeX
     FE->>API: POST /revisions/{session}/{id} action=accepted
-    API->>SS: set_revision_action → DB suggestions
 ```
 
 ---
@@ -142,65 +161,119 @@ sequenceDiagram
 
 | Route | Chức năng | Trạng thái |
 |-------|-----------|------------|
-| `/` | Landing editorial | ✅ |
-| `/projects` | Quản lý dự án | ✅ Postgres papers API |
-| `/editor` | LaTeX editor + PDF preview + chat Ario | ✅ |
+| `/` | Landing editorial + marketing | ✅ |
+| `/signin`, `/signup`, `/forgot-password` | Auth JWT + Google SSO | ✅ |
+| `/projects` | Quản lý dự án (PostgreSQL) | ✅ |
+| `/editor?projectId=` | LaTeX editor + PDF + chat Ario | ✅ |
+| `/defense?projectId=` | Mock viva — split PDF + chat council | ✅ |
 | `/profile` | Researcher profile & preferences | ✅ |
-| `/signin`, `/signup` | Auth JWT | ✅ |
+| `/plan` | Billing / upgrade | ✅ |
+| `/templates` | Template gallery (IMRaD EN/VI) | ✅ |
+| `/share/$token` | Read-only shared paper + Yjs WS | ✅ |
+| `/admin` | God admin — users, LLM policy, cost report | ✅ |
+| `/guide` | User Guide v2 | ✅ |
+| `/pricing`, `/about`, `/features`, … | Marketing pages (EN/VI) | ✅ |
 
-**Editor (`/editor`) — đã triển khai:**
+**Editor architecture** — refactor Gate 3 (`features/editor/`):
 
-| Tính năng | File / module |
-|-----------|---------------|
-| LaTeX editor + line gutter | `routes/editor.tsx` → `LatexEditor` |
-| Diff đỏ/xanh trong editor | `components/latex-diff-editor.tsx`, `lib/text-diff.ts` |
-| Accept / Reject + L4 audit (`revisionAction`) | `editor.tsx` → `revisionAction()` |
-| Revision history panel | Tools → Versions tab, `GET /sessions/{id}/revisions` |
-| Citation registry reload | `fetchCitationRegistry()` on project open |
-| Chat streaming (activity, token, done + `revision_id`) | `lib/api/academic.ts` → `streamChat()` |
-| Citation verify panel | Tools tab → `verifyCitations()` |
-| Provider / model picker | Chat dock |
-| Ctrl+S lưu + dirty `*` indicator | `project-store.ts` |
-| Session sync API | `syncSession()` (best-effort) |
+| Hook / module | Trách nhiệm |
+|---------------|-------------|
+| `EditorWorkspace.tsx` | Shell layout, keyboard shortcuts, wiring hooks |
+| `useEditorProject` | Boot paper, files/assets, persist, import ZIP |
+| `useLatexWorkspace` | Compile, PDF preview, SyncTeX, cache |
+| `useEditorChat` | Chat threads, SSE stream, pending edits, logic audit launch |
+| `useEditorTools` | Tools panel, citation verify, structure, score gate |
+| `useEditorProviders` | LLM provider/model picker state |
+| `CenterPanel` + `ChatOverlay` | Editor surface + chat dock |
+| `lib/api/academic.ts` | SSE chat, compile, logic audit (đang tách dần sang `*-api.ts`) |
+| `lib/api/papers-api.ts` | Papers CRUD |
+| `lib/project-store.ts` | Client-side project model + VI/EN blank templates |
 
-**Planned (P2):** DOCX/PDF upload & parse, logic audit UI, peer-review reply UI.
+**Editor features đã triển khai:**
+
+| Tính năng | Module |
+|-----------|--------|
+| LaTeX editor + line gutter + selection toolbar | `LatexEditor`, `editor-selection-toolbar` |
+| Diff đỏ/xanh, multi-file edits | `PendingEditsPanel`, `SuggestionPanel`, `useEditorChat` |
+| Accept / Reject + revision API | `revisionAction()` |
+| Chat streaming (activity, token, done) | `streamChat()` in `academic.ts` |
+| Natural-language edit (VI: "rút gọn section") | `intent_rules` + `chat_stream` |
+| Logic Audit Quick/Deep panel | `logic-audit-panel`, `logic_audit/runner.py` |
+| Publication score gate (pre-export) | `paper-score.ts`, `useEditorTools` |
+| Citation verify panel | Tools tab |
+| Overleaf ZIP import | `overleaf-import.ts` |
+| Mobile layout (files / editor / chat tabs) | `Mobile*` components |
+| Auto-save + coalesced PATCH | `useEditorProject` |
+| Compile-after-accept | `useLatexWorkspace` |
+
+**Planned (P2):** DOCX/PDF upload & parse, peer-review reply UI, tách hoàn toàn `academic.ts`.
 
 ### 4.2 Backend (FastAPI)
 
-Prefix: `/api/v1` · Health: `GET /health`
+Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
+
+**Router map:**
+
+| Router file | Prefix / path | Mục đích |
+|-------------|---------------|----------|
+| `routes.py` | `/api/v1` | Sessions, chat/stream, compile, citations, revisions, providers |
+| `auth_routes.py` | `/api/v1/auth` | Register, login, forgot-password, Google OAuth |
+| `paper_routes.py` | `/api/v1/papers` | Papers CRUD (auth) |
+| `profile_routes.py` | `/api/v1/users` | Researcher profile |
+| `admin_routes.py` | `/api/v1/admin` | Users, usage, cost report, LLM config |
+| `billing_routes.py` | `/api/v1/billing` | Status, checkout, upgrade |
+| `defense_routes.py` | `/api/v1` | Defense quota + SSE stream |
+| `share_routes.py` | `/api/v1` | Share links + Yjs WebSocket |
+| `template_routes.py` | `/api/v1/templates` | Gallery + admin template mgmt |
+
+**Core agent endpoints** (`routes.py`):
 
 | Endpoint | Mục đích | Trạng thái |
 |----------|----------|------------|
 | `GET /status` | Agent name, provider, storage mode | ✅ |
 | `GET /providers` | LLM providers & models | ✅ |
-| `POST /sessions` | Tạo session | ✅ |
-| `GET /sessions/{id}` | Lấy session | ✅ |
-| `PATCH /sessions/{id}` | Cập nhật latex/metadata | ✅ |
+| `POST /sessions` · `GET/PATCH /sessions/{id}` | Session CRUD (cache) | ✅ |
 | `POST /chat` | Chat sync (LangGraph) | ✅ |
-| `POST /chat/stream` | Chat SSE (intent + template) | ✅ |
+| `POST /chat/stream` | Chat SSE — intent + edit + template + logic audit | ✅ |
 | `POST /edit/style` | Style edit trực tiếp | ✅ |
 | `POST /citations/verify` | Xác minh trích dẫn | ✅ |
+| `POST /compile` | LaTeX → PDF (delta assets, gzip, rate limit) | ✅ |
+| `GET /compile/status` | TeX Live availability probe | ✅ |
+| `POST /compile/synctex` | SyncTeX inverse lookup | ✅ |
 | `POST /revisions/{session_id}/{revision_id}` | Ghi accept/reject revision | ✅ |
 | `GET /sessions/{session_id}/revisions` | Lịch sử AI revision | ✅ |
-| `GET /sessions/{session_id}/citations` | Citation registry đã verify | ✅ |
-| `GET/PATCH /users/me/profile` | Researcher profile & preferences | ✅ |
-| `POST /papers`, `GET/PATCH/DELETE /papers/{id}` | Auth papers CRUD | ✅ |
+| `GET /sessions/{session_id}/citations` | Citation registry | ✅ |
 
-### 4.3 LangGraph Orchestrator
+**Auth & business endpoints:**
 
-**Topology mục tiêu:** Orchestrator → specialized sub-agents (không peer-to-peer, theo ARC).
+| Endpoint | Mục đích |
+|----------|----------|
+| `POST /auth/register/*`, `/login`, `/forgot-password` | Email auth + verification |
+| `GET /auth/google/start`, `/callback` | Google SSO |
+| `GET/PATCH /users/me/profile` | Researcher profile |
+| `GET/POST/PATCH/DELETE /papers/*` | Paper persistence |
+| `GET /admin/*` | Admin console |
+| `GET/POST /billing/*` | Quotas, checkout, upgrade |
+| `GET /defense/quota`, `POST /defense/stream` | Defense council |
+| `GET/POST/DELETE /papers/{id}/share`, `GET /share/{token}` | Share links |
+| `WS /ws/share/{token}` | Yjs collaborative read |
+| `GET/POST /templates/*` | Template gallery |
 
-**Đã triển khai** (`src/agents/graph.py`):
+### 4.3 LangGraph Orchestrator + Stream Service
+
+**LangGraph** (`src/agents/graph.py`) — sync path `POST /chat`:
 
 ```mermaid
 flowchart LR
     START((Start)) --> ROUTE[route_node]
     ROUTE --> PARSE[parse_node]
     PARSE -->|style| STYLE[style_node]
-    PARSE -->|structure / logic| STRUCT[structure_node]
+    PARSE -->|edit| EDIT[edit_node]
+    PARSE -->|structure / logic| STRUCT[structure_node / logic_node]
     PARSE -->|citation| CITE[citation_node]
     PARSE -->|chat| CHAT[chat_node]
     STYLE --> AIM[integrity_node]
+    EDIT --> AIM
     AIM --> RESPOND[respond_node]
     CITE --> RESPOND
     STRUCT --> RESPOND
@@ -210,53 +283,98 @@ flowchart LR
 
 | Node | Chức năng |
 |------|-----------|
-| `route_node` | Regex intent: style, structure, citation, template, chat |
-| `parse_node` | Parse LaTeX sections, cite keys, BibTeX; sync session |
-| `style_node` | LLM polish + L2 retry (`max_style_retries`) |
-| `integrity_node` | Merge integrity flags sau style |
+| `route_node` | Regex intent routing |
+| `parse_node` | Parse LaTeX sections, cite keys, BibTeX |
+| `style_node` | LLM polish + L2 retry |
+| `edit_node` | Scoped document edits (section/title/selection) |
+| `integrity_node` | Merge integrity flags sau style/edit |
 | `citation_node` | 4-layer verify → `citation_registry` |
 | `structure_node` | Rule-based + LLM structure suggestions |
-| `chat_node` | General Ario chat; auto style nếu có selection |
+| `logic_node` | Logic audit entry (sync path) |
+| `chat_node` | General Ario chat |
 | `respond_node` | Format response message |
 
-**Ngoài graph:** `chat_stream.py` xử lý SSE, reasoning stream, và task **`template`** (IMRAD skeleton qua `template_latex.py`) — chưa có node riêng trong graph sync.
+**Stream service** (`src/services/chat_stream.py`) — primary path `POST /chat/stream`:
 
-**Planned (P2):** `logic` → Logic Audit Panel, `review` → Peer-Review Response Agent.
+- `classify_intent()` — rules-first (`intent_rules.py`), LLM classifier fallback (`intent_router.py`)
+- Handles: style, edit, structure, citation, template, logic audit, casual chat
+- Vietnamese NL edit routing (e.g. "rút gọn introduction")
+- SSE events: `activity`, `reasoning`, `token`, `done`, `error`
+- Client disconnect cancels in-flight work
+- Template IMRAD via `template_latex.py` (ngoài graph sync path)
 
-### 4.4 Paper Session Store (C10 adapt)
+**Intent routing stack:**
 
-**Hiện tại** (`src/services/sessions.py` — in-memory):
-
-```json
-{
-  "id": "uuid",
-  "name": "Untitled",
-  "latex_content": "...",
-  "metadata": {},
-  "citation_registry": [{ "key", "status", "layers", "metadata", "message" }],
-  "revision_history": [
-    { "id", "section", "original", "suggestion", "action": "pending|accepted|rejected", "created_at" }
-  ],
-  "created_at": "...",
-  "updated_at": "..."
-}
+```
+User message
+  → intent_rules (regex, casual chat guard, VI patterns)
+  → intent_router (LLM JSON classifier, 20s timeout)
+  → chat_stream task dispatch
 ```
 
-Frontend lưu project riêng trong **localStorage** (`lib/project-store.ts`); `syncSession()` đồng bộ latex lên API khi mở/lưu editor.
+### 4.4 Logic Audit (`src/services/logic_audit/`)
 
-**Schema mục tiêu (planned):** thêm `peer_review_log`, `parsed_structure` persist, `integrity_flags` theo session, PostgreSQL persistence.
+| Module | Chức năng |
+|--------|-----------|
+| `runner.py` | Orchestrate Quick/Deep audit, chunking, persist debounce |
+| `debate.py` | Multi-perspective persona debate + synthesis |
+| `paper_gate_skim.py` | Pre-publication score gate (Z.AI / Gemini) |
+| `config.py` | Model selection per mode (quick/deep/gate) |
+| `schemas.py` | `LogicAuditReport` structure |
 
-### 4.5 External integrations
+- Quick mode: section skim + gate fingerprint
+- Deep mode: persona debate per section, streamed to Tools panel
+- Dedicated Gemini models (`google_logic_audit_*` in `config.py`)
+- Session mutex + incremental persist to paper metadata
+- **Comment-only** — không auto-apply vào manuscript
+
+### 4.5 Defense Council (`src/services/defense_*`)
+
+| Module | Chức năng |
+|--------|-----------|
+| `defense_stream.py` | SSE mock viva, Gemini 3.1 Flash Lite default |
+| `defense_quota.py` | Turn limits per tier, atomic `FOR UPDATE` billing |
+| `defense_citations.py` | PDF passage prep for council context |
+
+- Frontend: `/defense` — split PDF viewer + chat panel
+- Session persist in `localStorage` (`defense-session-storage.ts`)
+- PDF citation deep-links from defense chat
+- Client disconnect cancels quota charge
+
+### 4.6 Paper & Session Persistence
+
+**Ba lớp persistence (có chủ đích):**
+
+```mermaid
+flowchart LR
+    FE[Frontend localStorage<br/>project-store cache] -->|PATCH coalesced| DB[(PostgreSQL<br/>papers, users, audit)]
+    FE -->|best-effort| SS[in-memory session_store<br/>citation_registry, revisions]
+    SS -.->|when DB ready| DB
+```
+
+| Lớp | Module | Dữ liệu |
+|-----|--------|---------|
+| **PostgreSQL** | `db/models.py`, `paper_repository.py` | Users, Papers, Sections, Suggestions, Citations, AuditLog, Subscriptions |
+| **Session cache** | `services/sessions.py` | Per-session latex, citation_registry, revision_history (in-memory; refreshed from DB when enabled) |
+| **Frontend cache** | `lib/project-store.ts` | Project files, assets, chat threads, logic audit reports |
+
+Prisma schema (`prisma/schema.prisma`) là source of truth cho migrations; SQLAlchemy mirrors cho FastAPI runtime. `DIRECT_DATABASE_URL` (TCP) cho backend; `DATABASE_URL` (Prisma Accelerate) cho CLI.
+
+### 4.7 External integrations
 
 | Dịch vụ | Mục đích | Trạng thái |
 |---------|----------|------------|
-| OpenAI / Anthropic / OpenRouter | LLM inference | ✅ |
+| Z.AI (GLM) | Default LLM — editor, logic audit quick | ✅ |
+| Google Gemini | Defense council, logic audit deep/gate | ✅ |
+| OpenAI / Anthropic / OpenRouter | Alternative providers (editor picker) | ✅ |
 | arXiv API | Verify preprint ID | ✅ |
 | CrossRef | Verify DOI metadata | ✅ |
 | Semantic Scholar | Title search fallback | ✅ |
+| SMTP | Email verification, password reset | ✅ (production) |
+| Google OAuth | SSO | ✅ |
+| Inngest | Chat pipeline observability | Optional |
 | OpenAlex | Literature suggest / validate | Planned P2 |
-| DataCite | DOI metadata (bổ sung) | Planned P2 |
-| LangSmith | Tracing (BTC deliverable) | Optional (`.env`) |
+| LangSmith | Tracing | Optional (`.env`) |
 
 Citation verifier: arXiv → CrossRef → Semantic Scholar (`src/services/citations/verifier.py`).
 
@@ -264,33 +382,39 @@ Citation verifier: arXiv → CrossRef → Semantic Scholar (`src/services/citati
 
 ## 5. Guardrail Architecture (4 lớp)
 
-Yếu tố khác biệt cốt lõi so với editor AI thông thường.
-
 ```mermaid
 flowchart TB
     subgraph L1["Lớp 1 — Prompt Constraint ✅"]
         P1[System prompt prohibition<br/>prompts.default.yaml]
+        P2[Prompt injection guard<br/>request_guard.py]
     end
     subgraph L2["Lớp 2 — Output Validation ✅"]
-        P2[Numeric drift check]
-        P3[Semantic / length checks]
-        P4[Citation registry match — partial]
+        P3[Numeric drift check]
+        P4[Length / semantic checks]
+        P5[Editor scope guard]
+        P6[Output sanitize]
     end
     subgraph L3["Lớp 3 — Differential Display ✅"]
-        P5[Line diff in editor — no silent overwrite]
+        P7[Line diff in editor — no silent overwrite]
+        P8[Blocking flags disable Accept]
     end
-    subgraph L4["Lớp 4 — Audit Log ⚠️ partial"]
-        P6[revision_history backend;<br/>FE Accept chưa gọi API]
+    subgraph L4["Lớp 4 — Audit Log ✅ partial"]
+        P9[revision_history + AuditLog DB]
+        P10[FE Accept → revision API]
+        P11[Publication score gate fingerprint]
     end
     L1 --> L2 --> L3 --> L4
 ```
 
-| Lớp | Cơ chế | Trạng thái |
-|-----|--------|------------|
-| L1 | `src/prompts/prompts.default.yaml` — cấm thêm số liệu/claim/citation | ✅ |
-| L2 | `check_integrity()` + retry trong `style_node` | ✅ |
-| L3 | `LatexDiffEditor` + Accept/Reject; blocking flags disable Accept | ✅ |
-| L4 | `add_revision()` backend; export AI Contribution Report | ⚠️ Partial |
+| Lớp | Cơ chế | Module |
+|-----|--------|--------|
+| L1 | Cấm thêm số liệu/claim/citation trong system prompt | `prompts/prompts.default.yaml` |
+| L1+ | Injection detection, system prompt leak guard | `guardrails/prompt_injection.py`, `request_guard.py` |
+| L2 | `check_integrity()` + retry; editor scope limits | `guardrails/integrity.py`, `editor_scope.py` |
+| L3 | `PendingEditsPanel` + Accept/Reject; multi-edit queue | Frontend editor |
+| L4 | `add_revision()` + `AuditLog` model; score gate skim | `sessions.py`, `db/models.py` |
+
+Chi tiết: [docs/GUARDRAILS.md](./docs/GUARDRAILS.md)
 
 ---
 
@@ -299,15 +423,15 @@ flowchart TB
 | ARC | Quyết định | Arionear equivalent | Trạng thái |
 |-----|------------|---------------------|------------|
 | C1 RAG | ADAPT | Citation Verifier (+ Literature Suggester opt-in) | Verifier ✅ |
-| C2 Debate | ADAPT | Logic Audit Panel, Review Response agents | P2 |
+| C2 Debate | ADAPT | Logic Audit Panel (persona debate) | ✅ |
 | C3 Sandbox | **DROP** | — | — |
-| C4 Citation | ADOPT | 4-layer verifier (layers 1–3 deterministic) | ✅ |
+| C4 Citation | ADOPT | 4-layer verifier | ✅ |
 | C5 Sentinel | ADAPT | Academic Integrity Monitor | ✅ L2 |
 | C6 PIVOT | **DROP** | Revision Control (accept/reject) | ✅ UI |
 | C7 HITL | ADAPT | Gate mọi LLM output qua diff | ✅ |
 | C8 MetaClaw | Deferred P3 | Meta-patterns only | — |
 | C9 Prompts YAML | ADOPT | `prompts.default.yaml` | ✅ |
-| C10 KB | ADAPT | Paper Session Store | ✅ in-memory |
+| C10 KB | ADAPT | Paper Store (PostgreSQL + session cache) | ✅ |
 
 Chi tiết: [AutoResearchReferee.md](./AutoResearchReferee.md) §3–4.
 
@@ -317,23 +441,35 @@ Chi tiết: [AutoResearchReferee.md](./AutoResearchReferee.md) §3–4.
 
 ### Style & Grammar ✅
 
-Selection / section text → Style Agent (C9) → L2 `check_integrity` → unified diff → Human gate → apply local (+ `revision_history` backend khi qua style API).
+Selection / section text → Style Agent (C9) → L2 `check_integrity` → unified diff → Human gate → apply + optional compile-after-accept.
+
+### Scoped Edit ✅
+
+NL request ("rename title", "rút gọn Methods") → `edit_planner` + `edit_executor` → multi-file `edits[]` → diff per file → Human gate.
 
 ### IMRAD Template ✅
 
-Chat "sườn bài mẫu" → `generate_template()` → full-document diff (`apply_mode: document`) → Human gate.
+Chat "sườn bài mẫu" / template gallery → `generate_template()` / `template_store` → full-document diff (`apply_mode: document`) → Human gate. Templates EN + VI.
 
 ### Citation Validation ✅
 
-Cite keys + BibTeX → layers arXiv / CrossRef / Semantic Scholar → status report trong Tools panel. LLM relevance (layer 4) — planned P2.
+Cite keys + BibTeX → layers arXiv / CrossRef / Semantic Scholar → status report trong Tools panel.
 
 ### Structure Analysis ✅
 
-Parsed sections → rule checks + LLM JSON suggestions → chat response (chưa auto-apply diff).
+Parsed sections → rule checks + LLM JSON suggestions → chat response (không auto-apply).
 
-### Logic Check *(P2)*
+### Logic Audit ✅
 
-Full draft → 3 agents debate (chỉ comment) → Conflict Report.
+Full draft → persona debate (Deep) hoặc gate skim (Quick) → `LogicAuditReport` streamed to panel → comment-only, persist in paper metadata.
+
+### Publication Score Gate ✅
+
+Pre-export → `paper_gate_skim` + template-aware checks → score dialog → export allowed/blocked.
+
+### Defense Mock Viva ✅
+
+Paper PDF + LaTeX passages → Defense Council (Gemini) → streamed Q&A → citation links to PDF.
 
 ### Peer-Review Response *(P2)*
 
@@ -348,21 +484,30 @@ flowchart LR
     subgraph Client
         Browser[Browser]
     end
-    subgraph Cloud
-        FE[Nitro / Vercel<br/>Frontend SSR]
-        BE[FastAPI Container<br/>Render / Railway]
-        DB[(PostgreSQL<br/>planned)]
+    subgraph GCP["Google Cloud Run — asia-east1"]
+        FE[arionear-web<br/>Nitro SSR frontend]
+        BE[arionear-api<br/>FastAPI + TeX Live]
+    end
+    subgraph Data
+        DB[(PostgreSQL<br/>Prisma Accelerate)]
     end
     subgraph External
-        LLM[OpenAI / Anthropic / OpenRouter]
+        LLM[Z.AI · Google · OpenRouter · …]
         SCH[arXiv · CrossRef · Semantic Scholar]
+        SMTP[SMTP · Google OAuth]
     end
-    Browser --> FE
-    FE -->|REST + SSE| BE
-    BE -.-> DB
+    Browser -->|HTTPS| FE
+    FE -->|REST + SSE + WS| BE
+    BE --> DB
     BE --> LLM
     BE --> SCH
+    BE --> SMTP
 ```
+
+| Service | Custom domain | Cloud Run |
+|---------|---------------|-----------|
+| Frontend | https://arionear.id.vn | `arionear-web` |
+| Backend API | https://api.arionear.id.vn | `arionear-api` |
 
 **Dev:**
 
@@ -374,17 +519,24 @@ uvicorn src.main:app --reload --port 8000
 cd frontend && bun run dev
 ```
 
-**Docker:** `docker-compose.yml` — backend only; frontend container planned.
+**Deploy:** `scripts/deploy-cloudrun-backend.ps1`, `scripts/deploy-cloudrun-frontend.ps1`  
+**CI:** `.github/workflows/ci.yml` — pytest, Ruff, frontend vitest + build (self-hosted Linux runner).
 
 ---
 
 ## 9. Security & Privacy
 
-- API keys trong `.env` — never commit
+- API keys trong `.env` — never commit; Cloud Run secrets at deploy time
 - Pydantic validation mọi API input
-- CORS: explicit origins + regex `localhost` any port (dev mode)
-- *Planned:* JWT auth, encryption at rest, zero-retention LLM mode cho unpublished manuscripts
+- CORS: explicit origins (`cors_config.py`) + production domain `arionear.id.vn`
+- JWT auth (72h default, 30d remember-me) — `auth_service.py`
+- Google SSO OAuth2 — `google_oauth_service.py`
+- Bearer token on agent APIs (`agent_deps.py`) — paper session access check
+- God admin provisioned from env on startup (`ensure_god_admin`)
 - Prompt injection mitigation: user LaTeX trong HumanMessage, system prompt tách biệt (C9)
+- Compile rate limiting (`compile_policy.py`)
+- Defense quota atomic billing — prevent double-charge on disconnect
+- *Planned:* encryption at rest, zero-retention LLM mode
 
 ---
 
@@ -393,53 +545,102 @@ cd frontend && bun run dev
 | Decision | Choice | Reason |
 |----------|--------|--------|
 | Triết lý sản phẩm | Assisted Editing | Khác ARC; researcher giữ quyền sáng tạo |
-| Frontend | TanStack Start | SSR + file routing; đã build editor |
+| Frontend | TanStack Start | SSR + file routing; editor feature module |
 | Backend | FastAPI | Async, OpenAPI, SSE streaming |
-| Agent | LangGraph + stream service | Routing multi-task; template ngoài graph |
-| LLM (dev) | OpenRouter (có thể free tier) | Chi phí thấp; hỗ trợ đa provider |
-| Citation format | Citation.js / Pybtex *(planned)* | Deterministic — không tin LLM cho format rules |
+| Agent | LangGraph + `chat_stream` | Graph cho sync; stream service cho production UX |
+| LLM default | Z.AI GLM + Gemini defense/audit | Chi phí thấp; chất lượng đủ Gate 3 metrics |
 | Human gate | Line diff + explicit accept | "Show, Don't Overwrite" (C7) |
+| Logic audit | Comment-only debate | Giữ niềm tin researcher; không auto-apply |
+| Persistence | PostgreSQL + session cache + localStorage | DB authoritative; cache cho resilience/offline feel |
+| Compile | Server-side TeX Live | Consistent PDF; không phụ thuộc client TeX |
+| i18n | `*-i18n.ts` per domain | EN/VI toggle toàn app |
 | Experiment code | Không tích hợp | Tránh fabrication (C3 DROP) |
 | Prompts | External YAML (C9) | Audit, A/B test, không redeploy |
-| Session persistence | localStorage + in-memory API | MVP nhanh; DB do teammate Phase 2 |
 
 ---
 
 ## 11. Trạng thái triển khai vs kiến trúc mục tiêu
 
-| Thành phần | Hiện tại (Phase 1 MVP) | Target |
-|------------|------------------------|--------|
-| Document Parser | LaTeX backend (`parser/latex.py`) | + DOCX/PDF adapters |
-| Paper Session Store | localStorage + in-memory API | PostgreSQL |
-| Routing Engine | Regex intent + LangGraph conditional edges | + LLM classifier |
-| Style Agent | LLM + L2 retry | ✅ stable |
-| Template Generator | IMRAD skeleton (`template_latex.py`) | Journal-specific templates |
+| Thành phần | Hiện tại (Gate 3) | Target / gap |
+|------------|-------------------|--------------|
+| Document Parser | LaTeX + Overleaf ZIP | + DOCX/PDF adapters |
+| Paper Store | PostgreSQL + session cache + localStorage | Full offline sync |
+| Routing Engine | Rules + LLM classifier | Fine-tune classifier |
+| Style / Edit Agent | LLM + L2 retry + scope planner | ✅ stable |
+| Template Generator | IMRAD EN/VI + gallery admin | Journal-specific packs |
 | Structure Analyzer | Rules + LLM suggestions | Auto-apply optional diff |
-| Citation Verifier | arXiv → CrossRef → Semantic Scholar | + OpenAlex, L4 LLM relevance |
-| Human Gate diff | Line diff in editor + Accept/Reject | + Modify inline |
-| Logic / Review agents | — | P2 |
+| Logic Audit | Persona debate + gate skim | Peer-review linkage |
+| Citation Verifier | arXiv → CrossRef → S2 | + OpenAlex, L4 LLM relevance |
+| Defense Council | Mock viva SSE + quota | Live committee (out of scope) |
+| Human Gate diff | Multi-file diff + Accept/Reject | + Modify inline |
+| Peer-Review Response | — | P2 |
 | Integrity Monitor | `check_integrity()` + UI flags | + semantic model scoring |
-| Guardrail L1–L3 | ✅ | L4 full audit + export report |
+| Guardrail L1–L4 | ✅ L1–L3 full; L4 partial | Export AI Contribution report |
+| Auth | JWT + Google SSO + email verify | ✅ |
+| Billing | Tier quotas + QR checkout | Payment gateway integration |
+| Admin | Users, LLM policy, cost report | ✅ |
+| Share | Read-only link + Yjs WS | ✅ |
 | Chat streaming | SSE activity/reasoning/token | ✅ |
-| Auth | Mock UI | JWT / real auth |
+| Compile | Delta assets, gzip, PDF cache, SyncTeX | ✅ |
+| Tests | 296 pytest + frontend vitest | More FE integration tests |
+| Eval | Gate 3 — 8/9 metrics vs baseline | `health_latency_p95` cold-start |
 
 ---
 
 ## 12. Roadmap (tóm tắt)
 
-| Phase | Trọng tâm |
-|-------|-----------|
-| **P1 MVP** *(đang chạy)* | Style, structure, citation, template, diff gate, streaming — **phần lớn ✅** |
-| **P1.5** | ✅ L4 audit, revision/citation persistence, researcher profile |
-| **P2** | Logic audit panel, peer-review response, OpenAlex, DOCX/PDF import |
-| **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export |
+| Phase | Trọng tâm | Trạng thái |
+|-------|-----------|------------|
+| **P1 MVP** | Style, structure, citation, template, diff gate, streaming | ✅ Done |
+| **P1.5** | Auth, PostgreSQL, profile, revisions, L4 audit | ✅ Done |
+| **P2 Gate 3** | Logic audit, defense, billing, admin, production deploy, eval | ✅ Done |
+| **P2+** | Peer-review response, OpenAlex, DOCX/PDF import | Planned |
+| **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export | Deferred |
+| **GO PRODUCT** | Demo Day → maintenance, pitch deck, video demo | In progress (09/07) |
 
-Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · [AutoResearchReferee.md](./AutoResearchReferee.md)
+Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Gate 3 evidence: **[REPORT_GATE3.md](./REPORT_GATE3.md)**
+
+---
+
+## 13. Cấu trúc thư mục (tóm tắt)
+
+```
+src/
+├── main.py                 # FastAPI app, lifespan, router mount
+├── config.py               # Pydantic Settings (LLM, compile, auth, …)
+├── api/                    # Route handlers (thin — delegate to services)
+├── agents/                 # LangGraph graph + academic_nodes
+├── services/               # Business logic
+│   ├── chat_stream.py      # Primary SSE orchestrator
+│   ├── intent_router.py    # LLM intent classifier
+│   ├── intent_rules.py     # Regex / VI rules
+│   ├── edit_planner.py     # Scoped edit planning
+│   ├── edit_executor.py    # Apply edits to LaTeX
+│   ├── logic_audit/        # Debate + gate skim
+│   ├── defense_*.py        # Defense council
+│   ├── guardrails/         # L1–L2 integrity
+│   ├── latex_compile.py    # TeX Live pipeline
+│   └── …
+├── db/                     # SQLAlchemy models + engine
+└── models/                 # Pydantic request/response schemas
+
+frontend/src/
+├── routes/                 # TanStack file routes
+├── features/editor/        # EditorWorkspace + hooks
+├── components/             # Shared UI (chat-overlay, pdf-preview, …)
+└── lib/
+    ├── api/                # API clients (academic, papers, defense, …)
+    ├── *-i18n.ts           # EN/VI copy per domain
+    └── project-store.ts    # Client project model
+```
 
 ---
 
 ## Tài liệu liên quan
 
 - [AutoResearchReferee.md](./AutoResearchReferee.md) — phân tích ARC & quyết định adopt/adapt/drop
-- [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map (v2.1)
+- [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map
+- [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) — guardrail layers L1–L4
+- [REPORT_GATE3.md](./REPORT_GATE3.md) — Gate 3 eval metrics & production evidence
 - [README.md](./README.md) — hướng dẫn chạy dự án
+- [WORKLOG.md](./WORKLOG.md) · [JOURNAL.md](./JOURNAL.md) — team deliverables log
