@@ -76,10 +76,12 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: |
-          npm ci
-          # Self-hosted Linux: npm cache/optional-deps can omit @rollup/rollup-linux-x64-gnu
-          node -e "require('@rollup/rollup-linux-x64-gnu')" 2>/dev/null \
-            || npm install --no-save @rollup/rollup-linux-x64-gnu
+          npm ci --include=optional
+          # Self-hosted Linux: optional native bindings are sometimes skipped by npm ci
+          npm install --no-save \
+            @rollup/rollup-linux-x64-gnu \
+            lightningcss-linux-x64-gnu \
+            @tailwindcss/oxide-linux-x64-gnu
 
       - name: Run unit tests
         working-directory: frontend
