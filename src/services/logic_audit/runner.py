@@ -364,6 +364,7 @@ async def run_logic_audit(
     scope: str = "selected",
     section_filter: list[str] | None = None,
     chat_provider: str | None = None,
+    locale: str | None = None,
     max_sections: int = 4,
     on_progress: LogicProgressFn | None = None,
     on_reasoning: LogicReasoningFn | None = None,
@@ -378,6 +379,7 @@ async def run_logic_audit(
     if normalized_mode == "gate":
         from src.services.logic_audit.paper_gate_skim import run_paper_gate_skim
 
+        ui_language = "English" if locale == "en" else "Vietnamese"
         return await run_paper_gate_skim(
             latex=latex,
             sections=sections,
@@ -385,7 +387,7 @@ async def run_logic_audit(
             provider=provider,
             model=model,
             chat_provider=chat_provider,
-            ui_language="Vietnamese",
+            ui_language=ui_language,
             on_progress=on_progress,
             on_reasoning=on_reasoning,
             cancel_event=cancel_event,

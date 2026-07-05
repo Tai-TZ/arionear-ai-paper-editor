@@ -4,7 +4,12 @@ from src.services.chat_context import (
     chat_query_needs_manuscript_context,
     format_conversation_history_for_router,
 )
-from src.services.intent_rules import fallback_intent, infer_followup_intent, looks_like_edit_followup
+from src.services.intent_rules import (
+    fallback_intent,
+    infer_followup_intent,
+    looks_like_edit_followup,
+    looks_like_manuscript_edit_request,
+)
 from src.services.llm_errors import friendly_llm_error
 from src.services.quota_policy import QuotaExceededError, check_rate_limit, reset_rate_limit_state
 
@@ -16,6 +21,13 @@ def test_chat_query_needs_manuscript_context_for_section_question():
 
 def test_chat_query_skips_casual_greeting():
     assert not chat_query_needs_manuscript_context("xin chào")
+
+
+def test_looks_like_manuscript_edit_request_shorten_section():
+    query = "giúp tôi rút gọn phần introduction nhé, trông nó khá dài"
+    assert looks_like_manuscript_edit_request(query)
+    assert not looks_like_manuscript_edit_request("giúp tôi hiểu phần introduction")
+    assert not looks_like_manuscript_edit_request("chào bạn")
 
 
 def test_fallback_intent_edit_question():

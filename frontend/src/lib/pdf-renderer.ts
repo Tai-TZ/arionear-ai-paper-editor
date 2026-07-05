@@ -68,6 +68,85 @@ export function pdfPointFromClick(
   return [pdfX, pdfY];
 }
 
+function hitSpanAtPoint(
+  clientX: number,
+  clientY: number,
+  textLayer: HTMLElement,
+): HTMLSpanElement | null {
+  const elements = document.elementsFromPoint(clientX, clientY);
+  for (const el of elements) {
+    if (!textLayer.contains(el)) continue;
+    const span = el.closest("span");
+    if (!span || !textLayer.contains(span)) continue;
+    const rect = span.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    return span as HTMLSpanElement;
+  }
+  return null;
+}
+
+/** Map a PDF.js text-layer span (% or calc positions) to PDF user-space coordinates. */
+export function pdfPointFromTextLayerSpan(
+  span: HTMLElement,
+  viewport: PageViewport,
+  canvasRect: DOMRect,
+): [number, number] | null {
+  const leftRaw = span.style.left;
+  const topRaw = span.style.top;
+  if (leftRaw.endsWith("%") && topRaw.endsWith("%")) {
+    const leftPct = Number.parseFloat(leftRaw) / 100;
+    const topPct = Number.parseFloat(topRaw) / 100;
+    const vx = leftPct * viewport.width;
+    const vy = topPct * viewport.height;
+    return viewport.convertToPdfPoint(vx, vy);
+  }
+
+  const rect = span.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const vx = (cx - canvasRect.left) * (viewport.width / canvasRect.width);
+  const vy = (cy - canvasRect.top) * (viewport.height / canvasRect.height);
+  return viewport.convertToPdfPoint(vx, vy);
+}
+
+/** Prefer the PDF point under the clicked text glyph (more reliable than raw click on page 2+). */
+export function pdfPointFromTextLayerHit(
+  clientX: number,
+  clientY: number,
+  textLayer: HTMLElement | null,
+  viewport: PageViewport,
+  canvasRect: DOMRect,
+): [number, number] | null {
+  if (!textLayer) return null;
+  const span = hitSpanAtPoint(clientX, clientY, textLayer);
+  if (!span) return null;
+  return pdfPointFromTextLayerSpan(span, viewport, canvasRect);
+}
+
+/** Best-effort PDF point for SyncTeX: span style → text content → raw click. */
+export async function resolveSynctexPdfPoint(
+  page: PDFPageProxy,
+  viewport: PageViewport,
+  canvasRect: DOMRect,
+  clientX: number,
+  clientY: number,
+  textLayer: HTMLElement | null,
+  wordHint?: string,
+): Promise<[number, number]> {
+  if (textLayer) {
+    const span = hitSpanAtPoint(clientX, clientY, textLayer);
+    if (span) {
+      const fromSpan = pdfPointFromTextLayerSpan(span, viewport, canvasRect);
+      if (fromSpan) return fromSpan;
+    }
+  }
+
+  let [pdfX, pdfY] = pdfPointFromClick(viewport, canvasRect, clientX, clientY);
+  [pdfX, pdfY] = await refineSynctexPoint(page, pdfX, pdfY, wordHint);
+  return [pdfX, pdfY];
+}
+
 type TextBBox = { xMin: number; xMax: number; yMin: number; yMax: number; str: string };
 
 function textItemBBox(item: { str: string; transform: number[]; width: number }): TextBBox {
@@ -127,7 +206,7 @@ export async function refineSynctexPoint(
     const dist = bboxDistance(box, pdfX, pdfY);
     const inside = bboxContains(box, pdfX, pdfY);
 
-    if (!inside && needle && dist > 40000) continue;
+    if (!inside && needle && dist > 900) continue;
 
     if (!best || (inside && dist < best.dist) || dist < best.dist) {
       best = { dist, x: cx, y: cy };
@@ -176,7 +255,7 @@ export async function extractPdfWordContext(
     const inside = bboxContains(box, pdfX, pdfY);
     if (needle) {
       const hay = box.str.toLowerCase();
-      if (!inside && !hay.includes(needle) && !needle.includes(hay.trim()) && dist > 40000) {
+      if (!inside && !hay.includes(needle) && !needle.includes(hay.trim()) && dist > 900) {
         continue;
       }
     }
@@ -228,6 +307,7 @@ export async function renderPageTextLayer(
   // PDF.js 4 TextLayer positions/fontSize use calc(var(--scale-factor) * …).
   // Without this, selection highlights drift left/right of the rendered glyphs.
   container.style.setProperty("--scale-factor", String(viewport.scale));
+  container.style.setProperty("--user-unit", String(viewport.userUnit || 1));
   const textLayer = new TextLayer({
     textContentSource: page.streamTextContent(),
     container,
@@ -244,6 +324,8 @@ export async function renderPageAnnotationLayer(
   linkService: PdfLinkService,
 ): Promise<AnnotationLayer> {
   container.replaceChildren();
+  container.style.setProperty("--scale-factor", String(viewport.scale));
+  container.style.setProperty("--user-unit", String(viewport.userUnit || 1));
   container.className = "annotationLayer pdf-preview-annotation-layer";
   container.style.setProperty("--scale-factor", String(viewport.scale));
   container.style.width = `${viewport.width}px`;

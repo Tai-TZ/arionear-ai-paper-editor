@@ -4,12 +4,14 @@ import {
   defenseQuotaResetTimeZone,
   formatCountdownMs,
   msUntilEndOfDay235959,
+  msUntilIso,
 } from "@/lib/defense-quota-reset";
 
 type Props = {
   locale: UiLanguage;
   resetTimeLabel: string;
   countdownLabel: (remaining: string) => string;
+  resetsAt?: string | null;
   onElapsed?: () => void;
   className?: string;
 };
@@ -18,16 +20,21 @@ export function DefenseQuotaResetTimer({
   locale,
   resetTimeLabel,
   countdownLabel,
+  resetsAt,
   onElapsed,
   className,
 }: Props) {
   const timeZone = defenseQuotaResetTimeZone(locale);
-  const [remainingMs, setRemainingMs] = useState(() => msUntilEndOfDay235959(timeZone));
+  const [remainingMs, setRemainingMs] = useState(() => {
+    const fromServer = msUntilIso(resetsAt);
+    return fromServer ?? msUntilEndOfDay235959(timeZone);
+  });
   const elapsedRef = useRef(false);
 
   useEffect(() => {
     const tick = () => {
-      const next = msUntilEndOfDay235959(timeZone);
+      const fromServer = msUntilIso(resetsAt);
+      const next = fromServer ?? msUntilEndOfDay235959(timeZone);
       setRemainingMs(next);
       if (next <= 0) {
         if (!elapsedRef.current) {
@@ -41,7 +48,7 @@ export function DefenseQuotaResetTimer({
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [timeZone, onElapsed]);
+  }, [timeZone, resetsAt, onElapsed]);
 
   const countdown = formatCountdownMs(remainingMs);
 

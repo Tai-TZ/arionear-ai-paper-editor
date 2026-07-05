@@ -547,13 +547,17 @@ async def stream_chat(
                 request.session_id,
                 latex_content=request.latex_content,
             )
-            session_store.update(request.session_id, latex_content=request.latex_content)
+            meta_patch: dict | None = None
             if request.latex_content_hash:
                 session = session_store.get(request.session_id)
                 if session:
-                    meta = dict(session.metadata or {})
-                    meta["latex_content_hash"] = request.latex_content_hash
-                    session_store.update(request.session_id, metadata=meta)
+                    meta_patch = dict(session.metadata or {})
+                    meta_patch["latex_content_hash"] = request.latex_content_hash
+            session_store.update(
+                request.session_id,
+                latex_content=request.latex_content,
+                metadata=meta_patch,
+            )
 
         try:
             enforce_llm_quota_for_paper(request.session_id)
@@ -1224,6 +1228,7 @@ async def stream_chat(
                         scope=request.logic_audit_scope or "selected",
                         section_filter=request.logic_audit_sections,
                         chat_provider=provider,
+                        locale=request.locale,
                         on_progress=_logic_progress,
                         on_reasoning=_logic_reasoning,
                         on_section_complete=_logic_section,
@@ -1262,6 +1267,17 @@ async def stream_chat(
                     section_char_limit=logic_flags["section_char_limit"],
                     section_concurrency=logic_flags["section_concurrency"],
                 )
+
+                def _persist_logic_report(report: dict) -> None:
+                    if not request.session_id:
+                        return
+                    fp = request.latex_content_hash if logic_mode == "gate" else None
+                    session_store.set_logic_audit_report(
+                        request.session_id,
+                        report,
+                        latex_fingerprint=fp,
+                    )
+
                 logic_result: dict[str, Any] | None = None
                 persist_pending_report: dict[str, Any] | None = None
                 persist_after = 0.0
@@ -1273,10 +1289,7 @@ async def stream_chat(
                         and time.perf_counter() >= persist_after
                     ):
                         if request.session_id:
-                            session_store.set_logic_audit_report(
-                                request.session_id,
-                                persist_pending_report,
-                            )
+                            _persist_logic_report(persist_pending_report)
                         persist_pending_report = None
                         persist_after = 0.0
                     elif (
@@ -1284,10 +1297,7 @@ async def stream_chat(
                         and persist_debounce <= 0
                         and request.session_id
                     ):
-                        session_store.set_logic_audit_report(
-                            request.session_id,
-                            persist_pending_report,
-                        )
+                        _persist_logic_report(persist_pending_report)
                         persist_pending_report = None
                     if _cancelled():
                         audit_task.cancel()
@@ -1342,10 +1352,7 @@ async def stream_chat(
                                             time.perf_counter() + persist_debounce
                                         )
                                     else:
-                                        session_store.set_logic_audit_report(
-                                            request.session_id,
-                                            partial_report,
-                                        )
+                                        _persist_logic_report(partial_report)
                             yield _sse("logic_section", {"section": item[1]})
                             continue
                         _, step_id, label, detail, status = item
@@ -1376,10 +1383,7 @@ async def stream_chat(
 
                 logic_result = logic_result or {}
                 if persist_pending_report and request.session_id:
-                    session_store.set_logic_audit_report(
-                        request.session_id,
-                        persist_pending_report,
-                    )
+                    _persist_logic_report(persist_pending_report)
                     persist_pending_report = None
                 conflict_count = sum(
                     len(sec.get("conflicts") or [])
@@ -1400,7 +1404,7 @@ async def stream_chat(
                 if request.session_id:
                     report = logic_result.get("logic_audit_report")
                     if isinstance(report, dict) and report:
-                        session_store.set_logic_audit_report(request.session_id, report)
+                        _persist_logic_report(report)
             finally:
                 if session_key:
                     await _release_logic_audit_slot(session_key)

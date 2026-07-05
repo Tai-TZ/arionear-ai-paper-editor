@@ -20,6 +20,7 @@ from src.services.intent_rules import (
     infer_followup_intent,
     is_casual_chat,
     looks_like_edit_followup,
+    looks_like_manuscript_edit_request,
 )
 from src.services.prompts import (
     build_router_system_prompt,
@@ -98,6 +99,8 @@ def _should_use_fast_intent(
     ):
         return True
     if _TITLE_EDIT_RE.search(q):
+        return True
+    if looks_like_manuscript_edit_request(query):
         return True
     return bool(
         _RENAME_EDIT_RE.search(q)

@@ -22,8 +22,7 @@ import {
   extractPdfWordContext,
   findPageForQuery,
   loadPdfDocument,
-  pdfPointFromClick,
-  refineSynctexPoint,
+  resolveSynctexPdfPoint,
   renderPageAnnotationLayer,
   renderPageTextLayer,
   renderPageToCanvas,
@@ -31,7 +30,7 @@ import {
   type PdfSearchMatch,
 } from "@/lib/pdf-renderer";
 import { PdfLinkService } from "@/lib/pdf-link-service";
-import { capturePdfClickWord, resolveSynctexLine } from "@/lib/synctex-highlight";
+import { capturePdfClickWord } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
@@ -66,8 +65,12 @@ type PdfPreviewPanelProps = {
   latexSource?: string;
   /** Hide compile/tools; show PDF with zoom/navigation only (shared view). */
   readOnly?: boolean;
+  /** Reuse backend compile workspace for SyncTeX (avoids re-uploading PDF blobs). */
+  compileCacheId?: string;
   /** Scroll to and highlight a citation from defense chat links. */
   citationFocus?: DefensePdfCitationFocus | null;
+  /** Called when a citation link could not be located in the PDF. */
+  onCitationMiss?: () => void;
 };
 
 function IconBtn({
@@ -124,7 +127,12 @@ function PdfPageView({
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [pageViewport, setPageViewport] = useState<PageViewport | null>(null);
   const pageRef = useRef<PDFPageProxy | null>(null);
+  const viewportRef = useRef<PageViewport | null>(null);
   const renderTokenRef = useRef(0);
+
+  const activeViewport = useCallback((): PageViewport | null => {
+    return viewportRef.current ?? pageViewport ?? pageRef.current?.getViewport({ scale }) ?? null;
+  }, [pageViewport, scale]);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -155,23 +163,39 @@ function PdfPageView({
     let cancelled = false;
 
     (async () => {
-      const page = await pdf.getPage(pageNumber);
-      if (cancelled || token !== renderTokenRef.current) return;
-      pageRef.current = page;
+      try {
+        const page = await pdf.getPage(pageNumber);
+        if (cancelled || token !== renderTokenRef.current) return;
+        pageRef.current = page;
 
-      const rendered: PdfPageRenderResult = await renderPageToCanvas(page, canvas, scale);
-      if (cancelled || token !== renderTokenRef.current) return;
+        const rendered: PdfPageRenderResult = await renderPageToCanvas(page, canvas, scale);
+        if (cancelled || token !== renderTokenRef.current) return;
 
-      setDimensions({ width: rendered.width, height: rendered.height });
-      setPageViewport(rendered.viewport);
-      await renderPageTextLayer(page, textLayer, rendered.viewport);
-      await renderPageAnnotationLayer(page, annotationLayer, rendered.viewport, linkService);
-    })().catch(() => {
-      if (!cancelled) {
-        setDimensions(null);
-        setPageViewport(null);
+        viewportRef.current = rendered.viewport;
+        setDimensions({ width: rendered.width, height: rendered.height });
+        setPageViewport(rendered.viewport);
+
+        try {
+          await renderPageTextLayer(page, textLayer, rendered.viewport);
+        } catch {
+          /* SyncTeX still works via canvas + text-content fallback */
+        }
+        if (cancelled || token !== renderTokenRef.current) return;
+
+        try {
+          await renderPageAnnotationLayer(page, annotationLayer, rendered.viewport, linkService);
+        } catch {
+          /* citation links are optional */
+        }
+      } catch {
+        if (!cancelled) {
+          viewportRef.current = null;
+          pageRef.current = null;
+          setDimensions(null);
+          setPageViewport(null);
+        }
       }
-    });
+    })();
 
     return () => {
       cancelled = true;
@@ -185,7 +209,8 @@ function PdfPageView({
       className="pdf-preview-page-sheet"
       onDoubleClick={(e) => {
         if (!onPageClick || !canvasRef.current) return;
-        if (!pageViewport) {
+        const viewport = activeViewport();
+        if (!viewport) {
           onPageNotReady?.();
           return;
         }
@@ -196,14 +221,23 @@ function PdfPageView({
         const textLayer = textLayerRef.current;
         void capturePdfClickWord(clientX, clientY, textLayer).then(async (word) => {
           window.getSelection()?.removeAllRanges();
-          let [pdfX, pdfY] = pdfPointFromClick(pageViewport, rect, clientX, clientY);
           let context = "";
-          if (pageRef.current) {
-            [pdfX, pdfY] = await refineSynctexPoint(pageRef.current, pdfX, pdfY, word);
-            const ctx = await extractPdfWordContext(pageRef.current, pdfX, pdfY, word);
-            if (ctx?.word && !word) word = ctx.word;
-            context = ctx?.context ?? "";
-          }
+          let pdfX = 0;
+          let pdfY = 0;
+          const page = pageRef.current ?? (await pdf.getPage(pageNumber));
+          pageRef.current = page;
+          [pdfX, pdfY] = await resolveSynctexPdfPoint(
+            page,
+            viewport,
+            rect,
+            clientX,
+            clientY,
+            textLayer,
+            word,
+          );
+          const ctx = await extractPdfWordContext(page, pdfX, pdfY, word);
+          if (ctx?.word && !word) word = ctx.word;
+          context = ctx?.context ?? "";
           onPageClick(pageNumber, pdfX, pdfY, word, context);
         });
       }}
@@ -249,6 +283,8 @@ export function PdfPreviewPanel({
   latexSource = "",
   readOnly = false,
   citationFocus = null,
+  onCitationMiss,
+  compileCacheId,
 }: PdfPreviewPanelProps) {
   const { locale } = useLocale();
   const t = useMemo(() => editorCopy(locale), [locale]);
@@ -290,6 +326,9 @@ export function PdfPreviewPanel({
   }, [fitScale, zoomMode]);
 
   const displayZoom = Math.round(effectiveScale * 100);
+
+  const synctexEnabled =
+    !readOnly && Boolean(onSynctexHit && (synctexBase64 || compileCacheId?.trim()));
 
   useEffect(() => {
     let cancelled = false;
@@ -517,15 +556,39 @@ export function PdfPreviewPanel({
     const viewport = viewportRef.current;
     if (!citationFocus || !pdf || !viewport) return;
 
-    const query = citationFocus.search.trim();
-    if (!query) return;
+    const queries = [
+      citationFocus.search,
+      ...(citationFocus.searchCandidates ?? []),
+    ]
+      .map((q) => q.trim())
+      .filter((q, i, arr) => q.length > 0 && arr.indexOf(q) === i);
+    if (!queries.length) return;
 
     let cancelled = false;
 
     (async () => {
       clearPdfHighlights(viewport);
-      const page = citationFocus.page ?? (await findPageForQuery(pdf, query, 1));
-      if (!page || cancelled) return;
+
+      let page = citationFocus.page ?? null;
+      let matchedQuery = queries[0];
+
+      if (!page) {
+        for (const query of queries) {
+          const found = await findPageForQuery(pdf, query, 1);
+          if (found) {
+            page = found;
+            matchedQuery = query;
+            break;
+          }
+        }
+      }
+
+      if (!page) {
+        if (!cancelled) onCitationMiss?.();
+        return;
+      }
+
+      if (cancelled) return;
 
       scrollToPage(page);
 
@@ -537,18 +600,24 @@ export function PdfPreviewPanel({
           `[data-page="${page}"] .pdf-preview-text-layer`,
         );
         if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
-        const mark = highlightPdfTextLayer(layer, query);
-        if (mark) {
-          mark.scrollIntoView({ behavior: "smooth", block: "center" });
-          return;
+        const highlightQueries =
+          page === citationFocus.page ? queries : [matchedQuery, ...queries];
+        for (const query of highlightQueries) {
+          const mark = highlightPdfTextLayer(layer, query);
+          if (mark) {
+            mark.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+          }
         }
       }
+
+      if (!cancelled) onCitationMiss?.();
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [citationFocus, pdf, latexSource, scrollToPage]);
+  }, [citationFocus, pdf, latexSource, scrollToPage, onCitationMiss]);
 
   const pageNumbers = useMemo(
     () => (pdf ? Array.from({ length: numPages }, (_, index) => index + 1) : []),
@@ -565,8 +634,8 @@ export function PdfPreviewPanel({
       jobname: string,
     ) => {
       const hit = await lookupSynctexInverse(
-        synctexBase64!,
-        pdfBase64!,
+        synctexBase64 ?? "",
+        pdfBase64 ?? "",
         page,
         x,
         y,
@@ -574,16 +643,19 @@ export function PdfPreviewPanel({
         word ?? "",
         latexSource,
         context ?? "",
+        compileCacheId ? { cacheId: compileCacheId } : undefined,
       );
       if (hit.found && hit.line > 0) return hit;
       return null;
     },
-    [synctexBase64, pdfBase64, latexSource],
+    [synctexBase64, pdfBase64, latexSource, compileCacheId],
   );
 
   const handleSynctexClick = useCallback(
     async (page: number, x: number, y: number, word?: string, context?: string) => {
-      if (!synctexBase64 || !pdfBase64 || !onSynctexHit) return;
+      const canUseCache = Boolean(compileCacheId?.trim());
+      if ((!synctexBase64 || !pdfBase64) && !canUseCache) return;
+      if (!onSynctexHit) return;
       if (synctexBusyRef.current) return;
       synctexBusyRef.current = true;
       setSynctexHint("Syncing to source…");
@@ -591,17 +663,15 @@ export function PdfPreviewPanel({
         const jobname = mainFile.replace(/\.(tex|latex)$/i, "") || "main";
         const hit = await lookupSynctex(page, x, y, word, context, jobname);
         if (hit) {
-          const resolvedLine =
-            word && latexSource
-              ? resolveSynctexLine(latexSource, hit.line, word, hit.column, context)
-              : hit.line;
-          onSynctexHit(hit.file || mainFile, resolvedLine, word, hit.column, context);
+          onSynctexHit(hit.file || mainFile, hit.line, word, hit.column, context);
           const label = word
-            ? `${hit.file || mainFile}:${resolvedLine} (“${word}”)`
-            : `${hit.file || mainFile}:${resolvedLine}`;
+            ? `${hit.file || mainFile}:${hit.line} (“${word}”)`
+            : `${hit.file || mainFile}:${hit.line}`;
           flashSynctexHint(`Jumped to ${label}`);
         } else {
-          flashSynctexHint("No source line here — double-click directly on text, then Compile again.");
+          flashSynctexHint(
+            "No source line here — Compile (full) again, then double-click directly on text.",
+          );
         }
       } catch {
         flashSynctexHint("SyncTeX failed — start backend on port 8001 and restart npm run dev.");
@@ -609,7 +679,7 @@ export function PdfPreviewPanel({
         synctexBusyRef.current = false;
       }
     },
-    [synctexBase64, pdfBase64, mainFile, latexSource, onSynctexHit, lookupSynctex, flashSynctexHint],
+    [synctexBase64, pdfBase64, mainFile, latexSource, onSynctexHit, lookupSynctex, flashSynctexHint, compileCacheId],
   );
 
   const handlePageNotReady = useCallback(() => {
@@ -632,14 +702,14 @@ export function PdfPreviewPanel({
 
   return (
     <section
-      className={`pdf-preview-shell relative flex min-h-0 flex-col ${
+      className={`pdf-preview-shell relative flex min-h-0 min-w-0 flex-col ${
         mobile ? "flex-1 w-full" : "h-full w-full"
       }`}
     >
       <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between px-3 md:px-4">
         <div className="flex items-center gap-2.5">
           {readOnly ? (
-            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
+            <span className="pdf-preview-toolbar-muted inline-flex items-center gap-2 font-mono text-[11px]">
               {isCompiling ? (
                 <span className="inline-flex items-center gap-1.5">
                   <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
@@ -649,6 +719,17 @@ export function PdfPreviewPanel({
                 t.pdf.pagesOf(currentPage, numPages)
               ) : (
                 t.pdf.noPdfYet
+              )}
+              {compileError && (
+                <button
+                  type="button"
+                  onClick={onCompile}
+                  disabled={isCompiling}
+                  className="pdf-preview-compile-btn inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold text-white transition disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
+                  {t.pdf.compile}
+                </button>
               )}
             </span>
           ) : (
@@ -781,7 +862,7 @@ export function PdfPreviewPanel({
 
       <div
         ref={viewportRef}
-        className="pdf-preview-viewport soft-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-12"
+        className="pdf-preview-viewport soft-scrollbar min-w-0 flex-1 overflow-auto pb-12"
       >
         {!pdf && !isCompiling && (
           <div className="flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center">
@@ -803,6 +884,17 @@ export function PdfPreviewPanel({
                 <pre className="max-h-48 w-full max-w-lg overflow-auto rounded border border-red-200 bg-red-50 p-3 text-left text-[10px] text-red-700 whitespace-pre-wrap">
                   {compileError || loadError}
                 </pre>
+                {onCompile && compileError && (
+                  <button
+                    type="button"
+                    onClick={onCompile}
+                    disabled={isCompiling}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-800 shadow-sm transition hover:bg-red-50 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
+                    {t.pdf.compile}
+                  </button>
+                )}
                 {onAskArioFix && compileError && (
                   <button
                     type="button"
@@ -840,8 +932,8 @@ export function PdfPreviewPanel({
                 scale={effectiveScale}
                 linkService={linkService}
                 onVisible={handlePageVisible}
-                onPageClick={synctexBase64 ? handleSynctexClick : undefined}
-                onPageNotReady={synctexBase64 ? handlePageNotReady : undefined}
+                onPageClick={synctexEnabled ? handleSynctexClick : undefined}
+                onPageNotReady={synctexEnabled ? handlePageNotReady : undefined}
               />
             ))}
           </div>
@@ -872,7 +964,7 @@ export function PdfPreviewPanel({
 
       <CompileLogPanel log={compileLog ?? ""} open={logOpen} onClose={() => setLogOpen(false)} />
 
-      {synctexBase64 && pdf && (
+      {synctexEnabled && pdf && (
         <div className="pointer-events-none absolute top-12 left-1/2 z-10 -translate-x-1/2 rounded bg-[#333]/80 px-2 py-0.5 text-[10px] text-white/80">
           {synctexHint ?? "Double-click PDF to jump to source (SyncTeX)"}
         </div>

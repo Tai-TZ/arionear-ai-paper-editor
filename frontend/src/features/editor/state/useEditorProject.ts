@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { addPaperAssets, fetchPaper, updatePaper } from "@/lib/api/papers-api";
 import { fetchDedupe, invalidateFetchKey } from "@/lib/api/fetch-dedupe";
-import { syncSession, invalidateSessionSync } from "@/lib/api/academic";
+import { syncSession, invalidateSessionSync, markSessionSynced } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
 import { importOverleafZip } from "@/lib/overleaf-import";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/lib/latex-import";
 import { fetchResearcherProfile } from "@/lib/api/profile-api";
 import { getCachedProfile, type ResearcherProfile } from "@/lib/researcher-profile";
-import { fetchPaperShareStatus, type PaperShareStatus } from "@/lib/api/share-api";
+import type { PaperShareStatus } from "@/lib/api/share-api";
 import { useYjsShareSync } from "@/lib/use-yjs-share-sync";
 import { useLatexHistory } from "@/lib/use-latex-history";
 import type { UiLanguage } from "@/lib/researcher-profile";
@@ -95,7 +95,6 @@ export function useEditorProject({
   );
 
   const bootChatThreadsRef = useRef<ChatThread[]>([]);
-  const sessionSyncedRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -147,21 +146,27 @@ export function useEditorProject({
       const panelFp = project.logicAuditReport?.sections?.length
         ? logicAuditFingerprint(project.latex)
         : null;
-      const gateFp = project.gateAuditReport?.sections?.length
-        ? logicAuditFingerprint(project.latex)
-        : null;
+      const storedGateFp = project.gateAuditFingerprint ?? null;
+      const currentFp = logicAuditFingerprint(project.latex);
+      const gateFp =
+        storedGateFp && storedGateFp === currentFp ? storedGateFp : null;
+      const gateReportUsable =
+        project.gateAuditReport?.sections?.length && gateFp
+          ? project.gateAuditReport
+          : null;
 
       onBootReady?.({
         chatThreads: bootChatThreadsRef.current,
         logicAuditReport: project.logicAuditReport?.sections?.length
           ? project.logicAuditReport
           : null,
-        gateAuditReport: project.gateAuditReport?.sections?.length
-          ? project.gateAuditReport
-          : null,
+        gateAuditReport: gateReportUsable,
         mainLatexFingerprint: panelFp,
         gateAuditFingerprint: gateFp,
       });
+
+      // Server already has this latex from GET /papers — skip redundant sync on boot.
+      markSessionSynced(project.id, project.name, project.latex);
 
       setBootState("ready");
     },
@@ -177,18 +182,12 @@ export function useEditorProject({
     setBootState("loading");
     setBootError(null);
     setSplashPhase("visible");
+    setShareStatus(null);
 
     fetchPaper(projectId)
       .then((project) => {
         if (cancelled) return;
         applyBootProject(project);
-        void fetchPaperShareStatus(projectId)
-          .then((status) => {
-            if (!cancelled) setShareStatus(status);
-          })
-          .catch(() => {
-            if (!cancelled) setShareStatus(null);
-          });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -205,7 +204,6 @@ export function useEditorProject({
   }, [projectId, navigate, applyBootProject]);
 
   useEffect(() => {
-    sessionSyncedRef.current = null;
     if (projectId) invalidateSessionSync(projectId);
   }, [projectId]);
 
@@ -218,17 +216,6 @@ export function useEditorProject({
       window.clearTimeout(hideTimer);
     };
   }, [bootState]);
-
-  useEffect(() => {
-    if (bootState !== "ready" || !projectId) return;
-    if (sessionSyncedRef.current === projectId) return;
-    sessionSyncedRef.current = projectId;
-    void fetchDedupe(`session:init:${projectId}`, () =>
-      syncSession(projectId, projectName, mainLatexSource),
-    ).catch(() => {
-      toast.error(t.errors.syncFailed);
-    });
-  }, [bootState, projectId, projectName, mainLatexSource, t.errors.syncFailed]);
 
   useYjsShareSync({
     token: shareStatus?.token ?? null,
@@ -302,46 +289,40 @@ export function useEditorProject({
   );
   const viewingAsset = isImageAssetFile(activeFile);
 
-  const persistProjectFiles = useCallback(() => {
-    if (!projectId) return;
-    const files = persistActiveFile(
+  const persistProjectFiles = useCallback(
+    (options?: { immediate?: boolean }) => {
+      if (!projectId) return;
+      const activePath = persistableFile(projectFiles, activeFile);
+      const files = persistActiveFile(latex, projectFiles, activePath);
+      setProjectFiles(files);
+      const mainContent = files.find((f) => f.path === mainFile)?.content ?? latex;
+      const changedFile = files.find((f) => f.path === activePath);
+      updatePaper(
+        projectId,
+        {
+          latex: mainContent,
+          ...(changedFile ? { files: [changedFile] } : {}),
+        },
+        { immediate: options?.immediate ?? false },
+      )
+        .then(() => {
+          setSavedLatex(latex);
+        })
+        .catch(() => {
+          toast.error(t.errors.saveFailed);
+        });
+    },
+    [
+      projectId,
       latex,
       projectFiles,
-      persistableFile(projectFiles, activeFile),
-    );
-    setProjectFiles(files);
-    const mainContent = files.find((f) => f.path === mainFile)?.content ?? latex;
-    updatePaper(
-      projectId,
-      {
-        name: projectName,
-        latex: mainContent,
-        files,
-        mainFile,
-        compiler,
-        assets,
-      },
-      { immediate: true },
-    )
-      .then(() => {
-        setSavedLatex(latex);
-      })
-      .catch(() => {
-        toast.error(t.errors.saveFailed);
-      });
-  }, [
-    projectId,
-    projectName,
-    latex,
-    projectFiles,
-    activeFile,
-    mainFile,
-    compiler,
-    assets,
-    persistActiveFile,
-    persistableFile,
-    t.errors.saveFailed,
-  ]);
+      activeFile,
+      mainFile,
+      persistActiveFile,
+      persistableFile,
+      t.errors.saveFailed,
+    ],
+  );
 
   const saveProjectAfterEdit = useCallback(() => {
     if (!projectId || !autoSave) return;

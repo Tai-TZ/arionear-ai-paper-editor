@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from src.db.models import AiSession, Paper, PaperStatus, TaskType
 
@@ -20,6 +20,19 @@ def _ensure_ai_session(db: Session, paper: Paper) -> AiSession:
     db.flush()
     paper.ai_sessions.append(ai_session)
     return ai_session
+
+
+def _merge_files(existing: list[dict], incoming: list[dict]) -> list[dict]:
+    by_path: dict[str, dict] = {}
+    for item in existing:
+        path = str(item.get("path") or "").strip()
+        if path:
+            by_path[path] = dict(item)
+    for item in incoming:
+        path = str(item.get("path") or "").strip()
+        if path:
+            by_path[path] = dict(item)
+    return list(by_path.values())
 
 
 def _merge_assets(existing: list[dict], incoming: list[dict]) -> list[dict]:
@@ -46,8 +59,10 @@ def _merge_assets(existing: list[dict], incoming: list[dict]) -> list[dict]:
 
 
 def list_papers(db: Session, user_id: uuid.UUID) -> list[Paper]:
+    """List papers without loading heavy raw_latex / metadata columns."""
     return (
         db.query(Paper)
+        .options(load_only(Paper.id, Paper.title, Paper.created_at, Paper.updated_at))
         .filter(Paper.user_id == user_id)
         .order_by(Paper.updated_at.desc())
         .all()
@@ -103,7 +118,13 @@ def update_paper(
         paper.raw_latex = latex
     if metadata is not None:
         merged = dict(paper.metadata_ or {})
-        merged.update(metadata)
+        incoming_files = metadata.get("files")
+        if isinstance(incoming_files, list) and incoming_files:
+            merged["files"] = _merge_files(merged.get("files") or [], incoming_files)
+            rest = {k: v for k, v in metadata.items() if k != "files"}
+            merged.update(rest)
+        else:
+            merged.update(metadata)
         paper.metadata_ = merged
     if assets is not None:
         current = dict(paper.metadata_ or {})

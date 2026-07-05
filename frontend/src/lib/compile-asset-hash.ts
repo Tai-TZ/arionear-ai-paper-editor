@@ -30,11 +30,22 @@ export async function sha256HexFromDataUrl(dataUrl: string): Promise<string> {
   return bytesToHex(digest);
 }
 
+const hashCache = new Map<string, string>();
+
 export async function buildCompileAssetHashes(
   assets: Array<{ name: string; dataUrl: string }>,
 ): Promise<Record<string, string>> {
   const entries = await Promise.all(
-    assets.map(async (asset) => [asset.name, await sha256HexFromDataUrl(asset.dataUrl)] as const),
+    assets.map(async (asset) => {
+      const cacheKey = `${asset.name}\0${asset.dataUrl.length}\0${asset.dataUrl.slice(-128)}`;
+      const hit = hashCache.get(cacheKey);
+      if (hit) {
+        return [asset.name, hit] as const;
+      }
+      const hash = await sha256HexFromDataUrl(asset.dataUrl);
+      hashCache.set(cacheKey, hash);
+      return [asset.name, hash] as const;
+    }),
   );
   return Object.fromEntries(entries);
 }

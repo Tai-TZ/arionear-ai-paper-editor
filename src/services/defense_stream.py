@@ -10,6 +10,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessageChunk, HumanMessage, SystemMessage
 
+from src.config import get_settings
 from src.db.engine import db_is_ready, get_db
 from src.db.models import User
 from src.models.schemas import DefenseConversationTurn, DefenseRequest
@@ -236,9 +237,10 @@ async def stream_defense(
             return
 
     try:
+        settings = get_settings()
         llm = get_llm(
-            provider=request.llm_provider,
-            model=request.llm_model or None,
+            provider=request.llm_provider or settings.defense_llm_provider,
+            model=request.llm_model or settings.defense_llm_model,
             temperature=0.7,
         )
     except Exception as exc:

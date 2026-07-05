@@ -80,7 +80,7 @@ const CASUAL_ACKNOWLEDGMENT_RE =
   /^(?:rất\s+tốt|rat\s+tot|good(?:\s+(?:job|work))?|nice|great|perfect|tuyệt|tuyet|ổn|on|được|duoc)\s*[!?.…]*$/i;
 
 const CASUAL_CONVERSATIONAL_RE =
-  /bạn\s+là\s+ai|who\s+are\s+you|what\s+can\s+you\s+do|giúp\s+tôi\s+gì|help\s+me|bạn\s+biết\s+gì/i;
+  /^(?:bạn\s+là\s+ai|who\s+are\s+you|what\s+can\s+you\s+do|giúp\s+tôi\s+gì|help\s+me|what\s+can\s+you\s+help(?:\s+me)?\s+with|bạn\s+biết\s+gì)\s*\?*$/i;
 
 /** Greetings / small talk — must not trigger quick-edit or edit follow-up heuristics. */
 export function isCasualChatMessage(message: string): boolean {
@@ -89,6 +89,31 @@ export function isCasualChatMessage(message: string): boolean {
   if (CASUAL_GREETING_RE.test(q)) return true;
   if (CASUAL_ACKNOWLEDGMENT_RE.test(q)) return true;
   return CASUAL_CONVERSATIONAL_RE.test(q);
+}
+
+const MANUSCRIPT_SECTION_RE =
+  /abstract|tóm\s*tắt|introduction|giới\s*thiệu|method|phương\s*pháp|result|kết\s*quả|discussion|thảo\s*luận|conclusion|kết\s*luận|section|phần|đoạn/i;
+
+const SHORTEN_RE =
+  /rút\s*gọn|shorten|condense|trim\s+down|cut\s+down|cắt\s*bớt|làm\s*ngắn|giảm\s*độ\s*dài|make\s+(?:it\s+)?shorter/i;
+
+const EXPAND_RE =
+  /mở\s*rộng|expand|lengthen|làm\s*dài|extend|make\s+(?:it\s+)?longer/i;
+
+const EDIT_VERB_RE =
+  /\bsửa\b|\bchỉnh\b|\bedit\b|\bfix\b|\bupdate\b|\bchange\b|viết\s+lại|rewrite|rephrase|đổi|thay/i;
+
+const HELP_ME_EDIT_RE =
+  /giúp\s+tôi\s+(?:rút|sửa|chỉnh|viết|đổi|thay|bổ|thêm|xóa|bỏ|làm)|help\s+me\s+(?:shorten|edit|fix|rewrite|update|change|trim|condense|expand)/i;
+
+/** Infer edit task from natural-language manuscript requests (no slash command). */
+export function inferManuscriptEditTask(message: string): ChatSlashTask | null {
+  const q = message.trim();
+  if (!q) return null;
+  if (SHORTEN_RE.test(q) || EXPAND_RE.test(q)) return "edit";
+  if (HELP_ME_EDIT_RE.test(q)) return "edit";
+  if (MANUSCRIPT_SECTION_RE.test(q) && EDIT_VERB_RE.test(q)) return "edit";
+  return null;
 }
 
 export function parseChatSlashCommand(
@@ -128,7 +153,8 @@ export function parseChatSlashCommand(
 
   return {
     task,
-    message: getSlashDefaultMessage(locale, task) ?? text,
+    // User text after the slash command wins; defaults are only for bare `/edit`, `/logic`, etc.
+    message: text || getSlashDefaultMessage(locale, task) || "",
     command: cmdPart,
     ...(logicAuditMode ? { logicAuditMode } : {}),
     ...(logicAuditScope ? { logicAuditScope } : {}),

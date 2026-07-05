@@ -27,22 +27,24 @@ We presented an interpretable pipeline for tabular data with practical implicati
 \\end{document}`;
 
 describe("computePaperScore", () => {
-  it("scores a complete IMRaD draft with PDF", () => {
-    const result = computePaperScore({
-      latex: SAMPLE_LATEX,
-      hasPdf: true,
-    });
+  it("scores a complete IMRaD draft", () => {
+    const result = computePaperScore({ latex: SAMPLE_LATEX });
     expect(result.overall).toBeGreaterThan(40);
     expect(result.dimensions.find((d) => d.id === "structure")?.score).toBeGreaterThanOrEqual(80);
     expect(result.grade).toBeTruthy();
     expect(result.dimensions.some((d) => d.id === "logic")).toBe(true);
     expect(result.dimensions.some((d) => d.id === "readiness")).toBe(false);
+    expect(result.dimensions).toHaveLength(4);
+  });
+
+  it("flags placeholder templates in the result", () => {
+    const result = computePaperScore({ latex: IEEE_SAMPLE_LATEX });
+    expect(result.isPlaceholderTemplate).toBe(true);
   });
 
   it("penalizes logic audit conflicts when peer review enabled", () => {
     const result = computePaperScore({
       latex: SAMPLE_LATEX,
-      hasPdf: true,
       includeLogicReview: true,
       logicAuditReport: {
         sections: [
@@ -68,23 +70,20 @@ describe("computePaperScore", () => {
   it("shows partial heuristic score while audit is pending", () => {
     const result = computePaperScore({
       latex: SAMPLE_LATEX,
-      hasPdf: true,
       auditPending: true,
     });
-    // Partial score from structure + completeness + citations only (no logic dim).
     expect(result.overall).toBeGreaterThan(0);
     expect(result.grade).toBe("~");
     expect(result.gradeLabel).toBe("Đang đánh giá…");
     expect(result.agentScored).toBe(false);
-    // Logic dimension still shown in array (pending state) but not in weights.
     const logicDim = result.dimensions.find((d) => d.id === "logic");
     expect(logicDim).toBeDefined();
+    expect(result.dimensions).toHaveLength(4);
   });
 
   it("uses audit summary in result", () => {
     const result = computePaperScore({
       latex: SAMPLE_LATEX,
-      hasPdf: true,
       logicAuditReport: {
         summary: "Bản thảo ổn nhưng cần thêm citation ở Results.",
         sections: [{ section: "Abstract" }],
@@ -102,17 +101,13 @@ describe("computePaperScore", () => {
   it("scores the built-in IEEE sample much lower than a real draft", () => {
     const templateResult = computePaperScore({
       latex: IEEE_SAMPLE_LATEX,
-      hasPdf: true,
       logicAuditReport: {
         summary:
           "Manuscript hiện tại chỉ chứa các mô tả chung về cấu trúc và hướng dẫn thay thế nội dung, chưa chứa bất kỳ nội dung nghiên cứu khoa học cụ thể nào.",
         sections: [{ section: "Introduction", conflicts: [], weak_claims: [] }],
       },
     });
-    const draftResult = computePaperScore({
-      latex: SAMPLE_LATEX,
-      hasPdf: true,
-    });
+    const draftResult = computePaperScore({ latex: SAMPLE_LATEX });
 
     expect(templateResult.overall).toBeLessThan(55);
     expect(templateResult.dimensions.find((d) => d.id === "structure")?.score).toBeLessThanOrEqual(58);
@@ -160,8 +155,10 @@ describe("paper-score-audit helpers", () => {
   });
 
   it("formats gate LLM errors with clearer guidance", () => {
-    const msg = formatPaperScoreGateError("API key không hợp lệ");
-    expect(msg).toContain("API key");
+    const vi = formatPaperScoreGateError("API key không hợp lệ", "vi");
+    const en = formatPaperScoreGateError("invalid api key", "en");
+    expect(vi).toContain("API key");
+    expect(en).toContain("API key");
   });
 
   it("needs re-audit when latex fingerprint changes", () => {
@@ -176,5 +173,13 @@ describe("paper-score-audit helpers", () => {
     expect(
       needsScoreGateAudit(SAMPLE_LATEX, { sections: [{ section: "Abstract" }] }, fp),
     ).toBe(true);
+  });
+
+  it("needs re-audit when stored fingerprint is null despite gate report", () => {
+    const gateReport = {
+      sections: [{ section: "Abstract" }],
+      meta: { audit_mode: "gate" },
+    };
+    expect(needsScoreGateAudit(SAMPLE_LATEX, gateReport, null)).toBe(true);
   });
 });

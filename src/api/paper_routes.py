@@ -40,7 +40,7 @@ def _to_response(paper: Paper) -> PaperResponse:
 
 
 @router.get("", response_model=list[PaperSummary])
-async def list_user_papers(
+def list_user_papers(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
@@ -65,7 +65,7 @@ async def create_user_paper(
 
 
 @router.get("/{paper_id}", response_model=PaperResponse)
-async def get_user_paper(
+def get_user_paper(
     paper_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
@@ -82,7 +82,7 @@ async def get_user_paper(
 
 
 @router.patch("/{paper_id}", response_model=PaperResponse)
-async def update_user_paper(
+def update_user_paper(
     paper_id: str,
     body: PaperUpdate,
     user: User = Depends(get_current_user),

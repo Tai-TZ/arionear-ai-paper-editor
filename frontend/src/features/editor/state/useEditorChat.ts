@@ -20,7 +20,11 @@ import {
   type ProviderInfo,
 } from "@/lib/api/academic";
 import { llmUserErrorMsg } from "@/lib/api/api-errors";
-import { isCasualChatMessage, parseChatSlashCommand } from "@/lib/chat-commands";
+import {
+  inferManuscriptEditTask,
+  isCasualChatMessage,
+  parseChatSlashCommand,
+} from "@/lib/chat-commands";
 import { buildConversationHistory } from "@/lib/chat-history";
 import {
   finishChatStreamProgress,
@@ -543,7 +547,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     const task =
       ctx.chatComposerMode === "quick-edit" && !casualChat
         ? ("edit" as const)
-        : parsed.task ?? undefined;
+        : parsed.task ?? inferManuscriptEditTask(text) ?? undefined;
     const userDisplay =
       logicLaunch?.userDisplay ??
       editLaunch?.userDisplay ??

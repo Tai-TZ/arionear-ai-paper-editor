@@ -16,7 +16,7 @@ def _sec(name: str, content: str = "some content here") -> dict:
 
 
 class TestPickGateSections:
-    def test_picks_abstract_intro_conclusion(self):
+    def test_picks_imrad_core_sections(self):
         sections = [
             _sec("Abstract"),
             _sec("Introduction"),
@@ -28,13 +28,15 @@ class TestPickGateSections:
         names = [s["name"] for s in picked]
         assert "Abstract" in names
         assert "Introduction" in names
+        assert "Methods" in names
+        assert "Results" in names
         assert "Conclusion" in names
-        assert len(picked) <= 3
+        assert len(picked) <= 5
 
     def test_respects_max_sections(self):
         sections = [_sec(f"Section {i}") for i in range(10)]
         picked = _pick_gate_sections(sections)
-        assert len(picked) <= 3
+        assert len(picked) <= 5
 
     def test_falls_back_to_first_sections_when_no_key_names(self):
         sections = [_sec("Background"), _sec("Experiments"), _sec("Related Work")]

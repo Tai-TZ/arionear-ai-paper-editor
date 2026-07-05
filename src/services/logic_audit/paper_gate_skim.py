@@ -1,8 +1,8 @@
 """Lightweight pre-publication gate scan.
 
-Single-call, fast path: reads abstract + intro + conclusion and returns
-a brief LogicAuditReport suitable for the score dialog.  Skips the
-full multi-persona debate to stay under ~30 s.
+Single-call, fast path: reads abstract, intro, methods, results and conclusion
+and returns a brief LogicAuditReport suitable for the score dialog.  Skips the
+full multi-persona debate to stay under ~45 s.
 """
 from __future__ import annotations
 
@@ -26,20 +26,29 @@ from src.services.logic_audit.debate import (
 from src.services.logic_audit.language import resolve_audit_language
 from src.services.logic_audit.text_utils import infer_claim_text
 
-_GATE_SECTION_KEYS = ("abstract", "introduction", "intro", "conclusion", "discussion")
-_GATE_MAX_SECTIONS = 3
-_GATE_CHAR_LIMIT = 3500
+_GATE_SECTION_PRIORITY: tuple[tuple[str, ...], ...] = (
+    ("abstract",),
+    ("introduction", "intro"),
+    ("methods", "methodology", "materials and methods"),
+    ("results", "experiments"),
+    ("conclusion",),
+    ("discussion",),
+)
+_GATE_MAX_SECTIONS = 5
+_GATE_CHAR_LIMIT = 2800
 
 
 def _pick_gate_sections(sections: list[dict]) -> list[dict]:
-    """Return up to 3 key sections: abstract, intro, conclusion."""
+    """Return up to 5 key sections: abstract, intro, methods, results, conclusion."""
     key_picks: list[dict] = []
     seen: set[str] = set()
-    for key in _GATE_SECTION_KEYS:
+    for keys in _GATE_SECTION_PRIORITY:
         for section in sections:
             name = str(section.get("name") or "").lower()
             content = str(section.get("content") or "").strip()
-            if key in name and content and name not in seen:
+            if not content or name in seen:
+                continue
+            if any(key in name for key in keys):
                 seen.add(name)
                 key_picks.append(section)
                 break

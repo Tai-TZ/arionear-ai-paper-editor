@@ -1,16 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-const READING_PHRASES = [
-  "Đọc abstract…",
-  "Phân tích luận điểm chính…",
-  "Kiểm tra mạch lập luận…",
-  "Đối chiếu giới thiệu và kết luận…",
-  "Tìm điểm yếu trong lập luận…",
-  "Xác minh tính nhất quán…",
-  "Đánh giá chất lượng học thuật…",
-  "Tổng hợp nhận xét…",
-];
-
 function ScanningLines() {
   return (
     <div className="flex flex-col gap-[5px] w-full" aria-hidden>
@@ -44,34 +33,35 @@ function BlinkingCursor() {
   );
 }
 
-export function PaperScoreAuditAnimation({ progress }: { progress?: string | null }) {
+export function PaperScoreAuditAnimation({
+  progress,
+  label,
+  phrases,
+}: {
+  progress?: string | null;
+  label: string;
+  phrases: string[];
+}) {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [displayed, setDisplayed] = useState("");
   const [isTyping, setIsTyping] = useState(true);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const phraseRef = useRef(phraseIndex);
-  phraseRef.current = phraseIndex;
 
-  // Advance to next phrase every ~4s when no live progress
   useEffect(() => {
     if (progress) return;
     const interval = setInterval(() => {
-      setPhraseIndex((i) => (i + 1) % READING_PHRASES.length);
+      setPhraseIndex((i) => (i + 1) % Math.max(phrases.length, 1));
       setIsTyping(true);
       setDisplayed("");
     }, 4000);
     return () => clearInterval(interval);
-  }, [progress]);
+  }, [progress, phrases.length]);
 
-  // Determine what to type: live progress takes precedence, but only
-  // restart the typewriter when the text actually *changes*, not on every
-  // render — prevents flickering on rapid SSE ticks with the same label.
   const lastProgressRef = useRef<string | null>(null);
-  const fallback = READING_PHRASES[phraseIndex];
+  const fallback = phrases[phraseIndex] ?? "";
   const target = progress ?? fallback;
 
   useEffect(() => {
-    // Avoid restart when live progress is the same string.
     if (progress !== null && progress === lastProgressRef.current) return;
     lastProgressRef.current = progress ?? null;
 
@@ -96,17 +86,13 @@ export function PaperScoreAuditAnimation({ progress }: { progress?: string | nul
 
   return (
     <div className="flex flex-col items-center gap-5 select-none">
-      {/* Animated paper icon */}
       <div className="relative flex h-20 w-16 items-end justify-center">
-        {/* Paper body */}
         <div className="relative w-full h-[4.5rem] rounded-sm border-2 border-foreground/20 bg-background shadow-sm overflow-hidden">
-          {/* Scan beam */}
           <div
             className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-primary/70 to-transparent"
             style={{ animation: "scan-beam 2s ease-in-out infinite" }}
             aria-hidden
           />
-          {/* Micro text lines */}
           <div className="pt-2 px-1.5 flex flex-col gap-[4px]">
             {[0.85, 1, 0.65, 0.9, 0.7, 0.8, 0.55].map((w, i) => (
               <div
@@ -120,7 +106,6 @@ export function PaperScoreAuditAnimation({ progress }: { progress?: string | nul
             ))}
           </div>
         </div>
-        {/* Animated eye below */}
         <div
           className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shadow"
           aria-hidden
@@ -138,13 +123,11 @@ export function PaperScoreAuditAnimation({ progress }: { progress?: string | nul
         </div>
       </div>
 
-      {/* Scanning lines */}
       <ScanningLines />
 
-      {/* Status text */}
       <div className="text-center">
         <p className="font-sans-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
-          Ario đang đọc
+          {label}
         </p>
         <p className="text-sm text-foreground/80 min-h-[1.5em] leading-snug">
           {displayed}

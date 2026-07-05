@@ -1,27 +1,39 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/require-auth";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-
-// ─── Module-level PDF cache (survives SPA navigation within the same tab) ──
-// Keyed by projectId + content fingerprint so stale PDFs are never served
-// after a LaTeX edit.
-const _pdfCache = new Map<string, Uint8Array>();
-function pdfCacheKey(projectId: string, content: string): string {
-  return `${projectId}:${content.length}:${content.slice(-200)}`;
-}
 import { fetchPaper } from "@/lib/api/papers-api";
+import { invalidateFetchKey } from "@/lib/api/fetch-dedupe";
 import { compileLatex, type CompileResult } from "@/lib/api/academic";
+import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
+import { computeCompileFingerprint } from "@/features/editor/lib/editor-compile";
 import { getSession } from "@/lib/auth-store";
+import {
+  buildDefenseLatexContext,
+  getCompilePayload,
+  type LatexCompiler,
+  type ProjectAsset,
+  type ProjectFile,
+  type StoredProject,
+} from "@/lib/project-store";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { useLocale } from "@/components/locale-provider";
 import { DefenseMastheadPrefs } from "@/components/defense/defense-masthead-prefs";
 import {
+  DefenseMobileTabBar,
+  type DefenseMobileTab,
+} from "@/components/defense/defense-mobile-tab-bar";
+import {
+  DefensePdfStatusBar,
+  type DefensePdfStatus,
+} from "@/components/defense/defense-pdf-status-bar";
+import {
   DefenseChatPanel,
   DefenseQuotaBadge,
+  buildDefenseConversationHistory,
   countCompletedCouncilTurns,
   type DefenseMessage,
 } from "@/components/defense/defense-chat-panel";
@@ -35,42 +47,22 @@ import {
 } from "@/lib/api/defense-api";
 import { fetchBillingStatus } from "@/lib/api/billing-api";
 import type { DefensePdfCitation, DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
+import { resolveDefensePdfCitation } from "@/lib/defense-pdf-citation-resolve";
 import { prepareDefenseCouncilMarkdown } from "@/lib/defense-pdf-autolink";
+import {
+  clearDefenseSession,
+  flushDefenseSessionPersistNow,
+  loadLocalDefenseSession,
+  mergeDefenseSessions,
+  persistDefenseSession,
+  type StoredDefenseSession,
+} from "@/lib/defense-session-storage";
+
+// Module-level PDF cache (survives SPA navigation within the same tab).
+// Keyed by compile fingerprint so stale PDFs are never served after edits.
+const _pdfCache = new Map<string, Uint8Array>();
 
 type DefenseSearch = { projectId?: string };
-
-// ─── Session history helpers ─────────────────────────────────────────────────
-type SavedDefenseSession = {
-  messages: DefenseMessage[];
-  hasStarted: boolean;
-};
-
-function loadSession(projectId: string): SavedDefenseSession | null {
-  try {
-    const raw = sessionStorage.getItem(`defense_session_${projectId}`);
-    if (!raw) return null;
-    return JSON.parse(raw) as SavedDefenseSession;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(projectId: string, session: SavedDefenseSession) {
-  try {
-    // Strip in-flight streaming/cancelled-empty messages before saving
-    const clean = session.messages.filter((m) => !m.isStreaming);
-    sessionStorage.setItem(
-      `defense_session_${projectId}`,
-      JSON.stringify({ ...session, messages: clean }),
-    );
-  } catch {
-    /* sessionStorage full — ignore */
-  }
-}
-
-function clearSession(projectId: string) {
-  sessionStorage.removeItem(`defense_session_${projectId}`);
-}
 
 export const Route = createFileRoute("/defense")({
   ssr: false,
@@ -93,9 +85,15 @@ function DefensePage() {
   const t = useMemo(() => defenseCopy(locale), [locale]);
 
   const [latexContent, setLatexContent] = useState("");
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
+  const [mainFile, setMainFile] = useState("main.tex");
+  const [compiler, setCompiler] = useState<LatexCompiler>("auto");
+  const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [paperName, setPaperName] = useState("Untitled");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [paperLoading, setPaperLoading] = useState(true);
+  const [paperRefreshing, setPaperRefreshing] = useState(false);
+  const [mobileTab, setMobileTab] = useState<DefenseMobileTab>("chat");
 
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
@@ -103,10 +101,8 @@ function DefensePage() {
   const [compileWarning, setCompileWarning] = useState<string | null>(null);
   const [compileLog, setCompileLog] = useState<string | null>(null);
 
-  // Session history: loaded once at mount; reset when projectId changes
-  const [restoredSession, setRestoredSession] = useState<SavedDefenseSession | null>(
-    () => (projectId ? loadSession(projectId) : null),
-  );
+  // Session history: merged from server metadata + sessionStorage
+  const [restoredSession, setRestoredSession] = useState<StoredDefenseSession | null>(null);
 
   const [messages, setMessages] = useState<DefenseMessage[]>([]);
   const [input, setInput] = useState("");
@@ -119,15 +115,82 @@ function DefensePage() {
   const abortRef = useRef<AbortController | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const streamGenRef = useRef(0);
+  const compileInFlightRef = useRef(false);
+  const pendingCompileForceRef = useRef(false);
+  const lastPaperUpdatedAtRef = useRef<number | null>(null);
+  const hasStartedRef = useRef(false);
+  const messagesRef = useRef<DefenseMessage[]>([]);
+  const isStreamingRef = useRef(false);
+  const defenseLatexContextRef = useRef("");
+  const visibilityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track previous projectId to reset conversation on navigation between papers
   const prevProjectIdRef = useRef(projectId);
   const pdfCitationKeyRef = useRef(0);
   const [pdfCitationFocus, setPdfCitationFocus] = useState<DefensePdfCitationFocus | null>(null);
 
-  const handlePdfCitation = useCallback((citation: DefensePdfCitation) => {
-    pdfCitationKeyRef.current += 1;
-    setPdfCitationFocus({ ...citation, key: pdfCitationKeyRef.current });
-  }, []);
+  hasStartedRef.current = hasStarted;
+  messagesRef.current = messages;
+  isStreamingRef.current = isStreaming;
+
+  const persistOpts = useMemo(
+    () => ({
+      onError: () => toast.error(t.chat.sessionPersistFailed),
+    }),
+    [t.chat.sessionPersistFailed],
+  );
+
+  const pdfStatus = useMemo((): DefensePdfStatus => {
+    if (isCompiling) return "compiling";
+    if (compileError) return "error";
+    if (pdfData) return "ready";
+    return "waiting";
+  }, [isCompiling, compileError, pdfData]);
+
+  const defenseLatexContext = useMemo(
+    () => buildDefenseLatexContext({ latex: latexContent, files: projectFiles, mainFile }),
+    [latexContent, projectFiles, mainFile],
+  );
+  defenseLatexContextRef.current = defenseLatexContext;
+
+  const compileProject = useMemo(
+    () =>
+      projectId
+        ? getCompilePayload({
+            id: projectId,
+            name: paperName,
+            latex: latexContent,
+            files: projectFiles,
+            mainFile,
+            compiler,
+            assets,
+            createdAt: 0,
+            updatedAt: 0,
+          })
+        : null,
+    [projectId, paperName, latexContent, projectFiles, mainFile, compiler, assets],
+  );
+
+  const handlePdfCitation = useCallback(
+    (citation: DefensePdfCitation) => {
+      const resolved = resolveDefensePdfCitation(citation, defenseLatexContext);
+      const candidates = [resolved.locateText, ...resolved.headingCandidates].filter(
+        (q, i, arr) => q.trim().length > 0 && arr.indexOf(q) === i,
+      );
+      if (!candidates.length) {
+        toast.message(t.chat.citationNotFound);
+        return;
+      }
+      const [search, ...searchCandidates] = candidates;
+      pdfCitationKeyRef.current += 1;
+      setPdfCitationFocus({
+        search,
+        page: resolved.page ?? citation.page,
+        searchCandidates: searchCandidates.length > 0 ? searchCandidates : undefined,
+        key: pdfCitationKeyRef.current,
+      });
+    },
+    [defenseLatexContext, t.chat.citationNotFound],
+  );
 
   const refreshQuota = useCallback(() => {
     setQuotaLoadFailed(false);
@@ -175,10 +238,94 @@ function DefensePage() {
     setPdfCitationFocus(null);
     setPdfData(null);
     setCompileError(null);
+    setProjectFiles([]);
+    setMainFile("main.tex");
+    setCompiler("auto");
+    setAssets([]);
     setQuota(null);
     setQuotaLoadFailed(false);
-    setRestoredSession(projectId ? loadSession(projectId) : null);
+    setRestoredSession(null);
+    lastPaperUpdatedAtRef.current = null;
   }, [projectId]);
+
+  const applyPaper = useCallback(
+    (paper: StoredProject) => {
+      const normalizedMain = paper.mainFile ?? "main.tex";
+      const prevUpdatedAt = lastPaperUpdatedAtRef.current;
+      const contentChanged =
+        prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
+      lastPaperUpdatedAtRef.current = paper.updatedAt;
+
+      setLatexContent(paper.latex);
+      setProjectFiles(
+        paper.files?.length
+          ? paper.files
+          : [{ path: normalizedMain, content: paper.latex }],
+      );
+      setMainFile(normalizedMain);
+      setCompiler(paper.compiler ?? "auto");
+      setAssets(paper.assets ?? []);
+      setPaperName(paper.name);
+      setLoadError(null);
+
+      if (contentChanged) {
+        setPdfData(null);
+        setCompileError(null);
+      }
+
+      const merged = mergeDefenseSessions(
+        paper.defenseSession,
+        projectId ? loadLocalDefenseSession(projectId) : null,
+      );
+      if (!hasStartedRef.current && messagesRef.current.length === 0) {
+        setRestoredSession(merged);
+      }
+    },
+    [projectId],
+  );
+
+  const reloadPaper = useCallback(
+    (opts?: { silent?: boolean; manual?: boolean }) => {
+      if (!projectId || paperRefreshing) return;
+      invalidateFetchKey(`papers:${projectId}`);
+      const isBackground = Boolean(opts?.silent || opts?.manual);
+      if (!isBackground) setPaperLoading(true);
+      else setPaperRefreshing(true);
+
+      const prevUpdatedAt = lastPaperUpdatedAtRef.current;
+      fetchPaper(projectId)
+        .then((paper) => {
+          const wasUpdated =
+            prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
+          applyPaper(paper);
+          if (opts?.manual) {
+            toast.info(
+              wasUpdated ? t.chat.paperUpdatedFromEditor : t.chat.paperRefreshDone,
+            );
+          } else if (opts?.silent && wasUpdated) {
+            toast.info(t.chat.paperUpdatedFromEditor);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!isBackground) {
+            setLoadError(err instanceof Error ? err.message : t.chat.paperLoadFallbackError);
+          } else {
+            toast.error(
+              err instanceof Error ? err.message : t.chat.paperLoadFallbackError,
+            );
+          }
+        })
+        .finally(() => {
+          if (!isBackground) setPaperLoading(false);
+          else setPaperRefreshing(false);
+        });
+    },
+    [projectId, paperRefreshing, applyPaper, t.chat],
+  );
+
+  const handleRefreshPaper = useCallback(() => {
+    reloadPaper({ silent: true, manual: true });
+  }, [reloadPaper]);
 
   useEffect(() => {
     if (!projectId) void navigate({ to: "/projects" });
@@ -187,52 +334,114 @@ function DefensePage() {
   useEffect(() => {
     if (!projectId) return;
     setPaperLoading(true);
+    lastPaperUpdatedAtRef.current = null;
     fetchPaper(projectId)
-      .then((paper) => {
-        setLatexContent(paper.latex);
-        setPaperName(paper.name);
-        setLoadError(null);
-      })
+      .then((paper) => applyPaper(paper))
       .catch((err: unknown) => {
         setLoadError(err instanceof Error ? err.message : t.chat.paperLoadFallbackError);
       })
       .finally(() => setPaperLoading(false));
-  }, [projectId]);
+  }, [projectId, applyPaper, t.chat.paperLoadFallbackError]);
 
-  // PDF compile with content-aware module-level cache — skips recompile when
-  // latex hasn't changed since last compile within this browser tab session.
-  const runCompile = useCallback((latex: string) => {
-    if (!latex || !projectId) return;
-    const key = pdfCacheKey(projectId, latex);
-    const cached = _pdfCache.get(key);
-    if (cached) {
-      setPdfData(cached);
-      return;
-    }
-    setIsCompiling(true);
-    setCompileError(null);
-    compileLatex(latex, [], { compiler: "auto" })
-      .then((result: CompileResult) => {
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (isStreamingRef.current) return;
+      if (visibilityDebounceRef.current) clearTimeout(visibilityDebounceRef.current);
+      visibilityDebounceRef.current = setTimeout(() => {
+        reloadPaper({ silent: true });
+      }, 800);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      if (visibilityDebounceRef.current) clearTimeout(visibilityDebounceRef.current);
+    };
+  }, [reloadPaper]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      flushDefenseSessionPersistNow();
+    };
+  }, []);
+
+  // PDF compile with fingerprint cache — skips recompile when project unchanged in-tab.
+  const runCompile = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (!compileProject || !projectId) return;
+
+      if (compileInFlightRef.current) {
+        if (force) pendingCompileForceRef.current = true;
+        return;
+      }
+
+      const assetHashes = await buildCompileAssetHashes(compileProject.assets);
+      const fingerprint = computeCompileFingerprint(compileProject, assetHashes);
+      const cached = _pdfCache.get(fingerprint);
+      if (!force && cached) {
+        setPdfData(cached);
+        setCompileError(null);
+        return;
+      }
+
+      compileInFlightRef.current = true;
+      setIsCompiling(true);
+      setCompileError(null);
+      try {
+        const result: CompileResult = await compileLatex(
+          compileProject.latex,
+          compileProject.assets,
+          {
+            mainFile: compileProject.mainFile,
+            compiler: compileProject.compiler,
+            cacheId: projectId,
+            mode: "full",
+            knownAssetHashes: assetHashes,
+            forceFullAssets: force,
+          },
+        );
         if (result.success && result.pdf_base64) {
           const binary = atob(result.pdf_base64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          _pdfCache.set(key, bytes);
+          _pdfCache.set(fingerprint, bytes);
           setPdfData(bytes);
           setCompileError(null);
           setCompileWarning(result.warning ?? null);
+          setCompileLog(null);
         } else {
           setCompileError(result.error || t.chat.compileFailed);
           setCompileLog(result.log ?? null);
         }
-      })
-      .catch(() => setCompileError(t.chat.compileNetworkError))
-      .finally(() => setIsCompiling(false));
-  }, [projectId, t.chat.compileFailed, t.chat.compileNetworkError]);
+      } catch {
+        setCompileError(t.chat.compileNetworkError);
+      } finally {
+        compileInFlightRef.current = false;
+        setIsCompiling(false);
+        if (pendingCompileForceRef.current) {
+          pendingCompileForceRef.current = false;
+          void runCompile({ force: true });
+        }
+      }
+    },
+    [compileProject, projectId, t.chat.compileFailed, t.chat.compileNetworkError],
+  );
+
+  const handleRetryCompile = useCallback(() => {
+    void runCompile({ force: true });
+  }, [runCompile]);
+
+  const handleCitationMiss = useCallback(() => {
+    toast.message(t.chat.citationNotFound);
+  }, [t.chat.citationNotFound]);
 
   useEffect(() => {
-    if (latexContent) runCompile(latexContent);
-  }, [latexContent, runCompile]);
+    if (compileProject?.latex) void runCompile();
+  }, [compileProject, runCompile]);
 
   const handleSend = useCallback(() => {
     if (isStreaming) return;
@@ -260,15 +469,12 @@ function DefensePage() {
     // When starting a fresh session (user chose "Bắt đầu mới"), clear any
     // previously saved session so the welcome screen won't show stale history.
     if (!hasStarted && messages.length === 0 && projectId) {
-      clearSession(projectId);
+      clearDefenseSession(projectId, persistOpts);
       setRestoredSession(null);
     }
 
     const userMessage = input.trim();
-    // Build history excluding cancelled partial messages (no content)
-    const history: DefenseConversationTurn[] = messages
-      .filter((m) => !(m.isCancelled && !m.content.trim()))
-      .map((m) => ({ role: m.role, content: m.content }));
+    const history: DefenseConversationTurn[] = buildDefenseConversationHistory(messages);
 
     if (userMessage) {
       history.push({ role: "user", content: userMessage });
@@ -317,7 +523,7 @@ function DefensePage() {
 
     streamDefense(
       {
-        latex_content: latexContent,
+        latex_content: defenseLatexContext,
         conversation_history: history,
         mode: "proactive",
         paper_id: projectId,
@@ -335,14 +541,21 @@ function DefensePage() {
         onDone: (response) => {
           if (streamGenRef.current !== myGen) return;
           if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
-          const finalText = prepareDefenseCouncilMarkdown(response || assembled, latexContent);
+          const latexCtx = defenseLatexContextRef.current;
+          const finalText = prepareDefenseCouncilMarkdown(response || assembled, latexCtx);
           setMessages((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
             if (last?.role === "assistant") {
               next[next.length - 1] = { ...last, content: finalText, isStreaming: false };
             }
-            if (projectId) saveSession(projectId, { messages: next, hasStarted: true });
+            if (projectId) {
+              persistDefenseSession(
+                projectId,
+                { messages: next, hasStarted: true },
+                persistOpts,
+              );
+            }
             return next;
           });
           setActivityText("");
@@ -374,7 +587,7 @@ function DefensePage() {
       },
       abort.signal,
     );
-  }, [isStreaming, quotaLoadFailed, hasStarted, input, messages, latexContent, projectId, quota, locale, t.chat, refreshQuota]);
+  }, [isStreaming, quotaLoadFailed, hasStarted, input, messages, defenseLatexContext, projectId, quota, locale, t.chat, refreshQuota, persistOpts]);
 
   const completedCouncilTurns = countCompletedCouncilTurns(messages);
   const displayUsed = quota ? Math.max(quota.used, completedCouncilTurns) : completedCouncilTurns;
@@ -399,11 +612,17 @@ function DefensePage() {
           next.pop();
         }
       }
-      if (projectId) saveSession(projectId, { messages: next, hasStarted: true });
+      if (projectId) {
+        persistDefenseSession(
+          projectId,
+          { messages: next, hasStarted: true },
+          persistOpts,
+        );
+      }
       return next;
     });
     refreshQuota();
-  }, [projectId, refreshQuota]);
+  }, [projectId, refreshQuota, persistOpts]);
 
   const doReset = useCallback(() => {
     streamGenRef.current += 1;
@@ -419,8 +638,8 @@ function DefensePage() {
     setActivityText("");
     setPdfCitationFocus(null);
     setRestoredSession(null);
-    if (projectId) clearSession(projectId);
-  }, [projectId]);
+    if (projectId) clearDefenseSession(projectId, persistOpts);
+  }, [projectId, persistOpts]);
 
   const handleResume = useCallback(() => {
     if (!restoredSession) return;
@@ -437,6 +656,51 @@ function DefensePage() {
       duration: 8000,
     });
   }, [messages.length, t.chat, doReset]);
+
+  const chatPanel = (
+    <DefenseChatPanel
+      copy={t.chat}
+      quota={quota}
+      quotaLoadFailed={quotaLoadFailed}
+      messages={messages}
+      input={input}
+      isStreaming={isStreaming}
+      activityText={activityText}
+      onInputChange={setInput}
+      onSend={handleSend}
+      onStop={handleStop}
+      onReset={handleReset}
+      onResume={restoredSession ? handleResume : undefined}
+      savedMessages={restoredSession?.messages.filter((m) => !m.isStreaming)}
+      onQuotaRetry={refreshQuota}
+      hasStarted={hasStarted}
+      paperName={paperName}
+      latexContent={defenseLatexContext}
+      onPdfCitation={(citation) => {
+        handlePdfCitation(citation);
+        setMobileTab("pdf");
+      }}
+      locale={locale}
+      onQuotaRefresh={refreshQuota}
+    />
+  );
+
+  const pdfPanel = (
+    <PdfPreviewPanel
+      pdfData={pdfData}
+      isCompiling={isCompiling}
+      compileError={compileError}
+      compileWarning={compileWarning}
+      compileLog={compileLog}
+      mainFile={mainFile}
+      projectName={paperName}
+      onCompile={handleRetryCompile}
+      readOnly
+      latexSource={defenseLatexContext}
+      citationFocus={pdfCitationFocus}
+      onCitationMiss={handleCitationMiss}
+    />
+  );
 
   if (paperLoading) {
     return <AppLoadingScreen label={t.loading} variant="fullscreen" />;
@@ -472,6 +736,16 @@ function DefensePage() {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleRefreshPaper}
+            disabled={paperRefreshing || isStreaming}
+            className="defense-masthead-refresh inline-flex items-center gap-1 rounded px-1.5 py-0.5 normal-case font-sans text-[10px] tracking-normal transition hover:text-[color:var(--editorial-red)] disabled:opacity-50"
+            title={t.masthead.refreshPaper}
+          >
+            <RefreshCw className={`h-3 w-3${paperRefreshing ? " animate-spin" : ""}`} aria-hidden />
+            {paperRefreshing ? t.masthead.refreshingPaper : t.masthead.refreshPaper}
+          </button>
           {quota ? (
             <DefenseQuotaBadge
               copy={t.chat}
@@ -485,7 +759,16 @@ function DefensePage() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <DefensePdfStatusBar
+        status={pdfStatus}
+        copy={t.pdfStatus}
+        onRetry={handleRetryCompile}
+        isRetrying={isCompiling}
+      />
+
+      <DefenseMobileTabBar tab={mobileTab} onChange={setMobileTab} copy={t.mobile} />
+
+      <div className="hidden min-h-0 flex-1 overflow-hidden md:flex">
         <EditorDesktopPanels
           groupId="defense-layout-70"
           centerPanelId="defense-chat"
@@ -494,46 +777,13 @@ function DefensePage() {
           previewDefaultSize={30}
           centerMinSize={28}
           previewMinSize={22}
-          center={
-            <DefenseChatPanel
-              copy={t.chat}
-              quota={quota}
-              quotaLoadFailed={quotaLoadFailed}
-              messages={messages}
-              input={input}
-              isStreaming={isStreaming}
-              activityText={activityText}
-              onInputChange={setInput}
-              onSend={handleSend}
-              onStop={handleStop}
-              onReset={handleReset}
-              onResume={restoredSession ? handleResume : undefined}
-              savedMessages={restoredSession?.messages.filter((m) => !m.isStreaming)}
-              onQuotaRetry={refreshQuota}
-              hasStarted={hasStarted}
-              paperName={paperName}
-              latexContent={latexContent}
-              onPdfCitation={handlePdfCitation}
-              locale={locale}
-              onQuotaRefresh={refreshQuota}
-            />
-          }
-          right={
-            <PdfPreviewPanel
-              pdfData={pdfData}
-              isCompiling={isCompiling}
-              compileError={compileError}
-              compileWarning={compileWarning}
-              compileLog={compileLog}
-              mainFile="main.tex"
-              projectName={paperName}
-              onCompile={() => {}}
-              readOnly
-              latexSource={latexContent}
-              citationFocus={pdfCitationFocus}
-            />
-          }
+          center={chatPanel}
+          right={pdfPanel}
         />
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:hidden">
+        {mobileTab === "chat" ? chatPanel : pdfPanel}
       </div>
     </div>
   );

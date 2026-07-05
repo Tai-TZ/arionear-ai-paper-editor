@@ -1,5 +1,5 @@
 import type { LogicAuditReport } from "@/lib/api/academic";
-import { streamChat, syncSession } from "@/lib/api/academic";
+import { streamChat } from "@/lib/api/academic";
 import type { LLMProvider } from "@/lib/api/academic";
 import { contentFingerprint } from "@/lib/pending-edit-utils";
 
@@ -10,6 +10,9 @@ import { contentFingerprint } from "@/lib/pending-edit-utils";
 export function logicAuditFingerprint(latex: string): string {
   return contentFingerprint(latex);
 }
+
+/** Client timeout — backend gate default is 120s; add buffer for network/SSE. */
+export const SCORE_GATE_AUDIT_TIMEOUT_MS = 135_000;
 
 // ---------------------------------------------------------------------------
 // Report usability checks
@@ -51,18 +54,24 @@ export function needsScoreGateAudit(
 // Error formatting
 // ---------------------------------------------------------------------------
 
-export function formatPaperScoreGateError(raw: string): string {
+export function formatPaperScoreGateError(raw: string, locale: "en" | "vi" = "vi"): string {
   const lower = raw.toLowerCase();
   if (lower.includes("api key") || lower.includes("unauthorized") || lower.includes("401")) {
-    return `Lỗi API key — kiểm tra cấu hình provider trong Settings. (${raw})`;
+    return locale === "en"
+      ? `API key error — check provider configuration in Settings. (${raw})`
+      : `Lỗi API key — kiểm tra cấu hình provider trong Settings. (${raw})`;
   }
   if (lower.includes("timeout") || lower.includes("timed out")) {
-    return "Quá thời gian phản biện — thử lại hoặc chọn bài ngắn hơn.";
+    return locale === "en"
+      ? "AI review timed out — try again or use a shorter manuscript."
+      : "Quá thời gian phản biện — thử lại hoặc chọn bài ngắn hơn.";
   }
   if (lower.includes("rate limit") || lower.includes("429")) {
-    return "Vượt giới hạn API — đợi vài giây rồi mở lại dialog.";
+    return locale === "en"
+      ? "API rate limit — wait a few seconds and try again."
+      : "Vượt giới hạn API — đợi vài giây rồi mở lại dialog.";
   }
-  return raw || "Không thể chạy phản biện AI.";
+  return raw || (locale === "en" ? "Could not run AI peer review." : "Không thể chạy phản biện AI.");
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +84,7 @@ export interface ScoreGateAuditOptions {
   integrityStrictness?: "relaxed" | "standard" | "strict";
   llmProvider?: LLMProvider;
   llmModel?: string;
+  locale?: "en" | "vi";
   signal?: AbortSignal;
   onProgress?: (label: string) => void;
 }
@@ -95,11 +105,12 @@ export async function runQuickLogicAuditForScore(
     integrityStrictness = "standard",
     llmProvider,
     llmModel,
+    locale = "vi",
     signal,
     onProgress,
   } = opts;
 
-  await syncSession(sessionId, "", latex).catch(() => {});
+  const latexHash = logicAuditFingerprint(latex);
 
   return new Promise<LogicAuditReport | null>((resolve, reject) => {
     let settled = false;
@@ -111,7 +122,6 @@ export async function runQuickLogicAuditForScore(
       fn();
     };
 
-    // Resolve immediately when the caller aborts — prevents the promise hanging.
     const onAbort = () => settle(() => resolve(null));
     signal?.addEventListener("abort", onAbort, { once: true });
 
@@ -160,10 +170,12 @@ export async function runQuickLogicAuditForScore(
     };
 
     streamChat(
-      "Đọc lướt bài báo",
+      locale === "en" ? "Skim manuscript" : "Đọc lướt bài báo",
       {
         sessionId,
         latexContent: latex,
+        latexContentHash: latexHash,
+        locale,
         task: "logic",
         logic_audit_mode: "gate",
         logic_audit_scope: "selected",

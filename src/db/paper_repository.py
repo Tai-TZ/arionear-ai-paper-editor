@@ -139,7 +139,9 @@ class DatabaseSessionStore:
                 if latex_content:
                     existing.raw_latex = latex_content
                 if metadata is not None:
-                    existing.metadata_ = metadata
+                    merged = dict(existing.metadata_ or {})
+                    merged.update(metadata)
+                    existing.metadata_ = merged
                 existing.updated_at = _utcnow()
                 _ensure_ai_session(db, existing)
                 db.flush()
@@ -194,7 +196,9 @@ class DatabaseSessionStore:
             if latex_content is not None:
                 paper.raw_latex = latex_content
             if metadata is not None:
-                paper.metadata_ = metadata
+                merged = dict(paper.metadata_ or {})
+                merged.update(metadata)
+                paper.metadata_ = merged
             paper.updated_at = _utcnow()
             db.flush()
             return _paper_to_session(_load_paper(db, paper.id) or paper)
@@ -288,7 +292,12 @@ class DatabaseSessionStore:
             paper.updated_at = _utcnow()
 
     @retry_on_lock_timeout()
-    def set_logic_audit_report(self, session_id: str, report: dict) -> None:
+    def set_logic_audit_report(
+        self,
+        session_id: str,
+        report: dict,
+        latex_fingerprint: str | None = None,
+    ) -> None:
         with get_db() as db:
             paper = _load_paper(db, _parse_uuid(session_id))
             if not paper:
@@ -297,5 +306,7 @@ class DatabaseSessionStore:
             audit_mode = (report.get("meta") or {}).get("audit_mode")
             key = "logic_gate_audit_report" if audit_mode == "gate" else "logic_audit_report"
             meta[key] = report
+            if audit_mode == "gate" and latex_fingerprint:
+                meta["logic_gate_audit_fingerprint"] = latex_fingerprint
             paper.metadata_ = meta
             paper.updated_at = _utcnow()

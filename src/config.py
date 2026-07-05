@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     google_logic_audit_quick_model: str = "gemini-2.5-flash"
     google_logic_audit_deep_model: str = "gemini-3.5-flash"
 
+    # Agent Defense council (independent of editor default LLM)
+    defense_llm_provider: LLMProvider = "google"
+    defense_llm_model: str = "gemini-3.1-flash-lite"
+
     # LLM HTTP + logic-audit stream timeouts (seconds)
     llm_request_timeout_sec: float = Field(default=180.0, ge=30.0, le=900.0)
     logic_audit_persona_timeout_sec: float = Field(default=90.0, ge=30.0, le=900.0)

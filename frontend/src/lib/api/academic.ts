@@ -339,25 +339,79 @@ export function invalidateSessionSync(sessionId?: string) {
   else sessionSyncById.clear();
 }
 
+/** Mark session cache as synced without a network call (e.g. after GET /papers). */
+export function markSessionSynced(
+  sessionId: string,
+  name: string,
+  latexContent: string,
+): void {
+  const record = sessionSyncRecord(sessionId);
+  record.syncedHash = contentFingerprint(latexContent);
+  record.syncedName = name;
+}
+
 async function patchOrCreateSession(
   sessionId: string,
   name: string,
   latexContent: string,
 ): Promise<void> {
-  try {
-    await apiFetch(`/sessions/${sessionId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name, latex_content: latexContent }),
-    });
-  } catch {
-    await apiFetch("/sessions", {
-      method: "POST",
-      body: JSON.stringify({
-        id: sessionId,
-        name,
-        latex_content: latexContent,
-      }),
-    });
+  const patchBody = JSON.stringify({ name, latex_content: latexContent });
+  const headers = {
+    "Content-Type": "application/json",
+    ...authHeaders(),
+  };
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers,
+        body: patchBody,
+      });
+    } catch {
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 300 * 2 ** attempt));
+        continue;
+      }
+      throw new Error("NETWORK_ERROR");
+    }
+
+    if (res.ok) return;
+
+    if (res.status === 404) {
+      const postRes = await fetch(`${API_BASE}/sessions`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ id: sessionId, name, latex_content: latexContent }),
+      });
+      if (!postRes.ok) {
+        let detail: unknown = postRes.statusText;
+        try {
+          const body = await postRes.json();
+          detail = body.detail ?? detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(mapApiHttpError(postRes.status, detail));
+      }
+      return;
+    }
+
+    // 500 lock timeout etc. — retry; never fall through to POST (worsens contention).
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 400 * 2 ** attempt));
+      continue;
+    }
+
+    let detail: unknown = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(mapApiHttpError(res.status, detail));
   }
 }
 
@@ -954,20 +1008,27 @@ export async function lookupSynctexInverse(
   word = "",
   latex = "",
   context = "",
+  options?: { cacheId?: string },
 ): Promise<SyncTeXHit> {
+  const cacheId = options?.cacheId?.trim();
+  const body: Record<string, unknown> = {
+    page,
+    x,
+    y,
+    jobname,
+    word: word ?? "",
+    context: context ?? "",
+  };
+  if (cacheId) {
+    body.cache_id = cacheId;
+  } else {
+    body.synctex_base64 = synctexBase64;
+    body.pdf_base64 = pdfBase64;
+    body.latex = latex ?? "";
+  }
   return apiFetch("/compile/synctex", {
     method: "POST",
-    body: JSON.stringify({
-      synctex_base64: synctexBase64,
-      pdf_base64: pdfBase64,
-      page,
-      x,
-      y,
-      jobname,
-      word: word ?? "",
-      context: context ?? "",
-      latex: latex ?? "",
-    }),
+    body: JSON.stringify(body),
   });
 }
 

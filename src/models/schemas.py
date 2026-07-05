@@ -290,8 +290,13 @@ class CompileStatusResponse(BaseModel):
 
 
 class SyncTeXLookupRequest(BaseModel):
-    synctex_base64: str = Field(..., min_length=1)
-    pdf_base64: str = Field(..., min_length=1)
+    cache_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Reuse compile workspace PDF/SyncTeX on disk instead of uploading base64 blobs.",
+    )
+    synctex_base64: str = Field(default="", max_length=50_000_000)
+    pdf_base64: str = Field(default="", max_length=50_000_000)
     page: int = Field(..., ge=1)
     x: float = 0.0
     y: float = 0.0
@@ -299,6 +304,14 @@ class SyncTeXLookupRequest(BaseModel):
     word: str = Field(default="", max_length=256)
     context: str = Field(default="", max_length=512)
     latex: str = Field(default="", max_length=2_000_000)
+
+    @model_validator(mode="after")
+    def payload_or_cache(self) -> SyncTeXLookupRequest:
+        if self.cache_id and self.cache_id.strip():
+            return self
+        if not self.synctex_base64.strip() or not self.pdf_base64.strip():
+            raise ValueError("synctex_base64 and pdf_base64 are required without cache_id")
+        return self
 
 
 class SyncTeXLookupResponse(BaseModel):

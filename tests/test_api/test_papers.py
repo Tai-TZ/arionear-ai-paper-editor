@@ -170,3 +170,40 @@ async def test_share_token_survives_metadata_patch(client, papers_db):
     public = await client.get(f"/api/v1/share/{share_token}")
     assert public.status_code == 200
     assert public.json()["name"] == "Shared Paper"
+
+
+@pytest.mark.asyncio
+async def test_patch_merges_partial_files(client, papers_db):
+    token = await _register(client, "merge-files@uni.edu", "Merge Files User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create = await client.post(
+        "/api/v1/papers",
+        headers=headers,
+        json={
+            "name": "Multi-file",
+            "latex": "main content",
+            "metadata": {
+                "files": [
+                    {"path": "main.tex", "content": "main content"},
+                    {"path": "refs.bib", "content": "@article{a, title={A}}"},
+                ],
+                "mainFile": "main.tex",
+            },
+        },
+    )
+    assert create.status_code == 201
+    paper_id = create.json()["id"]
+
+    patched = await client.patch(
+        f"/api/v1/papers/{paper_id}",
+        headers=headers,
+        json={
+            "latex": "updated main",
+            "metadata": {"files": [{"path": "main.tex", "content": "updated main"}]},
+        },
+    )
+    assert patched.status_code == 200
+    files = {f["path"]: f["content"] for f in patched.json()["metadata"]["files"]}
+    assert files["main.tex"] == "updated main"
+    assert files["refs.bib"] == "@article{a, title={A}}"

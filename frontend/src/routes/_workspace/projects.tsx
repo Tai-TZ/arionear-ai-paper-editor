@@ -95,7 +95,8 @@ function ProjectsPage() {
       setLoadError(null);
 
       try {
-        const [, list] = await Promise.all([refreshSession(), fetchPapers()]);
+        void refreshSession().catch(() => {});
+        const list = await fetchPapers();
         if (cancelled) return;
         setProjects(list);
       } catch (error) {

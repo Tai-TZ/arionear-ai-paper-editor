@@ -17,6 +17,7 @@ import {
   logicAuditFingerprint,
   needsScoreGateAudit,
   runQuickLogicAuditForScore,
+  SCORE_GATE_AUDIT_TIMEOUT_MS,
 } from "@/lib/paper-score-audit";
 import {
   buildStructureEditMessage,
@@ -56,7 +57,7 @@ export type UseEditorToolsOptions = {
   bootGateAuditReport?: LogicAuditReport | null;
 };
 
-const SCORE_AUDIT_TIMEOUT_MS = 150_000;
+const SCORE_AUDIT_TIMEOUT_MS = SCORE_GATE_AUDIT_TIMEOUT_MS;
 
 export function useEditorTools({
   projectId,
@@ -122,9 +123,9 @@ export function useEditorTools({
   }, [projectId, t.errors.revisionFailed]);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !toolsOpen) return;
     void loadSessionAudit(projectId);
-  }, [projectId, loadSessionAudit]);
+  }, [projectId, toolsOpen, loadSessionAudit]);
 
   useEffect(() => {
     if (bootLogicAuditReport) {
@@ -175,6 +176,17 @@ export function useEditorTools({
   const runScoreGateAudit = useCallback(async () => {
     if (!projectId || scoreAuditLoading) return;
 
+    if (!logicAuditEngineAvailable) {
+      const fp = logicAuditFingerprint(mainLatexSource);
+      scoreAuditAttemptedForRef.current = fp;
+      setScoreAuditError(
+        locale === "vi"
+          ? "Cần Google AI provider — cấu hình trong Settings."
+          : "Google AI provider required — configure in Settings.",
+      );
+      return;
+    }
+
     scoreAuditAbortRef.current?.abort();
     const abort = new AbortController();
     scoreAuditAbortRef.current = abort;
@@ -203,14 +215,16 @@ export function useEditorTools({
         integrityStrictness,
         llmProvider,
         llmModel,
+        locale,
         signal: abort.signal,
         onProgress: (label) => setScoreAuditProgress(label),
       });
       if (abort.signal.aborted) return;
-      scoreAuditAttemptedForRef.current = logicAuditFingerprint(mainLatexSource);
+      const fp = logicAuditFingerprint(mainLatexSource);
+      scoreAuditAttemptedForRef.current = fp;
       if (report?.sections?.length) {
         setGateAuditReport(report);
-        lastGateAuditFingerprintRef.current = logicAuditFingerprint(mainLatexSource);
+        lastGateAuditFingerprintRef.current = fp;
       } else {
         setGateAuditReport(null);
         setScoreAuditError(
@@ -224,7 +238,7 @@ export function useEditorTools({
       const message =
         error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
       setGateAuditReport(null);
-      setScoreAuditError(formatPaperScoreGateError(message));
+      setScoreAuditError(formatPaperScoreGateError(message, locale));
     } finally {
       clearTimeout(timeoutId);
       if (!abort.signal.aborted) {
@@ -241,43 +255,47 @@ export function useEditorTools({
     llmProvider,
     llmModel,
     locale,
+    logicAuditEngineAvailable,
     t.scoreGate.hintLoading,
   ]);
 
-  const tryStartScoreGateAudit = useCallback(
-    (auditInProgress: boolean) => {
-      if (!exportOpen) {
-        scoreAuditAbortRef.current?.abort();
-        scoreAuditAbortRef.current = null;
-        scoreAuditAttemptedForRef.current = null;
-        setScoreAuditLoading(false);
-        setScoreAuditProgress(null);
-        return;
-      }
-      if (!projectId || scoreAuditLoading || auditInProgress) return;
+  const retryScoreGateAudit = useCallback(() => {
+    scoreAuditAttemptedForRef.current = null;
+    setScoreAuditError(null);
+    void runScoreGateAudit();
+  }, [runScoreGateAudit]);
 
-      const fingerprint = logicAuditFingerprint(mainLatexSource);
-      if (scoreAuditAttemptedForRef.current === fingerprint) return;
-      if (
-        !needsScoreGateAudit(
-          mainLatexSource,
-          gateAuditReport,
-          lastGateAuditFingerprintRef.current,
-        )
-      ) {
-        return;
-      }
-      void runScoreGateAudit();
-    },
-    [
-      exportOpen,
-      projectId,
-      scoreAuditLoading,
-      mainLatexSource,
-      gateAuditReport,
-      runScoreGateAudit,
-    ],
-  );
+  const tryStartScoreGateAudit = useCallback(() => {
+    if (!exportOpen) {
+      scoreAuditAbortRef.current?.abort();
+      scoreAuditAbortRef.current = null;
+      scoreAuditAttemptedForRef.current = null;
+      setScoreAuditLoading(false);
+      setScoreAuditProgress(null);
+      return;
+    }
+    if (!projectId || scoreAuditLoading) return;
+
+    const fingerprint = logicAuditFingerprint(mainLatexSource);
+    if (scoreAuditAttemptedForRef.current === fingerprint) return;
+    if (
+      !needsScoreGateAudit(
+        mainLatexSource,
+        gateAuditReport,
+        lastGateAuditFingerprintRef.current,
+      )
+    ) {
+      return;
+    }
+    void runScoreGateAudit();
+  }, [
+    exportOpen,
+    projectId,
+    scoreAuditLoading,
+    mainLatexSource,
+    gateAuditReport,
+    runScoreGateAudit,
+  ]);
 
   const applyStructureFix = useCallback(
     (suggestion: StructureSuggestion) => {
@@ -403,14 +421,29 @@ export function useEditorTools({
     ],
   );
 
+  const openCitationsTab = useCallback(() => {
+    setToolsOpen(true);
+    setToolsTab("citations");
+    setMobileToolsOpen(false);
+  }, [setMobileToolsOpen]);
+
   const exportDialogProps = useMemo(
     () => ({
       logicAuditReport: gateAuditReport,
       auditLoading: scoreAuditLoading,
       auditProgress: scoreAuditProgress,
       auditError: scoreAuditError,
+      onRetryAudit: retryScoreGateAudit,
+      onOpenCitationsTab: openCitationsTab,
     }),
-    [gateAuditReport, scoreAuditLoading, scoreAuditProgress, scoreAuditError],
+    [
+      gateAuditReport,
+      scoreAuditLoading,
+      scoreAuditProgress,
+      scoreAuditError,
+      retryScoreGateAudit,
+      openCitationsTab,
+    ],
   );
 
   return {
@@ -425,5 +458,6 @@ export function useEditorTools({
     toolsPanelProps,
     exportDialogProps,
     tryStartScoreGateAudit,
+    retryScoreGateAudit,
   };
 }

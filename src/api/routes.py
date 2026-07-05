@@ -45,7 +45,7 @@ from src.services.latex_compile import (
     compile_latex,
     compile_status,
     parse_synctex_inverse_disambiguated,
-    resolve_synctex_line,
+    resolve_synctex_line_from_request,
 )
 from src.services.llm import list_providers
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
@@ -429,7 +429,8 @@ def _compile_client_key(request: Request) -> str:
 
 @router.post("/compile/synctex", response_model=SyncTeXLookupResponse)
 async def synctex_lookup(body: SyncTeXLookupRequest):
-    hit = parse_synctex_inverse_disambiguated(
+    hit = await asyncio.to_thread(
+        parse_synctex_inverse_disambiguated,
         body.synctex_base64,
         body.pdf_base64,
         body.page,
@@ -439,11 +440,19 @@ async def synctex_lookup(body: SyncTeXLookupRequest):
         body.word,
         body.latex,
         body.context,
+        body.cache_id,
     )
     if not hit:
         return SyncTeXLookupResponse(found=False, page=body.page)
     raw_line = int(hit.get("line", 0))
-    resolved_line = resolve_synctex_line(body.latex, raw_line, body.word, body.context)
+    resolved_line = resolve_synctex_line_from_request(
+        body.cache_id,
+        body.jobname,
+        body.latex,
+        raw_line,
+        body.word,
+        body.context,
+    )
     return SyncTeXLookupResponse(
         found=True,
         file=str(hit.get("file", "")),

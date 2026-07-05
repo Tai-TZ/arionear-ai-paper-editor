@@ -88,7 +88,8 @@ class InMemorySessionStore:
         if latex_content is not None:
             session.latex_content = latex_content
         if metadata is not None:
-            session.metadata = metadata
+            merged = {**(session.metadata or {}), **metadata}
+            session.metadata = merged
         session.updated_at = _utcnow()
         return session
 
@@ -131,13 +132,21 @@ class InMemorySessionStore:
             session.citation_registry = registry
             session.updated_at = _utcnow()
 
-    def set_logic_audit_report(self, session_id: str, report: dict) -> None:
+    def set_logic_audit_report(
+        self,
+        session_id: str,
+        report: dict,
+        latex_fingerprint: str | None = None,
+    ) -> None:
         session = self.get(session_id)
         if not session:
             return
         audit_mode = (report.get("meta") or {}).get("audit_mode")
         key = "logic_gate_audit_report" if audit_mode == "gate" else "logic_audit_report"
-        session.metadata = {**(session.metadata or {}), key: report}
+        meta = {**(session.metadata or {}), key: report}
+        if audit_mode == "gate" and latex_fingerprint:
+            meta["logic_gate_audit_fingerprint"] = latex_fingerprint
+        session.metadata = meta
         session.updated_at = _utcnow()
 
 

@@ -34,6 +34,22 @@ def test_fallback_style_beats_edit_for_abstract_polish():
     assert result.action == "style"
 
 
+def test_fallback_intent_shorten_introduction_section():
+    result = _fallback_intent(
+        "giúp tôi rút gọn phần introduction nhé, trông nó khá dài",
+        True,
+        False,
+    )
+    assert result.action == "edit"
+    assert result.scope == "document"
+
+
+def test_fallback_intent_help_me_shorten_english():
+    result = _fallback_intent("help me shorten the introduction section", True, False)
+    assert result.action == "edit"
+    assert result.scope == "document"
+
+
 def test_preview_edit_scope_for_title():
     latex = "\\title{Vietnamese herbariums Species Classification with EfficientNetV2}\n"
     _, detail = _preview_edit_scope(

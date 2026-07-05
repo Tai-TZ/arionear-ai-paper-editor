@@ -31,7 +31,7 @@ def _is_lock_timeout(exc: BaseException) -> bool:
 
 
 def retry_on_lock_timeout(
-    attempts: int = 3, base_delay: float = 0.1
+    attempts: int = 5, base_delay: float = 0.15
 ) -> Callable[[Callable[..., _T]], Callable[..., _T]]:
     """Retry a self-contained DB write that hit a Postgres ``lock_timeout``.
 
@@ -86,7 +86,7 @@ def _get_engine() -> Engine:
         if db_url.startswith("postgresql"):
             connect_args = {
                 "connect_timeout": 10,
-                "options": "-c statement_timeout=15000 -c lock_timeout=5000",
+                "options": "-c statement_timeout=15000 -c lock_timeout=8000",
             }
         elif db_url.startswith("sqlite"):
             connect_args = {"check_same_thread": False}

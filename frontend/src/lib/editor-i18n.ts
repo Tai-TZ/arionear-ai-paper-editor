@@ -229,6 +229,13 @@ export type EditorCopy = {
     gradeEvaluating: string;
     hintLoading: string;
     gatePeerReviewNote: string;
+    retryAudit: string;
+    topIssues: string;
+    templateBanner: string;
+    jumpToSection: string;
+    openCitations: string;
+    auditAnimationLabel: string;
+    auditPhrases: string[];
   };
   mobile: {
     files: string;
@@ -532,7 +539,7 @@ const EN: EditorCopy = {
     staleWarning: "Could not update review:",
     criteria: "Scoring criteria",
     footerLoading:
-      "Ario is reading abstract, introduction and conclusion — technical criteria on the right are ready.",
+      "Ario is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
     footerCompileError:
       "PDF is ready to download — but we recommend fixing compile errors first.",
     footerReady: "Export PDF after reviewing the score. See Logic Audit for details.",
@@ -552,6 +559,23 @@ const EN: EditorCopy = {
     hintLoading: "Ario is reading the full manuscript…",
     gatePeerReviewNote:
       "Quick skim for scoring only — open the Logic Audit tab for full multi-agent review.",
+    retryAudit: "Retry AI review",
+    topIssues: "Key issues",
+    templateBanner:
+      "This looks like a template or placeholder — replace sample text with real research before relying on the score.",
+    jumpToSection: "Go to section",
+    openCitations: "Open Citations in Tools",
+    auditAnimationLabel: "Ario is reading",
+    auditPhrases: [
+      "Reading abstract…",
+      "Analyzing main arguments…",
+      "Checking logical flow…",
+      "Cross-checking intro and conclusion…",
+      "Finding weak claims…",
+      "Verifying consistency…",
+      "Assessing academic quality…",
+      "Summarizing feedback…",
+    ],
   },
   mobile: {
     files: "Files",
@@ -864,7 +888,7 @@ const VI: EditorCopy = {
     staleWarning: "Không cập nhật phản biện mới:",
     criteria: "Tiêu chí chấm điểm",
     footerLoading:
-      "Ario đang đọc abstract, giới thiệu và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
+      "Ario đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
     footerCompileError:
       "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
     footerReady: "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit.",
@@ -884,6 +908,23 @@ const VI: EditorCopy = {
     hintLoading: "Ario đang đọc lướt toàn bộ bài…",
     gatePeerReviewNote:
       "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
+    retryAudit: "Chạy lại phản biện AI",
+    topIssues: "Vấn đề nổi bật",
+    templateBanner:
+      "Bản thảo có vẻ là template/mẫu — thay nội dung mẫu bằng nghiên cứu thật trước khi tin vào điểm số.",
+    jumpToSection: "Đi tới section",
+    openCitations: "Mở Citations trong Tools",
+    auditAnimationLabel: "Ario đang đọc",
+    auditPhrases: [
+      "Đọc abstract…",
+      "Phân tích luận điểm chính…",
+      "Kiểm tra mạch lập luận…",
+      "Đối chiếu giới thiệu và kết luận…",
+      "Tìm điểm yếu trong lập luận…",
+      "Xác minh tính nhất quán…",
+      "Đánh giá chất lượng học thuật…",
+      "Tổng hợp nhận xét…",
+    ],
   },
   mobile: {
     files: "Tệp",

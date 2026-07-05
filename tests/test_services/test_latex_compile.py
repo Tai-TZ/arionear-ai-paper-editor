@@ -112,6 +112,30 @@ def test_synctex_inverse_when_available():
     assert hit["line"] >= 1
 
 
+def test_synctex_inverse_uses_cached_workspace():
+    if not lc.find_pdflatex() or not lc.find_synctex():
+        return
+    cache_id = "test-synctex-cache"
+    req = CompileRequest(
+        latex="\\documentclass{article}\\begin{document}\nTarget line here\n\\end{document}",
+        compiler="pdflatex",
+        cache_id=cache_id,
+    )
+    result = lc.compile_latex(req)
+    assert result.success and result.synctex_base64
+    hit = lc.parse_synctex_inverse_disambiguated(
+        "",
+        "",
+        1,
+        200.0,
+        650.0,
+        "main",
+        cache_id=cache_id,
+    )
+    assert hit is not None
+    assert hit["line"] >= 1
+
+
 def test_max_direct_passes_simple_article():
     latex = r"\documentclass{article}\begin{document}Hello\end{document}"
     assert lc._max_direct_passes(latex) == 1

@@ -137,6 +137,30 @@ def _best_matching_line(original: str, suggestion: str) -> str | None:
     return cand_lines[0] if len(cand_lines) == 1 else None
 
 
+def _strip_leaked_section_command(original: str, replacement: str) -> str:
+    """Drop a leading \\section{...} when editing section body only."""
+    if re.search(r"\\section\b", original, re.IGNORECASE):
+        return replacement
+    match = re.match(r"^\s*\\section\*?\s*\{", replacement, re.IGNORECASE)
+    if not match:
+        return replacement
+    brace_start = match.end() - 1
+    depth = 0
+    header_end = None
+    for index in range(brace_start, len(replacement)):
+        char = replacement[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                header_end = index + 1
+                break
+    if header_end is None:
+        return replacement
+    return replacement[header_end:].lstrip("\n")
+
+
 def clamp_selection_replacement(
     original: str,
     suggestion: str,
@@ -169,14 +193,14 @@ def clamp_selection_replacement(
 
             direct = try_direct_text_edit(query, orig)
             if direct and direct.strip() and direct.strip() != orig:
-                return direct.strip()
+                return _strip_leaked_section_command(orig, direct.strip())
 
         picked = _best_matching_line(orig, sugg)
         if picked:
-            return picked
+            return _strip_leaked_section_command(orig, picked)
         return orig
 
-    return sugg
+    return _strip_leaked_section_command(orig, sugg)
 
 
 def sanitize_style_output(

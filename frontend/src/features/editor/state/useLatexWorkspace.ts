@@ -8,7 +8,7 @@ import {
 import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
 import { getCompilePayload, normalizeAssetName, type LatexCompiler, type ProjectAsset, type ProjectFile } from "@/lib/project-store";
 import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
-import { resolveSynctexWordHighlight, type SynctexWordHighlight } from "@/lib/synctex-highlight";
+import { findWordRangeOnLine, type SynctexWordHighlight } from "@/lib/synctex-highlight";
 import { COMPILE_DEBOUNCE_MS, computeCompileFingerprint, isAgentFixableCompileError } from "../lib/editor-compile";
 import { parseCompileErrorLine } from "../lib/editor-project-stats";
 
@@ -259,10 +259,14 @@ export function useLatexWorkspace({
   );
 
   const jumpToSynctex = useCallback(
-    (line: number, word?: string, column?: number, sourceLatex?: string, context?: string) => {
+    (line: number, word?: string, column?: number, sourceLatex?: string) => {
       const content = sourceLatex ?? latex;
-      const highlight = resolveSynctexWordHighlight(content, line, word, column, 5, context);
-      const targetLine = highlight?.line ?? line;
+      const targetLine = line;
+      const lineText = content.split(/\r?\n/)[targetLine - 1] ?? "";
+      const range = word ? findWordRangeOnLine(lineText, word, column) : null;
+      const highlight = range
+        ? { line: targetLine, start: range.start, end: range.end }
+        : null;
       const flashToken = ++synctexFlashRef.current;
 
       setMobileTab("editor");
@@ -276,9 +280,7 @@ export function useLatexWorkspace({
           highlight?.end,
         );
       requestAnimationFrame(scroll);
-      window.setTimeout(scroll, 80);
-      window.setTimeout(scroll, 220);
-      window.setTimeout(scroll, 360);
+      window.setTimeout(scroll, 100);
 
       window.setTimeout(() => {
         if (synctexFlashRef.current !== flashToken) return;
@@ -306,7 +308,7 @@ export function useLatexWorkspace({
     if (!pending) return;
     pendingSynctexRef.current = null;
     const timer = window.setTimeout(
-      () => jumpToSynctex(pending.line, pending.word, pending.column, pending.latex, pending.context),
+      () => jumpToSynctex(pending.line, pending.word, pending.column, pending.latex),
       200,
     );
     return () => window.clearTimeout(timer);
@@ -330,7 +332,7 @@ export function useLatexWorkspace({
         return;
       }
 
-      jumpToSynctex(line, word, column, undefined, context);
+      jumpToSynctex(line, word, column);
     },
     [projectFiles, activeFile, switchActiveFile, jumpToSynctex],
   );

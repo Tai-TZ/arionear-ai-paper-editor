@@ -42,3 +42,16 @@ def test_turn_directive_after_author_reply():
     assert "CẤM" in directive
     assert "Tôi ghi nhận điều đó" in directive
     assert "Tôi ghi nhận điều đó" in directive.split("đã dùng")[-1]
+
+
+def test_defense_llm_defaults_to_gemini_flash_lite():
+    from src.config import get_settings
+    from src.models.schemas import DefenseRequest
+
+    settings = get_settings()
+    assert settings.defense_llm_provider == "google"
+    assert settings.defense_llm_model == "gemini-3.1-flash-lite"
+
+    req = DefenseRequest(latex_content="\\begin{document}test\\end{document}")
+    assert req.llm_provider is None
+    assert req.llm_model is None

@@ -110,6 +110,15 @@ def _numeric_severity(
     return "error"
 
 
+def _is_section_outline_number(num: str, text: str) -> bool:
+    """Ignore ordinals like 'Section 2' — not scientific metrics."""
+    for match in re.finditer(re.escape(num), text):
+        window = text[max(0, match.start() - 32) : match.end() + 12].lower()
+        if any(token in window for token in ("section", "sections", "phần")):
+            return True
+    return False
+
+
 def check_integrity(
     original: str,
     suggestion: str,
@@ -130,6 +139,7 @@ def check_integrity(
     orig_nums = _normalized_numbers(orig_surface)
     sugg_nums = _normalized_numbers(sugg_surface)
     new_nums = sugg_nums - orig_nums
+    new_nums = {n for n in new_nums if not _is_section_outline_number(n, sugg_surface)}
     removed_nums = orig_nums - sugg_nums
 
     if new_nums:

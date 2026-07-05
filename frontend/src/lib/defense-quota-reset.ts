@@ -2,6 +2,14 @@ import type { UiLanguage } from "@/lib/locale-store";
 
 const VI_RESET_TZ = "Asia/Ho_Chi_Minh";
 
+/** Milliseconds until an ISO timestamp, or null when invalid / absent. */
+export function msUntilIso(iso: string | null | undefined, nowMs = Date.now()): number | null {
+  if (!iso) return null;
+  const target = Date.parse(iso);
+  if (!Number.isFinite(target)) return null;
+  return Math.max(0, target - nowMs);
+}
+
 /** Backend resets defense quota at 23:59:59 Asia/Ho_Chi_Minh for all users. */
 export function defenseQuotaResetTimeZone(_locale: UiLanguage): string {
   return VI_RESET_TZ;

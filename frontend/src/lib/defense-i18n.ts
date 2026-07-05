@@ -3,9 +3,22 @@ import type { UiLanguage } from "@/lib/locale-store";
 export type DefenseCopy = {
   masthead: {
     backToProject: string;
+    refreshPaper: string;
+    refreshingPaper: string;
   };
   loading: string;
   loadErrorBack: string;
+  pdfStatus: {
+    compiling: string;
+    ready: string;
+    error: string;
+    waiting: string;
+    retry: string;
+  };
+  mobile: {
+    chat: string;
+    pdf: string;
+  };
   chat: {
     councilBrand: string;
     councilTitle: string;
@@ -47,6 +60,10 @@ export type DefenseCopy = {
     compileFailed: string;
     compileNetworkError: string;
     paperLoadFallbackError: string;
+    paperUpdatedFromEditor: string;
+    citationNotFound: string;
+    sessionPersistFailed: string;
+    paperRefreshDone: string;
     composerHint: string;
     composerPlaceholder: string;
     send: string;
@@ -59,9 +76,22 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
   en: {
     masthead: {
       backToProject: "Project",
+      refreshPaper: "Refresh paper",
+      refreshingPaper: "Refreshing…",
     },
     loading: "Loading research paper...",
     loadErrorBack: "Back to projects",
+    pdfStatus: {
+      compiling: "Compiling PDF preview…",
+      ready: "PDF preview ready",
+      error: "PDF compile failed",
+      waiting: "Waiting to compile PDF…",
+      retry: "Retry",
+    },
+    mobile: {
+      chat: "Council",
+      pdf: "PDF",
+    },
     chat: {
       councilBrand: "Ario",
       councilTitle: " Defense",
@@ -103,6 +133,11 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
       compileFailed: "Compile failed.",
       compileNetworkError: "Could not compile PDF.",
       paperLoadFallbackError: "Failed to load paper.",
+      paperUpdatedFromEditor: "Paper updated from the editor.",
+      citationNotFound: "Could not find that passage in the PDF.",
+      sessionPersistFailed:
+        "Could not save session to the server. Progress is kept in this browser only.",
+      paperRefreshDone: "Paper is up to date.",
       composerHint: "Enter to send · Shift+Enter for new line",
       composerPlaceholder: "Answer the council's question...",
       send: "Send",
@@ -113,9 +148,22 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
   vi: {
     masthead: {
       backToProject: "Dự án",
+      refreshPaper: "Làm mới bài",
+      refreshingPaper: "Đang tải…",
     },
     loading: "Đang tải bài nghiên cứu...",
     loadErrorBack: "Quay lại danh sách bài",
+    pdfStatus: {
+      compiling: "Đang biên dịch PDF…",
+      ready: "PDF sẵn sàng",
+      error: "Biên dịch PDF thất bại",
+      waiting: "Đang chờ biên dịch PDF…",
+      retry: "Thử lại",
+    },
+    mobile: {
+      chat: "Hội đồng",
+      pdf: "PDF",
+    },
     chat: {
       councilBrand: "Ario",
       councilTitle: " phản biện",
@@ -157,6 +205,11 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
       compileFailed: "Biên dịch thất bại.",
       compileNetworkError: "Không thể biên dịch PDF.",
       paperLoadFallbackError: "Không tải được bài nghiên cứu.",
+      paperUpdatedFromEditor: "Bài nghiên cứu đã được cập nhật từ editor.",
+      citationNotFound: "Không tìm thấy đoạn này trong PDF.",
+      sessionPersistFailed:
+        "Không lưu được phiên lên server. Tiến độ vẫn được giữ trên trình duyệt này.",
+      paperRefreshDone: "Bài đã được đồng bộ mới nhất.",
       composerHint: "Enter gửi · Shift+Enter xuống dòng",
       composerPlaceholder: "Trả lời câu hỏi của hội đồng...",
       send: "Gửi",

@@ -67,7 +67,9 @@ _EDIT_FOLLOWUP_SIGNAL_RE = re.compile(
 )
 _CONVERSATIONAL_CHAT_RE = re.compile(
     r"bạn\s+là\s+ai|who\s+are\s+you|what\s+can\s+you\s+do|"
-    r"giúp\s+tôi\s+gì|help\s+me|bạn\s+biết\s+gì",
+    r"giúp\s+tôi\s+gì|"
+    r"^(?:help\s+me|what\s+can\s+you\s+help(?:\s+me)?\s+with)\s*\?*$|"
+    r"bạn\s+biết\s+gì",
     re.IGNORECASE,
 )
 _IMPROVE_RE = re.compile(
@@ -85,6 +87,25 @@ _FOLLOWUP_SHORT_RE = re.compile(
     r"^(?:ngắn\s+hơn|dài\s+hơn|lại|thử\s+lại|tiếp|nữa|ok|được|"
     r"sửa\s+tiếp|chỉnh\s+tiếp|hay\s+hơn|tốt\s+hơn|mượt\s+hơn|"
     r"shorter|longer|again|retry|continue)\b",
+    re.IGNORECASE,
+)
+_SHORTEN_RE = re.compile(
+    r"rút\s*gọn|shorten|condense|trim\s+down|cut\s+down|"
+    r"cắt\s*bớt|làm\s*ngắn|giảm\s*độ\s*dài|make\s+(?:it\s+)?shorter",
+    re.IGNORECASE,
+)
+_EXPAND_RE = re.compile(
+    r"mở\s*rộng|expand|lengthen|làm\s*dài|extend|make\s+(?:it\s+)?longer",
+    re.IGNORECASE,
+)
+_EDIT_VERB_RE = re.compile(
+    r"\bsửa\b|\bchỉnh\b|\bedit\b|\bfix\b|\bupdate\b|\bchange\b|"
+    r"viết\s+lại|rewrite|rephrase|đổi|thay",
+    re.IGNORECASE,
+)
+_HELP_ME_EDIT_RE = re.compile(
+    r"giúp\s+tôi\s+(?:rút|sửa|chỉnh|viết|đổi|thay|bổ|thêm|xóa|bỏ|làm)|"
+    r"help\s+me\s+(?:shorten|edit|fix|rewrite|update|change|trim|condense|expand)",
     re.IGNORECASE,
 )
 
@@ -144,7 +165,23 @@ def _last_user_turn_was_edit(history: list | None) -> bool:
             "/edit" in lower
             or re.search(r"chỉnh\s*sửa|sửa\s+phần|\bedit\b", lower)
             or _IMPROVE_RE.search(lower)
+            or _SHORTEN_RE.search(lower)
+            or _HELP_ME_EDIT_RE.search(lower)
         )
+    return False
+
+
+def looks_like_manuscript_edit_request(query: str) -> bool:
+    """Natural-language edit requests without slash commands (e.g. shorten a section)."""
+    q = query.strip()
+    if not q:
+        return False
+    if _SHORTEN_RE.search(q) or _EXPAND_RE.search(q):
+        return True
+    if _HELP_ME_EDIT_RE.search(q):
+        return True
+    if _MANUSCRIPT_SECTION_RE.search(q) and _EDIT_VERB_RE.search(q):
+        return True
     return False
 
 
@@ -213,6 +250,12 @@ def fallback_intent(query: str, has_latex: bool, has_selection: bool) -> IntentR
     q = query.strip().lower()
     if not has_latex:
         return IntentResult(action="chat")
+
+    if looks_like_manuscript_edit_request(query):
+        return IntentResult(
+            action="style" if _STYLE_RE.search(q) else "edit",
+            scope="selection" if has_selection else "document",
+        )
 
     if is_casual_chat(query):
         return IntentResult(action="chat")

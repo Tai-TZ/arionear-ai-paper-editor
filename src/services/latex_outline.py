@@ -4,8 +4,6 @@ import json
 import re
 from dataclasses import asdict, dataclass, field
 
-from src.services.parser.latex import parse_latex_sections
-
 
 @dataclass(frozen=True)
 class LatexCommandRef:
@@ -73,6 +71,73 @@ def _preview(text: str, limit: int = 120) -> str:
     return compact[: limit - 1] + "…"
 
 
+def _close_brace_index(latex: str, open_brace_index: int) -> int | None:
+    depth = 0
+    for index in range(open_brace_index, len(latex)):
+        char = latex[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return None
+
+
+def _normalize_section_title(raw: str) -> str:
+    text = raw.strip()
+    prev = None
+    while text != prev:
+        prev = text
+        text = re.sub(
+            r"\\(?:textbf|textit|emph|textsc)\{([^{}]*)\}",
+            r"\1",
+            text,
+            flags=re.IGNORECASE,
+        )
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def _section_names_match(query: str, title: str) -> bool:
+    q = _normalize_section_title(query)
+    t = _normalize_section_title(title)
+    if not q or not t:
+        return False
+    if q == t or q in t or t in q:
+        return True
+    aliases: dict[str, list[str]] = {
+        "abstract": ["abstract", "tóm tắt", "tom tat"],
+        "introduction": ["introduction", "mở đầu", "mo dau", "giới thiệu"],
+        "methods": ["methods", "methodology", "phương pháp", "phuong phap"],
+        "results": ["results", "kết quả", "ket qua"],
+        "discussion": ["discussion", "thảo luận", "thao luan"],
+        "conclusion": ["conclusion", "kết luận", "ket luan"],
+    }
+    for key, terms in aliases.items():
+        if key in q or key in t:
+            if any(term in q for term in terms) or any(term in t for term in terms):
+                return True
+    return False
+
+
+def _iter_section_blocks(latex: str):
+    """Yield (header_start, body_start, body_end, title_raw) for each \\section."""
+    for match in re.finditer(r"\\section\*?", latex, re.IGNORECASE):
+        cursor = match.end()
+        while cursor < len(latex) and latex[cursor].isspace():
+            cursor += 1
+        if cursor >= len(latex) or latex[cursor] != "{":
+            continue
+        header_end = _close_brace_index(latex, cursor)
+        if header_end is None:
+            continue
+        title_raw = latex[cursor + 1 : header_end - 1]
+        body_start = header_end
+        next_match = re.search(r"\\section\*?", latex[body_start:], re.IGNORECASE)
+        body_end = body_start + next_match.start() if next_match else len(latex)
+        yield match.start(), body_start, body_end, title_raw
+
+
 def find_latex_command_block(latex: str, command: str) -> tuple[str, str, int, int] | None:
     """Return (full_command, inner_text, start, end) for \\command[...]{...}."""
     pattern = re.compile(
@@ -99,9 +164,9 @@ def find_latex_command_block(latex: str, command: str) -> tuple[str, str, int, i
 
 
 def find_section_span(latex: str, section_name: str) -> tuple[int, int, str] | None:
-    """Return (start, end, content) for a section or abstract by name."""
-    target = section_name.strip().lower()
-    if target in {"abstract", "tóm tắt", "tom tat"}:
+    """Return (start, end, content) for a section body — never includes \\section{...}."""
+    target = section_name.strip()
+    if _normalize_section_title(target) in {"abstract", "tóm tắt", "tom tat"}:
         match = re.search(
             r"\\begin\{abstract\}(.*?)\\end\{abstract\}",
             latex,
@@ -112,23 +177,10 @@ def find_section_span(latex: str, section_name: str) -> tuple[int, int, str] | N
             end = match.end(1)
             return start, end, latex[start:end]
 
-    pattern = re.compile(
-        r"\\section\*?\{(" + re.escape(section_name) + r")\}(.*?)(?=\\section\*?\{|$)",
-        re.DOTALL | re.IGNORECASE,
-    )
-    match = pattern.search(latex)
-    if match:
-        start = match.start(2)
-        end = match.end(2)
-        return start, end, latex[start:end]
+    for _header_start, body_start, body_end, title_raw in _iter_section_blocks(latex):
+        if _section_names_match(target, title_raw):
+            return body_start, body_end, latex[body_start:body_end]
 
-    for section in parse_latex_sections(latex):
-        name = str(section.get("name") or "")
-        if name.lower() == target or target in name.lower():
-            content = str(section.get("content") or "")
-            if content and content in latex:
-                idx = latex.index(content)
-                return idx, idx + len(content), content
     return None
 
 
@@ -173,19 +225,15 @@ def build_manuscript_outline(latex: str) -> ManuscriptOutline:
             )
         )
 
-    for match in re.finditer(r"\\section\*?\{([^}]*)\}", latex):
-        name = match.group(1).strip()
-        content_start = match.end()
-        next_section = re.search(r"\\section\*?\{", latex[content_start:])
-        content_end = content_start + next_section.start() if next_section else len(latex)
-        content = latex[content_start:content_end].strip()
+    for header_start, body_start, body_end, title_raw in _iter_section_blocks(latex):
+        content = latex[body_start:body_end].strip()
         outline.sections.append(
             SectionRef(
-                name=name,
+                name=_normalize_section_title(title_raw) or title_raw.strip(),
                 kind="section",
-                line=_line_at(latex, match.start()),
-                start=match.start(),
-                end=content_end,
+                line=_line_at(latex, header_start),
+                start=header_start,
+                end=body_end,
                 preview=_preview(content),
             )
         )

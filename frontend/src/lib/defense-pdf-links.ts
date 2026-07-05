@@ -5,6 +5,10 @@ export type DefensePdfCitation = {
   /** Text to search and highlight in the PDF. */
   search: string;
   page?: number;
+  /** Legacy passage slug from older agent output. */
+  passageId?: string;
+  /** Verbatim quote for body-text highlighting. */
+  quote?: string;
 };
 
 /** Parse `#pdf?search=...` or `#pdf?page=2&search=...` hrefs emitted by the agent. */
@@ -25,4 +29,8 @@ export function parseDefensePdfLink(href: string): DefensePdfCitation | null {
   };
 }
 
-export type DefensePdfCitationFocus = DefensePdfCitation & { key: number };
+export type DefensePdfCitationFocus = DefensePdfCitation & {
+  key: number;
+  /** Alternate search strings when the primary term is not found in the PDF. */
+  searchCandidates?: string[];
+};

@@ -87,10 +87,11 @@ def test_set_logic_gate_audit_report_uses_dedicated_key():
         "cross_section_conflicts": [],
         "meta": {"audit_mode": "gate"},
     }
-    session_store.set_logic_audit_report(session_id, report)
+    session_store.set_logic_audit_report(session_id, report, latex_fingerprint="abc123")
 
     session = session_store.get(session_id)
     assert session is not None
     assert "logic_gate_audit_report" in session.metadata
     assert session.metadata["logic_gate_audit_report"]["meta"]["audit_mode"] == "gate"
+    assert session.metadata["logic_gate_audit_fingerprint"] == "abc123"
     assert "logic_audit_report" not in session.metadata

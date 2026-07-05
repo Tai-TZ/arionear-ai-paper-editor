@@ -3,6 +3,7 @@ import { resolveApiBase } from "@/lib/api/base-url";
 import { mapApiHttpError, networkErrorMsg } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 import type { LatexCompiler, ProjectAsset, ProjectFile, StoredProject } from "@/lib/project-store";
+import { parseDefenseSession } from "@/lib/defense-session-storage";
 import type { LatexImportResult } from "@/lib/latex-import";
 import type { LogicAuditReport } from "@/lib/api/academic";
 
@@ -56,6 +57,11 @@ function toStoredProject(paper: PaperResponse): StoredProject {
   const chatThreads = Array.isArray(metadata.chat_threads)
     ? (metadata.chat_threads as import("@/lib/project-store").ChatThread[])
     : undefined;
+  const defenseSession = parseDefenseSession(metadata.defense_session);
+  const gateAuditFingerprint =
+    typeof metadata.logic_gate_audit_fingerprint === "string"
+      ? metadata.logic_gate_audit_fingerprint
+      : undefined;
   return {
     id: paper.id,
     name: paper.name,
@@ -66,7 +72,9 @@ function toStoredProject(paper: PaperResponse): StoredProject {
     compiler,
     logicAuditReport,
     gateAuditReport,
+    gateAuditFingerprint,
     chatThreads,
+    defenseSession,
     createdAt: parseApiDate(paper.created_at),
     updatedAt: parseApiDate(paper.updated_at),
   };
@@ -128,8 +136,10 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function fetchPapers(): Promise<StoredProject[]> {
-  const data = await fetchDedupe("papers:list", () =>
-    papersFetch<PaperSummaryResponse[]>("/papers"),
+  const data = await fetchDedupe(
+    "papers:list",
+    () => papersFetch<PaperSummaryResponse[]>("/papers"),
+    30_000,
   );
   return data.map(toStoredSummary);
 }
@@ -191,6 +201,13 @@ function mergePaperPatch(base: PaperPatch, next: PaperPatch): PaperPatch {
   if (base.metadata || next.metadata) {
     merged.metadata = { ...(base.metadata ?? {}), ...(next.metadata ?? {}) };
   }
+  if (base.files?.length && next.files?.length) {
+    const byPath = new Map(base.files.map((f) => [f.path, f]));
+    for (const f of next.files) {
+      byPath.set(f.path, f);
+    }
+    merged.files = Array.from(byPath.values());
+  }
   return merged;
 }
 
@@ -217,13 +234,25 @@ function buildPaperPatchBody(patch: PaperPatch): Record<string, unknown> {
   return body;
 }
 
-async function executePaperPatch(id: string, patch: PaperPatch): Promise<StoredProject> {
-  const data = await papersFetch<PaperResponse>(`/papers/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(buildPaperPatchBody(patch)),
-  });
-  invalidateFetchPrefix("papers:");
-  return toStoredProject(data);
+async function executePaperPatch(
+  id: string,
+  patch: PaperPatch,
+  attempt = 0,
+): Promise<StoredProject> {
+  try {
+    const data = await papersFetch<PaperResponse>(`/papers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(buildPaperPatchBody(patch)),
+    });
+    invalidateFetchPrefix("papers:");
+    return toStoredProject(data);
+  } catch (err) {
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 400 * 2 ** attempt));
+      return executePaperPatch(id, patch, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 function getPaperQueue(id: string): PaperQueue {

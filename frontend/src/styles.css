@@ -1263,6 +1263,59 @@
   color: var(--foreground);
 }
 
+.editor-shell .defense-masthead-refresh {
+  color: color-mix(in oklch, var(--muted-foreground) 90%, transparent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.editor-shell .defense-pdf-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 28px;
+  padding: 0.25rem 1rem;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--card) 92%, transparent);
+  flex-shrink: 0;
+}
+
+.editor-shell .defense-pdf-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.editor-shell .defense-pdf-status--ready .defense-pdf-status-label {
+  color: color-mix(in oklch, var(--foreground) 75%, #16a34a);
+}
+
+.editor-shell .defense-pdf-status--error .defense-pdf-status-label {
+  color: var(--destructive);
+}
+
+.editor-shell .defense-pdf-status-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--background);
+  cursor: pointer;
+}
+
+.editor-shell .defense-pdf-status-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Defense panel — editorial layout */
 .editor-shell .defense-panel {
   --defense-border: var(--border);
@@ -4173,6 +4226,7 @@ html[lang="vi"] .hero-headline {
 
 .editor-shell .pdf-preview-viewport {
   background: var(--editor-pdf-viewport);
+  overflow: auto;
 }
 
 .editor-shell .pdf-preview-pages {
@@ -4200,6 +4254,8 @@ html[lang="vi"] .hero-headline {
 
 /* PDF.js text layer — aligned with pdf_viewer.css; scoped under editor-shell */
 .editor-shell .pdf-preview-text-layer {
+  --user-unit: 1;
+  --total-scale-factor: calc(var(--scale-factor, 1) * var(--user-unit, 1));
   position: absolute;
   text-align: initial;
   inset: 0;

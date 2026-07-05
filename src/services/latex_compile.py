@@ -265,6 +265,7 @@ def _miktex_env(*, allow_package_install: bool = True) -> dict[str, str]:
     env = os.environ.copy()
     if not _is_miktex():
         return env
+    env["MIKTEX_DISABLE_DIAGNOSTICS"] = "1"
     if allow_package_install:
         env["MIKTEX_ENABLE_INSTALLER"] = "1"
         env["MIKTEX_ALLOW_UNATTENDED"] = "1"
@@ -357,7 +358,10 @@ def _workspace_content_digest(
             continue
         digest.update(rel.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        if path.stat().st_size > 65_536:
+            digest.update(_file_content_hash(path).encode("utf-8"))
+        else:
+            digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -415,6 +419,35 @@ def _prune_workspaces(now: float | None = None) -> None:
     for key in sorted(_workspaces, key=lambda item: _workspaces[item].last_used)[:overflow]:
         workspace = _workspaces.pop(key)
         shutil.rmtree(workspace.path, ignore_errors=True)
+
+
+def _get_cached_compile_workspace(cache_id: str | None) -> Path | None:
+    project = (cache_id or "").strip()
+    if not project:
+        return None
+    key = f"proj:{project}"
+    with _workspace_lock:
+        _prune_workspaces()
+        cached = _workspaces.get(key)
+        if cached and cached.path.is_dir():
+            cached.last_used = time.monotonic()
+            return cached.path
+    return None
+
+
+def _read_workspace_latex(work_dir: Path, jobname: str) -> str:
+    safe_job = Path(jobname).stem or "main"
+    candidates = [
+        work_dir / f"{safe_job}.tex",
+        work_dir / "main.tex",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path.read_text(encoding="utf-8", errors="replace")
+    for path in sorted(work_dir.glob("*.tex")):
+        if path.is_file():
+            return path.read_text(encoding="utf-8", errors="replace")
+    return ""
 
 
 def _acquire_workspace(
@@ -1178,6 +1211,8 @@ def _compile_latex_impl(request: CompileRequest) -> CompileResponse:
         )
 
     synctex_b64 = _read_synctex_gz(work_dir, jobname) if synctex else ""
+    if fast:
+        (work_dir / f"{jobname}.synctex.gz").unlink(missing_ok=True)
     merged_log = "\n".join(logs)
     response = CompileResponse(
         success=True,
@@ -1318,6 +1353,22 @@ def _resolve_synctex_line(
 resolve_synctex_line = _resolve_synctex_line
 
 
+def resolve_synctex_line_from_request(
+    cache_id: str | None,
+    jobname: str,
+    latex: str,
+    synctex_line: int,
+    word: str = "",
+    context: str = "",
+) -> int:
+    source_latex = latex.strip()
+    if not source_latex and (cache_id or "").strip():
+        work_dir = _get_cached_compile_workspace(cache_id)
+        if work_dir is not None:
+            source_latex = _read_workspace_latex(work_dir, Path(jobname).stem or "main")
+    return resolve_synctex_line(source_latex, synctex_line, word, context)
+
+
 def _synctex_inverse_probe(
     synctex: str,
     work_dir: Path,
@@ -1375,7 +1426,7 @@ def _best_candidate_yscan(
 ) -> int:
     best_line = candidates[0]
     best_score = 10_000
-    for dy in range(-56, 57, 4):
+    for dy in range(-40, 41, 8):
         probe = _synctex_inverse_probe(synctex, work_dir, pdf_name, page, x, y + dy)
         if not probe:
             continue
@@ -1385,6 +1436,8 @@ def _best_candidate_yscan(
             if score < best_score:
                 best_score = score
                 best_line = candidate
+                if score == 0:
+                    return best_line
     return best_line
 
 
@@ -1398,33 +1451,47 @@ def parse_synctex_inverse_disambiguated(
     word: str = "",
     latex: str = "",
     context: str = "",
+    cache_id: str | None = None,
 ) -> dict[str, str | int | float] | None:
     """Inverse SyncTeX with y-scan when the same word appears on multiple lines."""
     synctex = find_synctex()
-    if not synctex or not synctex_gz_b64 or not pdf_b64:
+    if not synctex:
         return None
 
     safe_job = Path(jobname).stem or "main"
     pdf_name = f"{safe_job}.pdf"
+    synctex_name = f"{safe_job}.synctex.gz"
+
+    work_dir = _get_cached_compile_workspace(cache_id)
+    temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    if work_dir is not None:
+        if not (work_dir / pdf_name).is_file() or not (work_dir / synctex_name).is_file():
+            work_dir = None
+
+    if work_dir is None:
+        if not synctex_gz_b64 or not pdf_b64:
+            return None
+        try:
+            pdf_bytes = base64.b64decode(pdf_b64)
+            synctex_bytes = base64.b64decode(synctex_gz_b64)
+        except (OSError, ValueError):
+            return None
+        temp_dir = tempfile.TemporaryDirectory(prefix="arionear-synctex-")
+        work_dir = Path(temp_dir.name)
+        (work_dir / pdf_name).write_bytes(pdf_bytes)
+        (work_dir / synctex_name).write_bytes(synctex_bytes)
+
+    assert work_dir is not None
+    source_latex = latex.strip() or _read_workspace_latex(work_dir, safe_job)
 
     try:
-        pdf_bytes = base64.b64decode(pdf_b64)
-        synctex_bytes = base64.b64decode(synctex_gz_b64)
-    except (OSError, ValueError):
-        return None
-
-    with tempfile.TemporaryDirectory(prefix="arionear-synctex-") as tmp:
-        work_dir = Path(tmp)
-        (work_dir / pdf_name).write_bytes(pdf_bytes)
-        (work_dir / f"{safe_job}.synctex.gz").write_bytes(synctex_bytes)
-
         base = _synctex_inverse_with_workdir(synctex, work_dir, pdf_name, page, x, y)
         if not base:
             return None
 
         ctx_line = (
-            _resolve_line_by_context(latex, context, int(base.get("line", 0)), word)
-            if context.strip() and word.strip() and latex.strip()
+            _resolve_line_by_context(source_latex, context, int(base.get("line", 0)), word)
+            if context.strip() and word.strip() and source_latex.strip()
             else None
         )
         if ctx_line:
@@ -1437,7 +1504,21 @@ def parse_synctex_inverse_disambiguated(
                 "y": y,
             }
 
-        candidates = _lines_containing_word(latex, word) if word.strip() and latex.strip() else []
+        candidates = (
+            _lines_containing_word(source_latex, word) if word.strip() and source_latex.strip() else []
+        )
+        if len(candidates) > 1:
+            raw_line = int(base.get("line", 0))
+            if raw_line in candidates:
+                return {
+                    "file": str(base.get("file", "main.tex")),
+                    "line": raw_line,
+                    "column": int(base.get("column", -1)),
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                }
+
         if len(candidates) <= 1:
             return base
 
@@ -1450,6 +1531,9 @@ def parse_synctex_inverse_disambiguated(
             "x": x,
             "y": y,
         }
+    finally:
+        if temp_dir is not None:
+            temp_dir.cleanup()
 
 
 def parse_synctex_inverse(

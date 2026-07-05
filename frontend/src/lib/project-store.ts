@@ -1,4 +1,5 @@
 import type { LogicAuditReport } from "@/lib/api/academic";
+import type { StoredDefenseSession } from "@/lib/defense-session-storage";
 export { formatProjectDateTime, formatTimeAgo, parseApiTimestamp } from "@/lib/date-i18n";
 
 export type ProjectAsset = {
@@ -55,7 +56,9 @@ export type StoredProject = {
   assets?: ProjectAsset[];
   logicAuditReport?: LogicAuditReport;
   gateAuditReport?: LogicAuditReport;
+  gateAuditFingerprint?: string;
   chatThreads?: ChatThread[];
+  defenseSession?: StoredDefenseSession;
   createdAt: number;
   updatedAt: number;
 };
@@ -472,6 +475,25 @@ function textToDataUrl(content: string): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return `data:text/plain;base64,${btoa(binary)}`;
+}
+
+/** Flatten multi-file projects so the defense agent sees \\input'd content. */
+export function buildDefenseLatexContext(
+  project: Pick<StoredProject, "latex" | "files" | "mainFile">,
+): string {
+  const normalized = normalizeProject({
+    id: "",
+    name: "",
+    latex: project.latex,
+    files: project.files,
+    mainFile: project.mainFile,
+    createdAt: 0,
+    updatedAt: 0,
+  });
+  const files = normalized.files ?? [];
+  const texFiles = files.filter((f) => isTexFile(f.path) || isBibFile(f.path));
+  if (texFiles.length <= 1) return normalized.latex;
+  return texFiles.map((f) => `%% FILE: ${f.path}\n${f.content}`).join("\n\n");
 }
 
 export function getCompilePayload(project: StoredProject) {

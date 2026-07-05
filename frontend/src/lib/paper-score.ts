@@ -16,6 +16,8 @@ export type PaperScoreResult = {
   auditSummary?: string;
   /** Whether agent peer-review dimension is included in the score. */
   agentScored: boolean;
+  /** True when the manuscript looks like a placeholder/template, not real research. */
+  isPlaceholderTemplate: boolean;
 };
 
 const IMRAD_CORE = ["abstract", "introduction", "methods", "results", "discussion", "conclusion"];
@@ -294,24 +296,28 @@ function scoreCitations(
       score: 40,
       hint:
         locale === "en"
-          ? "No \\cite{} detected — consider adding references."
-          : "Chưa phát hiện \\cite{} — cân nhắc thêm nguồn tham khảo.",
+          ? "No \\cite{} detected — add references, then run Citation verify in Tools."
+          : "Chưa phát hiện \\cite{} — thêm nguồn tham khảo, rồi chạy Citation verify trong Tools.",
     };
   }
 
   const hasBib = /@\w+\s*\{/.test(latex);
-  const score = hasBib ? 72 : 55;
+  const score = Math.min(hasBib ? 72 : 55, 65);
+  const verifyHint =
+    locale === "en"
+      ? "Open Tools → Citations to verify and improve this score."
+      : "Mở Tools → Citations để xác minh và cải thiện điểm.";
   return {
     id: "citations",
     label: citLabel,
     score,
     hint: hasBib
       ? locale === "en"
-        ? `${uniqueCites.size} cite keys — run Citation verify for a more accurate score.`
-        : `${uniqueCites.size} cite key — chạy Citation verify để chấm chính xác hơn.`
+        ? `${uniqueCites.size} cite keys — ${verifyHint}`
+        : `${uniqueCites.size} cite key — ${verifyHint}`
       : locale === "en"
-        ? `${uniqueCites.size} cite keys but no BibTeX found in manuscript.`
-        : `${uniqueCites.size} cite key nhưng chưa thấy BibTeX trong bản thảo.`,
+        ? `${uniqueCites.size} cite keys but no BibTeX in manuscript. ${verifyHint}`
+        : `${uniqueCites.size} cite key nhưng chưa thấy BibTeX. ${verifyHint}`,
   };
 }
 
@@ -402,8 +408,6 @@ export const PAPER_PEER_REVIEW_ENABLED = true;
 
 export function computePaperScore(opts: {
   latex: string;
-  hasPdf: boolean;
-  compileError?: string | null;
   citationResults?: Record<string, unknown>[] | null;
   logicAuditReport?: LogicAuditReport | null;
   includeLogicReview?: boolean;
@@ -450,6 +454,7 @@ export function computePaperScore(opts: {
     dimensions,
     auditSummary: includeLogic ? auditSummary : undefined,
     agentScored: includeLogic && !auditPending && Boolean(opts.logicAuditReport?.sections?.length),
+    isPlaceholderTemplate: maturity.isPlaceholderTemplate,
   };
 }
 

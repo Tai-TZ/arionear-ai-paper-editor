@@ -231,7 +231,7 @@ export function EditorWorkspace() {
   const handleSave = useCallback(() => {
     if (!projectId) return;
     persistActiveThreadNowRef.current();
-    project.persistProjectFiles();
+    project.persistProjectFiles({ immediate: true });
     if (project.autoCompile) {
       latexWs.scheduleCompile(project.latex);
     }
@@ -244,10 +244,9 @@ export function EditorWorkspace() {
   ]);
 
   useEffect(() => {
-    tools.tryStartScoreGateAudit(auditInProgress);
+    tools.tryStartScoreGateAudit();
   }, [
     exportOpen,
-    auditInProgress,
     project.mainLatexSource,
     tools.tryStartScoreGateAudit,
   ]);
@@ -386,10 +385,11 @@ export function EditorWorkspace() {
       onSynctexHit: latexWs.handleSynctexHit,
       onCompile: () => void latexWs.handleCompile(),
       onAskArioFix: latexWs.canAskArioFixCompile ? handleAskArioFixCompile : undefined,
+      compileCacheId: projectId,
       projectName: project.projectName,
       latexSource: project.mainLatexSource,
     }),
-    [latexWs, project.mainFile, project.compiler, project.projectName, project.mainLatexSource, handleAskArioFixCompile],
+    [latexWs, projectId, project.mainFile, project.compiler, project.projectName, project.mainLatexSource, handleAskArioFixCompile],
   );
 
   const toolsPanelBindings = useMemo(
@@ -733,7 +733,6 @@ export function EditorWorkspace() {
             projectName={project.projectName}
             latex={project.mainLatexSource}
             pdfData={latexWs.pdfData}
-            compileError={latexWs.compileError}
             citationResults={toolsPanelBindings.citationResults}
             {...tools.exportDialogProps}
           />

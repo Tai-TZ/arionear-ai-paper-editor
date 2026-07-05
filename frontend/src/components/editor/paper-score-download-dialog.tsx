@@ -14,6 +14,7 @@ import type { LogicAuditReport } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
 import {
   computePaperScore,
+  extractPeerReviewItems,
   PAPER_PEER_REVIEW_ENABLED,
   type PaperScoreDimension,
   type PaperScoreResult,
@@ -25,12 +26,19 @@ type PaperScoreDownloadDialogProps = {
   projectName: string;
   latex: string;
   pdfData: Uint8Array | null;
-  compileError?: string | null;
   citationResults?: Record<string, unknown>[] | null;
   logicAuditReport?: LogicAuditReport | null;
   auditLoading?: boolean;
   auditProgress?: string | null;
   auditError?: string | null;
+  onRetryAudit?: () => void;
+  onOpenCitationsTab?: () => void;
+};
+
+const ISSUE_SEVERITY_ORDER: Record<string, number> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
 };
 
 function scoreColor(score: number): string {
@@ -93,11 +101,15 @@ function DimensionCard({
   animate,
   index,
   pending,
+  actionLabel,
+  onAction,
 }: {
   dim: PaperScoreDimension;
   animate: boolean;
   index: number;
   pending?: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   const displayScore = useAnimatedNumber(dim.score, {
     enabled: animate && !pending,
@@ -126,6 +138,15 @@ function DimensionCard({
       <p className="mt-2 line-clamp-3 flex-1 text-[11px] leading-relaxed text-muted-foreground">
         {dim.hint}
       </p>
+      {onAction && actionLabel ? (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-2 self-start font-sans-ui text-[10px] uppercase tracking-[0.12em] text-foreground/70 underline underline-offset-2 hover:text-foreground"
+        >
+          {actionLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -169,12 +190,13 @@ export function PaperScoreDownloadDialog({
   projectName,
   latex,
   pdfData,
-  compileError = null,
   citationResults = null,
   logicAuditReport = null,
   auditLoading = false,
   auditProgress = null,
   auditError = null,
+  onRetryAudit,
+  onOpenCitationsTab,
 }: PaperScoreDownloadDialogProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale).scoreGate;
@@ -183,15 +205,13 @@ export function PaperScoreDownloadDialog({
     () =>
       computePaperScore({
         latex,
-        hasPdf: Boolean(pdfData),
-        compileError,
         citationResults,
         logicAuditReport,
         includeLogicReview: PAPER_PEER_REVIEW_ENABLED,
         auditPending: auditLoading,
         locale,
       }),
-    [latex, pdfData, compileError, citationResults, logicAuditReport, auditLoading, locale],
+    [latex, citationResults, logicAuditReport, auditLoading, locale],
   );
 
   const gradeColor = auditLoading ? "var(--muted-foreground)" : scoreColor(scoreResult.overall);
@@ -199,10 +219,27 @@ export function PaperScoreDownloadDialog({
     auditError && scoreResult.agentScored && !auditLoading ? auditError : null;
   const summaryText =
     auditError && !scoreResult.agentScored && !auditLoading
-      ? auditError
+      ? null
       : scoreResult.auditSummary;
 
-  const hasCompileError = Boolean(compileError);
+  const citationsUnverified = !citationResults?.length;
+
+  const topIssues = useMemo(() => {
+    if (!logicAuditReport || auditLoading) return [];
+    return extractPeerReviewItems(logicAuditReport)
+      .filter((item) => item.severity === "critical" || item.severity === "warning")
+      .sort(
+        (a, b) =>
+          (ISSUE_SEVERITY_ORDER[a.severity] ?? 9) - (ISSUE_SEVERITY_ORDER[b.severity] ?? 9),
+      )
+      .slice(0, 3);
+  }, [logicAuditReport, auditLoading]);
+
+  const handleOpenCitations = () => {
+    if (!onOpenCitationsTab) return;
+    onOpenChange(false);
+    onOpenCitationsTab();
+  };
 
   const handleDownload = () => {
     if (!pdfData || auditLoading) return;
@@ -219,7 +256,6 @@ export function PaperScoreDownloadDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="paper-score-dialog gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none !fixed !left-1/2 !top-1/2 !z-50 !flex !h-auto !w-[calc(100%-1.5rem)] !max-w-[56rem] !-translate-x-1/2 !-translate-y-1/2 max-h-[calc(100dvh-2rem)] flex-col [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
-        {/* Header */}
         <div className="relative shrink-0 border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
           <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
             {t.eyebrow}
@@ -235,39 +271,50 @@ export function PaperScoreDownloadDialog({
           </p>
         </div>
 
-        {/* Error banner — shown even during loading so user knows what happened */}
-        {auditError && auditLoading && (
+        {auditError ? (
           <div className="shrink-0 flex items-start gap-2.5 border-b border-[color:var(--editorial-amber,#b45309)]/30 bg-[color:var(--editorial-amber,#b45309)]/8 px-6 py-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]" aria-hidden />
-            <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-              <span className="font-semibold">{t.errorTitle}: </span>{auditError}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+                <span className="font-semibold">{t.errorTitle}: </span>{auditError}
+              </p>
+              {!auditLoading && onRetryAudit ? (
+                <button
+                  type="button"
+                  onClick={onRetryAudit}
+                  className="mt-2 font-sans-ui text-[10px] uppercase tracking-[0.14em] text-[color:var(--editorial-amber,#b45309)] underline underline-offset-2 hover:no-underline"
+                >
+                  {t.retryAudit}
+                </button>
+              ) : null}
+            </div>
           </div>
-        )}
+        ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-background">
-          <div className="grid min-h-0 grid-cols-1 md:grid-cols-[minmax(220px,260px)_1fr]">
-            {/* Left: score or audit animation */}
-            <aside className="flex flex-col justify-center border-b border-border/50 bg-muted/20 px-6 py-6 md:border-b-0 md:border-r">
-              {auditLoading ? (
-                <PaperScoreAuditAnimation progress={auditProgress} />
-              ) : (
-                <ScoreSummaryPanel
-                  scoreResult={scoreResult}
-                  gradeColor={gradeColor}
-                  agentScored={scoreResult.agentScored}
-                  t={t}
-                />
-              )}
-            </aside>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+          <aside className="flex shrink-0 flex-col justify-center border-b border-border/50 bg-muted/20 px-6 py-6 md:w-[min(260px,34%)] md:border-b-0 md:border-r md:self-stretch">
+            {auditLoading ? (
+              <PaperScoreAuditAnimation
+                progress={auditProgress}
+                label={t.auditAnimationLabel}
+                phrases={t.auditPhrases}
+              />
+            ) : (
+              <ScoreSummaryPanel
+                scoreResult={scoreResult}
+                gradeColor={gradeColor}
+                agentScored={scoreResult.agentScored}
+                t={t}
+              />
+            )}
+          </aside>
 
-            {/* Right: summary + criteria grid */}
-            <main className="flex min-w-0 flex-col px-6 py-5">
-              {hasCompileError && !auditLoading ? (
-                <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-red,#b91c1c)]/30 bg-[color:var(--editorial-red,#b91c1c)]/5 px-4 py-3">
-                  <span className="mt-0.5 shrink-0 text-[color:var(--editorial-red,#b91c1c)]" aria-hidden>✕</span>
-                  <p className="text-xs leading-relaxed text-[color:var(--editorial-red,#b91c1c)]">
-                    {t.compileErrorBanner}
+          <main className="paper-score-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              {scoreResult.isPlaceholderTemplate && !auditLoading ? (
+                <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-amber,#b45309)]/35 bg-[color:var(--editorial-amber,#b45309)]/8 px-4 py-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]" aria-hidden />
+                  <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+                    {t.templateBanner}
                   </p>
                 </div>
               ) : null}
@@ -294,6 +341,30 @@ export function PaperScoreDownloadDialog({
                 </div>
               ) : null}
 
+              {topIssues.length > 0 ? (
+                <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
+                  <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    {t.topIssues}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {topIssues.map((issue) => (
+                      <li key={issue.id} className="text-xs leading-relaxed text-foreground/85">
+                        <span
+                          className={`mr-1.5 font-semibold uppercase ${
+                            issue.severity === "critical"
+                              ? "text-[color:var(--editorial-red,#b91c1c)]"
+                              : "text-[color:var(--editorial-amber,#b45309)]"
+                          }`}
+                        >
+                          {issue.section}
+                        </span>
+                        {issue.comment}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 {t.criteria}
               </p>
@@ -305,22 +376,26 @@ export function PaperScoreDownloadDialog({
                     animate={open}
                     index={index}
                     pending={auditLoading && dim.id === "logic"}
+                    actionLabel={
+                      dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                        ? t.openCitations
+                        : undefined
+                    }
+                    onAction={
+                      dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                        ? handleOpenCitations
+                        : undefined
+                    }
                   />
                 ))}
               </div>
             </main>
-          </div>
         </div>
 
-        {/* Footer */}
         <div className="shrink-0 border-t border-border/70 bg-muted/20 px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {auditLoading
-                ? t.footerLoading
-                : hasCompileError
-                  ? t.footerCompileError
-                  : t.footerReady}
+              {auditLoading ? t.footerLoading : t.footerReady}
             </p>
             <button
               type="button"
