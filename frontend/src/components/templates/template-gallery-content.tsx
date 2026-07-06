@@ -1,3 +1,4 @@
+import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -176,7 +177,9 @@ export function TemplateGalleryContent() {
             <p className="template-catalog-lede">{t.gallerySubtitle}</p>
           </div>
           <div className="template-catalog-masthead-aside" aria-hidden>
-            <span className="template-catalog-aside-label">Arionear</span>
+            <span className="template-catalog-aside-label">
+              <ArionearWordmark />
+            </span>
             <span className="template-catalog-aside-rule" />
             <span className="template-catalog-aside-note">Paper IDE · LaTeX starters</span>
           </div>

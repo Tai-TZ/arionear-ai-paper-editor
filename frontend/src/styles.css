@@ -2432,6 +2432,10 @@
     transform: translateY(-50%);
   }
 
+  .projects-header-btn-guide {
+    display: none !important;
+  }
+
   .workspace-mobile-strip .masthead-theme-toggle {
     position: static;
     transform: none;
@@ -2462,48 +2466,39 @@
   }
 
   .projects-workspace-header {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "title view new";
+    align-items: center;
     height: auto;
     min-height: unset;
     max-height: none;
-    padding: 0.75rem 1rem;
-    gap: 0.625rem;
+    padding: 0.5rem 1rem;
+    gap: 0.375rem;
   }
 
   .projects-header-title {
+    grid-area: title;
     flex: none;
+    min-width: 0;
   }
 
   .projects-header-title h1 {
-    font-size: 1.25rem;
-    line-height: 1.15;
+    font-size: 1.125rem;
+    line-height: 1.1;
   }
 
   .projects-header-toolbar {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "search search"
-      "view new";
-    gap: 0.5rem;
-    width: 100%;
+    display: contents;
   }
 
   .projects-header-search {
-    grid-area: search;
-    display: block;
-  }
-
-  .projects-header-search input {
-    width: 100%;
-    height: 2.25rem;
+    display: none !important;
   }
 
   .projects-view-toggle {
     grid-area: view;
-    align-self: stretch;
-    height: 2.25rem;
+    height: 2rem;
     align-items: center;
   }
 
@@ -2513,9 +2508,11 @@
   }
 
   .projects-header-new .projects-header-btn-primary {
-    width: 100%;
-    height: 2.25rem;
+    width: auto;
+    height: 2rem;
     justify-content: center;
+    white-space: nowrap;
+    padding-inline: 0.625rem;
   }
 
   .projects-header-divider {
@@ -2529,6 +2526,45 @@
   .projects-desk-inner {
     padding-inline: 1rem;
     padding-top: 0.875rem;
+    padding-bottom: 1.25rem;
+    min-width: 0;
+  }
+
+  .projects-desk {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .projects-table-editorial,
+  .projects-grid-editorial {
+    min-width: 0;
+  }
+
+  .projects-table-head-editorial {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.4375rem 0.625rem;
+  }
+
+  .projects-col-name {
+    overflow: hidden;
+  }
+
+  .projects-col-actions {
+    align-self: center;
+  }
+
+  .projects-grid-card-editorial {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .projects-grid-card-editorial p {
+    overflow-wrap: anywhere;
+  }
+
+  .projects-skeleton-row {
+    padding-inline: 0.75rem;
   }
 
   .projects-desk-meta {
@@ -2790,6 +2826,7 @@
 /* Projects desk â€” main content area */
 .projects-desk {
   background: color-mix(in oklch, var(--background) 94%, var(--foreground));
+  min-width: 0;
 }
 
 .projects-desk-inner {
@@ -2857,13 +2894,19 @@
 }
 
 .projects-table-row-editorial {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.375rem 0.5rem;
+  align-items: start;
+  padding: 0.625rem 0.75rem;
   border-bottom: 1px solid color-mix(in oklch, var(--foreground) 14%, transparent);
   transition: background 0.12s ease;
   cursor: pointer;
+  min-width: 0;
+}
+
+.projects-col-name {
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
@@ -3539,6 +3582,73 @@
 .masthead-theme-toggle,
 .masthead-language-toggle {
   border-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+
+@media (max-width: 639px) {
+  .marketing-mobile-prefs-dock {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border: 1px solid color-mix(in oklch, var(--foreground) 55%, transparent);
+    border-right: none;
+    background: color-mix(in oklch, var(--background) 94%, var(--foreground));
+    box-shadow: -6px 0 20px color-mix(in oklch, var(--foreground) 10%, transparent);
+    transform: translateY(-50%);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang.language-toggle {
+    flex-direction: column;
+    border: none;
+    border-radius: 0;
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang .language-toggle-option {
+    min-height: 2.125rem;
+    min-width: 2.125rem;
+    padding-inline: 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang .language-toggle-option + .language-toggle-option {
+    border-left: none;
+    border-top: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-theme {
+    height: 2.125rem;
+    width: 100%;
+    border: none;
+    border-top: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+    border-radius: 0;
+  }
+
+  .marketing-ticker-track {
+    padding-block: 0.375rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+  }
+
+  .marketing-ticker-track span {
+    padding-inline: 1rem;
+    gap: 1rem;
+  }
+
+  .hero-headline-vi-fluid {
+    display: block;
+    max-width: 100%;
+    text-wrap: balance;
+    line-height: 1.02;
+  }
+
+  .hero-split-copy .drop-cap::first-letter {
+    font-size: 2.75rem;
+    margin-right: 0.35rem;
+  }
 }
 
 .language-toggle-option + .language-toggle-option {
@@ -5767,6 +5877,19 @@ html[lang="vi"] .hero-headline {
   margin: 0;
 }
 
+.editor-shell .chat-assistant-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+  padding-top: 0.125rem;
+  border-top: 1px solid color-mix(in oklch, var(--chat-assistant-border, var(--border)) 55%, transparent);
+}
+
+.editor-shell .chat-assistant-actions .chat-copy-btn {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
 @keyframes chat-activity-pulse {
   0%,
   100% {
@@ -6441,6 +6564,110 @@ html[lang="vi"] .hero-headline {
 
 .editor-shell .mobile-chat-sheet {
   animation: mobile-chat-sheet-in 0.36s cubic-bezier(0.32, 0.72, 0, 1) both;
+  --chat-bg: var(--card);
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
+  --chat-text: var(--foreground);
+  --chat-muted: var(--muted-foreground);
+  --chat-accent: var(--primary);
+  --chat-user-bg: var(--primary);
+  --chat-user-text: var(--primary-foreground);
+  --chat-code-bg: oklch(0.94 0.01 90);
+  --chat-code-border: oklch(0.88 0.012 90 / 70%);
+  --chat-state-base: oklch(1 0 0);
+}
+
+.dark .editor-shell .mobile-chat-sheet {
+  --chat-assistant-bg: oklch(0.22 0.01 90);
+  --chat-assistant-border: oklch(0.36 0.01 90 / 55%);
+  --chat-assistant-shadow: oklch(0 0 0 / 26%);
+  --chat-code-bg: oklch(0.3 0.012 90);
+  --chat-code-border: oklch(0.42 0.012 90 / 60%);
+  --chat-state-base: oklch(0.24 0.01 90);
+}
+
+.editor-shell .mobile-chat-sheet-handle {
+  width: 2.25rem;
+  height: 0.25rem;
+  margin: 0.5rem auto 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 18%, transparent);
+  flex-shrink: 0;
+}
+
+.editor-shell .mobile-chat-body {
+  min-height: 0;
+}
+
+.editor-shell .mobile-chat-sheet .chat-messages {
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-user-stack {
+  max-width: 82%;
+}
+
+.editor-shell .mobile-chat-sheet .chat-bubble-user-dark {
+  border-bottom-right-radius: 0.25rem;
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 8%);
+}
+
+.editor-shell .mobile-chat-sheet .chat-assistant-row {
+  gap: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-avatar {
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: 0.375rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-assistant-content {
+  padding: 0.4375rem 0.6875rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-ai-state {
+  margin-bottom: 0.375rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .ai-loading-state--compact .ai-loading-state-head {
+  gap: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-dock-llm-bar {
+  margin-bottom: 0.375rem;
+  min-height: 1.625rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-segment {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-provider-name {
+  max-width: 4.75rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-model-name {
+  max-width: 5.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-new-chat {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.editor-shell .mobile-chat-sheet .chat-input-shell {
+  min-height: 2.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-input-field {
+  font-size: 1rem;
 }
 
 /* Tools panel */

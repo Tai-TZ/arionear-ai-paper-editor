@@ -104,7 +104,7 @@ export function AiLoadingState({
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [feedLines.length]);
 
-  const lines = feedLines.length > 0 ? feedLines : [`${status}…`];
+  const lines = feedLines.length > 0 ? feedLines : [];
 
   return (
     <div
@@ -118,24 +118,26 @@ export function AiLoadingState({
         <span className="ai-loading-state-status">{statusWithElapsed}…</span>
       </div>
 
-      <div className="ai-loading-state-feed-wrap">
-        <div
-          className="ai-loading-state-feed"
-          ref={feedRef}
-          style={{ height: compact ? LINE_HEIGHT_PX : LINE_HEIGHT_PX * VISIBLE_LINES }}
-        >
-          <div>
-            {lines.map((text, index) => (
-              <div className="ai-loading-state-line" key={`feed-${index}-${text}`}>
-                <div className="ai-loading-state-line-text">{text}</div>
-              </div>
-            ))}
+      {lines.length > 0 ? (
+        <div className="ai-loading-state-feed-wrap">
+          <div
+            className="ai-loading-state-feed"
+            ref={feedRef}
+            style={{ height: compact ? LINE_HEIGHT_PX : LINE_HEIGHT_PX * VISIBLE_LINES }}
+          >
+            <div>
+              {lines.map((text, index) => (
+                <div className="ai-loading-state-line" key={`feed-${index}-${text}`}>
+                  <div className="ai-loading-state-line-text">{text}</div>
+                </div>
+              ))}
+            </div>
           </div>
+          {!compact && lines.length > VISIBLE_LINES && (
+            <div className="ai-loading-state-feed-fade" aria-hidden />
+          )}
         </div>
-        {!compact && lines.length > VISIBLE_LINES && (
-          <div className="ai-loading-state-feed-fade" aria-hidden />
-        )}
-      </div>
+      ) : null}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy, formatMastheadDate } from "@/lib/editor-i18n";
@@ -28,7 +29,7 @@ export function ArionearMasthead({
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
-          Arionear
+          <ArionearWordmark />
         </Link>
         <span className="opacity-40">·</span>
         <Link to="/projects" className="hover:text-[color:var(--editorial-red)] transition-colors">

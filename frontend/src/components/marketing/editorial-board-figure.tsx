@@ -197,9 +197,9 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
           y="48"
           textAnchor="middle"
           style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: 900 }}
-          fill="var(--foreground)"
         >
-          Arionear
+          <tspan fill="var(--foreground)">Ario</tspan>
+          <tspan fill="var(--editorial-red)">near</tspan>
         </text>
         <text
           x="544"

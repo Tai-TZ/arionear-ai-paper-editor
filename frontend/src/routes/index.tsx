@@ -29,21 +29,26 @@ function Hero() {
   return (
     <section className="border-b-4 border-foreground newsprint-texture">
       <div className="hero-split max-w-screen-2xl mx-auto px-4 sm:px-6 grid grid-cols-1 gap-0">
-        <div className="hero-split-copy lg:border-r border-foreground p-6 lg:p-8 xl:p-10">
-          <div className="flex items-center gap-3 font-mono-data uppercase text-xs tracking-widest mb-6">
+        <div className="hero-split-copy lg:border-r border-foreground p-4 sm:p-6 lg:p-8 xl:p-10">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono-data uppercase text-[10px] sm:text-xs tracking-widest mb-4 sm:mb-6">
             <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">{h.breaking}</span>
-            <span>{h.deskEdition}</span>
+            <span className="min-w-0">{h.deskEdition}</span>
           </div>
-          <h1 className="hero-headline font-serif-display font-black tracking-tighter text-5xl sm:text-6xl lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
+          <h1 className="hero-headline font-serif-display font-black tracking-tighter text-[2.35rem] leading-[0.95] sm:text-6xl sm:leading-none lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
             {locale === "vi" ? (
               <>
-                Nghiên cứu
-                <br />
-                <em className="italic font-serif-display">Xứng đáng</em>
-                <br />
-                được đọc
-                <br />
-                công bằng.
+                <span className="hero-headline-vi-fluid inline lg:hidden">
+                  Nghiên cứu <em className="italic font-serif-display">Xứng đáng</em> được đọc công bằng.
+                </span>
+                <span className="hidden lg:inline">
+                  Nghiên cứu
+                  <br />
+                  <em className="italic font-serif-display">Xứng đáng</em>
+                  <br />
+                  được đọc
+                  <br />
+                  công bằng.
+                </span>
               </>
             ) : (
               <>
@@ -53,8 +58,8 @@ function Hero() {
               </>
             )}
           </h1>
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-12 gap-6">
-            <p className="md:col-span-7 font-body text-lg leading-relaxed text-justify drop-cap">{h.lede}</p>
+          <div className="mt-6 sm:mt-8 grid grid-cols-1 md:grid-cols-12 gap-6">
+            <p className="md:col-span-7 font-body text-base sm:text-lg leading-relaxed text-justify drop-cap">{h.lede}</p>
             <div className="md:col-span-5 border-l-0 md:border-l border-foreground md:pl-6">
               <div className="font-mono-data uppercase text-[10px] tracking-widest mb-3 pb-2 border-b border-foreground">
                 {h.fromEditor}
@@ -63,7 +68,7 @@ function Hero() {
               <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{h.editorByline}</p>
             </div>
           </div>
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3">
             <Link
               to={editorEntryPath()}
               className="inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-6 py-3 font-sans-ui uppercase text-xs tracking-widest hover:bg-background hover:text-foreground transition-colors min-h-[44px]"
@@ -78,7 +83,7 @@ function Hero() {
             </Link>
           </div>
         </div>
-        <aside className="hero-split-demo p-6 lg:p-6 xl:p-8 flex flex-col gap-5 lg:gap-6">
+        <aside className="hero-split-demo p-4 sm:p-6 lg:p-6 xl:p-8 flex flex-col gap-4 sm:gap-5 lg:gap-6">
           <div className="hero-figure-frame border border-foreground p-4 lg:p-6 min-w-0 flex-1">
             <div className="font-mono-data uppercase text-xs tracking-widest mb-3">{h.figCaption}</div>
             <HeroPeerReviewFigure />
