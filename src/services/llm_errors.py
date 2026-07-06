@@ -17,7 +17,11 @@ _PROVIDER_OVERLOADED_MSG = (
 )
 
 _PROVIDER_NO_KEY_MSG = (
-    "Chưa cấu hình API key cho provider này trên server (kiểm tra file .env)."
+    "Chưa cấu hình API key cho provider này. God-admin có thể thêm key trong Admin → LLM Keys."
+)
+
+_PROVIDER_KEY_EXHAUSTED_MSG = (
+    "API key provider đã hết quota hoặc không hợp lệ. God-admin: cập nhật key mới trong Admin → LLM Keys."
 )
 
 _PROVIDER_MODEL_MSG = (
@@ -112,8 +116,14 @@ def _classify_provider_error(msg: str) -> str | None:
     ):
         return _PROVIDER_MODEL_MSG
     if "insufficient balance" in lower or "please recharge" in lower:
+        return _PROVIDER_KEY_EXHAUSTED_MSG
+    if re.search(r"\b402\b", msg):
+        return _PROVIDER_KEY_EXHAUSTED_MSG
+    if "denied access" in lower and ("403" in lower or "permission_denied" in lower):
         return (
-            "Tài khoản provider hết số dư. Nạp thêm credit hoặc đổi provider có API key hợp lệ."
+            "Google đã chặn project GCP của API key này (403). "
+            "Tạo project + key mới tại AI Studio, lưu trong Admin → API Keys, "
+            "hoặc đổi sang OpenRouter / model gemini-2.5-flash-lite."
         )
     return None
 

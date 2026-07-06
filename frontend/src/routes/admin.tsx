@@ -21,6 +21,7 @@ import { WorkspacePanelSkeleton } from "@/components/workspace/workspace-content
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { AdminMonthPicker } from "@/components/admin/admin-month-picker";
 import { AdminTemplatesPanel } from "@/components/admin/admin-templates-panel";
+import { AdminProviderKeysPanel } from "@/components/admin/admin-provider-keys-panel";
 import type { AdminNavTab } from "@/components/admin/admin-sidebar";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -251,6 +252,15 @@ function AdminPage() {
     if (!llmConfig || !defaultsDraft) return false;
     return JSON.stringify(defaultsDraft) !== JSON.stringify(llmConfig.defaults);
   }, [defaultsDraft, llmConfig]);
+
+  const reloadLlmConfig = useCallback(async () => {
+    try {
+      const config = await fetchAdminLlmConfig();
+      setLlmConfig(config);
+    } catch {
+      /* overview still valid */
+    }
+  }, []);
 
   const handleSignOut = () => {
     signOut();
@@ -944,6 +954,10 @@ function AdminPage() {
                   )
                 ) : null}
               </section>
+            ) : null}
+
+            {tab === "llmKeys" ? (
+              <AdminProviderKeysPanel onKeysChanged={() => void reloadLlmConfig()} />
             ) : null}
 
             {tab === "llm" && llmConfig && defaultsDraft ? (

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import OperationalError
@@ -56,6 +58,7 @@ SIGNUP_CODE_DEV_MESSAGE = (
 INVALID_CREDENTIALS = "Invalid email or password."
 ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
+LOGIN_TIMEOUT_SEC = 20.0
 
 
 def _raise_db_busy(exc: OperationalError) -> None:
@@ -126,9 +129,14 @@ def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
+async def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
     try:
-        user, auth_error = authenticate_user(db, body.email, body.password)
+        user, auth_error = await asyncio.wait_for(
+            asyncio.to_thread(authenticate_user, db, body.email, body.password),
+            timeout=LOGIN_TIMEOUT_SEC,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(status_code=503, detail=DB_BUSY_MESSAGE) from exc
     except OperationalError as exc:
         _raise_db_busy(exc)
     if auth_error == AUTH_ACCOUNT_DISABLED:

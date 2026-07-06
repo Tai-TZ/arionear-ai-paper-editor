@@ -338,14 +338,13 @@ def build_partial_audit_result(
 
 
 def format_audit_failure_response(mode: str) -> str:
-    from src.config import get_settings
+    from src.services.logic_audit.config import logic_audit_engine_label
+    from src.services.provider_key_store import provider_has_api_key
 
-    settings = get_settings()
     engine = logic_audit_engine_label(mode)
-    if not settings.google_api_key.strip():
+    if not provider_has_api_key("google"):
         return (
-            "Logic audit cần GOOGLE_API_KEY trong .env (engine Gemini riêng). "
-            "Thêm key rồi restart backend."
+            "Logic audit cần Google AI — thêm key trong Admin → API Keys (Google) hoặc GOOGLE_API_KEY trong .env, rồi restart backend."
         )
     return (
         f"Logic audit chưa hoàn thành — timeout hoặc lỗi API ({engine}). "

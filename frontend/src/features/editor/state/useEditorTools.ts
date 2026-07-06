@@ -191,6 +191,9 @@ export function useEditorTools({
     const abort = new AbortController();
     scoreAuditAbortRef.current = abort;
 
+    const fingerprint = logicAuditFingerprint(mainLatexSource);
+    scoreAuditAttemptedForRef.current = fingerprint;
+
     setScoreAuditLoading(true);
     setScoreAuditError(null);
     setScoreAuditProgress(t.scoreGate.hintLoading);
@@ -220,11 +223,9 @@ export function useEditorTools({
         onProgress: (label) => setScoreAuditProgress(label),
       });
       if (abort.signal.aborted) return;
-      const fp = logicAuditFingerprint(mainLatexSource);
-      scoreAuditAttemptedForRef.current = fp;
       if (report?.sections?.length) {
         setGateAuditReport(report);
-        lastGateAuditFingerprintRef.current = fp;
+        lastGateAuditFingerprintRef.current = fingerprint;
       } else {
         setGateAuditReport(null);
         setScoreAuditError(
@@ -241,10 +242,8 @@ export function useEditorTools({
       setScoreAuditError(formatPaperScoreGateError(message, locale));
     } finally {
       clearTimeout(timeoutId);
-      if (!abort.signal.aborted) {
-        setScoreAuditLoading(false);
-        setScoreAuditProgress(null);
-      }
+      setScoreAuditLoading(false);
+      setScoreAuditProgress(null);
       scoreAuditAbortRef.current = null;
     }
   }, [

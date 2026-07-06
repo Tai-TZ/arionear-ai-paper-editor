@@ -498,3 +498,28 @@ class AuditLog(Base):
 
     user: Mapped[User | None] = relationship(back_populates="audit_logs")
     paper: Mapped[Paper | None] = relationship(back_populates="audit_logs")
+
+
+class PlatformProviderKey(Base):
+    __tablename__ = "platform_provider_keys"
+    __table_args__ = (
+        UniqueConstraint("provider", "priority", name="uq_platform_provider_keys_provider_priority"),
+        Index("ix_platform_provider_keys_provider", "provider"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    label: Mapped[str | None] = mapped_column(String(64))
+    key_ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    key_hint: Mapped[str] = mapped_column(String(32), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )

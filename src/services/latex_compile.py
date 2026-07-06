@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import os
 import re
 import shutil
@@ -12,6 +13,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 from src.config import get_settings
 from src.models.schemas import (
@@ -597,6 +600,52 @@ _DROPPABLE_PACKAGES = {
 }
 
 
+def _resolve_algorithm_package_conflict(latex: str) -> tuple[str, list[str]]:
+    """algorithm2e and algorithms/algorithm packages cannot be loaded together."""
+    warnings: list[str] = []
+    has_algo2e = bool(re.search(r"\\usepackage(?:\[[^\]]*\])?\{algorithm2e\}", latex))
+    has_algorithms = bool(
+        re.search(r"\\usepackage(?:\[[^\]]*\])?\{[^}]*\balgorithms?\b", latex)
+    )
+    if has_algo2e and has_algorithms:
+        latex = re.sub(r"\\usepackage(?:\[[^\]]*\])?\{algorithm2e\}\s*\n?", "", latex)
+        warnings.append("Removed `algorithm2e` (conflicts with `algorithm` / `algorithms`).")
+    return latex, warnings
+
+
+def _repair_latex_syntax(latex: str) -> tuple[str, list[str]]:
+    """Fix common LaTeX corruptions from AI edits or manual mistakes."""
+    warnings: list[str] = []
+
+    if re.search(r"\\textbfface\b", latex, re.I):
+        latex = re.sub(r"\\textbfface\b", r"\\textbf", latex, flags=re.I)
+        warnings.append("Fixed typo `\\textbfface` → `\\textbf`.")
+
+    if re.search(r"\\textbf\s*\{Introduction\}\s*In\s", latex, re.I) and not re.search(
+        r"\\section\*?\{Introduction\}", latex, re.I
+    ):
+        latex = re.sub(
+            r"\{?\s*\\textbf\s*\{Introduction\}\s*(?=In\s)",
+            r"\\section{Introduction}\n",
+            latex,
+            count=1,
+            flags=re.I,
+        )
+        warnings.append("Restored `\\section{Introduction}` from corrupted heading.")
+
+    latex, n = re.subn(
+        r"(\\(?:sub)*section\*?(?:\[[^\]]*\])?\{(?:[^{}]|\{[^{}]*\})*\})\s*\\+(?=\s*(?:\n|\\[a-zA-Z]|$))",
+        r"\1",
+        latex,
+    )
+    if n:
+        warnings.append(f"Removed stray `\\\\` after {n} section heading(s).")
+
+    latex, algo_warnings = _resolve_algorithm_package_conflict(latex)
+    warnings.extend(algo_warnings)
+    return latex, warnings
+
+
 def _strip_droppable_packages(latex: str, extra: set[str] | None = None) -> str:
     droppable = _DROPPABLE_PACKAGES | (extra or set())
 
@@ -669,8 +718,12 @@ def _mirror_figure_assets_to_root(work_dir: Path) -> None:
             shutil.copy2(path, root_copy)
 
 
-def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> str:
-    prepared = latex.replace(
+def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> tuple[str, list[str]]:
+    warnings: list[str] = []
+    prepared, repair_notes = _repair_latex_syntax(latex)
+    if repair_notes:
+        logger.info("LaTeX auto-repair applied: %s", "; ".join(repair_notes))
+    prepared = prepared.replace(
         "[font=Medium, justification=raggedright]{caption}",
         "[font=small, justification=raggedright]{caption}",
     )
@@ -687,7 +740,7 @@ def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> 
             1,
         )
 
-    return prepared
+    return prepared, warnings
 
 
 def _extract_missing_sty(log: str) -> str | None:
@@ -1128,7 +1181,8 @@ def _compile_latex_impl(request: CompileRequest) -> CompileResponse:
 
     _copy_support_files_to_root(work_dir)
 
-    prepared = _prepare_latex_source(patched_latex, work_dir, asset_names)
+    prepared, prep_warnings = _prepare_latex_source(patched_latex, work_dir, asset_names)
+    warnings.extend(prep_warnings)
     prepared, class_warnings = _resolve_document_class(prepared, work_dir)
     warnings.extend(class_warnings)
 

@@ -139,6 +139,7 @@ model User {
   auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
   subscription        UserSubscription?
+  providerKeysUpdated PlatformProviderKey[] @relation("ProviderKeyUpdater")
 
   @@map("users")
 }
@@ -369,4 +370,25 @@ model AuditLog {
   @@index([paperId])
   @@index([userId])
   @@map("audit_logs")
+}
+
+model PlatformProviderKey {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider       String    @db.VarChar(32)
+  priority       Int       @default(0)
+  label          String?   @db.VarChar(64)
+  keyCiphertext  String    @map("key_ciphertext")
+  keyHint        String    @map("key_hint") @db.VarChar(32)
+  isActive       Boolean   @default(true) @map("is_active")
+  lastVerifiedAt DateTime? @map("last_verified_at") @db.Timestamptz
+  lastError      String?   @map("last_error")
+  updatedBy      String?   @map("updated_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  updater User? @relation("ProviderKeyUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([provider, priority], name: "uq_platform_provider_keys_provider_priority")
+  @@index([provider], name: "ix_platform_provider_keys_provider")
+  @@map("platform_provider_keys")
 }
