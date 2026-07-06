@@ -124,21 +124,6 @@ export const latexGuideContent: MarketingPageContent = {
   ],
 };
 
-export const reviewerRepliesContent: MarketingPageContent = {
-  slug: "reviewer-replies",
-  title: "Reviewer Replies",
-  eyebrow: "Authors · Phase 2",
-  lede: "Structured drafts for point-by-point reviewer responses are planned for a later release.",
-  sections: [
-    {
-      paragraphs: [
-        "The current MVP focuses on LaTeX editing, AI suggestions, and PDF compile preview.",
-        "Reviewer reply assistance will return when the dedicated workflow is ready for production.",
-      ],
-    },
-  ],
-};
-
 export const aboutContent: MarketingPageContent = {
   slug: "about",
   title: "About Arionear",
@@ -229,18 +214,4 @@ export const dataUseContent: MarketingPageContent = {
       ],
     },
   ],
-};
-
-export const marketingPages: Record<string, MarketingPageContent> = {
-  workflow: workflowContent,
-  features: featuresContent,
-  integrity: integrityContent,
-  "latex-guide": latexGuideContent,
-  "reviewer-replies": reviewerRepliesContent,
-  about: aboutContent,
-  contact: contactContent,
-  terms: termsContent,
-  privacy: privacyContent,
-  ethics: ethicsContent,
-  "data-use": dataUseContent,
 };

@@ -1,8 +1,5 @@
 /**
- * Billing API client — subscription status + mock upgrade.
- *
- * V1: upgrade is instant/free (no payment gateway).
- * V2 path: replace upgradeToPro body with Stripe Checkout Session fetch.
+ * Billing API client — subscription status + QR checkout.
  */
 import { resolveApiBase } from "./base-url";
 import { mapApiHttpError } from "./api-errors";
@@ -22,10 +19,6 @@ export type BillingStatus = {
   upgraded_at: string | null;
   created_at: string;
 };
-
-export type UpgradeResult =
-  | { ok: true; message: string; billing: BillingStatus }
-  | { ok: false; error: string };
 
 export type CheckoutResult =
   | { ok: true; checkoutId: string; confirmUrl: string; qrPngB64: string; expiresInMinutes: number }
@@ -92,18 +85,5 @@ export async function createCheckout(): Promise<CheckoutResult> {
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed to create checkout." };
-  }
-}
-
-/** Direct upgrade — for admin/testing only. Normal flow: createCheckout() → QR scan. */
-export async function upgradeToPro(): Promise<UpgradeResult> {
-  try {
-    const data = await billingFetch<{ ok: boolean; message: string; billing: BillingStatus }>(
-      "/billing/upgrade",
-      { method: "POST", body: JSON.stringify({ plan: "pro" }) },
-    );
-    return { ok: true, message: data.message, billing: data.billing };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Upgrade failed." };
   }
 }

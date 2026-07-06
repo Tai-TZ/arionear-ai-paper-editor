@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+﻿@import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
@@ -60,7 +60,7 @@
   --font-latex-times-mono: 'Courier New', Courier, monospace;
 }
 
-/* LaTeX preview — Latin Modern (official CM web derivative used by LaTeX) */
+/* LaTeX preview â€” Latin Modern (official CM web derivative used by LaTeX) */
 @font-face {
   font-family: 'Latin Modern Roman';
   src: url('/fonts/lm/lmroman-regular-webfont.woff') format('woff');
@@ -127,7 +127,7 @@
   font-display: swap;
 }
 
-/* ── Home / marketing: Arionear newsprint ── */
+/* â”€â”€ Home / marketing: Arionear newsprint â”€â”€ */
 :root {
   --radius: 0px;
   --ink: oklch(0.145 0 0);
@@ -322,7 +322,7 @@
   }
 }
 
-/* ── Editor workspace: insight-editor feel + Arionear accents ── */
+/* â”€â”€ Editor workspace: insight-editor feel + Arionear accents â”€â”€ */
 .editor-shell {
   --radius: 0.375rem;
   --ink: oklch(0.145 0 0);
@@ -465,13 +465,6 @@
   --chat-border: var(--editor-chat-border);
 }
 
-.dark .editor-shell .chat-overlay-panel {
-  --chat-input-bg: var(--editor-chat-input-bg);
-  --chat-border: var(--editor-chat-border);
-  --chat-banner-bg: var(--editor-chat-banner-bg);
-  --chat-banner-text: var(--editor-chat-banner-text);
-}
-
 .dark .editor-shell .chat-dock-icon-btn:hover,
 .dark .editor-shell .chat-dock-resize-handle--top:hover,
 .dark .editor-shell .chat-dock-resize-handle--top:active {
@@ -495,68 +488,6 @@
 .dark .editor-shell .tools-stat-card,
 .dark .editor-shell .tools-version-entry {
   border-color: var(--border);
-}
-
-.dark .editor-shell .latex-diff-shell.latex-editor-shell {
-  background: var(--editor-latex-diff-bg);
-  border-color: var(--editor-latex-border);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-gutter {
-  background: var(--editor-latex-gutter);
-  border-right-color: var(--editor-latex-border);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-line-num,
-.dark .editor-shell .latex-diff-shell .latex-line-num-eq {
-  color: var(--editor-latex-line-num);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-diff-line-del,
-.dark .editor-shell .latex-diff-shell .latex-diff-line-ins,
-.dark .editor-shell .latex-diff-shell .latex-diff-line-eq {
-  color: var(--editor-latex-diff-text);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-diff-line-del {
-  background: var(--editor-diff-del-bg);
-  color: var(--editor-diff-del-text);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-diff-line-ins {
-  background: var(--editor-diff-ins-bg);
-  color: var(--editor-diff-ins-text);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-diff-line-eq {
-  background: transparent;
-  color: var(--editor-latex-diff-text);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-line-num-del {
-  color: var(--editor-diff-del-num);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-line-num-ins {
-  color: var(--editor-diff-ins-num);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-tok-comment {
-  color: var(--editor-latex-tok-comment);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-tok-cmd,
-.dark .editor-shell .latex-diff-shell .latex-tok-opt {
-  color: var(--editor-latex-tok-cmd);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-tok-key {
-  color: var(--editor-latex-tok-key);
-}
-
-.dark .editor-shell .latex-diff-shell .latex-tok-text,
-.dark .editor-shell .latex-diff-shell .latex-tok-brace {
-  color: var(--editor-latex-tok-text);
 }
 
 .dark .editor-shell .diff-del {
@@ -686,7 +617,7 @@
   overflow: hidden;
 }
 
-/* Shared metrics — textarea selection must match syntax highlight layer exactly */
+/* Shared metrics â€” textarea selection must match syntax highlight layer exactly */
 .editor-shell .latex-editor-canvas {
   font-family: var(--font-mono-data);
   font-size: 13px;
@@ -794,7 +725,7 @@
   background-color: rgba(0, 100, 255, 0.22);
 }
 
-/* Thin soft scrollbars — editor workspace only */
+/* Thin soft scrollbars â€” editor workspace only */
 .editor-shell .soft-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
@@ -818,7 +749,7 @@
   background: oklch(0.5 0.05 255 / 45%);
 }
 
-/* Paper score dialog — portaled outside .editor-shell */
+/* Paper score dialog â€” portaled outside .editor-shell */
 .paper-score-dialog .paper-score-scroll {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.58 0.03 80 / 38%) transparent;
@@ -858,7 +789,7 @@
   background: transparent;
 }
 
-/* Paper score — audit waiting animation */
+/* Paper score â€” audit waiting animation */
 .paper-score-audit-anim {
   display: flex;
   flex-direction: column;
@@ -1206,7 +1137,7 @@
   background: color-mix(in oklch, var(--primary) 45%, var(--border) 55%);
 }
 
-/* Defense mode — chat panel */
+/* Defense mode â€” chat panel */
 .editor-shell .defense-masthead-prefs {
   display: inline-flex;
   align-items: stretch;
@@ -1316,7 +1247,7 @@
   cursor: not-allowed;
 }
 
-/* Defense panel — editorial layout */
+/* Defense panel â€” editorial layout */
 .editor-shell .defense-panel {
   --defense-border: var(--border);
   --defense-muted: var(--muted-foreground);
@@ -1328,7 +1259,7 @@
   color: var(--foreground);
 }
 
-/* Header — match PDF toolbar height (44px / h-11) */
+/* Header â€” match PDF toolbar height (44px / h-11) */
 .editor-shell .defense-panel-head {
   display: flex;
   align-items: center;
@@ -2444,7 +2375,7 @@
   color: var(--foreground);
 }
 
-/* Workspace mobile layout (< md) — desktop unchanged from md breakpoint up */
+/* Workspace mobile layout (< md) â€” desktop unchanged from md breakpoint up */
 .workspace-main-column {
   min-width: 0;
 }
@@ -2501,6 +2432,10 @@
     transform: translateY(-50%);
   }
 
+  .projects-header-btn-guide {
+    display: none !important;
+  }
+
   .workspace-mobile-strip .masthead-theme-toggle {
     position: static;
     transform: none;
@@ -2531,48 +2466,39 @@
   }
 
   .projects-workspace-header {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "title view new";
+    align-items: center;
     height: auto;
     min-height: unset;
     max-height: none;
-    padding: 0.75rem 1rem;
-    gap: 0.625rem;
+    padding: 0.5rem 1rem;
+    gap: 0.375rem;
   }
 
   .projects-header-title {
+    grid-area: title;
     flex: none;
+    min-width: 0;
   }
 
   .projects-header-title h1 {
-    font-size: 1.25rem;
-    line-height: 1.15;
+    font-size: 1.125rem;
+    line-height: 1.1;
   }
 
   .projects-header-toolbar {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "search search"
-      "view new";
-    gap: 0.5rem;
-    width: 100%;
+    display: contents;
   }
 
   .projects-header-search {
-    grid-area: search;
-    display: block;
-  }
-
-  .projects-header-search input {
-    width: 100%;
-    height: 2.25rem;
+    display: none !important;
   }
 
   .projects-view-toggle {
     grid-area: view;
-    align-self: stretch;
-    height: 2.25rem;
+    height: 2rem;
     align-items: center;
   }
 
@@ -2582,9 +2508,11 @@
   }
 
   .projects-header-new .projects-header-btn-primary {
-    width: 100%;
-    height: 2.25rem;
+    width: auto;
+    height: 2rem;
     justify-content: center;
+    white-space: nowrap;
+    padding-inline: 0.625rem;
   }
 
   .projects-header-divider {
@@ -2598,6 +2526,45 @@
   .projects-desk-inner {
     padding-inline: 1rem;
     padding-top: 0.875rem;
+    padding-bottom: 1.25rem;
+    min-width: 0;
+  }
+
+  .projects-desk {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .projects-table-editorial,
+  .projects-grid-editorial {
+    min-width: 0;
+  }
+
+  .projects-table-head-editorial {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.4375rem 0.625rem;
+  }
+
+  .projects-col-name {
+    overflow: hidden;
+  }
+
+  .projects-col-actions {
+    align-self: center;
+  }
+
+  .projects-grid-card-editorial {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .projects-grid-card-editorial p {
+    overflow-wrap: anywhere;
+  }
+
+  .projects-skeleton-row {
+    padding-inline: 0.75rem;
   }
 
   .projects-desk-meta {
@@ -2856,9 +2823,10 @@
   color: var(--background);
 }
 
-/* Projects desk — main content area */
+/* Projects desk â€” main content area */
 .projects-desk {
   background: color-mix(in oklch, var(--background) 94%, var(--foreground));
+  min-width: 0;
 }
 
 .projects-desk-inner {
@@ -2926,13 +2894,19 @@
 }
 
 .projects-table-row-editorial {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.375rem 0.5rem;
+  align-items: start;
+  padding: 0.625rem 0.75rem;
   border-bottom: 1px solid color-mix(in oklch, var(--foreground) 14%, transparent);
   transition: background 0.12s ease;
   cursor: pointer;
+  min-width: 0;
+}
+
+.projects-col-name {
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
@@ -2964,7 +2938,7 @@
   border-bottom: none;
 }
 
-/* Workspace content skeleton — in-shell loading (no fullscreen flash) */
+/* Workspace content skeleton â€” in-shell loading (no fullscreen flash) */
 .workspace-content-skeleton {
   display: flex;
   flex-direction: column;
@@ -3605,13 +3579,76 @@
   outline-offset: 2px;
 }
 
-.theme-rail-btn {
-  border-radius: 0.5rem 0 0 0.5rem !important;
-}
-
 .masthead-theme-toggle,
 .masthead-language-toggle {
   border-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+
+@media (max-width: 639px) {
+  .marketing-mobile-prefs-dock {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border: 1px solid color-mix(in oklch, var(--foreground) 55%, transparent);
+    border-right: none;
+    background: color-mix(in oklch, var(--background) 94%, var(--foreground));
+    box-shadow: -6px 0 20px color-mix(in oklch, var(--foreground) 10%, transparent);
+    transform: translateY(-50%);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang.language-toggle {
+    flex-direction: column;
+    border: none;
+    border-radius: 0;
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang .language-toggle-option {
+    min-height: 2.125rem;
+    min-width: 2.125rem;
+    padding-inline: 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang .language-toggle-option + .language-toggle-option {
+    border-left: none;
+    border-top: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+
+  .marketing-mobile-prefs-dock .marketing-mobile-prefs-theme {
+    height: 2.125rem;
+    width: 100%;
+    border: none;
+    border-top: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+    border-radius: 0;
+  }
+
+  .marketing-ticker-track {
+    padding-block: 0.375rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+  }
+
+  .marketing-ticker-track span {
+    padding-inline: 1rem;
+    gap: 1rem;
+  }
+
+  .hero-headline-vi-fluid {
+    display: block;
+    max-width: 100%;
+    text-wrap: balance;
+    line-height: 1.02;
+  }
+
+  .hero-split-copy .drop-cap::first-letter {
+    font-size: 2.75rem;
+    margin-right: 0.35rem;
+  }
 }
 
 .language-toggle-option + .language-toggle-option {
@@ -3937,14 +3974,6 @@ html[lang="vi"] .hero-headline {
   cursor: pointer;
 }
 
-.trusted-by-mark {
-  min-height: 5.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
 /* Auth pages */
 .auth-spinner {
   width: 0.875rem;
@@ -4046,7 +4075,7 @@ html[lang="vi"] .hero-headline {
   hyphens: none;
 }
 
-/* IEEE letter margins ≈ 0.6825in sides, 0.75in top, 1in bottom (IEEEtran conference) */
+/* IEEE letter margins â‰ˆ 0.6825in sides, 0.75in top, 1in bottom (IEEEtran conference) */
 .editor-shell .preview-padding-ieee {
   padding: 0.75in 0.6825in 1in;
 }
@@ -4055,7 +4084,7 @@ html[lang="vi"] .hero-headline {
   padding: 1in 0.85in;
 }
 
-/* Override global h1/h2 Playfair — preview must use LaTeX serif only */
+/* Override global h1/h2 Playfair â€” preview must use LaTeX serif only */
 .editor-shell .preview-page-content h1,
 .editor-shell .preview-page-content h2,
 .editor-shell .preview-page-content h3,
@@ -4147,7 +4176,7 @@ html[lang="vi"] .hero-headline {
   font-weight: 700;
 }
 
-/* ── PDF.js preview panel (Overleaf-style) ── */
+/* â”€â”€ PDF.js preview panel (Overleaf-style) â”€â”€ */
 .editor-shell .pdf-preview-shell {
   background: var(--editor-pdf-chrome);
 }
@@ -4252,7 +4281,7 @@ html[lang="vi"] .hero-headline {
   pointer-events: none;
 }
 
-/* PDF.js text layer — aligned with pdf_viewer.css; scoped under editor-shell */
+/* PDF.js text layer â€” aligned with pdf_viewer.css; scoped under editor-shell */
 .editor-shell .pdf-preview-text-layer {
   --user-unit: 1;
   --total-scale-factor: calc(var(--scale-factor, 1) * var(--user-unit, 1));
@@ -4314,7 +4343,7 @@ html[lang="vi"] .hero-headline {
   background: transparent;
 }
 
-/* PDF.js annotation layer — citation / internal links (requires pdf_viewer section rules) */
+/* PDF.js annotation layer â€” citation / internal links (requires pdf_viewer section rules) */
 .editor-shell .pdf-preview-annotation-layer {
   position: absolute;
   inset: 0;
@@ -4372,7 +4401,7 @@ html[lang="vi"] .hero-headline {
   background: transparent;
 }
 
-/* IEEE / mathptmx / times — Times New Roman stack (Nimbus Roman on Linux) */
+/* IEEE / mathptmx / times â€” Times New Roman stack (Nimbus Roman on Linux) */
 .editor-shell .preview-page-content.preview-font-times,
 .editor-shell .preview-page-content.preview-font-times h1,
 .editor-shell .preview-page-content.preview-font-times h2,
@@ -4414,7 +4443,7 @@ html[lang="vi"] .hero-headline {
   line-height: 1.5;
 }
 
-/* Chat overlay — floats over LaTeX editor */
+/* Chat overlay â€” floats over LaTeX editor */
 .editor-shell .editor-workspace {
   isolation: isolate;
 }
@@ -4575,11 +4604,7 @@ html[lang="vi"] .hero-headline {
   box-shadow: none;
 }
 
-.editor-shell .chat-overlay-root {
-  z-index: 20;
-}
-
-/* Chat dock — fixed bottom panel inside editor column (does not overlay code) */
+/* Chat dock â€” fixed bottom panel inside editor column (does not overlay code) */
 .editor-shell .chat-dock {
   --chat-bg: color-mix(in oklch, var(--card) 98%, transparent);
   --chat-input-bg: var(--editor-chat-input-bg);
@@ -5001,7 +5026,7 @@ html[lang="vi"] .hero-headline {
   min-width: 0;
 }
 
-/* AI loading state — editorial "margin note" style, wired to SSE progress */
+/* AI loading state â€” editorial "margin note" style, wired to SSE progress */
 .editor-shell .ai-loading-state {
   width: 100%;
   border: none;
@@ -5175,196 +5200,6 @@ html[lang="vi"] .hero-headline {
   text-align: center;
 }
 
-.editor-shell .chat-overlay-panel {
-  --chat-bg: color-mix(in oklch, var(--card) 96%, transparent);
-  --chat-input-bg: var(--editor-chat-input-bg);
-  --chat-border: var(--editor-chat-border);
-  --chat-text: var(--foreground);
-  --chat-muted: var(--muted-foreground);
-  --chat-accent: var(--primary);
-  --chat-banner-bg: var(--editor-chat-banner-bg);
-  --chat-banner-text: var(--editor-chat-banner-text);
-  --chat-user-bg: var(--primary);
-  --chat-user-text: var(--primary-foreground);
-  border-radius: 1.5rem;
-  border: 1px solid var(--chat-border);
-  background: var(--chat-bg);
-  backdrop-filter: blur(12px);
-  box-shadow:
-    0 -8px 32px -12px oklch(0.2 0.02 255 / 14%),
-    0 4px 24px -8px oklch(0.2 0.02 255 / 10%);
-  transition: height 0.44s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: height;
-  color: var(--chat-text);
-}
-
-.editor-shell .chat-overlay-messages-section {
-  flex: 1 1 auto;
-  min-height: 0;
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
-    transform 0.38s cubic-bezier(0.32, 0.72, 0, 1) 0.04s,
-    flex 0.44s cubic-bezier(0.32, 0.72, 0, 1);
-  pointer-events: none;
-}
-
-.editor-shell .chat-overlay-panel[data-open="true"] .chat-overlay-messages-section {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-messages-section {
-  flex: 0 0 0;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-    flex 0.44s cubic-bezier(0.32, 0.72, 0, 1),
-    max-height 0.44s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.editor-shell .chat-overlay-panel[data-open="false"] .chat-resize-handle,
-.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-toolbar,
-.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-banner {
-  display: none;
-}
-
-.editor-shell .chat-overlay-panel[data-open="false"] {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.editor-shell .chat-overlay-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0 0.75rem 0.375rem;
-}
-
-.editor-shell .chat-overlay-banner {
-  margin: 0 0.75rem 0.5rem;
-  border-radius: 0.625rem;
-  background: var(--chat-banner-bg);
-  padding: 0.5rem 0.75rem;
-  font-size: 0.6875rem;
-  line-height: 1.45;
-  color: var(--chat-banner-text);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .editor-shell .chat-overlay-panel,
-  .editor-shell .chat-overlay-messages-section {
-    transition-duration: 0.01ms !important;
-    transition-delay: 0s !important;
-  }
-}
-
-.editor-shell .chat-resize-handle {
-  display: flex;
-  width: 100%;
-  flex-shrink: 0;
-  cursor: ns-resize;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0 0.375rem;
-  border: none;
-  background: transparent;
-  touch-action: none;
-}
-
-.editor-shell .chat-resize-handle-bar {
-  display: block;
-  height: 4px;
-  width: 2.5rem;
-  border-radius: 999px;
-  background: oklch(0.72 0.02 90 / 55%);
-  transition: background 0.15s ease;
-}
-
-.editor-shell .chat-resize-handle:hover .chat-resize-handle-bar,
-.editor-shell .chat-resize-handle:active .chat-resize-handle-bar {
-  background: oklch(0.55 0.04 90 / 70%);
-}
-
-.editor-shell .chat-overlay-icon-btn {
-  display: flex;
-  height: 1.75rem;
-  width: 1.75rem;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  border: none;
-  background: transparent;
-  color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.editor-shell .chat-overlay-icon-btn:hover {
-  background: oklch(0.96 0.008 90);
-  color: var(--foreground);
-}
-
-.editor-shell .chat-overlay-input-wrap {
-  padding: 0.5rem 0.625rem 0.625rem;
-}
-
-.editor-shell .chat-overlay-panel[data-open="true"] .chat-overlay-input-wrap {
-  padding: 0.625rem 0.75rem 0.75rem;
-}
-
-.editor-shell .chat-overlay-input-wrap-collapsed {
-  padding: 0.375rem 0.5rem 0.5rem;
-}
-
-.editor-shell .chat-overlay-llm-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.375rem;
-  min-height: 1.75rem;
-}
-
-.editor-shell .chat-overlay-panel[data-open="false"] .chat-overlay-llm-bar {
-  margin-bottom: 0.3125rem;
-}
-
-.editor-shell .chat-overlay-llm-bar .llm-selector {
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.editor-shell .chat-overlay-llm-bar .llm-selector-compact {
-  max-width: 100%;
-}
-
-.editor-shell .chat-overlay-llm-hint {
-  margin: 0;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  color: var(--chat-muted, var(--muted-foreground));
-}
-
-.editor-shell .chat-overlay-llm-hint code {
-  font-size: 0.625rem;
-}
-
-.editor-shell .chat-overlay-llm-label {
-  flex-shrink: 0;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--chat-muted, var(--muted-foreground));
-}
 
 .editor-shell .chat-input-actions {
   display: flex;
@@ -5566,7 +5401,7 @@ html[lang="vi"] .hero-headline {
   border-radius: 0.3rem;
 }
 
-/* Dropdown menus are portaled outside `.editor-shell` — duplicate the critical
+/* Dropdown menus are portaled outside `.editor-shell` â€” duplicate the critical
    size rules unscoped so provider icons don't blow up in the menu. */
 .llm-provider-avatar {
   height: 0.95rem;
@@ -6042,6 +5877,19 @@ html[lang="vi"] .hero-headline {
   margin: 0;
 }
 
+.editor-shell .chat-assistant-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+  padding-top: 0.125rem;
+  border-top: 1px solid color-mix(in oklch, var(--chat-assistant-border, var(--border)) 55%, transparent);
+}
+
+.editor-shell .chat-assistant-actions .chat-copy-btn {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
 @keyframes chat-activity-pulse {
   0%,
   100% {
@@ -6305,7 +6153,7 @@ html[lang="vi"] .hero-headline {
   overflow: auto;
 }
 
-/* Editor left sidebar — Overleaf-style icon rail + collapsible panel */
+/* Editor left sidebar â€” Overleaf-style icon rail + collapsible panel */
 .editor-shell .editor-left-sidebar {
   position: relative;
   display: flex;
@@ -6461,10 +6309,6 @@ html[lang="vi"] .hero-headline {
   background: oklch(0.98 0.02 250 / 45%);
 }
 
-.editor-shell .latex-inline-diff-line .diff-eq .latex-code-line {
-  display: inline;
-}
-
 .editor-shell .latex-input-readonly {
   color: transparent;
   caret-color: transparent;
@@ -6488,87 +6332,6 @@ html[lang="vi"] .hero-headline {
   color: var(--editor-diff-inline-ins-text);
 }
 
-/* LaTeX diff view — light background, red/green line highlights (same palette as editor) */
-.editor-shell .latex-diff-shell.latex-editor-shell {
-  background: #ffffff;
-  border-color: oklch(0.9 0.012 90 / 90%);
-}
-
-.editor-shell .latex-diff-shell .latex-gutter {
-  background: #ffffff;
-  border-right-color: #e3e3e3;
-}
-
-.editor-shell .latex-diff-shell .latex-line-num {
-  color: #a0a0a0;
-}
-
-.editor-shell .latex-diff-shell .latex-line-num-ins {
-  color: var(--editor-diff-ins-num);
-}
-
-.editor-shell .latex-diff-shell .latex-line-num-del {
-  color: var(--editor-diff-del-num);
-}
-
-.editor-shell .latex-diff-shell .latex-line-num-eq {
-  color: #a0a0a0;
-}
-
-.editor-shell .latex-diff-line {
-  min-height: 1.65em;
-  padding: 0 0.5rem;
-  border-radius: 0;
-}
-
-.editor-shell .latex-diff-shell .latex-diff-line-del {
-  background: var(--editor-diff-del-bg);
-  color: var(--editor-diff-del-text);
-  text-decoration: none;
-}
-
-.editor-shell .latex-diff-shell .latex-diff-line-ins {
-  background: var(--editor-diff-ins-bg);
-  color: var(--editor-diff-ins-text);
-}
-
-.editor-shell .latex-diff-shell .latex-diff-line-eq {
-  background: transparent;
-  color: var(--editor-latex-diff-text);
-}
-
-.editor-shell .latex-diff-shell .latex-tok-comment {
-  color: #3f7f5f;
-}
-
-.editor-shell .latex-diff-shell .latex-tok-cmd {
-  color: #0000c0;
-}
-
-.editor-shell .latex-diff-shell .latex-tok-opt {
-  color: #0000c0;
-}
-
-.editor-shell .latex-diff-shell .latex-tok-key {
-  color: #800000;
-}
-
-.editor-shell .latex-diff-shell .latex-tok-brace,
-.editor-shell .latex-diff-shell .latex-tok-text {
-  color: #000000;
-}
-
-.editor-shell .latex-diff-shell .soft-scrollbar {
-  scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
-}
-
-.editor-shell .latex-diff-shell .soft-scrollbar::-webkit-scrollbar-thumb {
-  background: oklch(0.55 0.03 255 / 30%);
-}
-
-.editor-shell .latex-diff-shell .soft-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0.05 255 / 45%);
-}
 
 .editor-shell .editor-file-tab {
   min-width: 0;
@@ -6801,6 +6564,110 @@ html[lang="vi"] .hero-headline {
 
 .editor-shell .mobile-chat-sheet {
   animation: mobile-chat-sheet-in 0.36s cubic-bezier(0.32, 0.72, 0, 1) both;
+  --chat-bg: var(--card);
+  --chat-input-bg: var(--editor-chat-input-bg);
+  --chat-border: var(--editor-chat-border);
+  --chat-text: var(--foreground);
+  --chat-muted: var(--muted-foreground);
+  --chat-accent: var(--primary);
+  --chat-user-bg: var(--primary);
+  --chat-user-text: var(--primary-foreground);
+  --chat-code-bg: oklch(0.94 0.01 90);
+  --chat-code-border: oklch(0.88 0.012 90 / 70%);
+  --chat-state-base: oklch(1 0 0);
+}
+
+.dark .editor-shell .mobile-chat-sheet {
+  --chat-assistant-bg: oklch(0.22 0.01 90);
+  --chat-assistant-border: oklch(0.36 0.01 90 / 55%);
+  --chat-assistant-shadow: oklch(0 0 0 / 26%);
+  --chat-code-bg: oklch(0.3 0.012 90);
+  --chat-code-border: oklch(0.42 0.012 90 / 60%);
+  --chat-state-base: oklch(0.24 0.01 90);
+}
+
+.editor-shell .mobile-chat-sheet-handle {
+  width: 2.25rem;
+  height: 0.25rem;
+  margin: 0.5rem auto 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 18%, transparent);
+  flex-shrink: 0;
+}
+
+.editor-shell .mobile-chat-body {
+  min-height: 0;
+}
+
+.editor-shell .mobile-chat-sheet .chat-messages {
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-user-stack {
+  max-width: 82%;
+}
+
+.editor-shell .mobile-chat-sheet .chat-bubble-user-dark {
+  border-bottom-right-radius: 0.25rem;
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 8%);
+}
+
+.editor-shell .mobile-chat-sheet .chat-assistant-row {
+  gap: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-avatar {
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: 0.375rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-assistant-content {
+  padding: 0.4375rem 0.6875rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-ai-state {
+  margin-bottom: 0.375rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .ai-loading-state--compact .ai-loading-state-head {
+  gap: 0.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-dock-llm-bar {
+  margin-bottom: 0.375rem;
+  min-height: 1.625rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-segment {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-provider-name {
+  max-width: 4.75rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-model-name {
+  max-width: 5.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .llm-selector-new-chat {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.editor-shell .mobile-chat-sheet .chat-input-shell {
+  min-height: 2.5rem;
+}
+
+.editor-shell .mobile-chat-sheet .chat-input-field {
+  font-size: 1rem;
 }
 
 /* Tools panel */
@@ -6998,7 +6865,7 @@ html[lang="vi"] .hero-headline {
   color: var(--newsprint);
 }
 
-/* App loading — route pending, editor entry, page fetch, overlays */
+/* App loading â€” route pending, editor entry, page fetch, overlays */
 .app-loading-screen--fullscreen {
   position: fixed;
   inset: 0;
@@ -7235,7 +7102,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* 404 — editorial missing page */
+/* 404 â€” editorial missing page */
 .app-not-found-masthead {
   background: var(--background);
 }
@@ -7244,7 +7111,7 @@ html[lang="vi"] .hero-headline {
   min-height: 100%;
 }
 
-/* About page — interactive editorial board figure */
+/* About page â€” interactive editorial board figure */
 .about-board-live-dot {
   width: 0.5rem;
   height: 0.5rem;
@@ -7387,7 +7254,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* ─── Admin console (ops-style shell — ~40% Arionear editorial DNA) ─────────── */
+/* â”€â”€â”€ Admin console (ops-style shell â€” ~40% Arionear editorial DNA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .admin-shell,
 .admin-shell * {
@@ -8976,7 +8843,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* Workspace user guide — animated step demos */
+/* Workspace user guide â€” animated step demos */
 .guide-step-demo {
   background: var(--hero-demo-desk);
   padding: 0.75rem;

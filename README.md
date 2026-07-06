@@ -340,7 +340,7 @@ ruff check src tests
 | [ROADMAP.md](./ROADMAP.md) | Lộ trình phase |
 | [eval/results/report.md](./eval/results/report.md) | Báo cáo đánh giá |
 | [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) | Gate 3 metrics (11 metrics vs baseline) |
-| [REPORT_GATE3.md](./REPORT_GATE3.md) | Gate 3 — production, eval, guardrails |
+| [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) | Gate 3 — production, eval, guardrails |
 | [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) | Guardrail 4 lớp |
 | [eval/results/guardrails.html](./eval/results/guardrails.html) | Báo cáo Guardrails (HTML) |
 | [eval/results/evaluation-metrics.html](./eval/results/evaluation-metrics.html) | Gate 3 metrics (HTML) |

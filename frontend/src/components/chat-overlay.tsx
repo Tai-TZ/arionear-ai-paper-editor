@@ -443,6 +443,7 @@ function ChatAiStatePanel(props: {
   activities?: string[];
   activity?: string | null;
   waitElapsedSec?: number | null;
+  compact?: boolean;
 }) {
   return <AiLoadingState {...props} />;
 }
@@ -452,11 +453,13 @@ export function ChatMessages({
   chatEndRef,
   chatLoading,
   streamProgress: streamProgressProp,
+  surface = "dock",
 }: {
   messages: ChatMessage[];
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   chatLoading?: boolean;
   streamProgress?: ChatStreamProgressSnapshot;
+  surface?: "dock" | "sheet";
 }) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
@@ -469,7 +472,10 @@ export function ChatMessages({
   );
 
   return (
-    <div className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3">
+    <div
+      className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3"
+      data-surface={surface}
+    >
       {visibleMessages.length === 0 && !chatLoading && (
         <p className="chat-dock-empty-hint">
           {t.chatDock.emptySlashHint(getChatSlashHints(locale).join(", "))}
@@ -482,7 +488,6 @@ export function ChatMessages({
             <div key={i} className="chat-message-row chat-user-row">
               <div className="chat-user-stack">
                 <div className="chat-bubble chat-bubble-user-dark">{m.content}</div>
-                <ChatCopyButton text={m.content} ariaLabel={t.chatDock.copyMessage} />
               </div>
             </div>
           );
@@ -522,6 +527,7 @@ export function ChatMessages({
                   activities={liveActivities}
                   activity={m.streamLabel ?? liveActivity}
                   waitElapsedSec={m.streamElapsedSec}
+                  compact={surface === "sheet"}
                 />
               )}
               {m.content && (
@@ -534,6 +540,11 @@ export function ChatMessages({
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                 </div>
               )}
+              {m.content && !m.isStreaming ? (
+                <div className="chat-assistant-actions">
+                  <ChatCopyButton text={m.content} ariaLabel={t.chatDock.copyMessage} />
+                </div>
+              ) : null}
               {m.isStreaming && m.content && (
                 <span className="chat-stream-cursor" aria-hidden />
               )}

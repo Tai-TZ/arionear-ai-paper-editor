@@ -283,7 +283,7 @@ function ProjectsPage() {
           <div className="projects-header-toolbar">
             <Link
               to="/guide"
-              className="projects-header-btn projects-header-btn-guide hidden sm:inline-flex"
+              className="projects-header-btn projects-header-btn-guide hidden md:inline-flex"
               title={workspace.userGuide}
             >
               <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -410,7 +410,7 @@ function ProjectsPage() {
             </div>
           )}
           {loading ? (
-            <ProjectsListSkeleton className="flex-1 overflow-y-auto px-4 py-5 md:px-6" />
+            <ProjectsListSkeleton className="flex-1 overflow-y-auto" />
           ) : filtered.length === 0 ? (
             <EmptyProjects
               hasSearch={!!search.trim()}

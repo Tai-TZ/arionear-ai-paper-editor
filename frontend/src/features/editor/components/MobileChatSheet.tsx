@@ -78,10 +78,11 @@ export function MobileChatSheet({
         aria-label={t.chatDock.closeChat}
       />
       <div className="mobile-chat-sheet relative mt-auto flex max-h-[88dvh] min-h-[50dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border/50 bg-card shadow-[0_-8px_40px_-8px_rgba(15,23,42,0.2)]">
-        <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <img src={arioAvatar} alt="" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="text-sm font-medium">Ario</span>
+        <div className="mobile-chat-sheet-handle" aria-hidden />
+        <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <img src={arioAvatar} alt="" className="h-7 w-7 rounded-lg object-contain" />
+            <span className="text-sm font-semibold tracking-tight">Ario</span>
           </div>
           <button
             onClick={onClose}
@@ -91,14 +92,17 @@ export function MobileChatSheet({
           </button>
         </div>
 
-        <ChatMessages
-          messages={messages}
-          chatEndRef={chatEndRef}
-          chatLoading={chatLoading}
-          streamProgress={streamProgress}
-        />
+        <div className="mobile-chat-body flex min-h-0 flex-1 flex-col">
+          <ChatMessages
+            messages={messages}
+            chatEndRef={chatEndRef}
+            chatLoading={chatLoading}
+            streamProgress={streamProgress}
+            surface="sheet"
+          />
+        </div>
 
-        <div className="shrink-0 border-t border-border/40 p-3 safe-area-pb">
+        <div className="mobile-chat-composer shrink-0 border-t border-border/40 px-3 py-2 safe-area-pb">
           {chatComposerMode === "quick-edit" && (
             <div className="chat-quick-edit-banner mb-2" role="status">
               <PencilLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -131,7 +135,7 @@ export function MobileChatSheet({
               )}
             </div>
           )}
-          <div className="chat-dock-llm-bar mb-2">
+          <div className="chat-dock-llm-bar mb-1.5">
             {canUseLlm ? (
               <LlmSelector
                 providers={providers!}

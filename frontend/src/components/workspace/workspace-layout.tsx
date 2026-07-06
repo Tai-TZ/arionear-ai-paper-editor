@@ -1,8 +1,7 @@
+import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { LanguageToggle } from "@/components/language-toggle";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   WorkspaceSidebar,
   type WorkspaceNav,
@@ -85,12 +84,8 @@ export function WorkspaceLayout({
             {navOpen ? <X className="h-4 w-4" strokeWidth={1.5} /> : <Menu className="h-4 w-4" strokeWidth={1.5} />}
           </button>
           <Link to="/" className="workspace-mobile-brand">
-            Arionear
+            <ArionearWordmark />
           </Link>
-          <div className="workspace-mobile-controls flex items-center gap-2">
-            <LanguageToggle compact className="masthead-language-toggle shrink-0" />
-            <ThemeToggle compact className="masthead-theme-toggle shrink-0" />
-          </div>
         </div>
 
         {children}

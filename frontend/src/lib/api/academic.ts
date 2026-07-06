@@ -780,49 +780,6 @@ export async function streamChat(
   await streamChatWithFetch(url, body, callbacks, signal);
 }
 
-export async function sendChat(
-  message: string,
-  opts: {
-    sessionId: string;
-    latexContent: string;
-    selection?: string;
-    task?: "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
-    integrity_strictness?: "relaxed" | "standard" | "strict";
-    logic_audit_mode?: "quick" | "deep" | "gate";
-    logic_audit_scope?: "selected" | "full";
-    logic_audit_sections?: string[];
-  } & LlmOptions,
-): Promise<ChatResult> {
-  return apiFetch<ChatResult>("/chat", {
-    method: "POST",
-    body: JSON.stringify(buildChatRequestBody(message, opts)),
-  });
-}
-
-export async function editStyle(
-  sessionId: string,
-  text: string,
-  section: string,
-  opts?: LlmOptions,
-): Promise<{
-  original_text: string;
-  suggestion: string;
-  diff: string;
-  integrity_flags: IntegrityFlag[];
-  revision_id: string;
-}> {
-  return apiFetch("/edit/style", {
-    method: "POST",
-    body: JSON.stringify({
-      session_id: sessionId,
-      text,
-      section,
-      llm_provider: opts?.llm_provider,
-      llm_model: opts?.llm_model,
-    }),
-  });
-}
-
 export async function verifyCitations(
   sessionId: string,
   bibContent = "",
