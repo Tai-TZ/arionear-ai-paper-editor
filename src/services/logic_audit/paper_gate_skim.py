@@ -7,6 +7,7 @@ full multi-persona debate to stay under ~45 s.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
 import uuid
@@ -220,17 +221,27 @@ async def run_paper_gate_skim(
 
     timeout_sec = get_settings().logic_audit_gate_timeout_sec
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_msg)]
+    invoke_task = asyncio.create_task(llm.ainvoke(messages))
+    started = asyncio.get_running_loop().time()
     try:
-        if cancel_event is not None and cancel_event.is_set():
-            return {
-                "logic_audit_report": {},
-                "response": "Logic audit đã hủy.",
-                "analysis": "gate:cancelled",
-            }
-        response = await asyncio.wait_for(llm.ainvoke(messages), timeout=timeout_sec)
+        while not invoke_task.done():
+            if cancel_event is not None and cancel_event.is_set():
+                invoke_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await invoke_task
+                return {
+                    "logic_audit_report": {},
+                    "response": "Logic audit đã hủy.",
+                    "analysis": "gate:cancelled",
+                }
+            if asyncio.get_running_loop().time() - started >= timeout_sec:
+                invoke_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await invoke_task
+                raise TimeoutError()
+            await asyncio.sleep(0.2)
+        response = await invoke_task
         raw_text = extract_llm_text(response)
-    except asyncio.TimeoutError as exc:
-        raise TimeoutError() from exc
     except asyncio.CancelledError:
         return {
             "logic_audit_report": {},

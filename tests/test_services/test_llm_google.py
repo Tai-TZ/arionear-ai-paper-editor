@@ -74,7 +74,7 @@ def test_get_llm_google_json_output(google_llm_env, monkeypatch):
             captured.update(kwargs)
 
     monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", FakeGoogleLLM)
-    from src.services.llm import get_llm
+    from src.services.llm import _build_llm_with_key
 
-    get_llm(provider="google", json_output=True)
+    _build_llm_with_key("google", "test-google-key", json_output=True)
     assert captured.get("response_mime_type") == "application/json"

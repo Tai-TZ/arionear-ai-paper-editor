@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
+from src.db.models import PlatformProviderKey
 from src.models.admin_schemas import (
     LlmModelOption,
     LlmProviderStatus,
@@ -17,17 +18,16 @@ from src.services.llm import list_provider_catalog
 from src.services.llm_failover import test_provider_api_key
 from src.services.provider_key_store import (
     ADMIN_LLM_PROVIDERS,
+    _env_api_key,
     clear_provider_keys,
     delete_provider_key,
     list_provider_key_rows,
+    mark_provider_key_verified,
     provider_has_api_key,
     row_to_admin_dict,
     upsert_provider_key,
-    _env_api_key,
-    mark_provider_key_verified,
 )
 from src.services.secret_crypto import decrypt_secret
-from src.db.models import PlatformProviderKey
 
 
 def _env_fallback_map() -> dict[str, bool]:

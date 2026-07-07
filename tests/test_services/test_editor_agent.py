@@ -51,9 +51,14 @@ def test_build_chat_manuscript_excerpt_prefers_section():
 def test_resolve_editor_aux_llm_prefers_configured_provider(monkeypatch):
     from src.config import get_settings
     from src.services.editor_llm import resolve_editor_aux_llm
+    from src.services.provider_key_store import invalidate_provider_key_cache
 
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("ZAI_API_KEY", "test-zai-key-12345678")
+    get_settings.cache_clear()
+    invalidate_provider_key_cache()
     settings = get_settings()
-    monkeypatch.setattr(settings, "zai_api_key", "test-key")
     provider, model = resolve_editor_aux_llm()
     assert provider == "zai"
     assert model == settings.zai_default_model

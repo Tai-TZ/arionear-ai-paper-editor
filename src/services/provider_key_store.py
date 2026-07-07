@@ -5,18 +5,15 @@ import threading
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.config import LLMProvider, Settings, get_settings
+from src.config import ENABLED_LLM_PROVIDERS, LLMProvider, Settings, get_settings
 from src.db.models import PlatformProviderKey
 from src.services.secret_crypto import decrypt_secret, encrypt_secret, key_hint
 
 logger = logging.getLogger(__name__)
 
-ADMIN_LLM_PROVIDERS: frozenset[str] = frozenset(
-    {"openrouter", "zai", "google", "openai", "anthropic"}
-)
+ADMIN_LLM_PROVIDERS: frozenset[str] = frozenset(ENABLED_LLM_PROVIDERS)
 
 _cache_lock = threading.Lock()
 _key_cache: dict[str, list[tuple[str, str]]] = {}
@@ -66,15 +63,22 @@ def refresh_provider_key_cache(db: Session) -> None:
         _key_cache.update(grouped)
 
 
+def _append_env_fallback(keys: list[str], env_key: str) -> list[str]:
+    """Append .env key after admin keys when set and not already in the chain."""
+    if not env_key or env_key in keys:
+        return keys
+    return [*keys, env_key]
+
+
 def get_provider_api_keys(provider: LLMProvider | str) -> list[str]:
-    """Ordered keys: admin DB overrides (by priority), then .env only if no admin keys."""
+    """Ordered keys: admin DB (by priority), then .env as final fallback on auth/quota errors."""
     provider_id = str(provider)
     settings = get_settings()
     with _cache_lock:
         cached = [plain for _, plain in _key_cache.get(provider_id, [])]
-    if cached:
-        return cached
     env_key = _env_api_key(settings, provider_id)
+    if cached:
+        return _append_env_fallback(cached, env_key)
     return [env_key] if env_key else []
 
 

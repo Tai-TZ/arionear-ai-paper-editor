@@ -121,7 +121,8 @@ def ensure_god_admin(db: Session) -> User | None:
 
     if user:
         user.full_name = name
-        user.password_hash = hash_password(password)
+        if not verify_password(password, user.password_hash):
+            user.password_hash = hash_password(password)
         user.role = UserRole.ADMIN
         user.is_active = True
         user.profile_settings = profile

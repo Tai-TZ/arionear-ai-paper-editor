@@ -61,30 +61,33 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
   const [working, setWorking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const refreshKeys = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
+    if (!silent) setLoading(true);
     try {
       const data = await fetchAdminProviderKeys();
       setKeys(data.keys);
       setEnvFallback(data.env_fallback_configured);
       setProviders(data.providers);
-      setExpanded((prev) => {
-        const next = { ...prev };
-        for (const p of data.providers) {
-          if (!(p.id in next)) next[p.id] = !p.configured;
-        }
-        return next;
-      });
+      if (!silent) {
+        setExpanded((prev) => {
+          const next = { ...prev };
+          for (const p of data.providers) {
+            if (!(p.id in next)) next[p.id] = !p.configured;
+          }
+          return next;
+        });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.loadError);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [t.loadError]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void refreshKeys();
+  }, [refreshKeys]);
 
   const keysByProvider = useMemo(() => {
     const map = new Map<string, ProviderKeyRow[]>();
@@ -117,8 +120,31 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
     }));
   };
 
-  const notifyChanged = async () => {
-    await load();
+  const mergeSavedKey = (row: ProviderKeyRow) => {
+    setKeys((prev) => {
+      const without = prev.filter((k) => k.id !== row.id && !(k.provider === row.provider && k.priority === row.priority));
+      return [...without, row];
+    });
+    setProviders((prev) =>
+      prev.map((p) => (p.id === row.provider ? { ...p, configured: true } : p)),
+    );
+  };
+
+  const patchKeyVerification = (keyId: string, ok: boolean, message: string) => {
+    setKeys((prev) =>
+      prev.map((k) =>
+        k.id === keyId
+          ? {
+              ...k,
+              last_verified_at: new Date().toISOString(),
+              last_error: ok ? null : message.slice(0, 240),
+            }
+          : k,
+      ),
+    );
+  };
+
+  const notifyKeysChanged = () => {
     onKeysChanged?.();
   };
 
@@ -130,7 +156,7 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
     }
     setWorking(`save:${provider}`);
     try {
-      await saveAdminProviderKey(provider, {
+      const row = await saveAdminProviderKey(provider, {
         api_key: draft.apiKey.trim(),
         priority: draft.priority,
         label: draft.label.trim() || undefined,
@@ -142,7 +168,8 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
         label: "",
         testModel: draft.testModel,
       });
-      await notifyChanged();
+      mergeSavedKey(row);
+      notifyKeysChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.saveError);
     } finally {
@@ -152,24 +179,30 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
 
   const handleTest = async (provider: string, providerMeta: LlmProviderStatus, keyId?: string) => {
     const draft = drafts[provider];
+    const rows = keysByProvider.get(provider) ?? [];
     const model = draft?.testModel || providerMeta.default_model;
-    setWorking(keyId ? `test:${keyId}` : `test:${provider}`);
+    const draftKey = draft?.apiKey.trim() || undefined;
+    const effectiveKeyId = keyId ?? (!draftKey && rows.length > 0 ? rows[0].id : undefined);
+
+    setWorking(effectiveKeyId ? `test:${effectiveKeyId}` : `test:${provider}`);
     try {
       const result = await testAdminProviderKey(provider, {
-        api_key: keyId ? undefined : draft?.apiKey.trim() || undefined,
-        key_id: keyId,
+        api_key: effectiveKeyId ? undefined : draftKey,
+        key_id: effectiveKeyId,
         model: model || undefined,
       });
       if (result.ok) {
         toast.success(t.testOk(result.latency_ms ?? 0));
-        const hasSaved = (keysByProvider.get(providerId) ?? []).length > 0;
-        if (!keyId && draft?.apiKey.trim() && !hasSaved) {
+        const hasSaved = rows.length > 0;
+        if (!effectiveKeyId && draftKey && !hasSaved) {
           toast.info(t.testSavedHint);
         }
       } else {
         toast.error(t.testFail, { description: result.message });
       }
-      await notifyChanged();
+      if (effectiveKeyId) {
+        patchKeyVerification(effectiveKeyId, result.ok, result.message);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.testError);
     } finally {
@@ -182,7 +215,8 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
     try {
       await deleteAdminProviderKey(keyId);
       toast.success(t.deleted);
-      await notifyChanged();
+      await refreshKeys({ silent: true });
+      notifyKeysChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.deleteError);
     } finally {
@@ -195,7 +229,8 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
     try {
       await clearAdminProviderKeys(provider);
       toast.success(t.cleared);
-      await notifyChanged();
+      await refreshKeys({ silent: true });
+      notifyKeysChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.clearError);
     } finally {

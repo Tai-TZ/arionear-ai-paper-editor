@@ -155,14 +155,8 @@ async def test_admin_provider_keys_crud(client, admin_db, monkeypatch):
     payload = empty.json()
     assert payload["keys"] == []
     assert "openrouter" in payload["env_fallback_configured"]
-    assert len(payload["providers"]) == 5
-    assert {p["id"] for p in payload["providers"]} == {
-        "openai",
-        "anthropic",
-        "openrouter",
-        "zai",
-        "google",
-    }
+    assert len(payload["providers"]) == 3
+    assert [p["id"] for p in payload["providers"]] == ["google", "openrouter", "zai"]
 
     saved = await client.put(
         "/api/v1/admin/llm/keys/openrouter",
@@ -234,7 +228,7 @@ async def test_admin_provider_keys_rejects_short_key(client, admin_db):
     headers = {"Authorization": f"Bearer {token}"}
 
     bad = await client.put(
-        "/api/v1/admin/llm/keys/openai",
+        "/api/v1/admin/llm/keys/google",
         headers=headers,
         json={"api_key": "short"},
     )

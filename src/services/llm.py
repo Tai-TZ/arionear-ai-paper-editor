@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
-from src.config import LLMProvider, Settings, get_settings, normalize_llm_provider
+from src.config import ENABLED_LLM_PROVIDERS, LLMProvider, Settings, get_settings, normalize_llm_provider
 from src.services.llm_failover import FailoverChatModel
 from src.services.provider_key_store import get_provider_api_keys, provider_has_api_key
 
@@ -324,55 +324,33 @@ def _model_options(
     ]
 
 
+def _provider_spec(
+    provider_id: LLMProvider,
+    settings: Settings,
+) -> tuple[str, str, list[tuple[str, str]]]:
+    specs: dict[LLMProvider, tuple[str, str, list[tuple[str, str]]]] = {
+        "openai": ("OpenAI", settings.openai_default_model, OPENAI_MODEL_CATALOG),
+        "anthropic": ("Anthropic (Claude)", settings.anthropic_default_model, ANTHROPIC_MODEL_CATALOG),
+        "openrouter": ("OpenRouter", settings.openrouter_default_model, OPENROUTER_MODEL_CATALOG),
+        "zai": ("Z.AI (GLM)", settings.zai_default_model, ZAI_MODEL_CATALOG),
+        "google": ("Google (Gemini)", settings.google_default_model, GOOGLE_CHAT_MODEL_CATALOG),
+    }
+    return specs[provider_id]
+
+
 def list_provider_catalog() -> list[dict]:
-    """Full provider + model catalog for admin (all providers, regardless of API keys)."""
+    """Full provider + model catalog for admin (enabled providers only)."""
     settings = get_settings()
-    specs: list[tuple[str, str, str, list[tuple[str, str]], bool]] = [
-        (
-            "openai",
-            "OpenAI",
-            settings.openai_default_model,
-            OPENAI_MODEL_CATALOG,
-            bool(provider_has_api_key("openai")),
-        ),
-        (
-            "anthropic",
-            "Anthropic (Claude)",
-            settings.anthropic_default_model,
-            ANTHROPIC_MODEL_CATALOG,
-            bool(provider_has_api_key("anthropic")),
-        ),
-        (
-            "openrouter",
-            "OpenRouter",
-            settings.openrouter_default_model,
-            OPENROUTER_MODEL_CATALOG,
-            bool(provider_has_api_key("openrouter")),
-        ),
-        (
-            "zai",
-            "Z.AI (GLM)",
-            settings.zai_default_model,
-            ZAI_MODEL_CATALOG,
-            bool(provider_has_api_key("zai")),
-        ),
-        (
-            "google",
-            "Google (Gemini)",
-            settings.google_default_model,
-            GOOGLE_CHAT_MODEL_CATALOG,
-            bool(provider_has_api_key("google")),
-        ),
-    ]
     return [
         {
             "id": provider_id,
             "name": name,
             "default_model": default_model,
-            "configured": configured,
+            "configured": bool(provider_has_api_key(provider_id)),
             "models": _model_options(catalog, default_model),
         }
-        for provider_id, name, default_model, catalog, configured in specs
+        for provider_id in ENABLED_LLM_PROVIDERS
+        for name, default_model, catalog in [_provider_spec(provider_id, settings)]
     ]
 
 
@@ -381,16 +359,10 @@ def list_providers() -> list[dict]:
     settings = get_settings()
     providers: list[dict] = []
 
-    provider_specs = [
-        ("openai", "OpenAI", settings.openai_default_model, OPENAI_MODEL_CATALOG),
-        ("anthropic", "Anthropic (Claude)", settings.anthropic_default_model, ANTHROPIC_MODEL_CATALOG),
-        ("openrouter", "OpenRouter", settings.openrouter_default_model, OPENROUTER_MODEL_CATALOG),
-        ("zai", "Z.AI (GLM)", settings.zai_default_model, ZAI_MODEL_CATALOG),
-        ("google", "Google (Gemini)", settings.google_default_model, GOOGLE_CHAT_MODEL_CATALOG),
-    ]
-    for provider_id, name, default, catalog in provider_specs:
+    for provider_id in ENABLED_LLM_PROVIDERS:
         if not provider_has_api_key(provider_id):
             continue
+        name, default, catalog = _provider_spec(provider_id, settings)
         providers.append(
             {
                 "id": provider_id,

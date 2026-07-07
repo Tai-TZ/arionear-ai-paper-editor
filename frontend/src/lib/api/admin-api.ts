@@ -195,7 +195,16 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new AdminApiError(mapApiHttpError(res.status, detail), res.status);
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await res.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {

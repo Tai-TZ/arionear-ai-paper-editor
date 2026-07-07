@@ -14,8 +14,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-logger = logging.getLogger(__name__)
-
 from src.config import get_settings
 from src.models.schemas import (
     CompileEnginesInfo,
@@ -23,6 +21,8 @@ from src.models.schemas import (
     CompileResponse,
     CompileStatusResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _LATEX_STUB_DIRS = (

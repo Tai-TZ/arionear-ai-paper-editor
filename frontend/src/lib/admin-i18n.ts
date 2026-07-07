@@ -381,7 +381,7 @@ const EN: AdminCopy = {
   },
   llmKeys: {
     intro:
-      "Manage encrypted API keys for every LLM provider on the platform. Priority 0 is primary; 1–9 are backups used on auth/quota errors. .env keys remain fallback when no admin key is set.",
+      "Manage encrypted API keys for every LLM provider on the platform. Priority 0 is primary; 1–9 are backups. If all admin keys fail auth/quota, .env is tried last. With no admin keys, .env alone is used.",
     loading: "Loading provider keys…",
     loadError: "Could not load provider keys.",
     summary: (configured, total) => `${configured} of ${total} providers have an API key`,
@@ -624,7 +624,7 @@ const VI: AdminCopy = {
   },
   llmKeys: {
     intro:
-      "Quản lý API key mã hoá cho mọi provider LLM trên nền tảng. Priority 0 là key chính; 1–9 là dự phòng khi lỗi auth/quota. Key .env vẫn là fallback nếu chưa có key admin.",
+      "Quản lý API key mã hoá cho mọi provider LLM trên nền tảng. Priority 0 là key chính; 1–9 là dự phòng. Khi mọi key admin lỗi auth/quota, hệ thống thử key .env cuối cùng. Không có key admin thì chỉ dùng .env.",
     loading: "Đang tải API key…",
     loadError: "Không tải được API key provider.",
     summary: (configured, total) => `${configured}/${total} provider đã có API key`,
