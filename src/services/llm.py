@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
-from src.config import LLMProvider, Settings, get_settings, normalize_llm_provider
+from src.config import ENABLED_LLM_PROVIDERS, LLMProvider, Settings, get_settings, normalize_llm_provider
+from src.services.llm_failover import FailoverChatModel
+from src.services.provider_key_store import get_provider_api_keys, provider_has_api_key
 
 if TYPE_CHECKING:
     pass
@@ -29,20 +31,126 @@ def _resolve_model(settings: Settings, provider: LLMProvider, model: str | None)
 
 
 def _resolve_api_key(settings: Settings, provider: LLMProvider) -> str:
-    keys = {
+    keys = get_provider_api_keys(provider)
+    if keys:
+        return keys[0]
+    env_keys = {
         "openai": settings.openai_api_key,
         "anthropic": settings.anthropic_api_key,
         "openrouter": settings.openrouter_api_key,
         "zai": settings.zai_api_key,
         "google": settings.google_api_key,
     }
-    key = keys.get(provider, "")
+    key = (env_keys.get(provider) or "").strip()
     if not key:
         raise ValueError(
             f"No API key configured for provider '{provider}'. "
-            f"Set {provider.upper()}_API_KEY in .env"
+            f"Set {provider.upper()}_API_KEY in .env or add a key in Admin → LLM Keys."
         )
     return key
+
+
+def _build_llm_with_key(
+    provider: LLMProvider,
+    api_key: str,
+    model: str | None = None,
+    temperature: float | None = None,
+    thinking: bool | None = None,
+    json_output: bool = False,
+) -> BaseChatModel:
+    """Build a concrete chat model for one API key (no failover wrapper)."""
+    settings = get_settings()
+    model_name = _resolve_model(settings, provider, model)
+    if temperature is not None:
+        temp = temperature
+    elif is_reasoning_model(model_name):
+        temp = REASONING_MODEL_TEMPERATURE
+    else:
+        temp = settings.llm_temperature
+
+    request_timeout = settings.llm_request_timeout_sec
+
+    if provider == "openai":
+        openai_kwargs: dict = {}
+        if json_output:
+            openai_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+        return ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url=settings.openai_base_url,
+            temperature=temp,
+            timeout=request_timeout,
+            **openai_kwargs,
+        )
+
+    if provider == "anthropic":
+        try:
+            from langchain_anthropic import ChatAnthropic
+
+            return ChatAnthropic(
+                model=model_name,
+                api_key=api_key,
+                temperature=temp,
+                timeout=request_timeout,
+            )
+        except ImportError:
+            return ChatOpenAI(
+                model=model_name,
+                api_key=api_key,
+                base_url=f"{settings.anthropic_base_url.rstrip('/')}/v1",
+                temperature=temp,
+                timeout=request_timeout,
+            )
+
+    if provider == "openrouter":
+        default_headers: dict[str, str] = {}
+        if settings.openrouter_site_url:
+            default_headers["HTTP-Referer"] = settings.openrouter_site_url
+        if settings.openrouter_app_name:
+            default_headers["X-Title"] = settings.openrouter_app_name
+
+        openrouter_kwargs: dict = {}
+        if json_output:
+            openrouter_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+        return ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url=settings.openrouter_base_url,
+            temperature=temp,
+            default_headers=default_headers or None,
+            timeout=request_timeout,
+            **openrouter_kwargs,
+        )
+
+    if provider == "zai":
+        use_thinking = thinking if thinking is not None else False
+        return ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url=settings.zai_base_url,
+            temperature=temp,
+            extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
+            timeout=request_timeout,
+        )
+
+    if provider == "google":
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError as exc:
+            raise ImportError(
+                "Google Gemini requires langchain-google-genai. "
+                "Run: pip install langchain-google-genai (or pip install -r requirements.txt)"
+            ) from exc
+
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=api_key,
+            temperature=temp,
+            timeout=request_timeout,
+            response_mime_type="application/json" if json_output else None,
+        )
+
+    raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
 def is_reasoning_model(model: str | None) -> bool:
@@ -117,7 +225,7 @@ def get_llm(
     thinking: bool | None = None,
     json_output: bool = False,
 ) -> BaseChatModel:
-    """Return a chat model for OpenAI, Anthropic, OpenRouter, Z.AI (GLM), or Google (Gemini)."""
+    """Return a chat model with admin-key failover for OpenAI-compatible providers."""
     settings = get_settings()
     provider = normalize_llm_provider(provider or settings.llm_provider) or settings.llm_provider
     model_name = _resolve_model(settings, provider, model)
@@ -128,89 +236,25 @@ def get_llm(
     else:
         temp = settings.llm_temperature
 
-    request_timeout = settings.llm_request_timeout_sec
+    _resolve_api_key(settings, provider)
 
-    if provider == "openai":
-        openai_kwargs: dict = {}
-        if json_output:
-            openai_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
-        return ChatOpenAI(
+    def build(api_key: str) -> BaseChatModel:
+        return _build_llm_with_key(
+            provider,
+            api_key,
             model=model_name,
-            api_key=_resolve_api_key(settings, "openai"),
-            base_url=settings.openai_base_url,
             temperature=temp,
-            timeout=request_timeout,
-            **openai_kwargs,
+            thinking=thinking,
+            json_output=json_output,
         )
 
-    if provider == "anthropic":
-        try:
-            from langchain_anthropic import ChatAnthropic
-
-            return ChatAnthropic(
-                model=model_name,
-                api_key=_resolve_api_key(settings, "anthropic"),
-                temperature=temp,
-                timeout=request_timeout,
-            )
-        except ImportError:
-            return ChatOpenAI(
-                model=model_name,
-                api_key=_resolve_api_key(settings, "anthropic"),
-                base_url=f"{settings.anthropic_base_url.rstrip('/')}/v1",
-                temperature=temp,
-                timeout=request_timeout,
-            )
-
-    if provider == "openrouter":
-        default_headers: dict[str, str] = {}
-        if settings.openrouter_site_url:
-            default_headers["HTTP-Referer"] = settings.openrouter_site_url
-        if settings.openrouter_app_name:
-            default_headers["X-Title"] = settings.openrouter_app_name
-
-        openrouter_kwargs: dict = {}
-        if json_output:
-            openrouter_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
-        return ChatOpenAI(
-            model=model_name,
-            api_key=_resolve_api_key(settings, "openrouter"),
-            base_url=settings.openrouter_base_url,
-            temperature=temp,
-            default_headers=default_headers or None,
-            timeout=request_timeout,
-            **openrouter_kwargs,
-        )
-
-    if provider == "zai":
-        use_thinking = thinking if thinking is not None else False
-        return ChatOpenAI(
-            model=model_name,
-            api_key=_resolve_api_key(settings, "zai"),
-            base_url=settings.zai_base_url,
-            temperature=temp,
-            extra_body={"thinking": {"type": "enabled" if use_thinking else "disabled"}},
-            timeout=request_timeout,
-        )
-
-    if provider == "google":
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-        except ImportError as exc:
-            raise ImportError(
-                "Google Gemini requires langchain-google-genai. "
-                "Run: pip install langchain-google-genai (or pip install -r requirements.txt)"
-            ) from exc
-
-        return ChatGoogleGenerativeAI(
-            model=model_name,
-            google_api_key=_resolve_api_key(settings, "google"),
-            temperature=temp,
-            timeout=request_timeout,
-            response_mime_type="application/json" if json_output else None,
-        )
-
-    raise ValueError(f"Unsupported LLM provider: {provider}")
+    return FailoverChatModel(
+        provider=provider,
+        model_name=model_name,
+        temperature=temp,
+        thinking=thinking,
+        build_llm=build,
+    )
 
 
 def _dedupe_models(models: list[str]) -> list[str]:
@@ -280,55 +324,33 @@ def _model_options(
     ]
 
 
+def _provider_spec(
+    provider_id: LLMProvider,
+    settings: Settings,
+) -> tuple[str, str, list[tuple[str, str]]]:
+    specs: dict[LLMProvider, tuple[str, str, list[tuple[str, str]]]] = {
+        "openai": ("OpenAI", settings.openai_default_model, OPENAI_MODEL_CATALOG),
+        "anthropic": ("Anthropic (Claude)", settings.anthropic_default_model, ANTHROPIC_MODEL_CATALOG),
+        "openrouter": ("OpenRouter", settings.openrouter_default_model, OPENROUTER_MODEL_CATALOG),
+        "zai": ("Z.AI (GLM)", settings.zai_default_model, ZAI_MODEL_CATALOG),
+        "google": ("Google (Gemini)", settings.google_default_model, GOOGLE_CHAT_MODEL_CATALOG),
+    }
+    return specs[provider_id]
+
+
 def list_provider_catalog() -> list[dict]:
-    """Full provider + model catalog for admin (all providers, regardless of API keys)."""
+    """Full provider + model catalog for admin (enabled providers only)."""
     settings = get_settings()
-    specs: list[tuple[str, str, str, list[tuple[str, str]], bool]] = [
-        (
-            "openai",
-            "OpenAI",
-            settings.openai_default_model,
-            OPENAI_MODEL_CATALOG,
-            bool(settings.openai_api_key.strip()),
-        ),
-        (
-            "anthropic",
-            "Anthropic (Claude)",
-            settings.anthropic_default_model,
-            ANTHROPIC_MODEL_CATALOG,
-            bool(settings.anthropic_api_key.strip()),
-        ),
-        (
-            "openrouter",
-            "OpenRouter",
-            settings.openrouter_default_model,
-            OPENROUTER_MODEL_CATALOG,
-            bool(settings.openrouter_api_key.strip()),
-        ),
-        (
-            "zai",
-            "Z.AI (GLM)",
-            settings.zai_default_model,
-            ZAI_MODEL_CATALOG,
-            bool(settings.zai_api_key.strip()),
-        ),
-        (
-            "google",
-            "Google (Gemini)",
-            settings.google_default_model,
-            GOOGLE_CHAT_MODEL_CATALOG,
-            bool(settings.google_api_key.strip()),
-        ),
-    ]
     return [
         {
             "id": provider_id,
             "name": name,
             "default_model": default_model,
-            "configured": configured,
+            "configured": bool(provider_has_api_key(provider_id)),
             "models": _model_options(catalog, default_model),
         }
-        for provider_id, name, default_model, catalog, configured in specs
+        for provider_id in ENABLED_LLM_PROVIDERS
+        for name, default_model, catalog in [_provider_spec(provider_id, settings)]
     ]
 
 
@@ -337,58 +359,16 @@ def list_providers() -> list[dict]:
     settings = get_settings()
     providers: list[dict] = []
 
-    if settings.openai_api_key:
-        default = settings.openai_default_model
+    for provider_id in ENABLED_LLM_PROVIDERS:
+        if not provider_has_api_key(provider_id):
+            continue
+        name, default, catalog = _provider_spec(provider_id, settings)
         providers.append(
             {
-                "id": "openai",
-                "name": "OpenAI",
+                "id": provider_id,
+                "name": name,
                 "default_model": default,
-                "models": _model_options(OPENAI_MODEL_CATALOG, default),
-            }
-        )
-
-    if settings.anthropic_api_key:
-        default = settings.anthropic_default_model
-        providers.append(
-            {
-                "id": "anthropic",
-                "name": "Anthropic (Claude)",
-                "default_model": default,
-                "models": _model_options(ANTHROPIC_MODEL_CATALOG, default),
-            }
-        )
-
-    if settings.openrouter_api_key:
-        default = settings.openrouter_default_model
-        providers.append(
-            {
-                "id": "openrouter",
-                "name": "OpenRouter",
-                "default_model": default,
-                "models": _model_options(OPENROUTER_MODEL_CATALOG, default),
-            }
-        )
-
-    if settings.zai_api_key:
-        default = settings.zai_default_model
-        providers.append(
-            {
-                "id": "zai",
-                "name": "Z.AI (GLM)",
-                "default_model": default,
-                "models": _model_options(ZAI_MODEL_CATALOG, default),
-            }
-        )
-
-    if settings.google_api_key:
-        default = settings.google_default_model
-        providers.append(
-            {
-                "id": "google",
-                "name": "Google (Gemini)",
-                "default_model": default,
-                "models": _model_options(GOOGLE_CHAT_MODEL_CATALOG, default),
+                "models": _model_options(catalog, default),
             }
         )
 

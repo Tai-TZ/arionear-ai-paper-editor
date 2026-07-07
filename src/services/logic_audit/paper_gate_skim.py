@@ -220,9 +220,8 @@ async def run_paper_gate_skim(
     llm = get_llm(provider=effective_provider, model=effective_model, temperature=0.3, json_output=True)
 
     timeout_sec = get_settings().logic_audit_gate_timeout_sec
-    invoke_task = asyncio.create_task(
-        llm.ainvoke([SystemMessage(content=system_prompt), HumanMessage(content=user_msg)])
-    )
+    messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_msg)]
+    invoke_task = asyncio.create_task(llm.ainvoke(messages))
     started = asyncio.get_running_loop().time()
     try:
         while not invoke_task.done():
@@ -243,6 +242,12 @@ async def run_paper_gate_skim(
             await asyncio.sleep(0.2)
         response = await invoke_task
         raw_text = extract_llm_text(response)
+    except asyncio.CancelledError:
+        return {
+            "logic_audit_report": {},
+            "response": "Logic audit đã hủy.",
+            "analysis": "gate:cancelled",
+        }
     except TimeoutError as exc:
         _progress("gate-error", "Lỗi phân tích", detail="Timeout", status="error")
         raise RuntimeError("Gate skim LLM timed out.") from exc

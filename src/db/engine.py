@@ -85,7 +85,7 @@ def _get_engine() -> Engine:
         connect_args: dict = {}
         if db_url.startswith("postgresql"):
             connect_args = {
-                "connect_timeout": 10,
+                "connect_timeout": 5 if settings.app_env == "development" else 10,
                 "options": "-c statement_timeout=15000 -c lock_timeout=8000",
             }
         elif db_url.startswith("sqlite"):
@@ -101,6 +101,40 @@ def _get_engine() -> Engine:
         _engine = create_engine(db_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
+
+
+def _ensure_platform_provider_keys_table(conn) -> None:
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS platform_provider_keys (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    provider TEXT NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    label TEXT,
+                    key_ciphertext TEXT NOT NULL,
+                    key_hint TEXT NOT NULL,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    last_verified_at TIMESTAMPTZ,
+                    last_error TEXT,
+                    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    CONSTRAINT uq_platform_provider_keys_provider_priority UNIQUE (provider, priority)
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_platform_provider_keys_provider "
+                "ON platform_provider_keys (provider)"
+            )
+        )
+        conn.commit()
+    # SQLite: created via Base.metadata.create_all in init_db
 
 
 def init_db() -> bool:
@@ -146,6 +180,7 @@ def init_db() -> bool:
                         print(f"Warning: profile_settings migration skipped: {exc}")
                 else:
                     conn.commit()
+                _ensure_platform_provider_keys_table(conn)
     except Exception as exc:
         _db_ready = False
         _db_error = str(exc)

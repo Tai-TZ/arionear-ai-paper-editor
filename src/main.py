@@ -34,6 +34,16 @@ def _provision_god_admin() -> None:
         print(f"God admin provisioning skipped: {exc}")
 
 
+def _refresh_provider_keys() -> None:
+    try:
+        from src.services.provider_key_store import refresh_provider_key_cache
+
+        with get_db() as db:
+            refresh_provider_key_cache(db)
+    except Exception as exc:
+        print(f"Provider key cache refresh skipped: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -45,6 +55,7 @@ async def lifespan(app: FastAPI):
             await asyncio.wait_for(asyncio.to_thread(init_db), timeout=20.0)
             if db_is_ready():
                 await asyncio.to_thread(_provision_god_admin)
+                await asyncio.to_thread(_refresh_provider_keys)
             refresh_session_store()
             print("Database connected")
         except TimeoutError:

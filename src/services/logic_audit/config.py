@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.config import LLMProvider, get_settings, normalize_llm_provider
+from src.services.provider_key_store import provider_has_api_key
 
 LogicAuditMode = str  # "quick" | "deep"
 
@@ -25,22 +26,22 @@ def resolve_logic_audit_llm(
     chat = normalize_llm_provider(chat_provider)
 
     if normalized_mode == "deep":
-        if settings.google_api_key.strip():
+        if provider_has_api_key("google"):
             return "google", settings.google_logic_audit_deep_model
-        if settings.openai_api_key.strip():
-            return "openai", settings.openai_default_model
-        if settings.anthropic_api_key.strip():
-            return "anthropic", settings.anthropic_default_model
+        if provider_has_api_key("openrouter"):
+            return "openrouter", settings.openrouter_logic_audit_quick_model
+        if provider_has_api_key("zai"):
+            return "zai", settings.zai_default_model
         if chat:
             return chat, None
         return settings.llm_provider, settings.google_logic_audit_deep_model
 
-    if settings.google_api_key.strip():
+    if provider_has_api_key("google"):
         return "google", settings.google_logic_audit_quick_model
-    if settings.openai_api_key.strip():
-        return "openai", settings.openai_default_model
-    if settings.anthropic_api_key.strip():
-        return "anthropic", settings.anthropic_default_model
+    if provider_has_api_key("openrouter"):
+        return "openrouter", settings.openrouter_logic_audit_quick_model
+    if provider_has_api_key("zai"):
+        return "zai", settings.zai_default_model
     if chat:
         return chat, None
     return settings.llm_provider, settings.google_logic_audit_quick_model
@@ -168,6 +169,11 @@ def compute_logic_audit_timeout_sec(
     """Estimate stream timeout from mode, scope, section count, and chunking."""
     settings = get_settings()
     normalized_mode = (mode or "quick").strip().lower()
+    if normalized_mode == "gate":
+        return min(
+            settings.logic_audit_gate_timeout_sec + 20.0,
+            settings.logic_audit_stream_timeout_max_sec,
+        )
     is_full = (scope or LOGIC_AUDIT_SCOPE_SELECTED).strip().lower() == LOGIC_AUDIT_SCOPE_FULL
     count = max(1, section_count)
 

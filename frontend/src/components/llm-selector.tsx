@@ -11,12 +11,9 @@ import {
 import { useLocale } from "@/components/locale-provider";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
+import { modelIconUrl, providerIconUrl, resolveModelVendor } from "@/lib/llm-model-icons";
 import { isFreeModel, isModelPaidForProvider, parseModelLabel } from "@/lib/llm-model-tier";
 import { cn } from "@/lib/utils";
-
-import googleIconUrl from "../../assets/google-color-icon.svg?url";
-import openrouterIconUrl from "../../assets/openrouter-icon.svg?url";
-import zaiIconUrl from "../../assets/z-ai-logo.svg?url";
 
 type LlmSelectorProps = {
   providers: ProviderInfo[];
@@ -29,13 +26,6 @@ type LlmSelectorProps = {
   variant?: "light" | "dark";
 };
 
-function providerIconUrl(provider: LLMProvider): string | null {
-  if (provider === "google") return googleIconUrl;
-  if (provider === "openrouter") return openrouterIconUrl;
-  if (provider === "zai") return zaiIconUrl;
-  return null;
-}
-
 function ProviderAvatar({ provider }: { provider: LLMProvider }) {
   const url = providerIconUrl(provider);
   if (!url) {
@@ -45,6 +35,34 @@ function ProviderAvatar({ provider }: { provider: LLMProvider }) {
     <img
       className="llm-provider-avatar"
       data-provider={provider}
+      src={url}
+      alt=""
+      aria-hidden
+      loading="lazy"
+    />
+  );
+}
+
+function ModelAvatar({
+  modelId,
+  provider,
+  className,
+}: {
+  modelId: string;
+  provider: LLMProvider;
+  className?: string;
+}) {
+  const url = modelIconUrl(modelId, provider);
+  const vendor = resolveModelVendor(modelId, provider);
+
+  if (!url) {
+    return <Cpu className={cn("llm-selector-model-icon", className)} aria-hidden />;
+  }
+
+  return (
+    <img
+      className={cn("llm-model-avatar", className)}
+      data-vendor={vendor}
       src={url}
       alt=""
       aria-hidden
@@ -124,7 +142,7 @@ export function LlmSelector({
               className="llm-selector-segment llm-selector-segment-model"
               aria-label="Chọn model LLM"
             >
-              <Cpu className="llm-selector-model-icon" aria-hidden />
+              <ModelAvatar modelId={llmModel} provider={llmProvider} />
               <span className="llm-selector-model-name">{modelName}</span>
               {paidModel ? (
                 <span className="llm-selector-tier llm-selector-tier-paid">{t.llm.paidBadge}</span>
@@ -152,25 +170,30 @@ export function LlmSelector({
                     title={paid ? t.llm.paidChatHint : undefined}
                     className="text-sm py-2"
                   >
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="font-medium leading-tight">{parsed.name}</span>
-                        {paid ? (
-                          <span className="llm-selector-tier llm-selector-tier-paid shrink-0">
-                            {t.llm.paidBadge}
-                          </span>
-                        ) : null}
+                    <span className="flex min-w-0 items-start gap-2.5">
+                      <span className="mt-0.5 inline-flex shrink-0 items-center justify-center">
+                        <ModelAvatar modelId={m.id} provider={llmProvider} />
                       </span>
-                      {parsed.tier && (
-                        <span
-                          className={cn(
-                            "text-xs text-muted-foreground leading-tight",
-                            free && "text-emerald-600 dark:text-emerald-400",
-                          )}
-                        >
-                          {parsed.tier}
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="font-medium leading-tight">{parsed.name}</span>
+                          {paid ? (
+                            <span className="llm-selector-tier llm-selector-tier-paid shrink-0">
+                              {t.llm.paidBadge}
+                            </span>
+                          ) : null}
                         </span>
-                      )}
+                        {parsed.tier && (
+                          <span
+                            className={cn(
+                              "text-xs text-muted-foreground leading-tight",
+                              free && "text-emerald-600 dark:text-emerald-400",
+                            )}
+                          >
+                            {parsed.tier}
+                          </span>
+                        )}
+                      </span>
                     </span>
                   </DropdownMenuRadioItem>
                 );

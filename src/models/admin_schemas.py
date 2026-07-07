@@ -149,3 +149,43 @@ class LlmGlobalConfigResponse(BaseModel):
 
 class LlmGlobalDefaultsPatch(BaseModel):
     defaults: LlmGlobalDefaults
+
+
+class ProviderKeyRow(BaseModel):
+    id: str
+    provider: str
+    priority: int
+    label: str | None = None
+    key_hint: str
+    is_active: bool
+    source: str = "admin"
+    last_verified_at: str | None = None
+    last_error: str | None = None
+    updated_at: str | None = None
+
+
+class ProviderKeyListResponse(BaseModel):
+    keys: list[ProviderKeyRow]
+    env_fallback_configured: dict[str, bool] = Field(default_factory=dict)
+    providers: list[LlmProviderStatus] = Field(default_factory=list)
+
+
+class ProviderKeyUpsertRequest(BaseModel):
+    api_key: str = Field(min_length=8, max_length=512)
+    priority: int = Field(default=0, ge=0, le=9)
+    label: str | None = Field(default=None, max_length=64)
+    is_active: bool = True
+
+
+class ProviderKeyTestRequest(BaseModel):
+    api_key: str | None = Field(default=None, max_length=512)
+    key_id: str | None = None
+    model: str | None = None
+
+
+class ProviderKeyTestResponse(BaseModel):
+    ok: bool
+    message: str
+    latency_ms: int | None = None
+    provider: str
+    key_hint: str | None = None

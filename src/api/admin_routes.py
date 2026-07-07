@@ -15,6 +15,18 @@ from src.models.admin_schemas import (
     LlmGlobalConfigResponse,
     LlmGlobalDefaults,
     LlmGlobalDefaultsPatch,
+    ProviderKeyListResponse,
+    ProviderKeyRow,
+    ProviderKeyTestRequest,
+    ProviderKeyTestResponse,
+    ProviderKeyUpsertRequest,
+)
+from src.services.admin_provider_keys import (
+    list_admin_provider_keys,
+    remove_admin_provider_key,
+    remove_all_admin_provider_keys,
+    save_admin_provider_key,
+    test_admin_provider_key,
 )
 from src.services.admin_service import (
     get_admin_overview,
@@ -107,5 +119,70 @@ def admin_patch_llm_defaults(
 ):
     try:
         return update_global_llm_defaults(body.defaults)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/llm/keys", response_model=ProviderKeyListResponse)
+def admin_list_provider_keys(
+    provider: str | None = None,
+    _admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    return list_admin_provider_keys(db, provider)
+
+
+@router.put("/llm/keys/{provider}", response_model=ProviderKeyRow)
+def admin_upsert_provider_key(
+    provider: str,
+    body: ProviderKeyUpsertRequest,
+    admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    try:
+        return save_admin_provider_key(db, provider, body, updated_by=admin.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/llm/keys/{key_id}", status_code=204)
+def admin_delete_provider_key(
+    key_id: str,
+    _admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    if not remove_admin_provider_key(db, key_id):
+        raise HTTPException(status_code=404, detail="Key not found.")
+    return None
+
+
+@router.delete("/llm/keys/provider/{provider}", status_code=204)
+def admin_clear_provider_keys(
+    provider: str,
+    _admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    try:
+        remove_all_admin_provider_keys(db, provider)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return None
+
+
+@router.post("/llm/keys/{provider}/test", response_model=ProviderKeyTestResponse)
+async def admin_test_provider_key(
+    provider: str,
+    body: ProviderKeyTestRequest,
+    _admin: User = Depends(get_admin_user),
+    db: Session = Depends(get_db_session),
+):
+    try:
+        return await test_admin_provider_key(
+            db,
+            provider,
+            api_key=body.api_key,
+            key_id=body.key_id,
+            model=body.model,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

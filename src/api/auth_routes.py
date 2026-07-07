@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import OperationalError
@@ -56,6 +58,15 @@ SIGNUP_CODE_DEV_MESSAGE = (
 INVALID_CREDENTIALS = "Invalid email or password."
 ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."
+LOGIN_TIMEOUT_SEC = 20.0
+
+
+def _authenticate_user_for_login(email: str, password: str) -> tuple[dict | None, str | None]:
+    with get_db() as db:
+        user, auth_error = authenticate_user(db, email, password)
+        if user is None:
+            return None, auth_error
+        return user_to_dict(user), auth_error
 
 
 def _raise_db_busy(exc: OperationalError) -> None:
@@ -126,9 +137,14 @@ def register(body: RegisterRequest, db: Session = Depends(_get_db_session)):
 
 
 @router.post("/login", response_model=AuthTokenResponse)
-def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
+async def login(body: LoginRequest):
     try:
-        user, auth_error = authenticate_user(db, body.email, body.password)
+        user_dict, auth_error = await asyncio.wait_for(
+            asyncio.to_thread(_authenticate_user_for_login, body.email, body.password),
+            timeout=LOGIN_TIMEOUT_SEC,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(status_code=503, detail=DB_BUSY_MESSAGE) from exc
     except OperationalError as exc:
         _raise_db_busy(exc)
     if auth_error == AUTH_ACCOUNT_DISABLED:
@@ -136,17 +152,17 @@ def login(body: LoginRequest, db: Session = Depends(_get_db_session)):
             status_code=403,
             detail={"code": AUTH_ACCOUNT_DISABLED, "message": ACCOUNT_DISABLED_MESSAGE},
         )
-    if not user:
+    if not user_dict:
         raise HTTPException(status_code=401, detail=INVALID_CREDENTIALS)
 
     token = create_access_token(
-        user_id=str(user.id),
-        email=user.email,
+        user_id=user_dict["id"],
+        email=user_dict["email"],
         remember=body.remember,
     )
     return AuthTokenResponse(
         access_token=token,
-        user=AuthUserResponse(**user_to_dict(user)),
+        user=AuthUserResponse(**user_dict),
     )
 
 

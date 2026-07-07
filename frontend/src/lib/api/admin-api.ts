@@ -145,6 +145,25 @@ export type LlmGlobalConfig = {
   defaults: LlmGlobalDefaults;
 };
 
+export type ProviderKeyRow = {
+  id: string;
+  provider: string;
+  priority: number;
+  label?: string | null;
+  key_hint: string;
+  is_active: boolean;
+  source: string;
+  last_verified_at?: string | null;
+  last_error?: string | null;
+  updated_at?: string | null;
+};
+
+export type ProviderKeyListResponse = {
+  keys: ProviderKeyRow[];
+  env_fallback_configured: Record<string, boolean>;
+  providers: LlmProviderStatus[];
+};
+
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
@@ -176,7 +195,16 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new AdminApiError(mapApiHttpError(res.status, detail), res.status);
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await res.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
@@ -234,4 +262,43 @@ export async function patchAdminLlmDefaults(defaults: LlmGlobalDefaults): Promis
   });
   invalidateFetchPrefix("admin:");
   return data;
+}
+
+export async function fetchAdminProviderKeys(provider?: string): Promise<ProviderKeyListResponse> {
+  const qs = provider ? `?provider=${encodeURIComponent(provider)}` : "";
+  return fetchDedupe(`admin:llm-keys${qs}`, () =>
+    adminFetch<ProviderKeyListResponse>(`/admin/llm/keys${qs}`),
+  );
+}
+
+export async function saveAdminProviderKey(
+  provider: string,
+  body: { api_key: string; priority?: number; label?: string; is_active?: boolean },
+): Promise<ProviderKeyRow> {
+  const row = await adminFetch<ProviderKeyRow>(`/admin/llm/keys/${provider}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  invalidateFetchPrefix("admin:");
+  return row;
+}
+
+export async function deleteAdminProviderKey(keyId: string): Promise<void> {
+  await adminFetch<void>(`/admin/llm/keys/${keyId}`, { method: "DELETE" });
+  invalidateFetchPrefix("admin:");
+}
+
+export async function clearAdminProviderKeys(provider: string): Promise<void> {
+  await adminFetch<void>(`/admin/llm/keys/provider/${provider}`, { method: "DELETE" });
+  invalidateFetchPrefix("admin:");
+}
+
+export async function testAdminProviderKey(
+  provider: string,
+  body: { api_key?: string; key_id?: string; model?: string },
+): Promise<{ ok: boolean; message: string; latency_ms?: number | null; provider: string; key_hint?: string | null }> {
+  return adminFetch(`/admin/llm/keys/${provider}/test`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

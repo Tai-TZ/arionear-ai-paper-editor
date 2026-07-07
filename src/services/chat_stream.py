@@ -1282,6 +1282,13 @@ async def stream_chat(
                 persist_pending_report: dict[str, Any] | None = None
                 persist_after = 0.0
                 persist_debounce = get_settings().logic_audit_persist_debounce_sec
+
+                async def _collect_audit_task() -> dict[str, Any] | None:
+                    try:
+                        return await audit_task
+                    except Exception:
+                        return None
+
                 while logic_result is None:
                     if (
                         persist_pending_report
@@ -1328,7 +1335,15 @@ async def stream_chat(
                         yield _sse("error", {"message": message})
                         return
                     if audit_task.done() and progress_queue.empty():
-                        logic_result = await audit_task
+                        logic_result = await _collect_audit_task()
+                        if logic_result is None:
+                            from src.services.llm_errors import friendly_llm_error
+
+                            exc = audit_task.exception()
+                            message = friendly_llm_error(exc) if exc else "Logic audit failed."
+                            await tracker.fail(message)
+                            yield _sse("error", {"message": message})
+                            return
                         break
                     try:
                         item = await asyncio.wait_for(progress_queue.get(), timeout=2.0)
@@ -1367,7 +1382,15 @@ async def stream_chat(
                         yield act_evt
                     except TimeoutError:
                         if audit_task.done():
-                            logic_result = audit_task.result()
+                            logic_result = await _collect_audit_task()
+                            if logic_result is None:
+                                from src.services.llm_errors import friendly_llm_error
+
+                                exc = audit_task.exception()
+                                message = friendly_llm_error(exc) if exc else "Logic audit failed."
+                                await tracker.fail(message)
+                                yield _sse("error", {"message": message})
+                                return
                             break
                         elapsed = round(time.perf_counter() - logic_started, 0)
                         state_evt, _ = _emit_state(

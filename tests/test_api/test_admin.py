@@ -139,3 +139,97 @@ async def test_admin_cost_report_endpoint(client, admin_db):
     data = report.json()
     assert data["month"] == "2026-06"
     assert "rows" in data
+
+
+@pytest.mark.asyncio
+async def test_admin_provider_keys_crud(client, admin_db, monkeypatch):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "god@test.local", "password": "GodAdmin123"},
+    )
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    empty = await client.get("/api/v1/admin/llm/keys", headers=headers)
+    assert empty.status_code == 200
+    payload = empty.json()
+    assert payload["keys"] == []
+    assert "openrouter" in payload["env_fallback_configured"]
+    assert len(payload["providers"]) == 3
+    assert [p["id"] for p in payload["providers"]] == ["google", "openrouter", "zai"]
+
+    saved = await client.put(
+        "/api/v1/admin/llm/keys/openrouter",
+        headers=headers,
+        json={
+            "api_key": "sk-or-v1-admin-test-key-123456",
+            "priority": 0,
+            "label": "primary",
+        },
+    )
+    assert saved.status_code == 200
+    row = saved.json()
+    assert row["provider"] == "openrouter"
+    assert row["priority"] == 0
+    assert row["key_hint"]
+    assert "sk-o" in row["key_hint"] or "…" in row["key_hint"]
+
+    listed = await client.get("/api/v1/admin/llm/keys?provider=openrouter", headers=headers)
+    assert listed.status_code == 200
+    assert len(listed.json()["keys"]) == 1
+
+    backup = await client.put(
+        "/api/v1/admin/llm/keys/openrouter",
+        headers=headers,
+        json={
+            "api_key": "sk-or-v1-admin-backup-key-7890",
+            "priority": 1,
+            "label": "backup",
+        },
+    )
+    assert backup.status_code == 200
+
+    async def _fake_test(provider, api_key, *, model=None, temperature=0.0):
+        return True, "OK", 42
+
+    monkeypatch.setattr(
+        "src.services.admin_provider_keys.test_provider_api_key",
+        _fake_test,
+    )
+
+    tested = await client.post(
+        "/api/v1/admin/llm/keys/openrouter/test",
+        headers=headers,
+        json={"key_id": row["id"]},
+    )
+    assert tested.status_code == 200
+    assert tested.json()["ok"] is True
+
+    deleted = await client.delete(f"/api/v1/admin/llm/keys/{row['id']}", headers=headers)
+    assert deleted.status_code == 204
+
+    cleared = await client.delete(
+        "/api/v1/admin/llm/keys/provider/openrouter",
+        headers=headers,
+    )
+    assert cleared.status_code == 204
+    assert (await client.get("/api/v1/admin/llm/keys?provider=openrouter", headers=headers)).json()[
+        "keys"
+    ] == []
+
+
+@pytest.mark.asyncio
+async def test_admin_provider_keys_rejects_short_key(client, admin_db):
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "god@test.local", "password": "GodAdmin123"},
+    )
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    bad = await client.put(
+        "/api/v1/admin/llm/keys/google",
+        headers=headers,
+        json={"api_key": "short"},
+    )
+    assert bad.status_code == 422 or bad.status_code == 400

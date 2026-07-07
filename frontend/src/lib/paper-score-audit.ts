@@ -186,10 +186,16 @@ export async function runQuickLogicAuditForScore(
       },
       callbacks,
       signal,
-    ).catch((err: unknown) => {
-      cleanup();
-      if (signal?.aborted) return;
-      settle(() => reject(err instanceof Error ? err : new Error(String(err))));
-    });
+    )
+      .then(() => {
+        if (!settled && !signal?.aborted) {
+          settle(() => reject(new Error("Stream ended before peer review completed.")));
+        }
+      })
+      .catch((err: unknown) => {
+        cleanup();
+        if (signal?.aborted) return;
+        settle(() => reject(err instanceof Error ? err : new Error(String(err))));
+      });
   });
 }

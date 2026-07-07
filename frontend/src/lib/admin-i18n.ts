@@ -25,6 +25,7 @@ export type AdminCopy = {
     users: string;
     cost: string;
     llm: string;
+    llmKeys: string;
     templates: string;
   };
   overview: {
@@ -138,6 +139,45 @@ export type AdminCopy = {
     defaultTemperature: string;
     serverEnvFoot: (provider: string, retries: number) => string;
   };
+  llmKeys: {
+    intro: string;
+    loading: string;
+    loadError: string;
+    summary: (configured: number, total: number) => string;
+    configured: string;
+    missingKey: string;
+    envFallbackHint: string;
+    noAdminKeys: string;
+    supportedModels: string;
+    modelsCount: (n: number) => string;
+    newKey: string;
+    newKeyPlaceholder: string;
+    priority: string;
+    priorityHint: string;
+    labelOptional: string;
+    labelPlaceholder: string;
+    saveKey: string;
+    saved: string;
+    saveError: string;
+    keyRequired: string;
+    test: string;
+    testDraft: string;
+    testActive: string;
+    testModel: string;
+    testOk: (ms: number) => string;
+    testFail: string;
+    testError: string;
+    testSavedHint: string;
+    saveBeforeChat: string;
+    deleted: string;
+    deleteError: string;
+    cleared: string;
+    clearError: string;
+    clearAdminKeys: string;
+    inactive: string;
+    lastVerified: string;
+    googleTestHint: string;
+  };
   templates: {
     intro: string;
     addTemplate: string;
@@ -219,6 +259,7 @@ const EN: AdminCopy = {
     users: "Users & Quotas",
     cost: "Cost Report",
     llm: "LLM Policy",
+    llmKeys: "API Keys",
     templates: "Templates",
   },
   overview: {
@@ -323,7 +364,7 @@ const EN: AdminCopy = {
   },
   llm: {
     intro:
-      "Global LLM policy defaults apply to all users without custom limits. Saved values enforce quota on chat (daily tokens, monthly cost cap, rate limit) and set default temperature. Provider API keys remain in server environment variables.",
+      "Global LLM policy defaults apply to all users without custom limits. Saved values enforce quota on chat (daily tokens, monthly cost cap, rate limit) and set default temperature. Manage provider API keys in the API Keys tab.",
     providerStatusTitle: "Provider status",
     configured: "Configured",
     missingKey: "Missing key",
@@ -337,6 +378,47 @@ const EN: AdminCopy = {
     defaultTemperature: "Default temperature",
     serverEnvFoot: (provider, retries) =>
       `Server env: LLM_PROVIDER=${provider} · max_style_retries=${retries}`,
+  },
+  llmKeys: {
+    intro:
+      "Manage encrypted API keys for every LLM provider on the platform. Priority 0 is primary; 1–9 are backups. If all admin keys fail auth/quota, .env is tried last. With no admin keys, .env alone is used.",
+    loading: "Loading provider keys…",
+    loadError: "Could not load provider keys.",
+    summary: (configured, total) => `${configured} of ${total} providers have an API key`,
+    configured: "Key available",
+    missingKey: "No key",
+    envFallbackHint: ".env fallback key is configured for this provider.",
+    noAdminKeys: "No admin-managed keys yet — add one below or rely on .env.",
+    supportedModels: "Models on this platform",
+    modelsCount: (n) => `${n} models`,
+    newKey: "API key",
+    newKeyPlaceholder: "Paste provider API key",
+    priority: "Priority",
+    priorityHint: "0 = primary, 1–9 = backup (tried in order on auth/quota errors).",
+    labelOptional: "Label (optional)",
+    labelPlaceholder: "e.g. Production / Backup",
+    saveKey: "Save key",
+    saved: "API key saved",
+    saveError: "Could not save API key",
+    keyRequired: "Enter an API key",
+    test: "Test",
+    testDraft: "Test draft key",
+    testActive: "Test active key",
+    testModel: "Model for connection test",
+    testOk: (ms) => `Connection OK (${ms} ms)`,
+    testFail: "Connection failed",
+    testError: "Test request failed",
+    testSavedHint: "Test passed — click Save key so chat uses this key (draft-only tests do not apply to the editor).",
+    saveBeforeChat: "Save key before using chat — Test draft only checks the typed key, not the running server config.",
+    deleted: "Key removed",
+    deleteError: "Could not delete key",
+    cleared: "All admin keys cleared for provider",
+    clearError: "Could not clear keys",
+    clearAdminKeys: "Clear all admin keys",
+    inactive: "Inactive",
+    lastVerified: "Verified",
+    googleTestHint:
+      "403 PERMISSION_DENIED usually means Google blocked the GCP project (Trust & Safety), not a bad key. Check AI Studio for a banner or create a new project + key.",
   },
   templates: {
     intro:
@@ -420,6 +502,7 @@ const VI: AdminCopy = {
     users: "Người dùng & Hạn mức",
     cost: "Báo cáo chi phí",
     llm: "Chính sách LLM",
+    llmKeys: "API Keys",
     templates: "Mẫu LaTeX",
   },
   overview: {
@@ -524,7 +607,7 @@ const VI: AdminCopy = {
   },
   llm: {
     intro:
-      "Mặc định chính sách LLM áp dụng cho mọi user chưa có hạn mức riêng. Giá trị lưu tại đây kiểm soát quota chat (token/ngày, chi phí/tháng, tốc độ) và nhiệt độ mặc định. API key provider vẫn nằm trong biến môi trường server.",
+      "Mặc định chính sách LLM áp dụng cho mọi user chưa có hạn mức riêng. Giá trị lưu tại đây kiểm soát quota chat và nhiệt độ mặc định. Quản lý API key provider tại tab API Keys.",
     providerStatusTitle: "Trạng thái provider",
     configured: "Đã cấu hình",
     missingKey: "Thiếu API key",
@@ -538,6 +621,47 @@ const VI: AdminCopy = {
     defaultTemperature: "Nhiệt độ mặc định",
     serverEnvFoot: (provider, retries) =>
       `Biến server: LLM_PROVIDER=${provider} · max_style_retries=${retries}`,
+  },
+  llmKeys: {
+    intro:
+      "Quản lý API key mã hoá cho mọi provider LLM trên nền tảng. Priority 0 là key chính; 1–9 là dự phòng. Khi mọi key admin lỗi auth/quota, hệ thống thử key .env cuối cùng. Không có key admin thì chỉ dùng .env.",
+    loading: "Đang tải API key…",
+    loadError: "Không tải được API key provider.",
+    summary: (configured, total) => `${configured}/${total} provider đã có API key`,
+    configured: "Có key",
+    missingKey: "Chưa có key",
+    envFallbackHint: "Provider này có key fallback trong .env.",
+    noAdminKeys: "Chưa có key admin — thêm bên dưới hoặc dùng .env.",
+    supportedModels: "Model trên hệ thống",
+    modelsCount: (n) => `${n} model`,
+    newKey: "API key",
+    newKeyPlaceholder: "Dán API key của provider",
+    priority: "Priority",
+    priorityHint: "0 = chính, 1–9 = dự phòng (thử lần lượt khi lỗi auth/quota).",
+    labelOptional: "Nhãn (tuỳ chọn)",
+    labelPlaceholder: "vd. Production / Backup",
+    saveKey: "Lưu key",
+    saved: "Đã lưu API key",
+    saveError: "Không lưu được API key",
+    keyRequired: "Nhập API key",
+    test: "Kiểm tra",
+    testDraft: "Test key nhập",
+    testActive: "Test key đang dùng",
+    testModel: "Model để test kết nối",
+    testOk: (ms) => `Kết nối OK (${ms} ms)`,
+    testFail: "Kết nối thất bại",
+    testError: "Không gửi được yêu cầu test",
+    testSavedHint: "Test OK — bấm Lưu key để chat dùng key này (test nháp không áp dụng cho editor).",
+    saveBeforeChat: "Cần Lưu key trước khi chat — Test draft chỉ thử key đang gõ, không đổi cấu hình server.",
+    deleted: "Đã xóa key",
+    deleteError: "Không xóa được key",
+    cleared: "Đã xóa mọi key admin của provider",
+    clearError: "Không xóa được key",
+    clearAdminKeys: "Xóa mọi key admin",
+    inactive: "Tắt",
+    lastVerified: "Đã kiểm tra",
+    googleTestHint:
+      "403 PERMISSION_DENIED thường do Google chặn project GCP (Trust & Safety), không phải key sai. Kiểm tra banner tại AI Studio hoặc tạo project + key mới.",
   },
   templates: {
     intro:

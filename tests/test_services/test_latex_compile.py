@@ -74,14 +74,40 @@ def test_figure_available_matches_extensionless_includegraphics(tmp_path):
 def test_prepare_latex_source_keeps_graphicx_when_figure_exists(tmp_path):
     (tmp_path / "diagram.pdf").write_bytes(b"%PDF-1.4")
     latex = r"\usepackage{graphicx}\includegraphics{diagram}"
-    prepared = lc._prepare_latex_source(latex, tmp_path, set())
+    prepared, _warnings = lc._prepare_latex_source(latex, tmp_path, set())
     assert "[demo]{graphicx}" not in prepared
 
 
 def test_prepare_latex_source_uses_demo_when_figure_missing(tmp_path):
     latex = r"\usepackage{graphicx}\includegraphics{missing-figure}"
-    prepared = lc._prepare_latex_source(latex, tmp_path, set())
+    prepared, _warnings = lc._prepare_latex_source(latex, tmp_path, set())
     assert "[demo]{graphicx}" in prepared
+
+
+def test_repair_latex_syntax_fixes_textbfface_and_stray_backslash():
+    broken = (
+        r"\documentclass{article}"
+        r"\usepackage{algorithm2e}"
+        r"\usepackage{algorithm,algorithmic}"
+        r"\textbfface{broken heading}"
+        r"\subsubsection{Foo}\\"
+        r"{\textbf{Introduction}In Thailand"
+    )
+    fixed, warnings = lc._repair_latex_syntax(broken)
+    assert r"\textbf" in fixed
+    assert "textbfface" not in fixed.lower()
+    assert r"\subsubsection{Foo}" in fixed
+    assert r"\subsubsection{Foo}\\" not in fixed
+    assert r"\section{Introduction}" in fixed
+    assert "algorithm2e" not in fixed
+    assert warnings
+
+
+def test_repair_latex_syntax_simplifies_section_textbf():
+    src = r"\section{\textbf{Conclusion}}"
+    fixed, warnings = lc._repair_latex_syntax(src)
+    assert fixed == src
+    assert not warnings
 
 
 def test_force_apply_known_fallbacks():

@@ -105,6 +105,14 @@ def test_select_logic_targets_deep_selected_one():
     assert picked[0]["name"] == "Introduction"
 
 
+def test_compute_logic_audit_timeout_gate_mode(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    timeout = compute_logic_audit_timeout_sec("gate", "selected", 5)
+    assert timeout == 140.0
+
+
 def test_compute_logic_audit_timeout_quick_selected(monkeypatch):
     from src.config import get_settings
 

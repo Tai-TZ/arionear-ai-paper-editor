@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 
 from src.agents.graph import agent
 from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
-from src.config import get_settings
+from src.config import get_settings, is_llm_provider_enabled
 from src.db.engine import db_is_ready, is_db_enabled
 from src.models.schemas import (
     ChatRequest,
@@ -132,10 +132,14 @@ async def get_providers():
     if not providers:
         raise HTTPException(
             status_code=503,
-            detail="No LLM API keys configured. Set ZAI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or OPENROUTER_API_KEY in .env",
+            detail="No LLM API keys configured. Set GOOGLE_API_KEY, OPENROUTER_API_KEY, or ZAI_API_KEY in .env",
         )
+    configured_ids = {p.id for p in providers}
+    default_provider = settings.llm_provider
+    if default_provider not in configured_ids or not is_llm_provider_enabled(default_provider):
+        default_provider = providers[0].id
     return ProvidersResponse(
-        default_provider=settings.llm_provider,
+        default_provider=default_provider,
         providers=providers,
     )
 

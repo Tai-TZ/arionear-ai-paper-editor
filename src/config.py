@@ -7,6 +7,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "google"]
 
+# Active providers for admin UI and editor selector (order = display priority).
+ENABLED_LLM_PROVIDERS: tuple[LLMProvider, ...] = ("google", "openrouter", "zai")
+
+
+def is_llm_provider_enabled(provider: str | None) -> bool:
+    normalized = normalize_llm_provider(provider)
+    return normalized in ENABLED_LLM_PROVIDERS if normalized else False
+
 
 def normalize_llm_provider(provider: str | None) -> LLMProvider | None:
     """Map legacy provider ids to current ones."""
