@@ -19,13 +19,17 @@ LOGIC_AUDIT_SCOPE_SELECTED = "selected"
 def resolve_logic_audit_llm(
     mode: str,
     chat_provider: str | None,
+    *,
+    scope: str = LOGIC_AUDIT_SCOPE_SELECTED,
 ) -> tuple[LLMProvider, str | None]:
-    """Pick provider/model for logic audit — dedicated Gemini engine when configured."""
+    """Pick provider/model for logic audit — full-manuscript uses Gemini quality model."""
     settings = get_settings()
     normalized_mode = (mode or "quick").strip().lower()
+    normalized_scope = (scope or LOGIC_AUDIT_SCOPE_SELECTED).strip().lower()
+    use_quality_model = normalized_mode == "deep" or normalized_scope == LOGIC_AUDIT_SCOPE_FULL
     chat = normalize_llm_provider(chat_provider)
 
-    if normalized_mode == "deep":
+    if use_quality_model:
         if provider_has_api_key("google"):
             return "google", settings.google_logic_audit_deep_model
         if provider_has_api_key("openrouter"):
@@ -47,9 +51,16 @@ def resolve_logic_audit_llm(
     return settings.llm_provider, settings.google_logic_audit_quick_model
 
 
-def logic_audit_engine_label(mode: str) -> str:
+def logic_audit_engine_label(
+    mode: str,
+    *,
+    scope: str = LOGIC_AUDIT_SCOPE_SELECTED,
+) -> str:
     settings = get_settings()
-    if (mode or "quick").strip().lower() == "deep":
+    normalized_mode = (mode or "quick").strip().lower()
+    normalized_scope = (scope or LOGIC_AUDIT_SCOPE_SELECTED).strip().lower()
+    use_quality_model = normalized_mode == "deep" or normalized_scope == LOGIC_AUDIT_SCOPE_FULL
+    if use_quality_model:
         model = settings.google_logic_audit_deep_model
         if model == "gemini-3.5-flash":
             return "Gemini 3.5 Flash"

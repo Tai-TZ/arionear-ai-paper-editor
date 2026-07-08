@@ -37,15 +37,9 @@ export function logicAuditModeLabel(mode: LogicAuditMode): string {
   return mode === "deep" ? "Deep" : "Quick";
 }
 
-export function logicAuditModeHint(mode: LogicAuditMode, scope: LogicAuditScope = "selected"): string {
+export function logicAuditModeHint(_mode: LogicAuditMode, scope: LogicAuditScope = "selected"): string {
   if (scope === "full") {
-    if (mode === "deep") {
-      return "Quét toàn bộ bài (tối đa 8 phần) bằng Gemini 3.5 Flash — có thể mất 8–15 phút.";
-    }
-    return "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 2.5 Flash — thường ~3–8 phút.";
-  }
-  if (mode === "deep") {
-    return "Soi sâu 1 phần bằng Gemini 3.5 Flash — ~2–4 phút. Không phụ thuộc provider chat.";
+    return "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 3.5 Flash — thường ~3–8 phút.";
   }
   return "Quét nhanh 2–3 phần bằng Gemini 2.5 Flash — ~1–2 phút. Không phụ thuộc provider chat.";
 }

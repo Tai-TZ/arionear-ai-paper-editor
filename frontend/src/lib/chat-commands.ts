@@ -15,7 +15,7 @@ export type ChatSlashTask =
   | "template";
 
 export type SlashCommandDef = {
-  /** Shown in menu and used for filter prefix (may include spaces, e.g. "logic deep"). */
+  /** Shown in menu and used for filter prefix (may include spaces, e.g. "logic full"). */
   command: string;
   task: ChatSlashTask;
   description: string;
@@ -27,11 +27,9 @@ export type SlashCommandDef = {
 
 const COMMAND_TO_TASK: Record<string, ChatSlashTask> = {
   logic: "logic",
-  style: "style",
   structure: "structure",
   citation: "citation",
   citations: "citation",
-  template: "template",
   edit: "edit",
   chat: "chat",
 };
@@ -123,7 +121,6 @@ export function parseChatSlashCommand(
   task: ChatSlashTask | null;
   message: string;
   command: string | null;
-  logicAuditMode?: "quick" | "deep";
   logicAuditScope?: "selected" | "full";
 } {
   const trimmed = raw.trim();
@@ -131,14 +128,36 @@ export function parseChatSlashCommand(
     return { task: null, message: trimmed, command: null };
   }
 
-  const spaceIdx = trimmed.indexOf(" ");
-  const cmdPart = (spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx)).toLowerCase();
-  const text = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx + 1).trim();
+  const body = trimmed.slice(1);
+  const bodyLower = body.toLowerCase();
+  const commands = [...getChatSlashCommands(locale)].sort(
+    (a, b) => b.command.length - a.command.length,
+  );
 
-  const logicAuditMode =
-    cmdPart === "logic deep" || cmdPart === "logic deep full" ? ("deep" as const) : undefined;
+  let cmdPart = "";
+  let text = "";
+  for (const def of commands) {
+    const cmd = def.command.toLowerCase();
+    if (bodyLower === cmd) {
+      cmdPart = cmd;
+      text = "";
+      break;
+    }
+    if (bodyLower.startsWith(`${cmd} `)) {
+      cmdPart = cmd;
+      text = body.slice(def.command.length).trim();
+      break;
+    }
+  }
+
+  if (!cmdPart) {
+    const spaceIdx = body.indexOf(" ");
+    cmdPart = (spaceIdx === -1 ? body : body.slice(0, spaceIdx)).toLowerCase();
+    text = spaceIdx === -1 ? "" : body.slice(spaceIdx + 1).trim();
+  }
+
   const logicAuditScope =
-    cmdPart === "logic full" || cmdPart === "logic deep full"
+    cmdPart === "logic full"
       ? ("full" as const)
       : cmdPart.startsWith("logic")
         ? ("selected" as const)
@@ -153,10 +172,8 @@ export function parseChatSlashCommand(
 
   return {
     task,
-    // User text after the slash command wins; defaults are only for bare `/edit`, `/logic`, etc.
     message: text || getSlashDefaultMessage(locale, task) || "",
     command: cmdPart,
-    ...(logicAuditMode ? { logicAuditMode } : {}),
     ...(logicAuditScope ? { logicAuditScope } : {}),
   };
 }

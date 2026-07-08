@@ -393,10 +393,12 @@ async def run_logic_audit(
         )
 
     flags = logic_audit_runtime_flags(mode, provider, scope=scope)
-    audit_provider, audit_model = resolve_logic_audit_llm(mode, chat_provider or provider)
+    audit_provider, audit_model = resolve_logic_audit_llm(
+        mode, chat_provider or provider, scope=scope
+    )
     provider = audit_provider
     model = model or audit_model
-    engine_label = logic_audit_engine_label(flags["mode"])
+    engine_label = logic_audit_engine_label(flags["mode"], scope=flags["scope"])
 
     if flags["use_combined_persona"]:
         roles = load_combined_logic_role() or load_debate_roles()

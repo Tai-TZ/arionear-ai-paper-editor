@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Files, Loader2, Microscope, Play, Square, Zap } from "lucide-react";
+import { Files, Loader2, Play, Square, Zap } from "lucide-react";
 
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy, logicAuditModeHint } from "@/lib/editor-i18n";
@@ -24,6 +24,8 @@ type LogicAuditPanelProps = {
   progressDetail?: string | null;
   sectionProgress?: { completed: number; total: number } | null;
   engineAvailable?: boolean;
+  /** When set (e.g. from /logic or /logic full in chat), sync the scope toggle. */
+  scopeHint?: LogicAuditScope | null;
   onRun: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   onCancel?: () => void;
   onJumpToIssue?: (sectionName: string, excerpt?: string) => void;
@@ -39,6 +41,7 @@ export function LogicAuditPanel({
   progressDetail = null,
   sectionProgress = null,
   engineAvailable = true,
+  scopeHint = null,
   onRun,
   onCancel,
   onJumpToIssue,
@@ -47,7 +50,6 @@ export function LogicAuditPanel({
 }: LogicAuditPanelProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale).logicAudit;
-  const [mode, setMode] = useState<LogicAuditMode>("quick");
   const [scope, setScope] = useState<LogicAuditScope>("selected");
   const sectionOptions = useMemo(
     () => listLogicAuditSectionOptions(parseLatexOutline(latex)),
@@ -56,6 +58,10 @@ export function LogicAuditPanel({
   const [selected, setSelected] = useState<string[]>(() =>
     defaultQuickSectionSelection(sectionOptions),
   );
+
+  useEffect(() => {
+    if (scopeHint) setScope(scopeHint);
+  }, [scopeHint]);
 
   useEffect(() => {
     if (scope === "full") return;
@@ -79,10 +85,6 @@ export function LogicAuditPanel({
 
   const toggleSection = (name: string) => {
     if (auditFull) return;
-    if (mode === "deep") {
-      setSelected([name]);
-      return;
-    }
     setSelected((prev) =>
       prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name],
     );
@@ -100,15 +102,7 @@ export function LogicAuditPanel({
       ? Math.min(100, Math.round((sectionProgress.completed / sectionProgress.total) * 100))
       : 0;
 
-  const runButtonLabel = loading
-    ? t.running
-    : auditFull
-      ? mode === "deep"
-        ? t.runDeepFull
-        : t.runQuickFull
-      : mode === "deep"
-        ? t.runDeep
-        : t.runQuick;
+  const runButtonLabel = loading ? t.running : auditFull ? t.runQuickFull : t.runQuick;
 
   return (
     <div className="logic-audit-panel">
@@ -144,25 +138,30 @@ export function LogicAuditPanel({
         </p>
       ) : null}
 
-      <div className="logic-audit-mode-toggle mt-4 grid grid-cols-2 gap-2">
+      <div className="logic-audit-mode-toggle mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
         {(
           [
-            { id: "quick" as const, icon: Zap, label: t.modeQuick, subtitle: t.modeQuickSubtitle },
-            { id: "deep" as const, icon: Microscope, label: t.modeDeep, subtitle: t.modeDeepSubtitle },
+            {
+              id: "selected" as const,
+              icon: Zap,
+              label: t.scanQuick,
+              subtitle: t.scanQuickSubtitle,
+            },
+            {
+              id: "full" as const,
+              icon: Files,
+              label: t.scanFull,
+              subtitle: t.scanFullSubtitle(sectionOptions.length),
+            },
           ] as const
         ).map(({ id, icon: Icon, label, subtitle }) => (
           <button
             key={id}
             type="button"
-            onClick={() => {
-              setMode(id);
-              if (id === "deep" && !auditFull && selected.length > 1) {
-                setSelected([selected[0]]);
-              }
-            }}
+            onClick={() => setScope(id)}
             className={cn(
               "logic-audit-mode-btn rounded-lg border px-3 py-2 text-left transition",
-              mode === id
+              scope === id
                 ? "border-primary bg-primary/5 shadow-sm"
                 : "border-border/60 bg-card hover:bg-muted/40",
             )}
@@ -171,69 +170,41 @@ export function LogicAuditPanel({
               <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
               <span className="text-xs font-semibold">{label}</span>
             </div>
-            <span className="mt-1 block text-[10px] text-muted-foreground">{subtitle}</span>
+            <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">{subtitle}</span>
           </button>
         ))}
       </div>
 
-      <label
-        className={cn(
-          "mt-3 flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2.5 transition",
-          auditFull ? "border-primary/40 bg-primary/5" : "border-border/60 hover:bg-muted/30",
-        )}
-      >
-        <input
-          type="checkbox"
-          checked={auditFull}
-          onChange={(e) => setScope(e.target.checked ? "full" : "selected")}
-          className="mt-0.5 h-3.5 w-3.5 accent-[var(--primary)]"
-        />
-        <span className="min-w-0">
-          <span className="flex items-center gap-1.5 text-xs font-semibold">
-            <Files className="h-3.5 w-3.5 text-primary" />
-            {t.scanFull}
-          </span>
-          <span className="mt-0.5 block text-[10px] leading-snug text-muted-foreground">
-            {mode === "quick"
-              ? t.scanFullHintQuick(sectionOptions.length)
-              : t.scanFullHintDeep(sectionOptions.length)}
-          </span>
-        </span>
-      </label>
-
       <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-        {logicAuditModeHint(locale, mode, scope)}
+        {logicAuditModeHint(locale, scope)}
       </p>
 
       {!auditFull ? (
         <div className="mt-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {mode === "deep" ? t.pickOneSection : t.pickSections}
+              {t.pickSections}
             </span>
-            {mode === "quick" ? (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="text-[10px] text-primary hover:underline"
-                  onClick={() => setSelected(sectionOptions)}
-                >
-                  {t.selectAll}
-                </button>
-                <button
-                  type="button"
-                  className="text-[10px] text-primary hover:underline"
-                  onClick={() => setSelected(defaultQuickSectionSelection(sectionOptions))}
-                >
-                  {t.imradDefault}
-                </button>
-              </div>
-            ) : null}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="text-[10px] text-primary hover:underline"
+                onClick={() => setSelected(sectionOptions)}
+              >
+                {t.selectAll}
+              </button>
+              <button
+                type="button"
+                className="text-[10px] text-primary hover:underline"
+                onClick={() => setSelected(defaultQuickSectionSelection(sectionOptions))}
+              >
+                {t.imradDefault}
+              </button>
+            </div>
           </div>
           <div className="mt-2 max-h-40 space-y-1 overflow-y-auto soft-scrollbar">
             {sectionOptions.map((name) => {
               const active = selected.includes(name);
-              const inputType = mode === "deep" ? "radio" : "checkbox";
               return (
                 <label
                   key={name}
@@ -245,8 +216,7 @@ export function LogicAuditPanel({
                   )}
                 >
                   <input
-                    type={inputType}
-                    name="logic-audit-section"
+                    type="checkbox"
                     checked={active}
                     onChange={() => toggleSection(name)}
                     className="h-3.5 w-3.5 accent-[var(--primary)]"
@@ -267,7 +237,7 @@ export function LogicAuditPanel({
         <button
           type="button"
           disabled={!canRun}
-          onClick={() => onRun(mode, scope, auditFull ? [] : selected)}
+          onClick={() => onRun("quick", scope, auditFull ? [] : selected)}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}

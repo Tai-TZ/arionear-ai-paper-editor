@@ -17,13 +17,13 @@ Hello
     expect(findSectionOutlineLine(latex, "Introduction")).toBe(2);
   });
 
-  it("builds template prompt for missing section", () => {
+  it("builds edit prompt for missing section", () => {
     const prompt = buildStructureAskPrompt({
       type: "missing",
       section: "Abstract",
       message: "Consider adding",
     });
-    expect(prompt).toContain("/template");
+    expect(prompt).toContain("/edit");
     expect(prompt).toContain("Abstract");
   });
 

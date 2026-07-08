@@ -31,6 +31,7 @@ export function MobileToolsSheet({
   logicAuditProgressDetail = null,
   logicAuditSectionProgress = null,
   logicAuditEngineAvailable = true,
+  logicAuditScopeHint = null,
   onCancelLogicAudit,
   onJumpToLogicIssue,
   onAskArioLogic,
@@ -60,6 +61,7 @@ export function MobileToolsSheet({
   logicAuditProgressDetail?: string | null;
   logicAuditSectionProgress?: { completed: number; total: number } | null;
   logicAuditEngineAvailable?: boolean;
+  logicAuditScopeHint?: LogicAuditScope | null;
   onCancelLogicAudit?: () => void;
   onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
   onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
@@ -106,6 +108,7 @@ export function MobileToolsSheet({
           logicAuditProgressDetail={logicAuditProgressDetail}
           logicAuditSectionProgress={logicAuditSectionProgress}
           logicAuditEngineAvailable={logicAuditEngineAvailable}
+          logicAuditScopeHint={logicAuditScopeHint}
           onCancelLogicAudit={onCancelLogicAudit}
           onJumpToLogicIssue={onJumpToLogicIssue}
           onAskArioLogic={onAskArioLogic}

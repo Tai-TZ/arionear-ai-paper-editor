@@ -151,29 +151,21 @@ export type EditorCopy = {
     jumpToIssue: string;
     askArio: string;
     claimLabel: string;
-    partialChatStopped: (count: number) => string;
+    partialChatStopped: (count) => string;
     partialChatTimeout: (count: number) => string;
-    modeQuick: string;
-    modeDeep: string;
-    modeQuickSubtitle: string;
-    modeDeepSubtitle: string;
+    scanQuick: string;
+    scanQuickSubtitle: string;
     scanFull: string;
-    scanFullHintQuick: (count: number) => string;
-    scanFullHintDeep: (count: number) => string;
+    scanFullSubtitle: (count: number) => string;
     hintQuickSelected: string;
-    hintDeepSelected: string;
     hintQuickFull: string;
-    hintDeepFull: string;
-    pickOneSection: string;
     pickSections: string;
     selectAll: string;
     imradDefault: string;
     willScanParts: (count: number) => string;
     running: string;
     runQuick: string;
-    runDeep: string;
     runQuickFull: string;
-    runDeepFull: string;
     panelNote: string;
     sectionsSkipped: (count: number) => string;
     noIssues: string;
@@ -187,10 +179,7 @@ export type EditorCopy = {
     panelLaunch: {
       displayQuick: string;
       displayQuickFull: string;
-      displayDeep: string;
-      displayDeepFull: string;
       messageFull: string;
-      messageDeepSelected: string;
       messageQuickSelected: string;
     };
   };
@@ -480,33 +469,22 @@ const EN: EditorCopy = {
       `Logic audit stopped — **${count}** section(s) already scanned. See **Logic Audit** tab for details.`,
     partialChatTimeout: (count) =>
       `Logic audit timed out — **${count}** section(s) scanned. See **Logic Audit** tab; try fewer sections or Quick mode.`,
-    modeQuick: "Quick",
-    modeDeep: "Deep",
-    modeQuickSubtitle: "2–3 sections · fast scan",
-    modeDeepSubtitle: "1 section · in-depth",
-    scanFull: "Scan entire manuscript",
-    scanFullHintQuick: (count) =>
-      `All sections in the manuscript (max 20 parts, currently ${count}).`,
-    scanFullHintDeep: (count) =>
-      `All sections — deep Gemini 3.5 Flash pass (max 8 parts, currently ${count}).`,
+    scanQuick: "Quick scan",
+    scanQuickSubtitle: "/logic · 2–3 IMRAD sections · Gemini 2.5 Flash · ~1–2 min",
+    scanFull: "Full manuscript",
+    scanFullSubtitle: (count) =>
+      `/logic full · up to 20 sections · Gemini 3.5 Flash · ${count} parts in file`,
     hintQuickSelected:
       "Quick scan of 2–3 sections via Gemini 2.5 Flash — ~1–2 min. Independent of chat provider.",
-    hintDeepSelected:
-      "Deep scan of 1 section via Gemini 3.5 Flash — ~2–4 min. Independent of chat provider.",
     hintQuickFull:
-      "Full-manuscript scan (max 20 sections) via Gemini 2.5 Flash — usually ~3–8 min.",
-    hintDeepFull:
-      "Full-manuscript deep scan (max 8 sections) via Gemini 3.5 Flash — may take 8–15 min.",
-    pickOneSection: "Pick 1 section",
+      "Full-manuscript scan (max 20 sections) via Gemini 3.5 Flash — usually ~3–8 min.",
     pickSections: "Pick sections to scan",
     selectAll: "Select all",
     imradDefault: "IMRAD default",
     willScanParts: (count) => `Will scan ${count} parts in the LaTeX file.`,
     running: "Running audit…",
     runQuick: "Run Quick audit",
-    runDeep: "Run Deep audit",
-    runQuickFull: "Run Quick · full manuscript",
-    runDeepFull: "Run Deep · full manuscript",
+    runQuickFull: "Run full-manuscript audit",
     panelNote: "Uses a dedicated Gemini engine (GOOGLE_API_KEY) — independent of chat provider.",
     sectionsSkipped: (count) =>
       `${count} section(s) could not be scanned (API timeout or empty persona response).`,
@@ -521,11 +499,8 @@ const EN: EditorCopy = {
     sectionProgress: (completed, total) => `Sections scanned: ${completed}/${total}`,
     panelLaunch: {
       displayQuick: "Logic audit · Quick",
-      displayQuickFull: "Logic audit · Quick · full manuscript",
-      displayDeep: "Logic audit · Deep",
-      displayDeepFull: "Logic audit · Deep · full manuscript",
+      displayQuickFull: "Logic audit · full manuscript",
       messageFull: "Run a logic audit on the full manuscript",
-      messageDeepSelected: "Deep logic audit on selected sections",
       messageQuickSelected: "Quick logic audit on the manuscript",
     },
   },
@@ -839,33 +814,22 @@ const VI: EditorCopy = {
       `Logic audit đã dừng — **${count}** phần đã quét. Xem tab **Logic Audit** để biết chi tiết.`,
     partialChatTimeout: (count) =>
       `Logic audit timeout — **${count}** phần đã quét. Xem tab **Logic Audit**; thử ít section hơn hoặc chế độ Nhanh.`,
-    modeQuick: "Nhanh",
-    modeDeep: "Sâu",
-    modeQuickSubtitle: "2–3 phần · quét nhanh",
-    modeDeepSubtitle: "1 phần · soi sâu",
-    scanFull: "Quét toàn bộ bài",
-    scanFullHintQuick: (count) =>
-      `Tất cả section trong bản thảo (tối đa 20 phần, hiện có ${count}).`,
-    scanFullHintDeep: (count) =>
-      `Tất cả section — Gemini 3.5 Flash sâu (tối đa 8 phần, hiện có ${count}).`,
+    scanQuick: "Quét nhanh",
+    scanQuickSubtitle: "/logic · 2–3 phần IMRAD · Gemini 2.5 Flash · ~1–2 phút",
+    scanFull: "Toàn bộ bài",
+    scanFullSubtitle: (count) =>
+      `/logic full · tối đa 20 section · Gemini 3.5 Flash · ${count} phần trong file`,
     hintQuickSelected:
       "Quét nhanh 2–3 phần bằng Gemini 2.5 Flash — ~1–2 phút. Không phụ thuộc provider chat.",
-    hintDeepSelected:
-      "Soi sâu 1 phần bằng Gemini 3.5 Flash — ~2–4 phút. Không phụ thuộc provider chat.",
     hintQuickFull:
-      "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 2.5 Flash — thường ~3–8 phút.",
-    hintDeepFull:
-      "Quét toàn bộ bài (tối đa 8 phần) bằng Gemini 3.5 Flash — có thể mất 8–15 phút.",
-    pickOneSection: "Chọn 1 phần",
+      "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 3.5 Flash — thường ~3–8 phút.",
     pickSections: "Chọn phần quét",
     selectAll: "Chọn tất cả",
     imradDefault: "IMRAD mặc định",
     willScanParts: (count) => `Sẽ quét ${count} phần trong file LaTeX.`,
     running: "Đang audit…",
     runQuick: "Chạy Quick audit",
-    runDeep: "Chạy Deep audit",
-    runQuickFull: "Chạy Quick · toàn bộ bài",
-    runDeepFull: "Chạy Deep · toàn bộ bài",
+    runQuickFull: "Chạy quét toàn bộ bài",
     panelNote: "Dùng engine Gemini riêng (GOOGLE_API_KEY) — không phụ thuộc provider chat.",
     sectionsSkipped: (count) =>
       `${count} phần không quét được (timeout API hoặc persona không phản hồi).`,
@@ -880,11 +844,8 @@ const VI: EditorCopy = {
     sectionProgress: (completed, total) => `Đã quét: ${completed}/${total} phần`,
     panelLaunch: {
       displayQuick: "Logic audit · Quick",
-      displayQuickFull: "Logic audit · Quick · toàn bộ",
-      displayDeep: "Logic audit · Deep",
-      displayDeepFull: "Logic audit · Deep · toàn bộ",
+      displayQuickFull: "Logic audit · toàn bộ bài",
       messageFull: "Kiểm tra logic toàn bộ bài báo",
-      messageDeepSelected: "Logic audit sâu phần đã chọn",
       messageQuickSelected: "Kiểm tra logic bài báo",
     },
   },
@@ -1054,14 +1015,10 @@ export function formatMastheadDate(locale: UiLanguage): string {
 
 export function logicAuditModeHint(
   locale: UiLanguage,
-  mode: LogicAuditMode,
   scope: LogicAuditScope = "selected",
 ): string {
   const t = editorCopy(locale).logicAudit;
-  if (scope === "full") {
-    return mode === "deep" ? t.hintDeepFull : t.hintQuickFull;
-  }
-  return mode === "deep" ? t.hintDeepSelected : t.hintQuickSelected;
+  return scope === "full" ? t.hintQuickFull : t.hintQuickSelected;
 }
 
 export function revisionActionLabel(locale: UiLanguage, action: string): string {
