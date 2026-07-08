@@ -1,8 +1,8 @@
 # Architecture Diagram — Arionear
 
 **Dự án:** Arionear · *Closer to Publication*  
-**Cập nhật:** 26/06/2026 · Đồng bộ Phase 2 (`develop` @ defense + templates + paper score)  
-**Live:** [https://arionear-web-345047770052.asia-east1.run.app/](https://arionear-web-345047770052.asia-east1.run.app/)
+**Cập nhật:** 08/07/2026 · Đồng bộ Gate 3 production (custom domain + admin LLM keys/failover + editor onboarding)  
+**Live:** [https://arionear.id.vn/](https://arionear.id.vn/) · API: [https://api.arionear.id.vn](https://api.arionear.id.vn)
 
 Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.
 
@@ -16,12 +16,12 @@ flowchart TB
         R([Researcher])
     end
 
-    subgraph Cloud["Google Cloud Run"]
+    subgraph Cloud["Google Cloud Run — asia-east1"]
         FE[TanStack Start / React 19<br/>Marketing · Projects · Editor · Defense · Templates]
     end
 
     subgraph Backend["FastAPI API"]
-        API[REST + SSE<br/>/api/v1/*]
+        API[REST + SSE + WS<br/>/api/v1/*]
         ING[Inngest /api/inngest<br/>chat telemetry ⚠️ optional]
     end
 
@@ -35,6 +35,7 @@ flowchart TB
         ANT[Anthropic]
         OR[OpenRouter]
         ZAI[Z.AI GLM]
+        GEM[Google Gemini]
     end
 
     subgraph Scholar["Citation APIs ✅"]
@@ -45,18 +46,18 @@ flowchart TB
 
     R -->|HTTPS| FE
     FE <-->|Bearer JWT| LS
-    FE -->|REST + SSE| API
+    FE -->|REST + SSE + WS| API
     API --> PG
     API --> ING
-    API --> OAI & ANT & OR & ZAI
+    API --> OAI & ANT & OR & ZAI & GEM
     API --> Scholar
 ```
 
 | Surface | URL / host | Ghi chú |
 |---------|------------|---------|
-| Frontend (prod) | `arionear-web-*.asia-east1.run.app` | Nitro `node-server`, Docker |
-| Backend API | Configured `VITE_API_URL` / proxy | FastAPI + TeX compile |
-| Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, templates |
+| Frontend (prod) | `https://arionear.id.vn` | Custom domain → Cloud Run `arionear-web` |
+| Backend API | `https://api.arionear.id.vn` | Custom domain → Cloud Run `arionear-api` + TeX compile |
+| Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, templates, platform provider keys |
 
 ---
 
@@ -136,11 +137,12 @@ flowchart TB
         CD[Chat dock / Ario]
         TP[Tools: Info · Citations · Logic · Versions]
         EXP[Export / Paper score dialog]
+        ONB[First-run onboarding dialog ✅]
     end
 
     PRJ --> ED & DEF
     TPL -->|open template| PRJ
-    ED --> LE & PP & CD & TP & EXP
+    ED --> LE & PP & CD & TP & EXP & ONB
     DEF --> DEFCHAT[DefenseChatPanel] & PP
 ```
 
@@ -326,10 +328,11 @@ flowchart LR
 | Paper score | `lib/paper-score.ts` + gate skim | Export readiness dialog | ✅ |
 | Templates | `template_store.py`, `template_routes.py` | Gallery + open as project | ✅ |
 | Defense | `defense_stream.py`, `defense_citations.py` | Mock viva + PDF links | ✅ |
-| LLM | OpenAI / Anthropic / OpenRouter / Z.AI | Inference | ✅ |
-| Database | PostgreSQL, Prisma, SQLAlchemy | Papers, auth, profiles, templates | ✅ |
+| LLM | OpenAI / Anthropic / OpenRouter / Z.AI / Gemini | Inference + key failover (`llm_failover.py`) | ✅ |
+| Database | PostgreSQL, Prisma, SQLAlchemy | Papers, auth, profiles, templates, provider keys | ✅ |
 | Auth | JWT + Google OAuth | Sign-in, 3-day default session | ✅ |
-| Admin | `admin_routes.py` | Users, LLM policy, quotas | ✅ |
+| Admin | `admin_routes.py` + `provider_key_store.py` | Users, LLM policy, platform API keys, priority failover, quotas | ✅ |
+| Editor onboarding | `editor-onboarding-dialog.tsx` | First-run guide in editor (localPreference) | ✅ |
 | Inngest | `inngest/` + hooks | Chat telemetry (optional) | ⚠️ |
 | Citation L4 LLM | — | Relevance layer | *(planned)* |
 | DOCX/PDF import | — | Non-LaTeX ingest | *(planned)* |
@@ -339,6 +342,6 @@ flowchart LR
 ## Tài liệu liên quan
 
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — mô tả chi tiết kiến trúc
-- [README.md](../README.md) — setup & Live URL
+- [README.md](../README.md) — setup & Live URL (`https://arionear.id.vn`)
 - [AutoResearchReferee.md](../AutoResearchReferee.md) — ARC adopt/adapt/drop
 - [pdf-preview-deploy.md](./pdf-preview-deploy.md) — TeX & Docker ops

@@ -2,13 +2,15 @@
 
 **Dự án:** Arionear · AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *Closer to Publication*  
-**Phiên bản tài liệu:** 3.0 · **Cập nhật:** 06/07/2026
+**Phiên bản tài liệu:** 3.1 · **Cập nhật:** 08/07/2026
 
 > Kiến trúc dựa trên phân tích [AutoResearchReferee.md](./AutoResearchReferee.md) (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
 Tài liệu này mô tả **kiến trúc đã triển khai** tại Gate 3 (production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
 
 **Production URLs:** https://arionear.id.vn · https://api.arionear.id.vn
+
+![Arionear system architecture](./docs/ARCHITECTURE.png)
 
 ---
 
@@ -29,7 +31,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 |-------|-----------|
 | Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Bun, PDF.js |
 | Backend | FastAPI, Python 3.11+, LangGraph, SQLAlchemy |
-| LLM | Z.AI (GLM) · Google (Gemini) · OpenAI · Anthropic · OpenRouter — chọn trong editor hoặc `.env` |
+| LLM | Z.AI (GLM) · Google (Gemini) · OpenAI · Anthropic · OpenRouter — chọn trong editor hoặc `.env`; admin platform keys + priority failover |
 | Persistence | PostgreSQL (Prisma schema + SQLAlchemy) · in-memory session cache · frontend localStorage cache |
 | Compile | TeX Live server-side (`latex_compile.py`), SyncTeX, delta asset compile, PDF cache |
 | Auth | JWT (email/password + Google SSO) · god admin provisioning |
@@ -205,6 +207,7 @@ sequenceDiagram
 | Mobile layout (files / editor / chat tabs) | `Mobile*` components |
 | Auto-save + coalesced PATCH | `useEditorProject` |
 | Compile-after-accept | `useLatexWorkspace` |
+| First-run editor onboarding | `EditorOnboardingDialog`, `editor-onboarding-prefs.ts` |
 
 **Planned (P2):** DOCX/PDF upload & parse, peer-review reply UI, tách hoàn toàn `academic.ts`.
 
@@ -220,7 +223,7 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `auth_routes.py` | `/api/v1/auth` | Register, login, forgot-password, Google OAuth |
 | `paper_routes.py` | `/api/v1/papers` | Papers CRUD (auth) |
 | `profile_routes.py` | `/api/v1/users` | Researcher profile |
-| `admin_routes.py` | `/api/v1/admin` | Users, usage, cost report, LLM config |
+| `admin_routes.py` | `/api/v1/admin` | Users, usage, cost report, LLM config, platform provider keys |
 | `billing_routes.py` | `/api/v1/billing` | Status, checkout, upgrade |
 | `defense_routes.py` | `/api/v1` | Defense quota + SSE stream |
 | `share_routes.py` | `/api/v1` | Share links + Yjs WebSocket |
@@ -252,7 +255,7 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `GET /auth/google/start`, `/callback` | Google SSO |
 | `GET/PATCH /users/me/profile` | Researcher profile |
 | `GET/POST/PATCH/DELETE /papers/*` | Paper persistence |
-| `GET /admin/*` | Admin console |
+| `GET /admin/*` | Admin console (users, LLM policy, provider keys, cost) |
 | `GET/POST /billing/*` | Quotas, checkout, upgrade |
 | `GET /defense/quota`, `POST /defense/stream` | Defense council |
 | `GET/POST/DELETE /papers/{id}/share`, `GET /share/{token}` | Share links |
@@ -367,6 +370,7 @@ Prisma schema (`prisma/schema.prisma`) là source of truth cho migrations; SQLAl
 | Z.AI (GLM) | Default LLM — editor, logic audit quick | ✅ |
 | Google Gemini | Defense council, logic audit deep/gate | ✅ |
 | OpenAI / Anthropic / OpenRouter | Alternative providers (editor picker) | ✅ |
+| Platform LLM keys | Admin-managed keys in DB (`provider_key_store`) + `.env` fallback; priority failover via `llm_failover.py` | ✅ |
 | arXiv API | Verify preprint ID | ✅ |
 | CrossRef | Verify DOI metadata | ✅ |
 | Semantic Scholar | Title search fallback | ✅ |
@@ -549,6 +553,7 @@ cd frontend && bun run dev
 | Backend | FastAPI | Async, OpenAPI, SSE streaming |
 | Agent | LangGraph + `chat_stream` | Graph cho sync; stream service cho production UX |
 | LLM default | Z.AI GLM + Gemini defense/audit | Chi phí thấp; chất lượng đủ Gate 3 metrics |
+| LLM keys | Admin platform keys + env fallback + priority failover | Tránh hard-fail một key; quay vòng khi auth/rate error |
 | Human gate | Line diff + explicit accept | "Show, Don't Overwrite" (C7) |
 | Logic audit | Comment-only debate | Giữ niềm tin researcher; không auto-apply |
 | Persistence | PostgreSQL + session cache + localStorage | DB authoritative; cache cho resilience/offline feel |
@@ -578,7 +583,7 @@ cd frontend && bun run dev
 | Guardrail L1–L4 | ✅ L1–L3 full; L4 partial | Export AI Contribution report |
 | Auth | JWT + Google SSO + email verify | ✅ |
 | Billing | Tier quotas + QR checkout | Payment gateway integration |
-| Admin | Users, LLM policy, cost report | ✅ |
+| Admin | Users, LLM policy, cost report, platform provider keys + failover | ✅ |
 | Share | Read-only link + Yjs WS | ✅ |
 | Chat streaming | SSE activity/reasoning/token | ✅ |
 | Compile | Delta assets, gzip, PDF cache, SyncTeX | ✅ |
@@ -639,6 +644,7 @@ frontend/src/
 ## Tài liệu liên quan
 
 - [AutoResearchReferee.md](./AutoResearchReferee.md) — phân tích ARC & quyết định adopt/adapt/drop
+- [docs/ARCHITECTURE.png](./docs/ARCHITECTURE.png) — sơ đồ kiến trúc tổng thể (ảnh)
 - [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map
 - [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) — guardrail layers L1–L4
 - [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) — Gate 3 eval metrics & production evidence

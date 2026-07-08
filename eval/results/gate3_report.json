@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-05 12:28:35 UTC",
+  "timestamp": "2026-07-08 12:08:11 UTC",
   "api_url": "https://api.arionear.id.vn",
   "frontend_url": "https://arionear.id.vn",
   "offline": {
@@ -170,12 +170,12 @@
     "health": {
       "status": 200,
       "latency_ms": [
-        15620.537900000272,
-        237.64570000093954,
-        265.25580000088667
+        227.09529999701772,
+        162.28760000376496,
+        162.85350000543986
       ],
-      "p50_ms": 265.3,
-      "p95_ms": 15620.5,
+      "p50_ms": 162.9,
+      "p95_ms": 227.1,
       "body": {
         "status": "ok",
         "env": "production",
@@ -184,7 +184,7 @@
     },
     "compile_status": {
       "status": 200,
-      "latency_s": 0.155,
+      "latency_s": 0.193,
       "body": {
         "available": true,
         "engine": "/usr/bin/pdflatex",
@@ -201,7 +201,7 @@
     },
     "compile_minimal": {
       "status": 200,
-      "latency_s": 0.485,
+      "latency_s": 0.441,
       "success": true,
       "pdf_bytes": 18372,
       "error": ""
@@ -211,7 +211,7 @@
         "id": "LIVE-CHAT",
         "task": "chat",
         "status": 401,
-        "latency_s": 0.167,
+        "latency_s": 0.225,
         "has_response": false,
         "integrity_flags": []
       },
@@ -219,13 +219,13 @@
         "id": "LIVE-STYLE",
         "task": "style",
         "status": 401,
-        "latency_s": 0.14,
+        "latency_s": 0.143,
         "has_response": false,
         "integrity_flags": []
       }
     ],
-    "chat_latency_p50_s": 0.167,
-    "style_latency_p50_s": 0.14,
+    "chat_latency_p50_s": 0.225,
+    "style_latency_p50_s": 0.143,
     "compile_success_rate": 1.0
   },
   "measured": {
@@ -233,10 +233,10 @@
     "edit_scope_accuracy": 1.0,
     "guardrail_block_rate": 0.5,
     "numeric_drift_detection_rate": 1.0,
-    "chat_latency_p50_s": 0.167,
-    "style_latency_p50_s": 0.14,
+    "chat_latency_p50_s": 0.225,
+    "style_latency_p50_s": 0.143,
     "compile_success_rate": 1.0,
-    "health_latency_p95_ms": 15620.5,
+    "health_latency_p95_ms": 227.1,
     "cost_per_active_user_month_usd": 1.2
   },
   "comparison": [
@@ -278,19 +278,19 @@
     },
     {
       "metric": "chat_latency_p50_s",
-      "arionear": 0.167,
+      "arionear": 0.225,
       "baseline": 8.0,
       "unit": "seconds",
-      "delta": 7.833,
+      "delta": 7.775,
       "improved_vs_baseline": true,
       "baseline_description": "Unscoped chat with full manuscript injected every turn"
     },
     {
       "metric": "style_latency_p50_s",
-      "arionear": 0.14,
+      "arionear": 0.143,
       "baseline": 6.0,
       "unit": "seconds",
-      "delta": 5.86,
+      "delta": 5.857,
       "improved_vs_baseline": true,
       "baseline_description": "Style edit on full document without selection scoping"
     },
@@ -305,11 +305,11 @@
     },
     {
       "metric": "health_latency_p95_ms",
-      "arionear": 15620.5,
+      "arionear": 227.1,
       "baseline": 800,
       "unit": "milliseconds",
-      "delta": -14820.5,
-      "improved_vs_baseline": false,
+      "delta": 572.9,
+      "improved_vs_baseline": true,
       "baseline_description": "Cold-start serverless without warm instance"
     },
     {

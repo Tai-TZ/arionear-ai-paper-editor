@@ -1,16 +1,22 @@
 {
-  "session_id": "e2a464d9-825c-4eaa-93db-c8c56c578521",
-  "timestamp": "2026-06-17 16:34:34",
+  "session_id": "62d934a7-557e-4923-91eb-10834cc107f9",
+  "timestamp": "2026-07-08 12:13:04 UTC",
+  "api_url": "https://api.arionear.id.vn",
+  "frontend_url": "https://arionear.id.vn",
+  "agent": "Ario v1.0",
   "tests": {
     "TC1_chat": {
       "input": {
         "message": "Giải thích ngắn gọn abstract của bài này bằng tiếng Việt",
-        "task": "chat"
+        "task": "chat",
+        "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\end{abstract}\\section{Introduction}Prior work cites \\cite{smith2020}.\\end{document}",
+        "llm_provider": "google",
+        "llm_model": "gemini-3.1-flash-lite"
       },
       "status_code": 200,
-      "elapsed_s": 5.55,
+      "elapsed_s": 5.2,
       "output": {
-        "response": "Abstract của bài này nêu rằng các mô hình học máy đạt được kết quả tốt nhưng thường thiếu tính giải thích. Điều này có nghĩa là mặc dù các mô hình này có thể dự đoán chính xác, nhưng người dùng khó hiểu được cách mà chúng đưa ra quyết định.",
+        "response": "Chào bạn, tôi là Ario. Để tôi có thể giải thích tóm tắt phần Abstract, bạn vui lòng cung cấp nội dung hoặc đoạn văn bản của phần Abstract trong bản thảo hiện tại. Sau khi có nội dung, tôi sẽ giúp bạn phân tích các ý chính như mục tiêu nghiên cứu, phương pháp, kết quả nổi bật và đóng góp của bài viết một cách ngắn gọn và chuẩn học thuật.",
         "analysis": "Chat response generated.",
         "task": "chat",
         "suggestion": "",
@@ -19,41 +25,55 @@
         "apply_mode": "document",
         "revision_id": "",
         "integrity_flags": [],
+        "edits": [],
         "citation_results": [],
-        "structure_suggestions": []
-      }
+        "structure_suggestions": [],
+        "logic_audit_report": {}
+      },
+      "pass": true,
+      "note": "has response/suggestion"
     },
     "TC2_style": {
       "input": {
         "message": "Chỉnh sửa abstract cho văn phong học thuật hơn",
-        "task": "style"
+        "task": "style",
+        "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\end{abstract}\\section{Introduction}Prior work cites \\cite{smith2020}.\\end{document}",
+        "llm_provider": "google",
+        "llm_model": "gemini-3.1-flash-lite"
       },
       "status_code": 200,
-      "elapsed_s": 3.33,
+      "elapsed_s": 4.5,
       "output": {
         "response": "Đề xuất cải thiện văn phong (xem diff bên dưới, Accept/Reject để áp dụng):",
         "analysis": "Style enhancement completed.",
         "task": "style",
-        "suggestion": "Machine learning models demonstrate impressive performance; however, they frequently suffer from a lack of interpretability.",
-        "original_text": "Machine learning models achieve strong results but often lack interpretability.\n\\",
-        "diff": "--- original\n+++ suggestion\n@@ -1,2 +1 @@\n-Machine learning models achieve strong results but often lack interpretability.\n\n-\\\n+Machine learning models demonstrate impressive performance; however, they frequently suffer from a lack of interpretability.",
+        "suggestion": "While machine learning models frequently demonstrate superior predictive performance, they are often constrained by a lack of interpretability.",
+        "original_text": "Machine learning models achieve strong results but often lack interpretability.",
+        "diff": "--- original\n+++ suggestion\n@@ -1 +1 @@\n-Machine learning models achieve strong results but often lack interpretability.\n+While machine learning models frequently demonstrate superior predictive performance, they are often constrained by a lack of interpretability.",
         "apply_mode": "selection",
-        "revision_id": "9ec6da1e-b221-4efd-a6f8-93ceb856f001",
+        "revision_id": "fc17d731-3f9a-4e55-87e3-e12fc374a900",
         "integrity_flags": [],
+        "edits": [],
         "citation_results": [],
-        "structure_suggestions": []
-      }
+        "structure_suggestions": [],
+        "logic_audit_report": {}
+      },
+      "pass": true,
+      "note": "has response/suggestion"
     },
     "TC3_structure": {
       "input": {
         "message": "Phân tích cấu trúc IMRaD của bài này",
-        "task": "structure"
+        "task": "structure",
+        "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\end{abstract}\\section{Introduction}Prior work shows promise.\\end{document}",
+        "llm_provider": "google",
+        "llm_model": "gemini-3.1-flash-lite"
       },
       "status_code": 200,
-      "elapsed_s": 3.51,
+      "elapsed_s": 3.27,
       "output": {
-        "response": "Gợi ý cấu trúc:\n- [WARNING] Conclusion: Consider adding a Conclusion section.",
-        "analysis": "Found 1 structure suggestions.",
+        "response": "Gợi ý cấu trúc:\n- [WARNING] Methods: Thiếu phần Methods/Phương pháp — bài IMRaD cần mô tả phương pháp trước Results.\n- [WARNING] Results: Thiếu phần Results — khung IMRaD thường cần section này.\n- [WARNING] Discussion: Thiếu phần Discussion — khung IMRaD thường cần section này.\n- [WARNING] Conclusion: Thiếu phần Conclusion — khung IMRaD thường cần section này.\n- [INFO] Introduction: Section 'Introduction' rất ngắn (39 ký tự).",
+        "analysis": "Found 5 structure suggestions.",
         "task": "structure",
         "suggestion": "",
         "original_text": "",
@@ -61,26 +81,57 @@
         "apply_mode": null,
         "revision_id": "",
         "integrity_flags": [],
+        "edits": [],
         "citation_results": [],
         "structure_suggestions": [
           {
             "type": "missing",
-            "section": "Conclusion",
-            "message": "Consider adding a Conclusion section.",
+            "section": "Methods",
+            "message": "Thiếu phần Methods/Phương pháp — bài IMRaD cần mô tả phương pháp trước Results.",
             "severity": "warning"
+          },
+          {
+            "type": "missing",
+            "section": "Results",
+            "message": "Thiếu phần Results — khung IMRaD thường cần section này.",
+            "severity": "warning"
+          },
+          {
+            "type": "missing",
+            "section": "Discussion",
+            "message": "Thiếu phần Discussion — khung IMRaD thường cần section này.",
+            "severity": "warning"
+          },
+          {
+            "type": "missing",
+            "section": "Conclusion",
+            "message": "Thiếu phần Conclusion — khung IMRaD thường cần section này.",
+            "severity": "warning"
+          },
+          {
+            "type": "length",
+            "section": "Introduction",
+            "message": "Section 'Introduction' rất ngắn (39 ký tự).",
+            "severity": "info"
           }
-        ]
-      }
+        ],
+        "logic_audit_report": {}
+      },
+      "pass": true,
+      "note": "has response/suggestion"
     },
     "TC4_template": {
       "input": {
-        "message": "Thêm các section IMRaD còn thiếi",
-        "task": "template"
+        "message": "Thêm các section IMRaD còn thiếu",
+        "task": "template",
+        "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Test\\end{abstract}\\end{document}",
+        "llm_provider": "google",
+        "llm_model": "gemini-3.1-flash-lite"
       },
       "status_code": 200,
-      "elapsed_s": 4.87,
+      "elapsed_s": 4.6,
       "output": {
-        "response": "Để hoàn thiện cấu trúc IMRaD (Introduction, Methods, Results, and Discussion), bạn cần thêm các phần sau:\n\n1. **Methods**: Mô tả phương pháp nghiên cứu mà bạn đã sử dụng.\n2. **Results**: Trình bày kết quả thu được từ nghiên cứu.\n3. **Discussion**: Thảo luận về ý nghĩa của kết quả, so sánh với các nghiên cứu trước đây và đưa ra kết luận.\n\nBạn có muốn tôi giúp bạn viết một trong các phần này không? Nếu có, hãy cho tôi biết cụ thể phần nào bạn muốn thêm vào.",
+        "response": "Để hoàn thiện cấu trúc IMRaD cho bản thảo, bạn cần đảm bảo các mục sau được thiết lập trong file LaTeX:\n\n1. Introduction: Giới thiệu vấn đề nghiên cứu, khoảng trống tri thức và mục tiêu bài báo.\n2. Methods: Mô tả chi tiết phương pháp, dữ liệu và quy trình thực nghiệm để đảm bảo tính tái lập.\n3. Results: Trình bày các kết quả thu được một cách khách quan, sử dụng bảng biểu và hình ảnh minh họa.\n4. Discussion: Phân tích ý nghĩa của kết quả, so sánh với các nghiên cứu trước đó và chỉ ra hạn chế.\n\nNếu bạn muốn tôi chèn khung (template) cho các mục này vào file main.tex, hãy cho tôi biết vị trí cụ thể bạn muốn đặt chúng. Tôi sẽ sử dụng các lệnh section chuẩn của LaTeX để bạn có thể bắt đầu điền nội dung.",
         "analysis": "Chat response generated.",
         "task": "template",
         "suggestion": "",
@@ -89,32 +140,43 @@
         "apply_mode": null,
         "revision_id": "",
         "integrity_flags": [],
+        "edits": [],
         "citation_results": [],
-        "structure_suggestions": []
-      }
+        "structure_suggestions": [],
+        "logic_audit_report": {}
+      },
+      "pass": true,
+      "note": "has response/suggestion"
     },
     "TC5_compile": {
       "input": {
-        "endpoint": "POST /api/v1/compile"
+        "latex": "\\documentclass{article}\\begin{document}Hello Arionear.\\end{document}",
+        "main_file": "main.tex"
       },
       "status_code": 200,
+      "elapsed_s": 0.21,
       "output": {
-        "success": false,
-        "log": "\nSorry, but latexmk.EXE did not succeed for the following reason:\n\n  MiKTeX could not find the script engine 'perl' which is required to execute 'latexmk'.\n\nRemedy:\n\n  Make sure 'perl' is installed on your system.\n\nThe log file hopefully contains the information to get MiKTeX going again:\n\n  C:\\Users\\Tai\\AppData\\Local\\MiKTeX\\miktex\\log\\latexmk.log\n\nFor more information, visit: https://miktex.org/kb/fix-script-engine-not-found\nlatexmk: major issue: So far, you have not checked for MiKTeX updates.\n\nThis is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex.fmt)\n restricted \\write18 enabled.\nentering extended mode\n(main.tex\nLaTeX2e <2025-11-01>\nL3 programming layer <2025-12-24>\n\n! LaTeX Error: There's no line here to end.\n\nSee the LaTeX manual or LaTeX Companion for explanation.\nType  H <return>  for immediate help.\n ...                                              \n                                                  \nl.1 \\\\d\n       ocumentclass{article}\n\n! LaTeX Error: Missing \\begin{document}.\n\nSee the LaTeX manual or LaTeX Companion for explanation.\nType  H <return>  for immediate help.\n ...                                              \n                                                  \nl.1 \\\\d\n       ocumentclass{article}\nMissing character: There is no d in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no M in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no v in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no f in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no k in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no y in font nullfont!\nMissing character: There is no . in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no b in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no I in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no P in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no w in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no k in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no 2 in font nullfont!\nMissing character: There is no 0 in font nullfont!\nMissing character: There is no 2 in font nullfont!\nMissing character: There is no 0 in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no w in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no v in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no y in font nullfont!\nMissing character: There is no . in font nullfont!\nMissing character: There is no W in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no v in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no l in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no p in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no h in font nullfont!\nMissing character: There is no f in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no w in font nullfont!\nMissing character: There is no r in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no g in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no i in font nullfont!\nMissing character: There is no s in font nullfont!\nMissing character: There is no t in font nullfont!\nMissing character: There is no a in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no . in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no d in font nullfont!\nMissing character: There is no o in font nullfont!\nMissing character: There is no c in font nullfont!\nMissing character: There is no u in font nullfont!\nMissing character: There is no m in font nullfont!\nMissing character: There is no e in font nullfont!\nMissing character: There is no n in font nullfont!\nMissing character: There is no t in font nullfont!\n)\n! Emergency stop.\n<*> ./main.tex\n              \n!  ==> Fatal error occurred, no output PDF file produced!\nTranscript written on main.log.\npdflatex: major issue: So far, you have not checked for MiKTeX updates.\n",
-        "error": "! LaTeX Error: There's no line here to end.\n! LaTeX Error: Missing \\begin{document}.\n! Emergency stop.\n<*> ./main.tex\n!  ==> Fatal error occurred, no output PDF file produced!\nTranscript written on main.log.",
+        "success": true,
+        "pdf_base64": "<base64 len=17540>",
+        "log": "This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2025/dev/Debian) (preloaded format=pdflatex)\n restricted \\write18 enabled.\nentering extended mode\n",
+        "error": "",
         "engine": "pdflatex",
         "compiler": "pdflatex",
         "warning": "",
-        "synctex_base64": "",
+        "synctex_base64": "H4sIAAAAAAAAA5WTPW/bMBCGd/4Ke0sB2eKRR4rkmqlDkQL9QIoiAy1TCRNJNiSqsFv0v5eS5VjQkLjQIOK95977EPXlWOdf3f3iu2tav6sNkI/1vgsGTBqqfWqbKDrbrEob3GEVrD4c9fE5XaeV9fU6aiPPTNq1Tdo+2calUS79r+FdFautb0N/TAePdGNbF32Dz0u3zst2NOD/Z9D63w5ozN+N+Xh1fsk3Nn9x9fZyWu23RQytt64Y7cRV89vuQO660CdEB/LJPta+8LkNwyoppeRb7eMyyf3irihaFwwlPy7H210dXB0MWXJNyR8gPyEBgxmXTMkEJWNUZGiYlBkHwRIEVMiUSuiJVJnWAtSEZJJqzWiCFLnIgM1J2Yt6AmZKIu+xmzex+JCnd4kP5GHWGDKBOMW4pIiK0nlFpaSgYjqBEAAwL3vGtOIUT0UPfRyA9Q3BGSCPJxUzEffyqp5YBCHYRH3pVQ5INfJLCchi7yBHq3l4mPXmnY/AGEc+n/QNbmgEtEYq+QSMe8A44Dgqo0wqDvo1Put/lgY6tto3+0CWEpD8Pf/h8uobvhSSfN61wVab0pl4a7t4Z5kiS4aDvmjzxu9DVxnyD66AE1NPBAAA",
         "main_file": "main.tex",
-        "pdf_base64_length": 0
-      }
+        "pdf_base64_length": 17540
+      },
+      "pass": true,
+      "note": "compile success + pdf"
     },
-    "TC6_citations": {
+    "TC6_citation": {
       "input": {
-        "session_id": "e2a464d9-825c-4eaa-93db-c8c56c578521"
+        "session_id": "62d934a7-557e-4923-91eb-10834cc107f9",
+        "bib_content": "@article{smith2020, title={Deep Learning}, year={2020}, author={Smith}, journal={JMLR}}"
       },
       "status_code": 200,
+      "elapsed_s": 2.42,
       "output": {
         "results": [
           {
@@ -122,22 +184,13 @@
             "status": "not_found",
             "layers": [],
             "metadata": {},
-            "message": "Insufficient metadata to verify."
+            "message": "Could not verify citation in external databases."
           }
         ],
         "summary": "Verified 0/1 citations."
-      }
+      },
+      "pass": true,
+      "note": "results=1 summary=Verified 0/1 citations."
     }
-  },
-  "health": {
-    "status": "ok",
-    "env": "development",
-    "database": "connected"
-  },
-  "status": {
-    "status": "ready",
-    "agent": "Ario v1.0",
-    "default_provider": "openrouter",
-    "storage": "postgresql"
   }
 }

@@ -2,7 +2,7 @@
 
 Arionear implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production on Cloud Run.
 
-**Visual report (mentor):** [`eval/results/guardrails.html`](../eval/results/guardrails.html)
+**Eval evidence (mentor):** [`EVALUATION.md`](../EVALUATION.md) · [`eval/results/gate3_summary.md`](../eval/results/gate3_summary.md)
 
 ## Overview
 
@@ -121,9 +121,9 @@ pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
 
 | Artefact | Content |
 |----------|---------|
+| `EVALUATION.md` | BTC Eval Evidences (bảng TC + metrics) |
 | `eval/results/gate3_report.json` | Machine-readable results |
-| `eval/results/guardrails.html` | Visual report for mentor |
-| `eval/results/evaluation-metrics.html` | Metrics incl. guardrail pass rate |
+| `eval/results/gate3_summary.md` | Gate 3 metrics vs baseline (incl. guardrail) |
 | `eval/datasets/gate3_guardrail_cases.json` | 4 guardrail test cases |
 
 **Gate 3 result:** `guardrail_test_pass_rate` = **1.00** (4/4 cases)
