@@ -178,7 +178,7 @@ async def test_run_logic_audit_mocked_llm(monkeypatch):
     )
     monkeypatch.setattr(
         "src.services.logic_audit.runner.resolve_logic_audit_llm",
-        lambda mode, _chat: ("google", "gemini-2.5-flash"),
+        lambda mode, _chat, *, scope="selected": ("google", "gemini-2.5-flash"),
     )
 
     result = await run_logic_audit(
