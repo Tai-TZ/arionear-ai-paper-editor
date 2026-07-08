@@ -44,7 +44,8 @@ export function hasChatHistory(messages: ChatMessage[]): boolean {
   return messages.some((m) => m.role === "user");
 }
 
-const CHAT_MIN_H = 320;
+/** Floor while dragging — keep toolbar + a few message lines readable. */
+const CHAT_MIN_H = 160;
 const CHAT_DEFAULT_RATIO = 0.62;
 const CHAT_MAX_RATIO = 0.86;
 const CHAT_HEIGHT_STORAGE_KEY = "ario-chat-panel-height";

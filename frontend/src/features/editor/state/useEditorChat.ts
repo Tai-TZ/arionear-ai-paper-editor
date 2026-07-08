@@ -627,6 +627,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     });
     setChatInput("");
     setChatComposerMode("normal");
+    // Selection was already snapshotted into the request — drop the chip so the next turn starts clean.
+    setChatSelectionContext(null);
+    setSelection("");
     if (task === "logic") {
       sideEffects.setToolsOpen(true);
       sideEffects.setToolsTab("logic");

@@ -1,5 +1,6 @@
 import type { LLMProvider } from "@/lib/api/academic";
 
+import googleIconUrl from "../../assets/google-color-icon.svg?url";
 import openrouterIconUrl from "../../assets/openrouter-icon.svg?url";
 import zaiIconUrl from "../../assets/z-ai-logo.svg?url";
 
@@ -9,6 +10,7 @@ export type ModelVendor =
   | "meta"
   | "gemma"
   | "gemini"
+  | "google"
   | "openai"
   | "anthropic"
   | "qwen"
@@ -16,14 +18,17 @@ export type ModelVendor =
   | "openrouter"
   | "unknown";
 
+type KnownModelVendor = Exclude<ModelVendor, "unknown">;
+
 const LOGO_MODEL_BASE = "/assets/logoModel";
 
-const VENDOR_ICON_URL: Record<Exclude<ModelVendor, "unknown">, string> = {
+const VENDOR_ICON_URL: Record<KnownModelVendor, string> = {
   nvidia: `${LOGO_MODEL_BASE}/NVIDIA.svg`,
   deepseek: `${LOGO_MODEL_BASE}/DEEPSEEK.svg`,
   meta: `${LOGO_MODEL_BASE}/LLAMA.svg`,
   gemma: `${LOGO_MODEL_BASE}/GEMMA.svg`,
   gemini: `${LOGO_MODEL_BASE}/Gemini.svg`,
+  google: googleIconUrl,
   openai: `${LOGO_MODEL_BASE}/GPT.svg`,
   anthropic: `${LOGO_MODEL_BASE}/CLAUDE.svg`,
   qwen: `${LOGO_MODEL_BASE}/QWEN.svg`,
@@ -31,10 +36,10 @@ const VENDOR_ICON_URL: Record<Exclude<ModelVendor, "unknown">, string> = {
   openrouter: openrouterIconUrl,
 };
 
-const PROVIDER_VENDOR: Partial<Record<LLMProvider, ModelVendor>> = {
+const PROVIDER_VENDOR: Partial<Record<LLMProvider, KnownModelVendor>> = {
   openai: "openai",
   anthropic: "anthropic",
-  google: "gemini",
+  google: "google",
   zai: "zai",
   openrouter: "openrouter",
 };

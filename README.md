@@ -26,7 +26,7 @@ Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện b�
 | -------- | ------------------------------------------------------ |
 | Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite |
 | Backend  | FastAPI, Python 3.11+, LangGraph                       |
-| LLM      | OpenRouter · OpenAI · Anthropic · Z.AI (GLM)           |
+| LLM      | Google (Gemini) · OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
 | Database | Prisma + PostgreSQL                                    |
 | PDF      | pdflatex + PDF.js + SyncTeX                            |
 
@@ -38,7 +38,7 @@ Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện b�
 - **Python 3.11+**
 - **Node.js 20+** và npm (hoặc Bun)
 - **Git**
-- **LLM API key** — ít nhất một trong: `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ZAI_API_KEY`, `ANTHROPIC_API_KEY`
+- **LLM API key** — ít nhất một trong: `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ZAI_API_KEY`, `ANTHROPIC_API_KEY`
 - **TeX distribution** (tùy chọn, cho PDF preview): MiKTeX (Windows) / TeX Live (Linux/macOS)
 
 ---
@@ -166,7 +166,8 @@ Copy từ `[.env.example](./.env.example)`. **Không commit file `.env`.**
 
 | Biến                  | Mô tả                                                         | Ví dụ                   |
 | --------------------- | ------------------------------------------------------------- | ----------------------- |
-| `LLM_PROVIDER`        | Provider mặc định: `openrouter`, `openai`, `anthropic`, `zai` | `openrouter`            |
+| `LLM_PROVIDER`        | Provider mặc định: `google`, `openrouter`, `zai`, `openai`, `anthropic` | `google`        |
+| `GOOGLE_API_KEY`      | Key Google AI Studio / Gemini (chat, defense, logic audit)    | *(aistudio.google.com)* |
 | `OPENROUTER_API_KEY`  | Key OpenRouter (nếu dùng OpenRouter)                          | `sk-or-...`             |
 | `OPENAI_API_KEY`      | Key OpenAI (nếu dùng OpenAI)                                  | `sk-...`                |
 | `ZAI_API_KEY`         | Key Z.AI GLM (nếu dùng Z.AI)                                  | `...`                   |
