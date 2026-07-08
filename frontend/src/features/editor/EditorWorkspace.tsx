@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
+import { EditorOnboardingDialog } from "@/components/editor/editor-onboarding-dialog";
 import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
 import { EditorEntrySplash } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
@@ -28,6 +29,7 @@ import { Route } from "@/routes/editor";
 import { persistChatThreads } from "./lib/editor-thread-storage";
 import { toInlineSuggestion } from "./lib/editor-inline-suggestion";
 import { EDITOR_SIDEBAR_STORAGE_KEY, readSidebarExpanded } from "./lib/editor-sidebar-prefs";
+import { hasSeenEditorOnboarding } from "./lib/editor-onboarding-prefs";
 import { ArionearMasthead } from "./components/ArionearMasthead";
 import { CenterPanel } from "./components/CenterPanel";
 import { LatexEditor } from "./components/LatexEditor";
@@ -65,6 +67,8 @@ export function EditorWorkspace() {
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const onboardingScheduledRef = useRef(false);
   const [selection, setSelection] = useState("");
   const [selectionPick, setSelectionPick] = useState<{
     context: EditorSelectionContext;
@@ -190,6 +194,7 @@ export function EditorWorkspace() {
     chatOpen,
     auditInProgress,
     auditSectionProgress,
+    logicAuditScopeHint,
     chatStreamProgress,
     setChatSelectionContext,
     chatComposerMode,
@@ -242,6 +247,16 @@ export function EditorWorkspace() {
     project.latex,
     latexWs.scheduleCompile,
   ]);
+
+  useEffect(() => {
+    if (project.bootState !== "ready" || project.showSplash || onboardingScheduledRef.current) {
+      return;
+    }
+    if (hasSeenEditorOnboarding()) return;
+    onboardingScheduledRef.current = true;
+    const timer = window.setTimeout(() => setOnboardingOpen(true), 450);
+    return () => window.clearTimeout(timer);
+  }, [project.bootState, project.showSplash]);
 
   useEffect(() => {
     tools.tryStartScoreGateAudit();
@@ -395,11 +410,12 @@ export function EditorWorkspace() {
   const toolsPanelBindings = useMemo(
     () => ({
       ...tools.toolsPanelProps,
+      logicAuditScopeHint,
       logicAuditProgressDetail: auditInProgress
         ? formatLogicAuditProgress(chatStreamProgress)
         : null,
     }),
-    [tools.toolsPanelProps, auditInProgress, chatStreamProgress],
+    [tools.toolsPanelProps, auditInProgress, chatStreamProgress, logicAuditScopeHint],
   );
 
   return (
@@ -737,6 +753,7 @@ export function EditorWorkspace() {
             citationResults={toolsPanelBindings.citationResults}
             {...tools.exportDialogProps}
           />
+          <EditorOnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
         </div>
       )}
     </div>

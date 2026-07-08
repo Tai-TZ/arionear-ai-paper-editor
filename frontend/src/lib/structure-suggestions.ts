@@ -28,7 +28,7 @@ export function buildStructureAskPrompt(suggestion: StructureSuggestion): string
   const type = (suggestion.type ?? "").toLowerCase();
 
   if (type === "missing") {
-    return `/template Thêm section ${section} theo khung IMRAD`;
+    return `/edit Thêm section ${section} theo khung IMRAD`;
   }
   if (type === "length") {
     return `/edit Mở rộng phần ${section} cho đủ nội dung học thuật${detail ? `: ${detail}` : ""}`;

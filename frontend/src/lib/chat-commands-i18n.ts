@@ -26,26 +26,8 @@ const EN: SlashCopy = {
     {
       command: "logic full",
       task: "logic",
-      description: "Logic audit Quick — full manuscript",
-      detail: "Gemini 2.5 Flash · ~3–8 min · up to 20 sections · Logic Audit tab",
-    },
-    {
-      command: "logic deep",
-      task: "logic",
-      description: "Logic audit Deep — one section in depth",
-      detail: "Gemini 3.5 Flash (dedicated engine) · ~2–4 min · not the chat provider",
-    },
-    {
-      command: "logic deep full",
-      task: "logic",
-      description: "Logic audit Deep — full manuscript",
-      detail: "Gemini 3.5 Flash · ~8–15 min · up to 8 sections",
-    },
-    {
-      command: "style",
-      task: "style",
-      description: "Polish academic tone, preserve meaning",
-      detail: "Uses selected provider/model · suggests scoped edits",
+      description: "Logic audit — full manuscript",
+      detail: "Gemini 3.5 Flash · ~3–8 min · up to 20 sections · Logic Audit tab",
     },
     {
       command: "structure",
@@ -58,12 +40,6 @@ const EN: SlashCopy = {
       task: "citation",
       description: "Check citations and bibliography",
       detail: "Match \\cite{...} keys to available metadata",
-    },
-    {
-      command: "template",
-      task: "template",
-      description: "Insert empty IMRAD scaffold in the file",
-      detail: "Abstract, Introduction, Methods, Results, Conclusion",
     },
     {
       command: "edit",
@@ -81,8 +57,6 @@ const EN: SlashCopy = {
   hints: [
     "/logic",
     "/logic full",
-    "/logic deep",
-    "/style",
     "/structure",
     "/citation",
   ],
@@ -107,26 +81,8 @@ const VI: SlashCopy = {
     {
       command: "logic full",
       task: "logic",
-      description: "Logic audit Quick — toàn bộ bài",
-      detail: "Gemini 2.5 Flash · ~3–8 phút · tối đa 20 section · tab Logic Audit",
-    },
-    {
-      command: "logic deep",
-      task: "logic",
-      description: "Logic audit Deep — soi sâu 1 phần",
-      detail: "Gemini 3.5 Flash (engine riêng) · ~2–4 phút · không dùng provider chat",
-    },
-    {
-      command: "logic deep full",
-      task: "logic",
-      description: "Logic audit Deep — toàn bộ bài",
-      detail: "Gemini 3.5 Flash · ~8–15 phút · tối đa 8 section",
-    },
-    {
-      command: "style",
-      task: "style",
-      description: "Chỉnh văn phong học thuật, giữ nguyên ý nghĩa",
-      detail: "Dùng provider/model đang chọn · đề xuất sửa từng đoạn",
+      description: "Logic audit — toàn bộ bài",
+      detail: "Gemini 3.5 Flash · ~3–8 phút · tối đa 20 section · tab Logic Audit",
     },
     {
       command: "structure",
@@ -139,12 +95,6 @@ const VI: SlashCopy = {
       task: "citation",
       description: "Kiểm tra trích dẫn và bibliography",
       detail: "Đối chiếu \\cite{...} với metadata có sẵn",
-    },
-    {
-      command: "template",
-      task: "template",
-      description: "Tạo khung IMRAD trống trong file",
-      detail: "Abstract, Introduction, Methods, Results, Conclusion",
     },
     {
       command: "edit",
@@ -162,8 +112,6 @@ const VI: SlashCopy = {
   hints: [
     "/logic",
     "/logic full",
-    "/logic deep",
-    "/style",
     "/structure",
     "/citation",
   ],

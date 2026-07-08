@@ -37,6 +37,7 @@ export function ToolsPanel({
   logicAuditProgressDetail = null,
   logicAuditSectionProgress = null,
   logicAuditEngineAvailable = true,
+  logicAuditScopeHint = null,
   onCancelLogicAudit,
   onJumpToLogicIssue,
   onAskArioLogic,
@@ -66,6 +67,7 @@ export function ToolsPanel({
   logicAuditProgressDetail?: string | null;
   logicAuditSectionProgress?: { completed: number; total: number } | null;
   logicAuditEngineAvailable?: boolean;
+  logicAuditScopeHint?: LogicAuditScope | null;
   onCancelLogicAudit?: () => void;
   onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
   onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
@@ -227,6 +229,7 @@ export function ToolsPanel({
               progressDetail={logicAuditProgressDetail}
               sectionProgress={logicAuditSectionProgress}
               engineAvailable={logicAuditEngineAvailable}
+              scopeHint={logicAuditScopeHint}
               onRun={onRunLogicAudit}
               onCancel={onCancelLogicAudit}
               onJumpToIssue={onJumpToLogicIssue}

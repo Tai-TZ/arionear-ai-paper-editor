@@ -172,6 +172,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [auditInProgress, setAuditInProgress] = useState(false);
+  const [logicAuditScopeHint, setLogicAuditScopeHint] = useState<LogicAuditScope | null>(null);
   const [auditSectionProgress, setAuditSectionProgress] = useState<{
     completed: number;
     total: number;
@@ -628,6 +629,8 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setChatComposerMode("normal");
     if (task === "logic") {
       sideEffects.setToolsOpen(true);
+      sideEffects.setToolsTab("logic");
+      setLogicAuditScopeHint(logicAuditScope ?? "selected");
       logicAuditPartialCountRef.current = 0;
       setAuditSectionProgress({ completed: 0, total: targetSectionCount });
       setAuditInProgress(true);
@@ -879,6 +882,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
             sideEffects.lastPanelAuditFingerprintRef.current =
               logicAuditFingerprint(sentMainLatex);
             sideEffects.setToolsOpen(true);
+            sideEffects.setToolsTab("logic");
           }
         }
         if (result.revision_id) {
@@ -1092,23 +1096,14 @@ export function useEditorChat(options: UseEditorChatOptions) {
       sectionOptions,
     );
     logicAuditLaunchRef.current = {
-      mode,
+      mode: "quick",
       scope,
       sections,
       targetSectionCount,
-      userDisplay: full
-        ? mode === "deep"
-          ? auditCopy.displayDeepFull
-          : auditCopy.displayQuickFull
-        : mode === "deep"
-          ? auditCopy.displayDeep
-          : auditCopy.displayQuick,
-      message: full
-        ? auditCopy.messageFull
-        : mode === "deep"
-          ? auditCopy.messageDeepSelected
-          : auditCopy.messageQuickSelected,
+      userDisplay: full ? auditCopy.displayQuickFull : auditCopy.displayQuick,
+      message: full ? auditCopy.messageFull : auditCopy.messageQuickSelected,
     };
+    setLogicAuditScopeHint(scope);
     openChatPanel();
     void handleSend();
   };
@@ -1494,6 +1489,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     chatLoading,
     auditInProgress,
     auditSectionProgress,
+    logicAuditScopeHint,
     chatStreamProgress,
     chatEndRef,
     chatSelectionContext,

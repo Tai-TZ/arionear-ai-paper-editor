@@ -23,6 +23,12 @@ describe("parseChatSlashCommand", () => {
     expect(inferManuscriptEditTask("chào bạn")).toBeNull();
   });
 
+  it("parses /logic full as full-manuscript scope", () => {
+    const parsed = parseChatSlashCommand("/logic full", "vi");
+    expect(parsed.task).toBe("logic");
+    expect(parsed.logicAuditScope).toBe("full");
+  });
+
   it("falls back to default when slash command has no trailing text", () => {
     const parsed = parseChatSlashCommand("/edit", "vi");
     expect(parsed.task).toBe("edit");

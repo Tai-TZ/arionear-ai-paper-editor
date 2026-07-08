@@ -152,6 +152,116 @@ function AccountDemo({ d }: { d: GuideDemoLabels }) {
   );
 }
 
+function SlashDemo({ d }: { d: GuideDemoLabels }) {
+  return (
+    <div className="guide-demo" aria-hidden>
+      <Chrome>{d.slashChrome}</Chrome>
+      <div className="guide-demo-body guide-demo-slash">
+        <div className="guide-demo-slash-input-wrap">
+          <span className="guide-demo-slash-input font-mono-data">{d.slashInput}</span>
+          <span className="guide-demo-cursor guide-demo-slash-cursor" />
+        </div>
+        <div className="guide-demo-slash-menu">
+          <div className="guide-demo-slash-item guide-demo-slash-item-active">
+            <span className="guide-demo-slash-cmd">/logic</span>
+            <span className="guide-demo-slash-desc">{d.slashMenuLogic}</span>
+          </div>
+          <div className="guide-demo-slash-item guide-demo-slash-item-2">
+            <span className="guide-demo-slash-cmd">/logic full</span>
+            <span className="guide-demo-slash-desc">{d.slashMenuLogicFull}</span>
+          </div>
+          <div className="guide-demo-slash-item guide-demo-slash-item-3">
+            <span className="guide-demo-slash-cmd">/edit</span>
+            <span className="guide-demo-slash-desc">{d.slashMenuEdit}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolsDemo({ d }: { d: GuideDemoLabels }) {
+  const tabs = [
+    d.toolsTabInfo,
+    d.toolsTabStructure,
+    d.toolsTabLogic,
+    d.toolsTabCitations,
+    d.toolsTabVersions,
+  ];
+  return (
+    <div className="guide-demo" aria-hidden>
+      <Chrome>{d.toolsChrome}</Chrome>
+      <div className="guide-demo-body guide-demo-tools">
+        <div className="guide-demo-tools-tabs">
+          {tabs.map((label, index) => (
+            <span
+              key={label}
+              className={`guide-demo-tools-tab${index === 2 ? " guide-demo-tools-tab-active" : ""}`}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="guide-demo-tools-content">
+          <div className="guide-demo-tools-row">
+            <span className="guide-demo-tools-label">{d.toolsAutoCompile}</span>
+            <span className="guide-demo-tools-toggle guide-demo-pulse-badge" />
+          </div>
+          <div className="guide-demo-tools-stat-grid">
+            <div className="guide-demo-tools-stat">
+              <Skel className="guide-demo-skel-meta" />
+              <Skel className="guide-demo-skel-title" />
+            </div>
+            <div className="guide-demo-tools-stat">
+              <Skel className="guide-demo-skel-meta" />
+              <Skel className="guide-demo-skel-title" />
+            </div>
+            <div className="guide-demo-tools-stat guide-demo-tools-stat-flag">
+              <Skel className="guide-demo-skel-bubble" />
+              <Skel className="guide-demo-skel-bubble guide-demo-skel-bubble-short" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScoreDemo({ d }: { d: GuideDemoLabels }) {
+  const dims = [
+    { label: d.scoreStructure, width: "82%" },
+    { label: d.scoreLogic, width: "68%" },
+    { label: d.scoreCitations, width: "91%" },
+    { label: d.scorePeerReview, width: "74%" },
+  ];
+  return (
+    <div className="guide-demo" aria-hidden>
+      <Chrome>{d.scoreChrome}</Chrome>
+      <div className="guide-demo-body guide-demo-score">
+        <div className="guide-demo-score-ring-wrap">
+          <div className="guide-demo-score-ring" role="presentation">
+            <span className="guide-demo-score-value font-mono-data">78</span>
+          </div>
+          <p className="guide-demo-col-label">{d.scoreOverall}</p>
+        </div>
+        <div className="guide-demo-score-dims">
+          {dims.map((dim) => (
+            <div key={dim.label} className="guide-demo-score-dim">
+              <div className="guide-demo-score-dim-head">
+                <span>{dim.label}</span>
+                <Skel className="guide-demo-skel-meta" />
+              </div>
+              <div className="guide-demo-score-bar">
+                <div className="guide-demo-score-bar-fill" style={{ width: dim.width }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GuideStepDemo({ id, labels }: { id: GuideDemoId; labels: GuideDemoLabels }) {
   switch (id) {
     case "projects":
@@ -170,5 +280,11 @@ export function GuideStepDemo({ id, labels }: { id: GuideDemoId; labels: GuideDe
       return <DefenseDemo d={labels} />;
     case "account":
       return <AccountDemo d={labels} />;
+    case "slash":
+      return <SlashDemo d={labels} />;
+    case "tools":
+      return <ToolsDemo d={labels} />;
+    case "score":
+      return <ScoreDemo d={labels} />;
   }
 }

@@ -45,6 +45,21 @@ def test_resolve_logic_audit_deep_uses_gemini_quality(monkeypatch):
     assert model == "gemini-3.5-flash"
 
 
+def test_resolve_logic_audit_quick_full_uses_gemini_quality(monkeypatch):
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("ZAI_API_KEY", "zai-test")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-test")
+    provider, model = resolve_logic_audit_llm(
+        "quick", "openrouter", scope="full"
+    )
+    assert provider == "google"
+    assert model == "gemini-3.5-flash"
+    assert logic_audit_engine_label("quick", scope="full") == "Gemini 3.5 Flash"
+
+
 def test_logic_audit_engine_label(monkeypatch):
     from src.config import get_settings
 
