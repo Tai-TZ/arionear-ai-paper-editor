@@ -6,8 +6,6 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronUp,
-  Copy,
-  Check,
   Maximize2,
   PencilLine,
   Square,
@@ -391,36 +389,6 @@ export function ChatDock({
   );
 }
 
-function ChatCopyButton({ text, ariaLabel }: { text: string; ariaLabel: string }) {
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleCopy = useCallback(() => {
-    void navigator.clipboard?.writeText(text);
-    setCopied(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 1000);
-  }, [text]);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
-  return (
-    <button
-      type="button"
-      className={cn("chat-copy-btn", copied && "chat-copy-btn-copied")}
-      aria-label={ariaLabel}
-      onClick={handleCopy}
-    >
-      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-    </button>
-  );
-}
-
 function assistantHasBody(message: ChatMessage): boolean {
   return Boolean(
     message.content?.trim() ||
@@ -541,11 +509,6 @@ export function ChatMessages({
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                 </div>
               )}
-              {m.content && !m.isStreaming ? (
-                <div className="chat-assistant-actions">
-                  <ChatCopyButton text={m.content} ariaLabel={t.chatDock.copyMessage} />
-                </div>
-              ) : null}
               {m.isStreaming && m.content && (
                 <span className="chat-stream-cursor" aria-hidden />
               )}

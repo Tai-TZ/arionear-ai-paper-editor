@@ -706,10 +706,11 @@ export function PdfPreviewPanel({
         mobile ? "flex-1 w-full" : "h-full w-full"
       }`}
     >
-      <header className="pdf-preview-toolbar-top flex h-11 shrink-0 items-center justify-between px-3 md:px-4">
-        <div className="flex items-center gap-2.5">
+      <header className="pdf-preview-toolbar-top editor-toolbar-scroll h-11 shrink-0 px-3 md:px-4">
+        <div className="flex h-full w-max min-w-full items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center gap-2.5">
           {readOnly ? (
-            <span className="pdf-preview-toolbar-muted inline-flex items-center gap-2 font-mono text-[11px]">
+            <span className="pdf-preview-toolbar-muted inline-flex items-center gap-2 whitespace-nowrap font-mono text-[11px]">
               {isCompiling ? (
                 <span className="inline-flex items-center gap-1.5">
                   <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
@@ -725,7 +726,7 @@ export function PdfPreviewPanel({
                   type="button"
                   onClick={onCompile}
                   disabled={isCompiling}
-                  className="pdf-preview-compile-btn inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold text-white transition disabled:opacity-60"
+                  className="pdf-preview-compile-btn inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-semibold text-white transition disabled:opacity-60"
                 >
                   <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
                   {t.pdf.compile}
@@ -738,19 +739,19 @@ export function PdfPreviewPanel({
                 type="button"
                 onClick={onCompile}
                 disabled={isCompiling}
-                className="pdf-preview-compile-btn inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
+                className="pdf-preview-compile-btn inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${isCompiling ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isCompiling ? "animate-spin" : ""}`} />
                 {isCompiling ? t.pdf.compiling : t.pdf.compile}
               </button>
-              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
+              <span className="pdf-preview-toolbar-muted whitespace-nowrap font-mono text-[11px]">
                 {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
               </span>
               {onCompilerChange && (
                 <select
                   value={compiler}
                   onChange={(e) => onCompilerChange(e.target.value as LatexCompiler)}
-                  className="pdf-preview-toolbar-select rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
+                  className="pdf-preview-toolbar-select shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
                   title="LaTeX compiler (Overleaf-style)"
                 >
                   {availableCompilerOptions.map((opt) => (
@@ -764,7 +765,7 @@ export function PdfPreviewPanel({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           {!readOnly && compileLog && !searchOpen && (
             <button
               type="button"
@@ -857,6 +858,7 @@ export function PdfPreviewPanel({
               ))}
             </select>
           ) : null}
+        </div>
         </div>
       </header>
 

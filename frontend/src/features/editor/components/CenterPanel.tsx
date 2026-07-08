@@ -155,87 +155,88 @@ export function CenterPanel({
 
   return (
     <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="editor-file-tab flex items-center gap-2 rounded-lg border border-border/80 bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
-            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span>{activeFile}</span>
-            {isDirty && !viewingAsset ? <span className="file-dirty-mark">*</span> : null}
+      <div className="editor-toolbar-scroll h-11 shrink-0 border-b border-border/60 bg-card/80 px-4 backdrop-blur-sm">
+        <div className="flex h-full w-max min-w-full items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="editor-file-tab flex items-center gap-2 rounded-lg border border-border/80 bg-background px-3 py-1.5 text-xs font-medium whitespace-nowrap text-foreground shadow-sm">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span>{activeFile}</span>
+              {isDirty && !viewingAsset ? <span className="file-dirty-mark">*</span> : null}
+            </div>
+            {!viewingAsset ? (
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  className="editor-history-btn"
+                  aria-label="Undo (Ctrl+Z)"
+                  title="Undo (Ctrl+Z)"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                  className="editor-history-btn"
+                  aria-label="Redo (Ctrl+Shift+Z)"
+                  title="Redo (Ctrl+Shift+Z)"
+                >
+                  <Redo2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : null}
           </div>
-          {!viewingAsset ? (
-          <div className="flex items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="editor-toolbar-actions flex">
+              {onExport ? (
+                <button
+                  type="button"
+                  onClick={onExport}
+                  disabled={!exportEnabled}
+                  className="editor-toolbar-action"
+                  title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
+                >
+                  <FileOutput className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>{t.toolbar.score}</span>
+                </button>
+              ) : null}
+              {onShare ? (
+                <button
+                  type="button"
+                  onClick={onShare}
+                  className={`editor-toolbar-action${shareEnabled ? " editor-toolbar-action-active" : ""}`}
+                  title={t.toolbar.share}
+                >
+                  <Share2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>{t.toolbar.share}</span>
+                </button>
+              ) : null}
+              {onDefense ? (
+                <button
+                  type="button"
+                  onClick={onDefense}
+                  className="editor-toolbar-action"
+                  title={t.toolbar.defense}
+                >
+                  <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>{t.toolbar.defense}</span>
+                </button>
+              ) : null}
+            </div>
             <button
-              type="button"
-              onClick={onUndo}
-              disabled={!canUndo}
-              className="editor-history-btn"
-              aria-label="Undo (Ctrl+Z)"
-              title="Undo (Ctrl+Z)"
+              onClick={onToggleTools}
+              className={`flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition ${
+                toolsOpen
+                  ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              }`}
             >
-              <Undo2 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={onRedo}
-              disabled={!canRedo}
-              className="editor-history-btn"
-              aria-label="Redo (Ctrl+Shift+Z)"
-              title="Redo (Ctrl+Shift+Z)"
-            >
-              <Redo2 className="h-3.5 w-3.5" />
+              <Wrench className="h-3 w-3" />
+              {t.toolbar.tools}
             </button>
           </div>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="editor-toolbar-actions hidden md:flex">
-            {onExport ? (
-              <button
-                type="button"
-                onClick={onExport}
-                disabled={!exportEnabled}
-                className="editor-toolbar-action"
-                title={exportEnabled ? t.toolbar.exportPdf : t.toolbar.compileBeforeExport}
-              >
-                <FileOutput className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span>{t.toolbar.score}</span>
-              </button>
-            ) : null}
-            {onShare ? (
-              <button
-                type="button"
-                onClick={onShare}
-                className={`editor-toolbar-action${shareEnabled ? " editor-toolbar-action-active" : ""}`}
-                title={t.toolbar.share}
-              >
-                <Share2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span>{t.toolbar.share}</span>
-              </button>
-            ) : null}
-            {onDefense ? (
-              <button
-                type="button"
-                onClick={onDefense}
-                className="editor-toolbar-action"
-                title={t.toolbar.defense}
-              >
-                <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span>{t.toolbar.defense}</span>
-              </button>
-            ) : null}
-          </div>
-          {/* Primary action */}
-          <button
-            onClick={onToggleTools}
-            className={`flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition ${
-              toolsOpen
-                ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
-          >
-            <Wrench className="h-3 w-3" />
-            {t.toolbar.tools}
-          </button>
         </div>
       </div>
 

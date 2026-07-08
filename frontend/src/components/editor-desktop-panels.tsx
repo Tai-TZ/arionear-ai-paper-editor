@@ -48,8 +48,8 @@ export function EditorDesktopPanels({
   previewPanelId = "preview",
   centerDefaultSize = 58,
   previewDefaultSize = 42,
-  centerMinSize = 28,
-  previewMinSize = 22,
+  centerMinSize = 200,
+  previewMinSize = 200,
   centerMaxSize,
   previewMaxSize,
 }: EditorDesktopPanelsProps) {
