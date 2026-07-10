@@ -344,18 +344,18 @@ function ProjectsPage() {
                 <div className="projects-menu projects-menu-grouped absolute right-0 top-full z-20 mt-1 min-w-[11.5rem]">
                   <p className="projects-menu-label">{t.menuCreate}</p>
                   <button
-                    onClick={() => runWithNotice(() => void handleCreateBlank())}
-                    className="projects-menu-item"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    {t.blankProject}
-                  </button>
-                  <button
                     onClick={() => runWithNotice(() => void handleCreateSample())}
                     className="projects-menu-item"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     {t.sampleProject}
+                  </button>
+                  <button
+                    onClick={() => runWithNotice(() => void handleCreateBlank())}
+                    className="projects-menu-item"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {t.blankProject}
                   </button>
                   {SHOW_PROJECTS_IMPORT ? (
                     <>
@@ -416,7 +416,6 @@ function ProjectsPage() {
               hasSearch={!!search.trim()}
               t={t}
               onSample={() => runWithNotice(() => void handleCreateSample())}
-              onBlank={() => runWithNotice(() => void handleCreateBlank())}
               disabled={!!creatingLabel}
             />
           ) : view === "list" ? (
@@ -482,13 +481,11 @@ function EmptyProjects({
   hasSearch,
   t,
   onSample,
-  onBlank,
   disabled = false,
 }: {
   hasSearch: boolean;
   t: ReturnType<typeof projectsCopy>;
   onSample: () => void;
-  onBlank: () => void;
   disabled?: boolean;
 }) {
   if (hasSearch) {
@@ -505,15 +502,7 @@ function EmptyProjects({
       <h2>{t.emptyStartTitle}</h2>
       <p>{t.emptyStartBody}</p>
 
-      <div className="projects-empty-actions">
-        <button type="button" onClick={onBlank} disabled={disabled} className="projects-empty-card">
-          <div className="icon-box">
-            <FileText className="h-5 w-5" strokeWidth={1.5} />
-          </div>
-          <h3>{t.blankProject}</h3>
-          <p>{t.emptyBlankHint}</p>
-        </button>
-
+      <div className="projects-empty-actions projects-empty-actions--single">
         <button type="button" onClick={onSample} disabled={disabled} className="projects-empty-card">
           <div className="icon-box">
             <BookOpen className="h-5 w-5" strokeWidth={1.5} />

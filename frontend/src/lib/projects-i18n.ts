@@ -80,7 +80,7 @@ const EN: ProjectsCopy = {
   emptyTryDifferent: "Try a different search term.",
   emptyStartTitle: "Write a scientific paper",
   emptyStartBody:
-    "IMRaD structure (Introduction, Methods, Results, Discussion) in IEEE journal format. Start with a blank project or open the sample.",
+    "IMRaD structure (Introduction, Methods, Results, Discussion) in IEEE journal format. Open the sample project to get started.",
   emptyBlankHint: "Blank outline with IMRaD sections ready for your content.",
   emptySampleHint: "Filled sample you can edit and compile to explore Arionear.",
   created: "Created",
@@ -141,7 +141,7 @@ const VI: ProjectsCopy = {
   emptyTryDifferent: "Thử từ khóa khác.",
   emptyStartTitle: "Viết bài báo khoa học",
   emptyStartBody:
-    "Theo khung IMRaD (Giới thiệu, Phương pháp, Kết quả, Thảo luận) và định dạng tạp chí IEEE. Chọn dự án trống hoặc mẫu để bắt đầu.",
+    "Theo khung IMRaD (Giới thiệu, Phương pháp, Kết quả, Thảo luận) và định dạng tạp chí IEEE. Chọn dự án mẫu để bắt đầu.",
   emptyBlankHint: "Khung bài báo trống — các mục IMRaD sẵn sàng để bạn điền nội dung.",
   emptySampleHint: "Bản mẫu có nội dung minh họa — thay bằng nghiên cứu của bạn.",
   created: "Tạo lúc",

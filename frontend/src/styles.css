@@ -3260,8 +3260,18 @@
   margin-top: 2rem;
 }
 
+.projects-empty-actions--single {
+  display: flex;
+  justify-content: center;
+}
+
+.projects-empty-actions--single .projects-empty-card {
+  width: 100%;
+  max-width: 18rem;
+}
+
 @media (min-width: 640px) {
-  .projects-empty-actions {
+  .projects-empty-actions:not(.projects-empty-actions--single) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
