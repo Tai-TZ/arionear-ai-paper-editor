@@ -11,8 +11,8 @@ Usage:
 Visual identity follows the app's editorial "newsprint" design (``frontend/src/styles.css``):
 newsprint paper, ink line-art blocks, editorial red for the live flow, square corners, hard
 offset shadows, Playfair / Source Serif / JetBrains Mono type stacks. Colours are CSS custom
-properties with a ``prefers-color-scheme: dark`` override (the app's ``.dark`` tokens), so one
-file reads well on GitHub's light and dark themes. The SVGs are self-contained (no external
+properties holding the app's light tokens; the diagrams always render on newsprint, also on
+GitHub's dark theme (like a printed figure). The SVGs are self-contained (no external
 fonts/scripts) and animate with CSS + SMIL; ``prefers-reduced-motion`` stops the motion and
 hides the moving packets. Text sizes assume the ~880px README column: nothing is set below 14px
 on the 1040px canvas (~12px on screen).
@@ -45,7 +45,6 @@ VI_TEXT = re.compile(r"[À-ɏḀ-ỿ]")
 
 # App tokens (frontend/src/styles.css), oklch converted to the sRGB hex the browser renders.
 # light: newsprint oklch(.973 .005 90) · ink oklch(.145 0 0) · red oklch(.52 .22 27) · divider oklch(.91 .003 90)
-# dark (.dark): ink oklch(.94 .005 90) · newsprint oklch(.16 .01 90) · red oklch(.62 .22 27) · divider oklch(.28 .01 90)
 LIGHT = {
     "pp": "#F7F6F2",  # newsprint (page)
     "ik": "#0A0A0A",  # ink
@@ -56,16 +55,6 @@ LIGHT = {
     "fr": "#C9C7C1",  # block right face
     "on": "#F7F6F2",  # text on red / ink
 }
-DARK = {
-    "pp": "#0F0D08",
-    "ik": "#ECEBE7",
-    "rd": "#EE3533",
-    "mu": "#A7A49E",
-    "tp": "#2E2C26",
-    "fl": "#221F1A",
-    "fr": "#181611",
-    "on": "#0F0D08",
-}
 
 
 def _vars(tokens: dict[str, str]) -> str:
@@ -74,7 +63,6 @@ def _vars(tokens: dict[str, str]) -> str:
 
 CSS = (
     f":root{{{_vars(LIGHT)}}}"
-    f"@media (prefers-color-scheme:dark){{:root{{{_vars(DARK)}}}}}"
     f".d{{font-family:{DISPLAY}}}.dv{{font-family:{DISPLAY_VI}}}.s{{font-family:{SERIF}}}"
     f".sv{{font-family:{SERIF_VI}}}.m{{font-family:{MONO}}}.u{{font-family:{SANS}}}"
     ".k{letter-spacing:.12em}"

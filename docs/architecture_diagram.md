@@ -1,7 +1,7 @@
 # Architecture Diagram — Arionear
 
 **Tagline:** *Closer to Publication*  
-**Cập nhật:** 04/10/2026 · Đồng bộ production v1.0 · sơ đồ sinh bởi [`scripts/build_diagrams.py`](../scripts/build_diagrams.py) (phong cách editorial của app, tự đổi theo light/dark theme)  
+**Cập nhật:** 04/10/2026 · Đồng bộ production v1.0 · sơ đồ sinh bởi [`scripts/build_diagrams.py`](../scripts/build_diagrams.py) (phong cách editorial của app, luôn hiển thị bản sáng)  
 **Live:** [https://arionear.id.vn/](https://arionear.id.vn/) · API: [https://api.arionear.id.vn](https://api.arionear.id.vn)
 
 Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.

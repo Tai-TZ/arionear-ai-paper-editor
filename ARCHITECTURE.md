@@ -47,7 +47,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
   <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
-Sơ đồ gồm cả DOCX/PDF import, Peer Review (→ Reply Letter), Citations L1–L4 (OpenAlex + L4 relevance) và AI Disclosure — endpoint chi tiết ở §4.2, luồng dữ liệu ở §7. Toàn bộ sơ đồ trong `docs/assets/` sinh từ [`scripts/build_diagrams.py`](./scripts/build_diagrams.py), theo phong cách editorial "newsprint" của app và tự đổi màu theo light/dark theme.
+Sơ đồ gồm cả DOCX/PDF import, Peer Review (→ Reply Letter), Citations L1–L4 (OpenAlex + L4 relevance) và AI Disclosure — endpoint chi tiết ở §4.2, luồng dữ liệu ở §7. Toàn bộ sơ đồ trong `docs/assets/` sinh từ [`scripts/build_diagrams.py`](./scripts/build_diagrams.py), theo phong cách editorial "newsprint" của app, luôn hiển thị bản sáng (kể cả trên GitHub dark theme).
 
 ---
 
