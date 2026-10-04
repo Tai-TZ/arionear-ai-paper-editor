@@ -254,6 +254,29 @@ class CompileEnginesInfo(BaseModel):
 
 CompileMode = Literal["full", "fast"]
 
+_MAIN_FILE_CHARS = re.compile(r"[A-Za-z0-9._/-]+")
+_MAIN_FILE_SUFFIXES = (".tex", ".latex")
+
+
+def validate_main_file_path(value: object) -> str:
+    """Relative `.tex`/`.latex` path inside the compile workspace (no `..`, drive or root)."""
+    if value is None:
+        return "main.tex"
+    if not isinstance(value, str):
+        raise ValueError("main_file must be a string")
+    name = value.strip()
+    if not name:
+        return "main.tex"
+    if name.startswith(("/", "\\")) or re.match(r"[A-Za-z]:", name):
+        raise ValueError("main_file must be a relative path")
+    if not _MAIN_FILE_CHARS.fullmatch(name):
+        raise ValueError("main_file may only contain letters, digits, '.', '_', '-' and '/'")
+    if ".." in name.split("/"):
+        raise ValueError("main_file must not contain '..'")
+    if not name.lower().endswith(_MAIN_FILE_SUFFIXES):
+        raise ValueError("main_file must end with .tex or .latex")
+    return name
+
 
 class CompileRequest(BaseModel):
     latex: str = Field(..., min_length=1, max_length=500_000)
@@ -269,6 +292,11 @@ class CompileRequest(BaseModel):
         default="full",
         description="fast: skip synctex and use lighter compile passes for preview.",
     )
+
+    @field_validator("main_file", mode="before")
+    @classmethod
+    def _safe_main_file(cls, value: object) -> str:
+        return validate_main_file_path(value)
 
 
 class CompileResponse(BaseModel):

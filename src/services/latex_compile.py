@@ -84,6 +84,10 @@ class CompileBudgetExceededError(Exception):
     """Raised when a compile exceeds the configured wall-clock budget."""
 
 
+class UnsafeMainFileError(ValueError):
+    """Raised when main_file would resolve outside the compile workspace."""
+
+
 @dataclass
 class _CachedWorkspace:
     path: Path
@@ -799,6 +803,15 @@ def _extract_latex_error(log: str) -> str:
     return "PDF generation failed. Review the LaTeX log for errors."
 
 
+def _main_file_path(work_dir: Path, main_file: str) -> Path:
+    """Defence in depth on top of CompileRequest validation: never write outside work_dir."""
+    root = work_dir.resolve()
+    candidate = (root / main_file.replace("\\", "/")).resolve()
+    if candidate == root or not candidate.is_relative_to(root):
+        raise UnsafeMainFileError("main_file must stay inside the compile workspace")
+    return candidate
+
+
 def _jobname(main_file: str) -> str:
     return Path(main_file).stem or "main"
 
@@ -1208,7 +1221,7 @@ def _compile_latex_impl(request: CompileRequest) -> CompileResponse:
     prepared, class_warnings = _resolve_document_class(prepared, work_dir)
     warnings.extend(class_warnings)
 
-    main_path = work_dir / main_file.replace("\\", "/")
+    main_path = _main_file_path(work_dir, main_file)
     main_path.parent.mkdir(parents=True, exist_ok=True)
     main_path.write_text(prepared, encoding="utf-8")
 

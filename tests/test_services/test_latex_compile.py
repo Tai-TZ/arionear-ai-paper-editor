@@ -8,6 +8,7 @@ import subprocess
 import uuid
 
 import pytest
+from pydantic import ValidationError
 
 from src.models.schemas import CompileRequest
 from src.services import latex_compile as lc
@@ -398,3 +399,55 @@ def test_compile_budget_exceeded():
     with pytest.raises(lc.CompileBudgetExceededError):
         lc._assert_compile_budget()
     lc._clear_compile_budget()
+
+
+@pytest.mark.parametrize("main_file", ["main.tex", "chapters/intro.tex", "paper-v2_final.latex", "a/b/c.TeX"])
+def test_compile_request_accepts_safe_main_file(main_file):
+    assert CompileRequest(latex="x", main_file=main_file).main_file == main_file
+
+
+@pytest.mark.parametrize("main_file", ["", "   "])
+def test_compile_request_blank_main_file_defaults(main_file):
+    assert CompileRequest(latex="x", main_file=main_file).main_file == "main.tex"
+
+
+@pytest.mark.parametrize(
+    "main_file",
+    [
+        "../x.tex",
+        "/etc/x.tex",
+        r"C:\x.tex",
+        "C:/x.tex",
+        "a/../../b.tex",
+        r"\\server\share\x.tex",
+        r"chapters\..\..\x.tex",
+        "main.sty",
+        "main",
+        "my paper.tex",
+        "..",
+    ],
+)
+def test_compile_request_rejects_unsafe_main_file(main_file):
+    with pytest.raises(ValidationError):
+        CompileRequest(latex="x", main_file=main_file)
+
+
+def test_main_file_path_guard_rejects_escape(tmp_path):
+    assert lc._main_file_path(tmp_path, "chapters/intro.tex") == (tmp_path / "chapters" / "intro.tex").resolve()
+    for bad in ("../escape.tex", "a/../../escape.tex", "."):
+        with pytest.raises(lc.UnsafeMainFileError):
+            lc._main_file_path(tmp_path, bad)
+
+
+def test_compile_impl_guards_unvalidated_main_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(lc, "find_tex_engine", lambda _compiler: "pdflatex")
+    request = CompileRequest.model_construct(
+        latex=r"\documentclass{article}\begin{document}x\end{document}",
+        main_file="../../escape.tex",
+        compiler="pdflatex",
+        assets=[],
+        cache_id=f"guard-{uuid.uuid4().hex}",
+        mode="full",
+    )
+    with pytest.raises(lc.UnsafeMainFileError):
+        lc.compile_latex(request)
