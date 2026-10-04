@@ -1,6 +1,7 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState, type InputHTMLAttributes } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
 import { EditorOnboardingDialog } from "@/components/editor/editor-onboarding-dialog";
 import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
@@ -18,6 +19,7 @@ import { editorShellCopy } from "@/lib/editor-shell-i18n";
 import { formatLogicAuditProgress } from "@/lib/logic-audit";
 import type { EditorSelectionContext, SelectionAnchor } from "@/lib/editor-selection-anchor";
 import { isImageAssetFile, type LatexCompiler } from "@/lib/project-store";
+import { useLatestRef } from "@/lib/use-latest-ref";
 import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import { Route } from "@/routes/editor";
 import { persistChatThreads } from "./lib/editor-thread-storage";
@@ -52,6 +54,12 @@ function isOtherEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.closest(".latex-input")) return false;
   return target.isContentEditable || target.matches("input, textarea, select");
+}
+
+type LeaveLocation = { pathname: string; search: unknown };
+
+function projectIdOf(search: unknown): unknown {
+  return (search as { projectId?: unknown } | null)?.projectId;
 }
 
 export function EditorWorkspace() {
@@ -258,6 +266,23 @@ export function EditorWorkspace() {
     [projectId, setProjectCompiler],
   );
 
+  // Unsaved-changes guard: browser leave (beforeunload) and in-app navigation away from this
+  // project. The callbacks are stable so the router registers the blocker once.
+  const hasUnsavedChangesRef = useLatestRef(project.bootState === "ready" && project.isDirty);
+  const shouldBlockLeave = useCallback(
+    ({ current, next }: { current: LeaveLocation; next: LeaveLocation }) =>
+      hasUnsavedChangesRef.current &&
+      (next.pathname !== current.pathname ||
+        projectIdOf(next.search) !== projectIdOf(current.search)),
+    [hasUnsavedChangesRef],
+  );
+  const warnBeforeUnload = useCallback(() => hasUnsavedChangesRef.current, [hasUnsavedChangesRef]);
+  const leaveBlocker = useBlocker({
+    shouldBlockFn: shouldBlockLeave,
+    enableBeforeUnload: warnBeforeUnload,
+    withResolver: true,
+  });
+
   const handleSave = useCallback(() => {
     if (!projectId) return;
     persistActiveThreadNowRef.current();
@@ -458,6 +483,18 @@ export function EditorWorkspace() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={leaveBlocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) leaveBlocker.reset?.();
+        }}
+        title={shellCopy.unsavedLeave.title}
+        description={shellCopy.unsavedLeave.body}
+        confirmLabel={shellCopy.unsavedLeave.leave}
+        cancelLabel={shellCopy.unsavedLeave.stay}
+        destructive
+        onConfirm={() => leaveBlocker.proceed?.()}
+      />
       {project.bootState === "error" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="font-serif-body text-lg font-semibold">{shellCopy.bootError.title}</p>
