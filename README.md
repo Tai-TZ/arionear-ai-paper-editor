@@ -348,6 +348,7 @@ Backend và frontend được đóng gói thành container và triển khai lên
 | [docs/pdf-preview-deploy.md](./docs/pdf-preview-deploy.md) | Vận hành compile & PDF preview |
 | [EVALUATION.md](./EVALUATION.md) | Kết quả kiểm thử & benchmark |
 | [ROADMAP.md](./ROADMAP.md) | Lộ trình phát triển |
+| [scripts/build_diagrams.py](./scripts/build_diagrams.py) | Sinh lại các sơ đồ SVG động trong `docs/assets/` |
 
 ---
 

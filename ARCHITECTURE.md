@@ -2,15 +2,13 @@
 
 **Dự án:** AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *Closer to Publication*  
-**Phiên bản tài liệu:** 3.1 · **Cập nhật:** 08/07/2026
+**Phiên bản tài liệu:** 3.2 · **Cập nhật:** 04/10/2026
 
 > Kiến trúc tham khảo framework mã nguồn mở AutoResearchClaw (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
 Tài liệu này mô tả **kiến trúc đã triển khai** (v1.0, production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
 
 **Production URLs:** https://arionear.id.vn · https://api.arionear.id.vn
-
-![Arionear system architecture](./docs/ARCHITECTURE.png)
 
 ---
 
@@ -45,72 +43,9 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 
 > **Quy ước sơ đồ:** Chỉ gồm thành phần **đã code và chạy production** (✅). Tính năng roadmap *(planned P2)* không vẽ vào đây — xem [§12 Roadmap](#12-roadmap-tóm-tắt). `Researcher` là actor (người dùng), không phải module phần mềm.
 
-```mermaid
-flowchart TB
-    subgraph UL["USER LAYER"]
-        U([Researcher])
-        UP[Upload LaTeX + figures<br/>Overleaf ZIP · Templates ✅]
-        UF[Chat intent<br/>Style · Edit · Structure · Citation · Template · Logic ✅]
-        DF[Defense Mode<br/>Mock viva Q&A ✅]
-    end
-
-    subgraph PL["PROCESSING LAYER"]
-        DP[Document Parser<br/>LaTeX backend ✅]
-        PSS[Paper Store<br/>PostgreSQL + session cache ✅]
-        RE[Intent Router<br/>rules + LLM classifier ✅]
-        SA[Style Agent ✅]
-        ED[Edit Agent ✅]
-        TN[Template Generator ✅]
-        ST[Structure Analyzer ✅]
-        LA[Logic Audit Panel ✅]
-        CV[Citation Verifier ✅]
-        DC[Defense Council ✅]
-        AIM[Academic Integrity Monitor ✅]
-        PS[Publication Score Gate ✅]
-    end
-
-    subgraph HGL["HUMAN GATE LAYER — C7 adapt"]
-        DIFF[Diff View in Editor<br/>Accept / Reject ✅]
-    end
-
-    subgraph OL["OUTPUT LAYER"]
-        RD[Revised draft ✅]
-        IR[Integrity flags ✅]
-        CR[Citation Verification Report ✅]
-        LR[Logic Audit Report ✅]
-        DR[Defense transcript ✅]
-        AL[Audit Log ✅]
-    end
-
-    subgraph INF["INFRASTRUCTURE"]
-        API[FastAPI REST + SSE + WebSocket ✅]
-        LG[LangGraph + chat_stream ✅]
-        LLM[LLM Providers<br/>Z.AI · Google · OpenAI · Anthropic · OpenRouter ✅]
-        DB[(PostgreSQL ✅)]
-        EXT[External APIs<br/>arXiv · CrossRef · Semantic Scholar ✅]
-        ADM[Admin Console ✅]
-        BIL[Billing / Quotas ✅]
-    end
-
-    U --> UP --> DP
-    UF --> RE
-    DF --> DC
-    DP --> PSS --> RE
-    RE --> SA & ED & ST & CV & TN & LA
-    SA & ED & ST & CV & TN --> AIM
-    LA --> AIM
-    AIM --> DIFF
-    DIFF --> RD & IR & CR & LR & AL
-    DIFF --> PS
-    DC --> DR
-    API --> LG --> SA & ED & ST & CV & TN & LA
-    LG --> LLM
-    DC --> LLM
-    CV --> EXT
-    PSS --> DB
-    API --> PSS
-    API --> ADM & BIL
-```
+<p align="center">
+  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
+</p>
 
 **Chưa vẽ vào sơ đồ (planned P2):** Peer-Review Response Agent, Reviewer Response drafts, OpenAlex, DOCX/PDF parser.
 
@@ -120,40 +55,9 @@ flowchart TB
 
 Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /chat` dùng LangGraph graph (ít dùng hơn). Defense dùng `POST /api/v1/defense/stream`.
 
-```mermaid
-sequenceDiagram
-    actor R as Researcher
-    participant FE as EditorWorkspace
-    participant API as FastAPI
-    participant IR as Intent Router
-    participant AG as Agent / Stream
-    participant AIM as Integrity Monitor
-    participant LLM as LLM Provider
-    participant DB as PostgreSQL
-
-    R->>FE: Mở project (papers API)
-    FE->>DB: GET/PATCH /papers/{id} (bearer JWT)
-    FE->>API: syncSession() best-effort
-    R->>FE: Chat ("rút gọn intro", "sườn IMRaD", …)
-    FE->>API: POST /chat/stream (SSE, bearer)
-    API->>IR: classify_intent (rules → LLM fallback)
-    IR-->>FE: event: activity
-    AG->>LLM: Prompt C9 + guardrail L1
-    LLM-->>AG: Suggestion / edits[]
-    AG->>AIM: L2 validate (numeric drift, length)
-    alt Blocking flag
-        AIM-->>AG: Reject → safe fallback
-    else OK
-        AIM-->>API: suggestion, diff, edits, flags
-    end
-    API-->>FE: event: token + event: done
-    FE->>R: Diff đỏ/xanh + Accept / Reject
-    R->>FE: Accept
-    FE->>DB: PATCH paper (coalesced saves)
-    FE->>API: POST /compile (delta assets, gzip)
-    API-->>FE: PDF base64 + SyncTeX
-    FE->>API: POST /revisions/{session}/{id} action=accepted
-```
+<p align="center">
+  <img src="./docs/assets/sequence.svg" alt="Sequence end-to-end: Researcher, Editor, FastAPI, Intent Router, Ario Agent, Integrity, LLM, PostgreSQL" width="100%">
+</p>
 
 ---
 
@@ -266,23 +170,9 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 
 **LangGraph** (`src/agents/graph.py`) — sync path `POST /chat`:
 
-```mermaid
-flowchart LR
-    START((Start)) --> ROUTE[route_node]
-    ROUTE --> PARSE[parse_node]
-    PARSE -->|style| STYLE[style_node]
-    PARSE -->|edit| EDIT[edit_node]
-    PARSE -->|structure / logic| STRUCT[structure_node / logic_node]
-    PARSE -->|citation| CITE[citation_node]
-    PARSE -->|chat| CHAT[chat_node]
-    STYLE --> AIM[integrity_node]
-    EDIT --> AIM
-    AIM --> RESPOND[respond_node]
-    CITE --> RESPOND
-    STRUCT --> RESPOND
-    CHAT --> RESPOND
-    RESPOND --> END((End))
-```
+<p align="center">
+  <img src="./docs/assets/langgraph.svg" alt="LangGraph: route_node → parse_node → style/edit/structure/citation/chat → integrity_node → respond_node" width="100%">
+</p>
 
 | Node | Chức năng |
 |------|-----------|
@@ -348,12 +238,9 @@ User message
 
 **Ba lớp persistence (có chủ đích):**
 
-```mermaid
-flowchart LR
-    FE[Frontend localStorage<br/>project-store cache] -->|PATCH coalesced| DB[(PostgreSQL<br/>papers, users, audit)]
-    FE -->|best-effort| SS[in-memory session_store<br/>citation_registry, revisions]
-    SS -.->|when DB ready| DB
-```
+<p align="center">
+  <img src="./docs/assets/persistence.svg" alt="Ba lớp persistence: frontend cache, session store in-memory, PostgreSQL" width="100%">
+</p>
 
 | Lớp | Module | Dữ liệu |
 |-----|--------|---------|
@@ -386,29 +273,9 @@ Citation verifier: arXiv → CrossRef → Semantic Scholar (`src/services/citati
 
 ## 5. Guardrail Architecture (4 lớp)
 
-```mermaid
-flowchart TB
-    subgraph L1["Lớp 1 — Prompt Constraint ✅"]
-        P1[System prompt prohibition<br/>prompts.default.yaml]
-        P2[Prompt injection guard<br/>request_guard.py]
-    end
-    subgraph L2["Lớp 2 — Output Validation ✅"]
-        P3[Numeric drift check]
-        P4[Length / semantic checks]
-        P5[Editor scope guard]
-        P6[Output sanitize]
-    end
-    subgraph L3["Lớp 3 — Differential Display ✅"]
-        P7[Line diff in editor — no silent overwrite]
-        P8[Blocking flags disable Accept]
-    end
-    subgraph L4["Lớp 4 — Audit Log ✅ partial"]
-        P9[revision_history + AuditLog DB]
-        P10[FE Accept → revision API]
-        P11[Publication score gate fingerprint]
-    end
-    L1 --> L2 --> L3 --> L4
-```
+<p align="center">
+  <img src="./docs/assets/guardrails.svg" alt="Guardrail 4 lớp: prompt constraint, output check, diff display, audit log" width="100%">
+</p>
 
 | Lớp | Cơ chế | Module |
 |-----|--------|--------|
@@ -481,30 +348,9 @@ Comments + draft → classify Major/Minor/Reject → response draft → Human ga
 
 ## 8. Deployment Architecture
 
-```mermaid
-flowchart LR
-    subgraph Client
-        Browser[Browser]
-    end
-    subgraph GCP["Google Cloud Run — asia-east1"]
-        FE[arionear-web<br/>Nitro SSR frontend]
-        BE[arionear-api<br/>FastAPI + TeX Live]
-    end
-    subgraph Data
-        DB[(PostgreSQL<br/>Prisma Accelerate)]
-    end
-    subgraph External
-        LLM[Z.AI · Google · OpenRouter · …]
-        SCH[arXiv · CrossRef · Semantic Scholar]
-        SMTP[SMTP · Google OAuth]
-    end
-    Browser -->|HTTPS| FE
-    FE -->|REST + SSE + WS| BE
-    BE --> DB
-    BE --> LLM
-    BE --> SCH
-    BE --> SMTP
-```
+<p align="center">
+  <img src="./docs/assets/deployment.svg" alt="Deployment: Browser → arionear-web → arionear-api trên Cloud Run, PostgreSQL và các dịch vụ ngoài" width="100%">
+</p>
 
 | Service | Custom domain | Cloud Run |
 |---------|---------------|-----------|
@@ -641,7 +487,7 @@ frontend/src/
 
 ## Tài liệu liên quan
 
-- [docs/ARCHITECTURE.png](./docs/ARCHITECTURE.png) — sơ đồ kiến trúc tổng thể (ảnh)
+- [scripts/build_diagrams.py](./scripts/build_diagrams.py) — sinh lại toàn bộ sơ đồ SVG trong `docs/assets/`
 - [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map
 - [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) — guardrail layers L1–L4
 - [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) — benchmark eval metrics & production evidence
