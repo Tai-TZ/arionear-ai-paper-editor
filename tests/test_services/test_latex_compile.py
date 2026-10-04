@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
+import uuid
 
 import pytest
 
@@ -277,6 +280,115 @@ def test_build_tex_cmd_includes_enable_installer_on_miktex(monkeypatch):
     monkeypatch.setattr(lc, "_is_miktex", lambda: True)
     cmd = lc._build_tex_cmd("pdflatex", "main.tex", synctex=False)
     assert "--enable-installer" in cmd
+
+
+def test_build_tex_cmd_disables_shell_escape_on_tex_live(monkeypatch):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: False)
+    cmd = lc._build_tex_cmd("/usr/bin/pdflatex", "main.tex", synctex=False)
+    assert "-no-shell-escape" in cmd
+    assert "--disable-write18" not in cmd
+    assert cmd.index("-no-shell-escape") < cmd.index("main.tex")
+
+
+def test_build_tex_cmd_disables_write18_on_miktex(monkeypatch):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: True)
+    cmd = lc._build_tex_cmd("pdflatex", "main.tex", synctex=True)
+    assert "--disable-write18" in cmd
+    assert "-no-shell-escape" not in cmd
+    assert cmd.index("--disable-write18") < cmd.index("main.tex")
+
+
+_APP_SECRETS = {
+    "AUTH_SECRET_KEY": "jwt-secret-value",
+    "OPENAI_API_KEY": "sk-openai-secret",
+    "GOOGLE_API_KEY": "google-secret",
+    "OPENROUTER_API_KEY": "or-secret",
+    "DATABASE_URL": "postgresql://u:p@db/x",
+    "DIRECT_DATABASE_URL": "postgresql://u:p@db/direct",
+    "ADMIN_GOD_PASSWORD": "god-password",
+    "SMTP_PASSWORD": "smtp-password",
+    "GOOGLE_CLIENT_SECRET": "oauth-secret",
+}
+
+
+@pytest.mark.parametrize("miktex", [False, True])
+def test_tex_env_excludes_app_secrets(monkeypatch, miktex):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: miktex)
+    for name, value in _APP_SECRETS.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("TEXMFHOME", "/srv/texmf")
+    monkeypatch.setenv("LC_ALL", "C.UTF-8")
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "0")
+
+    env = lc._tex_subprocess_env()
+
+    upper_names = {name.upper() for name in env}
+    for name in _APP_SECRETS:
+        assert name not in upper_names
+    assert not set(env.values()) & set(_APP_SECRETS.values())
+    assert env["TEXMFHOME"] == "/srv/texmf"
+    assert env["LC_ALL"] == "C.UTF-8"
+    assert env["SOURCE_DATE_EPOCH"] == "0"
+    assert "PATH" in upper_names
+
+
+@pytest.mark.parametrize("miktex", [False, True])
+def test_tex_env_sets_kpathsea_hardening(monkeypatch, miktex):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: miktex)
+    monkeypatch.setenv("openin_any", "a")  # an inherited permissive value must not win
+
+    env = lc._tex_subprocess_env()
+
+    assert env["shell_escape"] == "f"
+    assert env["openin_any"] == "p"
+    assert env["openout_any"] == "p"
+
+
+def test_tex_env_keeps_miktex_installer_flags(monkeypatch):
+    monkeypatch.setattr(lc, "_is_miktex", lambda: True)
+    allowed = lc._tex_subprocess_env(allow_package_install=True)
+    assert allowed["MIKTEX_ENABLE_INSTALLER"] == "1"
+    assert allowed["MIKTEX_ALLOW_UNATTENDED"] == "1"
+    assert allowed["MIKTEX_DISABLE_DIAGNOSTICS"] == "1"
+    blocked = lc._tex_subprocess_env(allow_package_install=False)
+    assert blocked["MIKTEX_ENABLE_INSTALLER"] == "0"
+
+
+def _pdflatex_is_tex_live() -> bool:
+    if os.name == "nt":
+        return False
+    pdflatex = lc.find_pdflatex()
+    if not pdflatex:
+        return False
+    try:
+        version = subprocess.run([pdflatex, "--version"], capture_output=True, text=True, timeout=30, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    banner = (version.stdout or "") + (version.stderr or "")
+    return "TeX Live" in banner and "MiKTeX" not in banner
+
+
+@pytest.mark.skipif(not _pdflatex_is_tex_live(), reason="needs TeX Live pdflatex (kpathsea openin_any)")
+def test_compile_cannot_input_absolute_path_outside_workspace(tmp_path):
+    marker = f"ARIONEARLEAK{uuid.uuid4().hex}"
+    secret = tmp_path / "secret.tex"
+    # \typeout would copy the marker into the log if TeX ever read the file.
+    secret.write_text(f"\\typeout{{{marker}}}\n{marker}\n", encoding="utf-8")
+    latex = (
+        f"\\documentclass{{article}}\n\\begin{{document}}\n\\input{{{secret.as_posix()}}}\nBody\n\\end{{document}}\n"
+    )
+
+    cache_id = f"leak-{uuid.uuid4().hex}"
+
+    result = lc.compile_latex(CompileRequest(latex=latex, compiler="pdflatex", cache_id=cache_id))
+
+    assert marker not in result.log
+    assert marker not in result.error
+    # batchmode keeps \typeout out of stdout, so also check TeX's own transcript in the workspace.
+    tex_log = lc._workspaces[f"proj:{cache_id}"].path / "main.log"
+    if tex_log.is_file():
+        assert marker not in tex_log.read_text(encoding="utf-8", errors="replace")
+    assert result.success is False or "openin_any" in result.log
 
 
 def test_compile_budget_exceeded():

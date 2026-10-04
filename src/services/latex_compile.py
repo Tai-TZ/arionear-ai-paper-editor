@@ -258,8 +258,44 @@ def _copy_latex_stubs(work_dir: Path, latex: str) -> None:
                 shutil.copy2(src, dest)
 
 
-def _miktex_env(*, allow_package_install: bool = True) -> dict[str, str]:
-    env = os.environ.copy()
+# Only these variables reach TeX subprocesses: user LaTeX runs there, so app secrets
+# (AUTH_SECRET_KEY, *_API_KEY, DATABASE_URL, SMTP_*, ADMIN_*, ...) must never be inherited.
+_TEX_ENV_ALLOWED_NAMES = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "USERPROFILE",
+        "TMP",
+        "TEMP",
+        "TMPDIR",
+        "LANG",
+        "SYSTEMROOT",
+        "WINDIR",
+        "COMSPEC",
+        "PATHEXT",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "PROGRAMDATA",
+    }
+)
+_TEX_ENV_ALLOWED_PREFIXES = ("LC_", "FONTCONFIG_", "TEX", "MIKTEX", "BIB", "BST", "SOURCE_DATE_EPOCH")
+# kpathsea reads these from the environment before texmf.cnf (TeX Live); MiKTeX ignores them.
+_TEX_KPATHSEA_HARDENING = {
+    "shell_escape": "f",  # no \write18 at all, not even the restricted list
+    "openin_any": "p",  # no absolute paths, `..` or dotfiles for \input/\openin
+    "openout_any": "p",  # same for \openout
+}
+
+
+def _is_allowed_tex_env_name(name: str) -> bool:
+    upper = name.upper()
+    return upper in _TEX_ENV_ALLOWED_NAMES or upper.startswith(_TEX_ENV_ALLOWED_PREFIXES)
+
+
+def _tex_subprocess_env(*, allow_package_install: bool = True) -> dict[str, str]:
+    """Minimal, hardened environment for TeX/BibTeX/latexmk/synctex subprocesses."""
+    env = {name: value for name, value in os.environ.items() if _is_allowed_tex_env_name(name)}
+    env.update(_TEX_KPATHSEA_HARDENING)
     if not _is_miktex():
         return env
     env["MIKTEX_DISABLE_DIAGNOSTICS"] = "1"
@@ -289,6 +325,9 @@ def _build_tex_cmd(engine: str, main_file: str, *, synctex: bool) -> list[str]:
         cmd.append("-synctex=1")
     if _is_miktex():
         cmd.append("--enable-installer")
+        cmd.append("--disable-write18")
+    else:
+        cmd.append("-no-shell-escape")
     cmd.append(main_file)
     return cmd
 
@@ -781,7 +820,7 @@ def _run_subprocess(
         errors="replace",
         timeout=timeout,
         check=False,
-        env=_miktex_env(allow_package_install=allow_package_install),
+        env=_tex_subprocess_env(allow_package_install=allow_package_install),
     )
     log = (result.stdout or "") + (result.stderr or "")
     return result.returncode, log
@@ -1420,7 +1459,7 @@ def _synctex_inverse_probe(
         errors="replace",
         timeout=30,
         check=False,
-        env=_miktex_env(),
+        env=_tex_subprocess_env(),
     )
     if result.returncode != 0 and "SyncTeX result begin" not in (result.stdout or ""):
         return None

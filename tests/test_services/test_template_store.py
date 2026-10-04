@@ -235,7 +235,7 @@ def _run_tex(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd,
         cwd=cwd,
-        env=lc._miktex_env(allow_package_install=False),
+        env=lc._tex_subprocess_env(allow_package_install=False),
         capture_output=True,
         text=True,
         errors="ignore",
