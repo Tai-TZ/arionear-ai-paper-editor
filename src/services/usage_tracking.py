@@ -38,8 +38,9 @@ def record_ai_usage(
     tokens_used: int | None = None,
     llm_provider: str | None = None,
     llm_model: str | None = None,
+    revision_id: str | None = None,
 ) -> None:
-    """Persist one AI interaction for admin usage / cost reporting."""
+    """Persist one AI interaction for admin usage / cost reporting (and the AI disclosure report)."""
     if not db_is_ready():
         return
     try:
@@ -60,7 +61,10 @@ def record_ai_usage(
             paper = db.query(Paper).filter(Paper.id == pid).first()
             if not paper:
                 return
-            metadata: dict[str, str] = {}
+            # Raw task name: TaskType has no EDIT member, so "edit" would otherwise be stored as CHAT.
+            metadata: dict[str, str] = {"task": task_type.lower()}
+            if revision_id:
+                metadata["revision_id"] = revision_id
             if llm_provider:
                 metadata["llm_provider"] = llm_provider
             if llm_model:

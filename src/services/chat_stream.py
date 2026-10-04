@@ -1465,6 +1465,7 @@ async def stream_chat(
                 tokens_used=provider_tokens,
                 llm_provider=provider,
                 llm_model=model or "",
+                revision_id=done_payload.get("revision_id") or None,
             )
 
         await tracker.complete(

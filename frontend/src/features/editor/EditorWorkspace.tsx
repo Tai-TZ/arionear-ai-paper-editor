@@ -747,6 +747,7 @@ export function EditorWorkspace() {
             latex={project.mainLatexSource}
             pdfData={latexWs.pdfData}
             citationResults={toolsPanelBindings.citationResults}
+            paperId={projectId}
             {...tools.exportDialogProps}
           />
           <EditorOnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
