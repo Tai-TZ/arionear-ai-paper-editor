@@ -277,3 +277,36 @@ def test_publisher_skeleton_compiles_when_class_available(tmp_path: Path, spec: 
     final_log = (tmp_path / "main.log").read_text(encoding="utf-8", errors="ignore")
     assert (tmp_path / "main.pdf").is_file()
     assert not re.search(r"Citation `[^']+'[^\n]*undefined", final_log)
+
+
+def test_lncs_builtin_is_labelled_cc_by(templates_root: Path):
+    ts.ensure_template_seed()
+
+    rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
+    assert rows["springer-lncs"]["license"].startswith("CC BY 4.0")
+    assert "samplepaper.tex" in rows["springer-lncs"]["license"]
+    assert rows["elsevier-elsarticle"]["license"].startswith("LPPL")
+
+
+def test_seed_updates_retired_lncs_license_label(templates_root: Path):
+    ts.ensure_template_seed()
+    data = _registry(templates_root)
+    for row in data["templates"]:
+        if row["id"] == "springer-lncs":
+            row["license"] = "LPPL (publisher class and BibTeX style ship with TeX Live)"
+    (templates_root / "registry.json").write_text(json.dumps(data), encoding="utf-8")
+
+    ts.ensure_template_seed()
+
+    rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
+    assert rows["springer-lncs"]["license"].startswith("CC BY 4.0")
+
+
+def test_seed_keeps_admin_set_lncs_license(templates_root: Path):
+    ts.ensure_template_seed()
+    ts.update_template("springer-lncs", PaperTemplateUpdateRequest(license="Lab internal use"))
+
+    ts.ensure_template_seed()
+
+    rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
+    assert rows["springer-lncs"]["license"] == "Lab internal use"

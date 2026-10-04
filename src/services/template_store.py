@@ -546,6 +546,7 @@ def ensure_template_seed() -> None:
         data = _read_registry()
         seeded = _seeded_builtin_ids(data)
         missing = [template_id for template_id in BUILTIN_TEMPLATE_IDS if template_id not in seeded]
+        changed = bool(missing)
         if missing:
             existing_ids = {str(row.get("id") or "") for row in data["templates"]}
             now = _utcnow().isoformat()
@@ -557,6 +558,13 @@ def ensure_template_seed() -> None:
                 else:
                     data["templates"].append(_seed_publisher_template(_PUBLISHER_TEMPLATES_BY_ID[template_id], now))
             data[_SEEDED_BUILTINS_KEY] = [*seeded, *missing]
+        # Correct retired default license labels on built-ins seeded earlier; admin-set labels stay.
+        for row in data["templates"]:
+            spec = _PUBLISHER_TEMPLATES_BY_ID.get(str(row.get("id") or ""))
+            if spec and row.get("license") in spec.superseded_licenses:
+                row["license"] = spec.metadata["license"]
+                changed = True
+        if changed:
             _write_registry(data)
 
         for row in data["templates"]:

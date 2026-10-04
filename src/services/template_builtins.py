@@ -26,6 +26,8 @@ class BuiltinTemplate:
     """Registry fields except ``id``/``slug``/timestamps, in registry key order."""
     files: dict[str, str]
     """Relative path -> UTF-8 text content (``main.tex``, ``references.bib``, ``preview.svg``)."""
+    superseded_licenses: tuple[str, ...] = ()
+    """Earlier default ``license`` labels; seeded rows still carrying one are updated to the current label."""
 
     def registry_row(self, now: str) -> dict[str, Any]:
         return {
@@ -38,6 +40,12 @@ class BuiltinTemplate:
 
 
 _TEMPLATE_LICENSE = "LPPL (publisher class and BibTeX style ship with TeX Live)"
+# The LNCS skeleton reuses placeholder text from Springer's LNCS sample paper, which Springer publishes
+# under CC BY 4.0 (attribution plus an indication of changes).
+_LNCS_LICENSE = (
+    "CC BY 4.0 — adapted from Springer's LNCS sample paper (samplepaper.tex); shortened and "
+    "reorganised into an IMRaD outline for Arionear"
+)
 
 
 def _svg_rules(x: int, y: int, width: int, count: int, step: int = 8) -> str:
@@ -231,7 +239,7 @@ SPRINGER_LNCS = BuiltinTemplate(
             "bảng/hình giữ chỗ và ví dụ BibTeX theo kiểu splncs04."
         ),
         "author": "Springer template (Arionear gallery)",
-        "license": _TEMPLATE_LICENSE,
+        "license": _LNCS_LICENSE,
         "tags": [
             "Citations",
             "Springer Official Templates",
@@ -249,6 +257,7 @@ SPRINGER_LNCS = BuiltinTemplate(
         "references.bib": SPRINGER_LNCS_BIB,
         "preview.svg": SPRINGER_LNCS_PREVIEW_SVG,
     },
+    superseded_licenses=(_TEMPLATE_LICENSE,),
 )
 
 

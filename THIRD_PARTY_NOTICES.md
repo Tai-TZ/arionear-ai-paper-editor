@@ -83,8 +83,9 @@ licenses — some of them GPL — documented inside the image, see [Bundled asse
 3. **Springer LNCS starter template.** Several placeholder lines in `SPRINGER_LNCS_MAIN_TEX`
    (`src/services/template_builtins.py`) match Springer's LNCS `samplepaper.tex`. CTAN lists the `llncs` package as
    CC BY 4.0, and Overleaf lists the Springer proceedings template as CC BY 4.0, which asks for attribution and an
-   indication of changes. The gallery metadata (`_TEMPLATE_LICENSE` in the same file) currently labels both the LNCS
-   and the Elsevier starters as LPPL.
+   indication of changes. **Resolved:** the LNCS starter is now labelled `CC BY 4.0 — adapted from Springer's LNCS
+   sample paper (samplepaper.tex); shortened and reorganised into an IMRaD outline for Arionear` (`_LNCS_LICENSE`);
+   registries seeded with the old LPPL label are corrected on start-up. The Elsevier starter keeps its LPPL label.
 4. **Native libraries inside psycopg2-binary.** The Linux wheel bundles shared libraries in `psycopg2_binary.libs/`
    (`libpq`, `libssl`/`libcrypto`, `libkrb5`, `libgssapi_krb5`, `libk5crypto`, `libkrb5support`, `libcom_err`,
    `libldap`, `liblber`, `libsasl2`, `libselinux`, `libpcre`, `libkeyutils`, `libcrypt`) without their license texts.
@@ -566,7 +567,7 @@ font `name` table read with fontTools) and were cross-checked against the upstre
 | `IEEEtran.bst` v1.14 (2015/08/26) | `frontend/public/latex-stubs/` | LPPL 1.3 (`LICENSES/LicenseRef-LPPL-1.3.txt`) | © 2003–2015 Michael Shell. Complete Work: <https://ctan.org/pkg/ieeetran>. |
 | `tikz-cd.sty` v1.0 (2021/05/04) | `frontend/public/latex-stubs/` | LPPL 1.3 or later (`LICENSES/LPPL-1.3c.txt`) | © 2011, 2012, 2014, 2018, 2021 Augusto Stoffel. Complete Work: <https://ctan.org/pkg/tikz-cd>. |
 | IEEE journal starter (`IEEE_JOURNAL_MAIN_TEX`) | `src/services/template_store.py` | Adapted from IEEEtran's `bare_jrnl.tex` (LPPL 1.3) — see owner review item 2 | `bare_jrnl.tex` V1.4b (2015/08/26) by Michael Shell, <https://ctan.org/pkg/ieeetran>. |
-| Springer LNCS starter (`SPRINGER_LNCS_MAIN_TEX`) | `src/services/template_builtins.py` | Placeholder lines from Springer's LNCS `samplepaper.tex` (CC BY 4.0 per CTAN/Overleaf) — see owner review item 3 | Springer LNCS proceedings template, <https://ctan.org/pkg/llncs>. `llncs.cls` itself is not vendored; it comes from TeX Live at runtime. |
+| Springer LNCS starter (`SPRINGER_LNCS_MAIN_TEX`) | `src/services/template_builtins.py` | CC BY 4.0 — adapted from Springer's LNCS `samplepaper.tex` (attribution and changes stated in the template's `license` field) | Springer LNCS proceedings template, <https://ctan.org/pkg/llncs>. `llncs.cls` itself is not vendored; it comes from TeX Live at runtime. |
 | Elsevier starter (`ELSEVIER_ELSARTICLE_MAIN_TEX`) | `src/services/template_builtins.py` | Written for this project against the documented `elsarticle` interface | `elsarticle.cls` (LPPL 1.3, <https://ctan.org/pkg/elsarticle>) is not vendored; it comes from TeX Live at runtime. |
 | Provider/model logos: Claude, DeepSeek, Gemma, GPT, Gemini, Llama, NVIDIA, Qwen; Google, OpenRouter, Z.ai icons | `frontend/public/assets/logoModel/*.svg`, `frontend/assets/*.svg` | Unknown — needs owner review | Trademarks of their respective owners, used only to label the matching model or provider in the UI; no endorsement implied. Source of the SVG files not recorded. |
 | Assistant avatar | `frontend/assets/avatar/avatar-chat.png` | Unknown — needs owner review | Source not recorded. |
