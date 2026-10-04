@@ -13,16 +13,13 @@ echo "Python version OK"
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (runtime + dev tooling)
+pip install -r requirements-dev.txt
 
 # Create .env if not exists
 if [ ! -f .env ]; then
     cp .env.example .env
     echo "Created .env — please edit with your API keys"
 fi
-
-# Create data directories
-mkdir -p data/chroma
 
 echo "Setup complete! Run: uvicorn src.main:app --reload"

@@ -121,7 +121,7 @@ Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](
 
 ### Yêu cầu
 
-- **Python 3.11+**, **Node.js 20+** (npm hoặc Bun)
+- **Python 3.11+**, **Node.js 20+**
 - **PostgreSQL** (local hoặc Prisma Postgres)
 - Ít nhất **một LLM API key**: `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` hoặc `ZAI_API_KEY`
 - *(Tùy chọn)* **TeX distribution** để compile PDF — MiKTeX (Windows) / TeX Live (macOS, Linux)
@@ -139,7 +139,7 @@ cp .env.example .env   # điền API key, DIRECT_DATABASE_URL, AUTH_SECRET_KEY
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime + pytest, ruff
 ```
 
 ### 3. Database
@@ -292,10 +292,11 @@ Báo cáo đầy đủ — gồm cả các case chưa đạt và hướng khắc
 ```bash
 pytest tests/ -v                 # 300+ test backend (API, services, guardrails)
 ruff check src tests             # lint Python
+ruff format --check src tests    # kiểm tra format
 cd frontend && npm test          # unit test frontend (Vitest)
 ```
 
-CI trên GitHub Actions tự động chạy lint, test backend, test và build frontend cho mỗi push/PR.
+CI trên GitHub Actions tự động chạy lint + format check, test backend, test và build frontend cho mỗi push/PR. Hoặc chạy toàn bộ kiểm tra backend bằng `make check`.
 
 ---
 
@@ -354,4 +355,4 @@ Backend và frontend được đóng gói thành container và triển khai lên
 
 ## 📄 License
 
-MIT
+Phát hành theo giấy phép [MIT](./LICENSE).

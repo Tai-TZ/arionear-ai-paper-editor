@@ -29,7 +29,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 
 | Layer | Công nghệ |
 |-------|-----------|
-| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Bun, PDF.js |
+| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite, PDF.js |
 | Backend | FastAPI, Python 3.11+, LangGraph, SQLAlchemy |
 | LLM | Z.AI (GLM) · Google (Gemini) · OpenAI · Anthropic · OpenRouter — chọn trong editor hoặc `.env`; admin platform keys + priority failover |
 | Persistence | PostgreSQL (Prisma schema + SQLAlchemy) · in-memory session cache · frontend localStorage cache |
@@ -518,7 +518,7 @@ flowchart LR
 uvicorn src.main:app --reload --port 8000
 
 # Frontend
-cd frontend && bun run dev
+cd frontend && npm run dev
 ```
 
 **Deploy:** `scripts/deploy-cloudrun-backend.ps1`, `scripts/deploy-cloudrun-frontend.ps1`  

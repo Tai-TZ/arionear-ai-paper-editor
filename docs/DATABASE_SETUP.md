@@ -15,7 +15,7 @@ DIRECT_DATABASE_URL trong .env  →  FastAPI (SQLAlchemy) đọc/ghi dữ liệu
 
 ## Database Schema (ERD)
 
-Sơ đồ dưới đây mirror `prisma/schema.prisma` — bám ERD gốc [`scientific_paper_assistant_erd.html`](../Db_Design_template/scientific_paper_assistant_erd.html) với vài field bổ sung cho Arionear Phase 1.
+Sơ đồ dưới đây mirror `prisma/schema.prisma` — nguồn sự thật duy nhất cho schema.
 
 > Xem trực quan: mở file này trên GitHub / VS Code (Markdown Preview) — Mermaid sẽ render diagram tự động.
 
@@ -333,4 +333,3 @@ Chi tiết diagram ở [Database Schema (ERD)](#database-schema-erd) phía trên
 | `src/db/models.py` | SQLAlchemy models (mirror Prisma) |
 | `src/db/paper_repository.py` | CRUD papers/suggestions/citations |
 | `src/services/sessions.py` | Adapter API-facing `PaperSession` |
-| `Db_Design_template/scientific_paper_assistant_erd.html` | ERD gốc tham khảo |
