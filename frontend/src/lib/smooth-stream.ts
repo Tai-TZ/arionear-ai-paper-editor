@@ -5,6 +5,21 @@ export type SmoothStreamController = {
   dispose: () => void;
 };
 
+/** Frames a large backlog is spread over (~0.5 s at 60 fps), so the reveal keeps up with the network. */
+const CATCH_UP_FRAMES = 32;
+
+/**
+ * Characters to reveal in one animation frame for a given backlog. Short backlogs keep the gentle
+ * 1–5 chars/frame typewriter feel; beyond that the step grows with the backlog, so a fast stream
+ * trails the network by about half a second instead of being capped at ~300 chars/s.
+ */
+export function revealStep(backlog: number): number {
+  if (backlog > 160) return Math.max(5, Math.ceil(backlog / CATCH_UP_FRAMES));
+  if (backlog > 60) return 3;
+  if (backlog > 16) return 2;
+  return 1;
+}
+
 /** Reveal streamed LLM text gradually for a typewriter effect. */
 export function createSmoothStream(onDisplay: (text: string) => void): SmoothStreamController {
   let target = "";
@@ -16,8 +31,7 @@ export function createSmoothStream(onDisplay: (text: string) => void): SmoothStr
       rafId = 0;
       return;
     }
-    const backlog = target.length - displayed.length;
-    const step = backlog > 160 ? 5 : backlog > 60 ? 3 : backlog > 16 ? 2 : 1;
+    const step = revealStep(target.length - displayed.length);
     displayed = target.slice(0, displayed.length + step);
     onDisplay(displayed);
     rafId = requestAnimationFrame(tick);

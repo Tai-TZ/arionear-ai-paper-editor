@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -31,6 +32,8 @@ import { AiLoadingState } from "@/components/ai-loading-state";
 import { cn } from "@/lib/utils";
 
 export type ChatMessage = {
+  /** Stable React key; in-memory only (stored threads keep role/content). */
+  id?: string;
   role: "user" | "assistant";
   content: string;
   reasoning?: string;
@@ -163,13 +166,15 @@ function ChatDock({
     return () => cancelAnimationFrame(frame);
   }, [composerMode, open, selectionContext?.start]);
 
+  // Opening the dock reveals the latest message; while it is open, ChatMessages keeps following
+  // new content only when the user is already at the bottom.
   useEffect(() => {
     if (!open) return;
     const frame = requestAnimationFrame(() => {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [open, messages, chatLoading, liveActivity, displaySteps, chatEndRef]);
+  }, [open, chatEndRef]);
 
   const persistPanelHeight = useCallback((height: number) => {
     try {
@@ -417,6 +422,91 @@ function ChatAiStatePanel(props: {
   return <AiLoadingState {...props} />;
 }
 
+const REMARK_PLUGINS = [remarkGfm];
+
+/** Markdown is the costly part of a message; re-parse only when its text changes. */
+const ChatMarkdown = memo(function ChatMarkdown({ content }: { content: string }) {
+  return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{content}</ReactMarkdown>;
+});
+
+/**
+ * One chat message. Memoized so a streamed token re-renders only the reply being streamed; the
+ * live-progress props are passed to that reply only and stay constant for every other message.
+ */
+const ChatMessageRow = memo(function ChatMessageRow({
+  message: m,
+  isStreamingAssistant,
+  liveActivity,
+  chatLoading,
+  surface,
+  reasoningTitle,
+}: {
+  message: ChatMessage;
+  isStreamingAssistant: boolean;
+  liveActivity: string | null;
+  chatLoading: boolean;
+  surface: "dock" | "sheet";
+  reasoningTitle: string;
+}) {
+  if (m.role === "user") {
+    return (
+      <div className="chat-message-row chat-user-row">
+        <div className="chat-user-stack">
+          <div className="chat-bubble chat-bubble-user-dark">{m.content}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const liveSteps = m.aiSteps ?? [];
+  const liveActivities = m.activities ?? [];
+  const hasAiSteps = filterDisplaySteps(liveSteps).length > 0;
+  const hasActivities = liveActivities.length > 0;
+  const hasLiveProgress = Boolean(
+    isStreamingAssistant &&
+    (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
+  );
+  const showLoadingState = Boolean(
+    isStreamingAssistant && hasLiveProgress && !m.content && !m.isError,
+  );
+
+  return (
+    <div className="chat-message-row chat-assistant-row">
+      <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
+      <div className="chat-assistant-content min-w-0 flex-1">
+        {m.reasoning?.trim() ? (
+          <details className="chat-reasoning-panel mb-2" open={Boolean(m.isStreaming)}>
+            <summary className="chat-reasoning-title cursor-pointer select-none">
+              {reasoningTitle}
+            </summary>
+            <div className="chat-reasoning-block mt-1 max-h-40 overflow-y-auto text-xs text-muted-foreground whitespace-pre-wrap">
+              {m.reasoning}
+            </div>
+          </details>
+        ) : null}
+        {showLoadingState && (
+          <ChatAiStatePanel
+            steps={liveSteps}
+            activities={liveActivities}
+            activity={m.streamLabel ?? liveActivity}
+            waitElapsedSec={m.streamElapsedSec}
+            compact={surface === "sheet"}
+          />
+        )}
+        {m.content && (
+          <div className={cn("chat-assistant-text", m.isError && "chat-assistant-text-error")}>
+            <ChatMarkdown content={m.content} />
+          </div>
+        )}
+        {m.isStreaming && m.content && <span className="chat-stream-cursor" aria-hidden />}
+      </div>
+    </div>
+  );
+});
+
+/** Distance from the bottom (px) within which the list keeps following new content. */
+const STICK_TO_BOTTOM_PX = 80;
+
 export function ChatMessages({
   messages,
   chatEndRef,
@@ -435,13 +525,51 @@ export function ChatMessages({
   const hookProgress = useChatStreamProgress();
   const progress = streamProgressProp ?? hookProgress;
   const liveActivity = progress.activity;
-  const waitElapsedSec = progress.waitElapsedSec;
   const visibleMessages = messages.filter(
     (m) => m.role === "user" || assistantHasBody(m) || m.isStreaming,
   );
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
+  const hasScrolledRef = useRef(false);
+  const userMessageCount = messages.reduce((n, m) => (m.role === "user" ? n + 1 : n), 0);
+  const threadKey = messages[0]?.id;
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const top = el.scrollTop;
+    if (el.scrollHeight - top - el.clientHeight <= STICK_TO_BOTTOM_PX) {
+      stickToBottomRef.current = true;
+    } else if (top < lastScrollTopRef.current) {
+      // Only an upward scroll detaches; content growing below the viewport does not.
+      stickToBottomRef.current = false;
+    }
+    lastScrollTopRef.current = top;
+  }, []);
+
+  // A new user turn (or another thread) always brings the conversation back to the bottom.
+  useLayoutEffect(() => {
+    stickToBottomRef.current = true;
+  }, [userMessageCount, threadKey]);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !stickToBottomRef.current) return;
+    if (chatLoading || !hasScrolledRef.current) {
+      // Instant while streaming: a smooth scroll restarted on every frame only lags and stutters.
+      el.scrollTop = el.scrollHeight;
+    } else {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+    hasScrolledRef.current = true;
+  }, [messages, chatLoading, progress]);
+
   return (
     <div
+      ref={scrollRef}
+      onScroll={handleScroll}
       className="soft-scrollbar chat-messages flex-1 overflow-y-auto px-4 py-3"
       data-surface={surface}
     >
@@ -452,63 +580,19 @@ export function ChatMessages({
       )}
 
       {visibleMessages.map((m, i) => {
-        if (m.role === "user") {
-          return (
-            <div key={i} className="chat-message-row chat-user-row">
-              <div className="chat-user-stack">
-                <div className="chat-bubble chat-bubble-user-dark">{m.content}</div>
-              </div>
-            </div>
-          );
-        }
-
-        const isLast = i === visibleMessages.length - 1;
-        const isStreamingAssistant = Boolean(isLast && m.isStreaming);
-        const liveSteps = m.aiSteps ?? [];
-        const liveActivities = m.activities ?? [];
-        const hasAiSteps = filterDisplaySteps(liveSteps).length > 0;
-        const hasActivities = liveActivities.length > 0;
-        const hasLiveProgress = Boolean(
-          isStreamingAssistant &&
-          (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
+        const isStreamingAssistant = Boolean(
+          m.role === "assistant" && i === visibleMessages.length - 1 && m.isStreaming,
         );
-        const showLoadingState = Boolean(
-          isStreamingAssistant && hasLiveProgress && !m.content && !m.isError,
-        );
-
         return (
-          <div key={i} className="chat-message-row chat-assistant-row">
-            <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
-            <div className="chat-assistant-content min-w-0 flex-1">
-              {m.reasoning?.trim() ? (
-                <details className="chat-reasoning-panel mb-2" open={Boolean(m.isStreaming)}>
-                  <summary className="chat-reasoning-title cursor-pointer select-none">
-                    {t.chatDock.reasoningTitle}
-                  </summary>
-                  <div className="chat-reasoning-block mt-1 max-h-40 overflow-y-auto text-xs text-muted-foreground whitespace-pre-wrap">
-                    {m.reasoning}
-                  </div>
-                </details>
-              ) : null}
-              {showLoadingState && (
-                <ChatAiStatePanel
-                  steps={liveSteps}
-                  activities={liveActivities}
-                  activity={m.streamLabel ?? liveActivity}
-                  waitElapsedSec={m.streamElapsedSec}
-                  compact={surface === "sheet"}
-                />
-              )}
-              {m.content && (
-                <div
-                  className={cn("chat-assistant-text", m.isError && "chat-assistant-text-error")}
-                >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                </div>
-              )}
-              {m.isStreaming && m.content && <span className="chat-stream-cursor" aria-hidden />}
-            </div>
-          </div>
+          <ChatMessageRow
+            key={m.id ?? `index-${i}`}
+            message={m}
+            isStreamingAssistant={isStreamingAssistant}
+            liveActivity={isStreamingAssistant ? liveActivity : null}
+            chatLoading={isStreamingAssistant ? Boolean(chatLoading) : false}
+            surface={surface}
+            reasoningTitle={t.chatDock.reasoningTitle}
+          />
         );
       })}
 

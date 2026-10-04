@@ -54,6 +54,7 @@ import {
   type LogicAuditScope,
 } from "@/lib/logic-audit";
 import { createSmoothStream, type SmoothStreamController } from "@/lib/smooth-stream";
+import { useLatestRef } from "@/lib/use-latest-ref";
 import { toast } from "sonner";
 import type { PendingEdit, PendingSuggestion, ToolsTab } from "../types";
 import {
@@ -71,6 +72,7 @@ import {
   getPersistedThreads,
   isPersistedThread,
   makeInitialMessages,
+  newChatMessageId,
   persistChatThreads,
   snapshotActiveThread,
   stripMessagesForStorage,
@@ -128,6 +130,20 @@ export type UseEditorChatOptions = {
   scoreAuditLoading?: boolean;
   sideEffects: EditorChatSideEffects;
 };
+
+/** Ends the latest assistant reply after an abort, keeping its partial text or a placeholder. */
+function closeAbortedReply(messages: ChatMessage[], placeholder: string): ChatMessage[] | null {
+  const idx = messages.findLastIndex((m) => m.role === "assistant");
+  if (idx === -1) return null;
+  const next = [...messages];
+  const msg = next[idx] as ChatMessage;
+  next[idx] = {
+    ...msg,
+    isStreaming: false,
+    content: msg.content.trim() || placeholder,
+  };
+  return next;
+}
 
 export function useEditorChat(options: UseEditorChatOptions) {
   const {
@@ -190,6 +206,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
   );
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatSmoothStreamRef = useRef<SmoothStreamController | null>(null);
+  const abortedReplyPlaceholderRef = useRef<() => string>(() => "");
   const [chatSelectionContext, setChatSelectionContext] = useState<EditorSelectionContext | null>(
     null,
   );
@@ -321,6 +338,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       return [
         makeInitialMessages(locale)[0],
         ...thread.messages.map((m) => ({
+          id: newChatMessageId(),
           role: m.role,
           content: m.content,
           ...(m.isError ? { isError: true } : {}),
@@ -498,6 +516,21 @@ export function useEditorChat(options: UseEditorChatOptions) {
     };
   }, [projectId, persistActiveThreadNow, flushPendingEditsToThread]);
 
+  // Leaving the editor mid-answer must not keep the request and its reveal loop running in the
+  // background. Persist the partial reply the way Stop does (the request's own `finally` can no
+  // longer update state after unmount), then abort.
+  const abortChatOnUnmountRef = useLatestRef(() => {
+    chatSmoothStreamRef.current?.dispose();
+    chatSmoothStreamRef.current = null;
+    const abort = chatAbortRef.current;
+    if (!abort) return;
+    chatAbortRef.current = null;
+    const next = closeAbortedReply(messagesRef.current, abortedReplyPlaceholderRef.current());
+    if (next) persistActiveThreadNow(next);
+    abort.abort();
+  });
+  useEffect(() => () => abortChatOnUnmountRef.current(), [abortChatOnUnmountRef]);
+
   useEffect(() => {
     if (!threadHasUserMessages(messages)) {
       setMessages(makeInitialMessages(locale));
@@ -509,12 +542,6 @@ export function useEditorChat(options: UseEditorChatOptions) {
   useEffect(() => {
     latexSyncRef.current = resetChatLatexSync();
   }, [projectId]);
-
-  useEffect(() => {
-    if (chatLoading) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, chatLoading]);
 
   const openChatPanel = useCallback(() => {
     setChatOpen(true);
@@ -637,8 +664,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
       syncChatStreamProgress();
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: userDisplay },
+        { id: newChatMessageId(), role: "user", content: userDisplay },
         {
+          id: newChatMessageId(),
           role: "assistant",
           content: "",
           reasoning: "",
@@ -685,10 +713,10 @@ export function useEditorChat(options: UseEditorChatOptions) {
     };
 
     chatSmoothStreamRef.current?.dispose();
+    // Plain (batched) state update: the reveal runs once per animation frame, and forcing a
+    // synchronous re-render of the whole editor from inside every frame blocked input.
     chatSmoothStreamRef.current = createSmoothStream((displayed) => {
-      flushSync(() => {
-        patchAssistant((msg) => ({ ...msg, content: displayed, isError: false }));
-      });
+      patchAssistant((msg) => ({ ...msg, content: displayed, isError: false }));
     });
 
     const CHAT_STREAM_TIMEOUT_MS =
@@ -702,6 +730,21 @@ export function useEditorChat(options: UseEditorChatOptions) {
         abort.abort();
       }
     }, CHAT_STREAM_TIMEOUT_MS);
+
+    /** Text kept in the reply when the request is aborted before any content arrived. */
+    const abortedReplyPlaceholder = () => {
+      const partialSections = logicAuditPartialCountRef.current;
+      return task === "logic" && partialSections > 0
+        ? chatTimedOut
+          ? t.logicAudit.partialChatTimeout(partialSections)
+          : t.logicAudit.partialChatStopped(partialSections)
+        : chatTimedOut
+          ? t.chatStream.timeout
+          : t.chatStream.stopped;
+    };
+    // The `finally` below cannot persist once the editor has unmounted (state updates are dropped),
+    // so the unmount cleanup persists the partial reply through this, exactly as Stop would.
+    abortedReplyPlaceholderRef.current = abortedReplyPlaceholder;
 
     const mainHash = contentFingerprint(sentMainLatex);
     const activeHash = contentFingerprint(sentActiveLatex);
@@ -992,28 +1035,16 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setAuditSectionProgress(null);
       chatAbortRef.current = null;
       setMessages((prev) => {
+        if (abort.signal.aborted) {
+          const next = closeAbortedReply(prev, abortedReplyPlaceholder());
+          if (!next) return prev;
+          persistActiveThreadNow(next);
+          return next;
+        }
         const idx = prev.findLastIndex((m) => m.role === "assistant");
         if (idx === -1) return prev;
         const next = [...prev];
         const msg = next[idx] as ChatMessage;
-        if (abort.signal.aborted) {
-          const partialSections = logicAuditPartialCountRef.current;
-          const partialContent =
-            task === "logic" && partialSections > 0
-              ? chatTimedOut
-                ? t.logicAudit.partialChatTimeout(partialSections)
-                : t.logicAudit.partialChatStopped(partialSections)
-              : chatTimedOut
-                ? t.chatStream.timeout
-                : t.chatStream.stopped;
-          next[idx] = {
-            ...msg,
-            isStreaming: false,
-            content: msg.content.trim() || partialContent,
-          };
-          persistActiveThreadNow(next);
-          return next;
-        }
         if (msg.isError && msg.content.trim()) {
           next[idx] = { ...msg, isStreaming: false };
           persistActiveThreadNow(next);
@@ -1027,7 +1058,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
         persistActiveThreadNow(next);
         return next;
       });
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Scrolling to the final answer is handled by ChatMessages (only if the user is at the bottom).
     }
   }, [
     locale,
@@ -1167,6 +1198,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setMessages((prev) => [
       ...prev,
       {
+        id: newChatMessageId(),
         role: "assistant",
         content: autoCompile ? t.chatStream.acceptAppliedCompile : t.chatStream.acceptApplied,
       },
@@ -1205,6 +1237,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     setMessages((prev) => [
       ...prev,
       {
+        id: newChatMessageId(),
         role: "assistant",
         content: t.chatStream.rejectSuggestionHint,
       },

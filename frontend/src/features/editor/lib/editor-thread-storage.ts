@@ -4,8 +4,22 @@ import { updatePaper } from "@/lib/api/papers-api";
 import type { ChatThread, StoredChatMessage } from "@/lib/project-store";
 import type { UiLanguage } from "@/lib/researcher-profile";
 
+let chatMessageSeq = 0;
+
+/** In-memory id used as the React key of a chat message (never persisted). */
+export function newChatMessageId(): string {
+  chatMessageSeq += 1;
+  return `msg-${chatMessageSeq}`;
+}
+
 export function makeInitialMessages(locale: UiLanguage): ChatMessage[] {
-  return [{ role: "assistant", content: editorCopy(locale).welcome.assistantMessage }];
+  return [
+    {
+      id: newChatMessageId(),
+      role: "assistant",
+      content: editorCopy(locale).welcome.assistantMessage,
+    },
+  ];
 }
 
 export function threadHasUserMessages(msgs: ChatMessage[]): boolean {
