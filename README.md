@@ -97,27 +97,9 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 
 Luồng chính của editor chạy qua **SSE streaming**: Intent Router phân loại yêu cầu (rules → LLM fallback), chuyển đến agent tương ứng; output đi qua Integrity Monitor trước khi trở thành diff cho người dùng duyệt.
 
-```mermaid
-sequenceDiagram
-    actor R as Researcher
-    participant FE as Editor (React)
-    participant API as FastAPI
-    participant IR as Intent Router
-    participant AG as Ario Agents
-    participant AIM as Integrity Monitor
-    participant LLM as LLM Provider
-
-    R->>FE: "Chỉnh abstract cho học thuật hơn"
-    FE->>API: POST /api/v1/chat/stream (SSE)
-    API->>IR: classify_intent (rules → LLM)
-    IR->>AG: Style / Edit / Structure / Citation / Template / Logic
-    AG->>LLM: Prompt + guardrail L1
-    LLM-->>AG: Suggestion + edits[]
-    AG->>AIM: L2 — numeric drift, length check
-    AIM-->>FE: diff + flags (stream)
-    R->>FE: Accept ✅ / Reject ❌
-    FE->>API: POST /api/v1/compile → PDF + SyncTeX
-```
+<p align="center">
+  <img src="./docs/assets/request-flow.svg" alt="Luồng xử lý một yêu cầu trong Arionear: Editor → FastAPI → Intent Router → Ario Agents → LLM → Integrity Monitor → Human Gate → PDF" width="100%">
+</p>
 
 Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](./ARCHITECTURE.md) và [docs/architecture_diagram.md](./docs/architecture_diagram.md).
 
