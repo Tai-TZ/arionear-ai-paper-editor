@@ -14,7 +14,7 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 
 # Exact lockfile install (the lockfile includes the Linux native bindings for rollup/lightningcss/oxide).
 RUN npm ci
