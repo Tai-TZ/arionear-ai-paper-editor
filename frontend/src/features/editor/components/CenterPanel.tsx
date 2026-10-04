@@ -2,6 +2,7 @@ import type React from "react";
 import { FileOutput, FileText, GraduationCap, Redo2, Share2, Undo2, Wrench } from "lucide-react";
 import { useLocale } from "@/components/locale-context";
 import { ChatOverlay, type ChatMessage } from "@/components/chat-overlay";
+import { PanelErrorBoundary } from "@/components/panel-error-boundary";
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
 import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
 import { SuggestionPanel } from "@/components/suggestion-panel";
@@ -296,28 +297,34 @@ export function CenterPanel({
           />
         ) : null}
 
-        <ChatOverlay
-          open={chatOpen}
-          onClose={onCloseChat}
-          onOpen={onOpenChat}
-          messages={messages}
-          chatInput={chatInput}
-          onChatInputChange={onChatInputChange}
-          onSend={onSend}
-          onStop={onStop}
-          chatEndRef={chatEndRef}
-          chatLoading={chatLoading}
-          streamProgress={streamProgress}
-          providers={providers}
-          llmProvider={llmProvider}
-          llmModel={llmModel}
-          onProviderChange={onProviderChange}
-          onModelChange={onModelChange}
-          onNewChat={onNewChat}
-          composerMode={chatComposerMode}
-          selectionContext={chatSelectionContext}
-          onClearSelectionContext={onClearChatSelectionContext}
-        />
+        <PanelErrorBoundary
+          panel="chat"
+          resetKeys={[messages.length]}
+          fallbackClassName="shrink-0 border-t border-border/60"
+        >
+          <ChatOverlay
+            open={chatOpen}
+            onClose={onCloseChat}
+            onOpen={onOpenChat}
+            messages={messages}
+            chatInput={chatInput}
+            onChatInputChange={onChatInputChange}
+            onSend={onSend}
+            onStop={onStop}
+            chatEndRef={chatEndRef}
+            chatLoading={chatLoading}
+            streamProgress={streamProgress}
+            providers={providers}
+            llmProvider={llmProvider}
+            llmModel={llmModel}
+            onProviderChange={onProviderChange}
+            onModelChange={onModelChange}
+            onNewChat={onNewChat}
+            composerMode={chatComposerMode}
+            selectionContext={chatSelectionContext}
+            onClearSelectionContext={onClearChatSelectionContext}
+          />
+        </PanelErrorBoundary>
       </div>
     </section>
   );

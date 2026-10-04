@@ -5,6 +5,7 @@ import { useLocale } from "@/components/locale-context";
 import { ChatInput, ChatMessages, type ChatMessage } from "@/components/chat-overlay";
 import { arioAvatar } from "@/lib/ario-avatar";
 import { LlmSelector } from "@/components/llm-selector";
+import { PanelErrorBoundary } from "@/components/panel-error-boundary";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import type { ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
@@ -99,13 +100,15 @@ export function MobileChatSheet({
         </div>
 
         <div className="mobile-chat-body flex min-h-0 flex-1 flex-col">
-          <ChatMessages
-            messages={messages}
-            chatEndRef={chatEndRef}
-            chatLoading={chatLoading}
-            streamProgress={streamProgress}
-            surface="sheet"
-          />
+          <PanelErrorBoundary panel="chat" resetKeys={[messages.length]} fallbackClassName="flex-1">
+            <ChatMessages
+              messages={messages}
+              chatEndRef={chatEndRef}
+              chatLoading={chatLoading}
+              streamProgress={streamProgress}
+              surface="sheet"
+            />
+          </PanelErrorBoundary>
         </div>
 
         <div className="mobile-chat-composer shrink-0 border-t border-border/40 px-3 py-2 safe-area-pb">

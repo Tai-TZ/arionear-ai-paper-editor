@@ -9,6 +9,7 @@ import { EditorEntrySplash } from "@/components/editor-entry-splash";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-download-dialog";
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
+import { PanelErrorBoundary } from "@/components/panel-error-boundary";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { SuggestionPanel } from "@/components/suggestion-panel";
 import { useLocale } from "@/components/locale-context";
@@ -663,7 +664,13 @@ export function EditorWorkspace() {
                     {...toolsPanelBindings}
                   />
                 ) : (
-                  <PdfPreviewPanel {...pdfPreviewProps} onCompilerChange={handleCompilerChange} />
+                  <PanelErrorBoundary
+                    panel="pdf"
+                    resetKeys={[latexWs.pdfData]}
+                    fallbackClassName="h-full"
+                  >
+                    <PdfPreviewPanel {...pdfPreviewProps} onCompilerChange={handleCompilerChange} />
+                  </PanelErrorBoundary>
                 )
               }
             />
@@ -763,11 +770,17 @@ export function EditorWorkspace() {
               </div>
             )}
             {mobileTab === "preview" && (
-              <PdfPreviewPanel
-                {...pdfPreviewProps}
-                onCompilerChange={handleCompilerChange}
-                mobile
-              />
+              <PanelErrorBoundary
+                panel="pdf"
+                resetKeys={[latexWs.pdfData]}
+                fallbackClassName="flex-1"
+              >
+                <PdfPreviewPanel
+                  {...pdfPreviewProps}
+                  onCompilerChange={handleCompilerChange}
+                  mobile
+                />
+              </PanelErrorBoundary>
             )}
           </div>
 

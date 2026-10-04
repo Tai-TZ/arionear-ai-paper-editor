@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { EditorErrorFallback } from "@/components/app-error-fallback";
 import { requireAuth } from "@/lib/require-auth";
 import { EditorWorkspace } from "@/features/editor/EditorWorkspace";
 
@@ -26,4 +27,5 @@ export const Route = createFileRoute("/editor")({
     ],
   }),
   component: EditorWorkspace,
+  errorComponent: EditorErrorFallback,
 });
