@@ -53,6 +53,24 @@ describe("prepareDefenseCouncilMarkdown", () => {
     expect(out.match(/\(#pdf\?search=PubMedBERT\)/g)).toHaveLength(1);
   });
 
+  it("never puts an auto-link inside $…$ or $$…$$ math", () => {
+    const reply = String.raw`Với $\mathrm{PubMedBERT}(x)$ và $$\text{PubMedBERT}$$, vì sao PubMedBERT tốt hơn?`;
+    const out = prepareDefenseCouncilMarkdown(reply, LATEX);
+
+    expect(out).toContain(String.raw`$\mathrm{PubMedBERT}(x)$`);
+    expect(out).toContain(String.raw`$$\text{PubMedBERT}$$`);
+    expect(out).toContain("vì sao [PubMedBERT](#pdf?search=PubMedBERT) tốt hơn?");
+  });
+
+  it("still links a term between currency amounts, which are not math", () => {
+    const out = prepareDefenseCouncilMarkdown(
+      "It cost $5 to fine-tune PubMedBERT, not $10.",
+      LATEX,
+    );
+
+    expect(out).toContain("[PubMedBERT](#pdf?search=PubMedBERT)");
+  });
+
   it("drops links whose search term is a stopword but keeps the label text", () => {
     const out = prepareDefenseCouncilMarkdown("See [this part](#pdf?search=the).", LATEX);
 

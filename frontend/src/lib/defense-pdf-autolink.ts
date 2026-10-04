@@ -111,16 +111,22 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-const MARKDOWN_LINK_RE = /\[[^\]]*\]\([^)]*\)/g;
+/**
+ * Markdown links, `$$…$$` and `$…$` math (same single-dollar rule as the chat renderer, see
+ * `isTexMathSpan`: no whitespace inside the dollars, no digit right after the closing one).
+ */
+const PROTECTED_SPAN_RE =
+  /\[[^\]]*\]\([^)]*\)|\$\$[\s\S]+?\$\$|\$(?=[^\s$])[^$\n]*?[^\s$]\$(?!\d)/g;
 
 /**
- * Apply `fn` only to the text outside existing markdown links, so an auto-link is never
- * nested inside a link the model already wrote (e.g. `[phần phương pháp](#pdf?passage=…)`).
+ * Apply `fn` only to the text outside existing markdown links and math, so an auto-link is never
+ * nested inside a link the model already wrote (e.g. `[phần phương pháp](#pdf?passage=…)`) nor
+ * dropped into a formula, where KaTeX would print the link markdown literally.
  */
-function replaceOutsideLinks(content: string, fn: (plain: string) => string): string {
+function replaceOutsideLinksAndMath(content: string, fn: (plain: string) => string): string {
   let out = "";
   let last = 0;
-  for (const match of content.matchAll(MARKDOWN_LINK_RE)) {
+  for (const match of content.matchAll(PROTECTED_SPAN_RE)) {
     const start = match.index ?? 0;
     out += fn(content.slice(last, start)) + match[0];
     last = start + match[0].length;
@@ -138,7 +144,7 @@ function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
     if (!isValidPdfCitationSearch(term) || alreadyLinked(out, term)) continue;
     const re = new RegExp(`\\b(${escapeRegExp(term)})\\b`, "i");
     let linked = false;
-    out = replaceOutsideLinks(out, (plain) => {
+    out = replaceOutsideLinksAndMath(out, (plain) => {
       if (linked || !re.test(plain)) return plain;
       linked = true;
       return plain.replace(
@@ -151,7 +157,7 @@ function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
   for (const rule of VI_PHRASE_RULES) {
     const candidate = rule.candidates.find(isValidPdfCitationSearch);
     if (!candidate || alreadyLinked(out, candidate)) continue;
-    out = replaceOutsideLinks(out, (plain) =>
+    out = replaceOutsideLinksAndMath(out, (plain) =>
       plain.replace(
         rule.pattern,
         (hit) => `[${hit}](#pdf?search=${encodeURIComponent(candidate)})`,

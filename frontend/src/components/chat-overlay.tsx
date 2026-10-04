@@ -28,6 +28,7 @@ import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/ch
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { filterDisplaySteps } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
+import { useMarkdownMath } from "@/lib/markdown-math";
 import { AiLoadingState } from "@/components/ai-loading-state";
 import { cn } from "@/lib/utils";
 
@@ -424,9 +425,26 @@ function ChatAiStatePanel(props: {
 
 const REMARK_PLUGINS = [remarkGfm];
 
-/** Markdown is the costly part of a message; re-parse only when its text changes. */
-const ChatMarkdown = memo(function ChatMarkdown({ content }: { content: string }) {
-  return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{content}</ReactMarkdown>;
+/**
+ * Markdown is the costly part of a message; re-parse only when its text changes (or when the reply
+ * finishes streaming). Math (`$…$`, KaTeX) renders only on finished replies — see useMarkdownMath.
+ */
+const ChatMarkdown = memo(function ChatMarkdown({
+  content,
+  isStreaming,
+}: {
+  content: string;
+  isStreaming: boolean;
+}) {
+  const math = useMarkdownMath(content, !isStreaming);
+  return (
+    <ReactMarkdown
+      remarkPlugins={math?.remarkPlugins ?? REMARK_PLUGINS}
+      rehypePlugins={math?.rehypePlugins}
+    >
+      {content}
+    </ReactMarkdown>
+  );
 });
 
 /**
@@ -495,7 +513,7 @@ const ChatMessageRow = memo(function ChatMessageRow({
         )}
         {m.content && (
           <div className={cn("chat-assistant-text", m.isError && "chat-assistant-text-error")}>
-            <ChatMarkdown content={m.content} />
+            <ChatMarkdown content={m.content} isStreaming={Boolean(m.isStreaming)} />
           </div>
         )}
         {m.isStreaming && m.content && <span className="chat-stream-cursor" aria-hidden />}

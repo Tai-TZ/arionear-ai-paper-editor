@@ -1,0 +1,12 @@
+/* Loaded with katex.min.css (markdown-math-plugins.ts), never on the landing page. */
+
+/*
+ * KaTeX lays out fraction bars, over/underlines and rules for the browser's default content-box
+ * sizing; Tailwind's preflight switches every element to border-box, which renders those lines
+ * 1px instead of ~1.8px tall and 0.8px lower. KaTeX's own border-box rules (.fbox, .fcolorbox,
+ * .angl) are more specific and still apply.
+ */
+.katex,
+.katex * {
+  box-sizing: content-box;
+}

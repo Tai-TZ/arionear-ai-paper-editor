@@ -4,6 +4,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseDefensePdfLink, type DefensePdfCitation } from "@/lib/defense-pdf-links";
 import { prepareDefenseCouncilMarkdown } from "@/lib/defense-pdf-autolink";
+import { useMarkdownMath } from "@/lib/markdown-math";
+
+const REMARK_PLUGINS = [remarkGfm];
 
 type Props = {
   content: string;
@@ -55,11 +58,14 @@ export function DefenseCouncilMarkdown({
     if (isStreaming || !latexContent.trim()) return content;
     return prepareDefenseCouncilMarkdown(content, latexContent);
   }, [content, latexContent, isStreaming]);
+  // Math (`$…$`, KaTeX) only once the turn has finished streaming — see useMarkdownMath.
+  const math = useMarkdownMath(markdown, !isStreaming);
 
   return (
     <div className="defense-msg-council-body defense-msg-council-markdown">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={math?.remarkPlugins ?? REMARK_PLUGINS}
+        rehypePlugins={math?.rehypePlugins}
         components={{
           a: (props) => <DefenseMarkdownLink {...props} onPdfCitation={onPdfCitation} />,
           p: ({ children }) => <p className="defense-md-p">{children}</p>,
