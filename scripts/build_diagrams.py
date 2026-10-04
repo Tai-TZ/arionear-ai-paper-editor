@@ -539,6 +539,111 @@ def architecture() -> Diagram:
     return d
 
 
+def _sequence(
+    name: str,
+    title: str,
+    subtitle: str,
+    parts: list[tuple[str, str, str]],
+    msgs: list[tuple[int, int, str, bool]],
+    *,
+    pills: tuple[tuple[str, str], ...] = (),
+    frames: tuple[dict, ...] = (),
+    aria: str = "",
+    glows: tuple[tuple[float, float, float, str, float], ...] = (
+        (0.65, 0.25, 0.6, "#7C3AED", 0.16),
+        (0.2, 0.8, 0.5, "#0EA5E9", 0.12),
+    ),
+    x_span: tuple[float, float] = (135, 1150),
+) -> Diagram:
+    """Animated sequence diagram: messages light up in order, each with a travelling packet.
+
+    ``msgs`` items are ``(from, to, label, is_return)``; ``from == to`` draws a self-call.
+    ``frames`` items are ``{"cols": (a, b), "branches": [(msg_index, label), ...], "color": hex}``.
+    """
+    top, row_h = 268, 33
+    d = Diagram(name, 1280, top + len(msgs) * row_h + 70, title, subtitle, pills=pills, glows=glows, aria=aria or title)
+    x0, x1 = x_span
+    xs = [x0 + i * (x1 - x0) / (len(parts) - 1) for i in range(len(parts))]
+    life_end = top + len(msgs) * row_h + 10
+    for x, (pname, accent, code) in zip(xs, parts, strict=True):
+        d.add(
+            "lanes",
+            f'<line x1="{x:.1f}" y1="236" x2="{x:.1f}" y2="{life_end}" stroke="{accent}" stroke-opacity="0.35" '
+            f'stroke-dasharray="3 6"/>',
+        )
+        d.block(x, 160, accent, hw=28, bh=16, code=code, title=pname, label_y=222, title_size=13.5)
+
+    def row_y(i: int) -> float:
+        return top + (i + 1) * row_h
+
+    for frame in frames:
+        a, b = frame["cols"]
+        color = frame.get("color", RED)
+        branches = frame["branches"]
+        last = frame.get("end", branches[-1][0])
+        fx0, fx1 = xs[a] - 45, xs[b] + 45
+        fy0, fy1 = row_y(branches[0][0]) - row_h + 6, row_y(last) + 9
+        d.add(
+            "lanes",
+            f'<rect x="{fx0:.1f}" y="{fy0:.1f}" width="{fx1 - fx0:.1f}" height="{fy1 - fy0:.1f}" rx="10" fill="{color}" '
+            f'fill-opacity="0.05" stroke="{color}" stroke-opacity="0.45" stroke-dasharray="4 4"/>',
+        )
+        for k, (idx, label) in enumerate(branches):
+            sy = row_y(idx) - row_h + 6
+            if k:
+                d.add(
+                    "lanes",
+                    f'<line x1="{fx0:.1f}" y1="{sy:.1f}" x2="{fx1:.1f}" y2="{sy:.1f}" stroke="{color}" '
+                    f'stroke-opacity="0.35" stroke-dasharray="3 5"/>',
+                )
+            prefix = "alt " if k == 0 else ""
+            d.text(fx0 + 8, sy + 13, f"{prefix}[{label}]", size=10.5, fill=shade(color, 1.3), mono=True, layer="lanes")
+
+    step, move, hold = 0.85, 0.7, 2.5
+    total = len(msgs) * step + hold
+    for i, (a, b, label, ret) in enumerate(msgs):
+        y = row_y(i)
+        accent = parts[a][1]
+        dash = ' stroke-dasharray="5 5"' if ret else ""
+        if a == b:
+            x = xs[a]
+            path = f"M {x + 5:.1f} {y - 9:.1f} h 34 v 13 h -28"
+            label_xy, anchor = (x + 48, y - 1), "start"
+        else:
+            x1_, x2_ = xs[a], xs[b]
+            direction = 1 if x2_ > x1_ else -1
+            path = f"M {x1_ + 5 * direction:.1f} {y} H {x2_ - 9 * direction:.1f}"
+            label_xy, anchor = ((x1_ + x2_) / 2, y - 7), "middle"
+        d.add(
+            "edges",
+            f'<path d="{path}" fill="none" stroke="{EDGE}" stroke-opacity="0.35" stroke-width="1.6"{dash} '
+            f'marker-end="url(#arrow)"/>',
+        )
+        s, e = (i * step + 0.4) / total, (i * step + 0.4 + move) / total
+        reveal = f'values="0;0;1;1;0" keyTimes="0;{s:.4f};{e:.4f};0.985;1" dur="{total:.2f}s" repeatCount="indefinite"'
+        d.add(
+            "edges",
+            f'<path d="{path}" fill="none" stroke="{accent}" stroke-width="2"{dash} opacity="0">'
+            f'<animate attributeName="opacity" {reveal}/></path>',
+        )
+        d.text(*label_xy, label, size=11.5, fill="#CBD5E1", anchor=anchor)
+        d.text(48, y + 4, f"{i + 1:02d}", size=11, fill="#475569", mono=True, weight=700, layer="lanes")
+        d.add(
+            "lanes",
+            f'<text x="48" y="{y + 4}" font-family="{MONO}" font-size="11" font-weight="700" fill="{accent}" opacity="0">'
+            f'{i + 1:02d}<animate attributeName="opacity" {reveal}/></text>',
+        )
+        d.add(
+            "packets",
+            f'<circle r="4.2" fill="{shade(accent, 1.4)}" filter="url(#dotglow)" opacity="0">'
+            f'<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;{s:.4f};{s + 0.004:.4f};{e:.4f};'
+            f'{e + 0.004:.4f};1" dur="{total:.2f}s" repeatCount="indefinite"/>'
+            f'<animateMotion path="{path}" keyPoints="0;0;1;1" keyTimes="0;{s:.4f};{e:.4f};1" calcMode="linear" '
+            f'dur="{total:.2f}s" repeatCount="indefinite"/></circle>',
+        )
+    return d
+
+
 def sequence() -> Diagram:
     parts = [
         ("Researcher", SOFTBLUE, "USR"),
@@ -550,7 +655,6 @@ def sequence() -> Diagram:
         ("LLM", PINK, "LLM"),
         ("PostgreSQL", SKY, "PG"),
     ]
-    # (from, to, label, is_return)
     msgs = [
         (0, 1, "Mở project", False),
         (1, 7, "GET / PATCH /papers/{id}  (bearer JWT)", False),
@@ -573,90 +677,102 @@ def sequence() -> Diagram:
         (2, 1, "PDF base64 + SyncTeX", True),
         (1, 2, "POST /revisions/{session}/{id}  accepted", False),
     ]
-    top, row_h = 268, 33
-    height = top + len(msgs) * row_h + 70
-    d = Diagram(
+    return _sequence(
         "sequence",
-        1280,
-        height,
         "End-to-end Sequence",
         "Một vòng chỉnh sửa: chat → agent → guardrail → diff → Accept → lưu & compile",
+        parts,
+        msgs,
         pills=(("SSE", GREEN), ("JWT bearer", BLUE), ("Human Gate", TEAL)),
-        glows=((0.65, 0.25, 0.6, "#7C3AED", 0.16), (0.2, 0.8, 0.5, "#0EA5E9", 0.12)),
-        aria="End-to-end sequence between researcher, editor, FastAPI, intent router, agent, integrity monitor, LLM and PostgreSQL",
+        frames=({"cols": (2, 5), "branches": [(11, "blocked"), (12, "ok")]},),
+        aria="End-to-end sequence between researcher, editor, FastAPI, intent router, agent, integrity monitor, "
+        "LLM and PostgreSQL",
     )
-    xs = [135 + i * 145 for i in range(len(parts))]
-    life_end = top + len(msgs) * row_h + 10
-    for x, (name, accent, code) in zip(xs, parts, strict=True):
-        d.add(
-            "lanes",
-            f'<line x1="{x}" y1="{236}" x2="{x}" y2="{life_end}" stroke="{accent}" stroke-opacity="0.35" stroke-dasharray="3 6"/>',
-        )
-        d.block(x, 160, accent, hw=28, bh=16, code=code, title=name, label_y=222, title_size=13.5)
 
-    # alt fragment around the two guardrail outcomes
-    fy0, fy1 = top + 11.5 * row_h - 10, top + 13 * row_h + 9
-    d.add(
-        "lanes",
-        f'<rect x="{xs[2] - 40}" y="{fy0:.1f}" width="{xs[6] - xs[2] - 60}" height="{fy1 - fy0:.1f}" rx="10" fill="#F87171" '
-        f'fill-opacity="0.05" stroke="#F87171" stroke-opacity="0.45" stroke-dasharray="4 4"/>',
+
+def sse_chat() -> Diagram:
+    parts = [
+        ("Editor", BLUE, "UI"),
+        ("chat_stream.py", GREEN, "SSE"),
+        ("logic_audit", AMBER, "LA"),
+        ("LLM", PINK, "LLM"),
+        ("integrity.py", RED, "L2"),
+    ]
+    msgs = [
+        (0, 1, "POST /chat/stream {task, latex}", False),
+        (1, 1, "intent / task detect", False),
+        (1, 2, "multi-agent debate + synthesize", False),
+        (1, 0, "done {logic_audit_report}", True),
+        (1, 3, "style + optional reasoning stream", False),
+        (1, 4, "L2 integrity + retry", False),
+        (1, 0, "done {suggestion, diff, flags}", True),
+        (1, 0, "done {apply_mode: document}", True),
+        (1, 3, "task handler", False),
+        (1, 0, "done", True),
+        (0, 0, "Diff Accept / Reject hoặc panel chỉ đọc", False),
+    ]
+    return _sequence(
+        "sse-chat",
+        "SSE — Editor Chat",
+        "POST /chat/stream rẽ nhánh theo task — chỉ chỉnh sửa văn bản mới qua integrity L2",
+        parts,
+        msgs,
+        pills=(("text/event-stream", GREEN), ("L2 retry", RED)),
+        frames=(
+            {
+                "cols": (0, 4),
+                "branches": [(2, "logic"), (4, "style"), (7, "template"), (8, "citation / structure / chat")],
+                "end": 9,
+                "color": AMBER,
+            },
+        ),
+        aria="SSE editor chat: the stream service branches by task into logic audit, style with integrity check, "
+        "template, or other handlers",
     )
-    d.text(xs[2] - 30, fy0 + 15, "alt", size=11, fill=RED, weight=700, mono=True, layer="lanes")
-    d.text(xs[2] - 30, top + 12 * row_h + 4, "[blocked]", size=10.5, fill="#FCA5A5", mono=True, layer="lanes")
-    d.text(xs[2] - 30, top + 13 * row_h - 7, "[ok]", size=10.5, fill="#86EFAC", mono=True, layer="lanes")
 
-    step, move, hold = 0.85, 0.7, 2.5
-    total = len(msgs) * step + hold
-    for i, (a, b, label, ret) in enumerate(msgs):
-        y = top + (i + 1) * row_h
-        x1, x2 = xs[a], xs[b]
-        direction = 1 if x2 > x1 else -1
-        x1s, x2e = x1 + 5 * direction, x2 - 9 * direction
-        accent = parts[a][1]
-        path = f"M {x1s} {y} H {x2e}"
-        dash = ' stroke-dasharray="5 5"' if ret else ""
-        d.add(
-            "edges",
-            f'<path d="{path}" fill="none" stroke="{EDGE}" stroke-opacity="0.35" stroke-width="1.6"{dash} marker-end="url(#arrow)"/>',
-        )
-        s, e = (i * step + 0.4) / total, (i * step + 0.4 + move) / total
-        reveal = f'values="0;0;1;1;0" keyTimes="0;{s:.4f};{e:.4f};0.985;1" dur="{total:.2f}s" repeatCount="indefinite"'
-        d.add(
-            "edges",
-            f'<path d="{path}" fill="none" stroke="{accent}" stroke-width="2"{dash} opacity="0">'
-            f'<animate attributeName="opacity" {reveal}/></path>',
-        )
-        d.text((x1 + x2) / 2, y - 7, label, size=11.5, fill="#CBD5E1", anchor="middle")
-        d.text(48, y + 4, f"{i + 1:02d}", size=11, fill="#475569", mono=True, weight=700, layer="lanes")
-        d.add(
-            "lanes",
-            f'<text x="48" y="{y + 4}" font-family="{MONO}" font-size="11" font-weight="700" fill="{accent}" opacity="0">'
-            f'{i + 1:02d}<animate attributeName="opacity" {reveal}/></text>',
-        )
-        d.add(
-            "packets",
-            f'<circle r="4.2" fill="{shade(accent, 1.4)}" filter="url(#dotglow)" opacity="0">'
-            f'<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;{s:.4f};{s + 0.004:.4f};{e:.4f};{e + 0.004:.4f};1" '
-            f'dur="{total:.2f}s" repeatCount="indefinite"/>'
-            f'<animateMotion path="{path}" keyPoints="0;0;1;1" keyTimes="0;{s:.4f};{e:.4f};1" calcMode="linear" '
-            f'dur="{total:.2f}s" repeatCount="indefinite"/></circle>',
-        )
-    return d
+
+def defense_flow() -> Diagram:
+    parts = [
+        ("Researcher", SOFTBLUE, "USR"),
+        ("/defense", PINK, "UI"),
+        ("defense_stream.py", GREEN, "SSE"),
+        ("LLM persona", VIOLET, "AI"),
+    ]
+    msgs = [
+        (0, 1, "Mở Defense từ project", False),
+        (1, 1, "Compile PDF preview", False),
+        (0, 1, "Chọn chế độ Proactive hoặc Q&A", False),
+        (1, 2, "POST /defense/stream  (Bearer)", False),
+        (2, 3, "council prompt + manuscript context", False),
+        (3, 2, "streamed tokens", True),
+        (2, 1, "SSE token … done", True),
+        (1, 1, "Highlight + deep-link trích dẫn trong PDF", False),
+    ]
+    return _sequence(
+        "defense-flow",
+        "Defense Mode",
+        "Phản biện thử (mock viva) — hội đồng AI đặt câu hỏi dựa trên chính bản thảo",
+        parts,
+        msgs,
+        pills=(("SSE", GREEN), ("quota per tier", PINK)),
+        aria="Defense mode sequence between researcher, defense page, defense stream service and LLM persona",
+        x_span=(170, 1110),
+    )
 
 
 def langgraph() -> Diagram:
     d = Diagram(
         "langgraph",
         1280,
-        650,
+        690,
         "LangGraph Orchestrator",
-        "Sync path POST /chat — router chọn nhánh, mọi chỉnh sửa văn bản đi qua integrity_node",
+        "Sync path POST /chat — parse_node rẽ theo task; chỉnh sửa văn bản (style · edit) đi qua integrity_node",
         pills=(("src/agents/graph.py", VIOLET),),
         glows=((0.55, 0.45, 0.6, "#7C3AED", 0.18),),
     )
-    mid = 359
-    rows = [175, 267, 359, 451, 543]
-    small = {"hw": 28, "bh": 16, "title_size": 13.5}
+    mid = 370
+    rows = [170, 250, 330, 410, 490, 570]
+    small = {"hw": 26, "bh": 15, "title_size": 13.5}
 
     def terminal(x, label, accent):
         d.add(
@@ -673,13 +789,13 @@ def langgraph() -> Diagram:
     branches = [
         ("style_node", "style", VIOLET, "STY"),
         ("edit_node", "edit", VIOLET, "EDT"),
-        ("structure / logic", "structure · logic", VIOLET, "STR"),
+        ("structure_node", "structure", VIOLET, "STR"),
+        ("logic_node", "logic", AMBER, "LOG"),
         ("citation_node", "citation", SKY, "REF"),
-        ("chat_node", "chat", BLUE, "MSG"),
+        ("chat_node", "chat · template", BLUE, "MSG"),
     ]
-    bx = 640
     bnodes = [
-        d.block(bx, y, acc, code=code, title=t, **small) for (t, _l, acc, code), y in zip(branches, rows, strict=True)
+        d.block(640, y, acc, code=code, title=t, **small) for (t, _l, acc, code), y in zip(branches, rows, strict=True)
     ]
     integrity = d.block(
         850, (rows[0] + rows[1]) / 2, RED, code="L2", title="integrity_node", sub="guardrail L2", **small
@@ -694,25 +810,388 @@ def langgraph() -> Diagram:
     for node, (_t, lbl, _a, _c) in zip(bnodes, branches, strict=True):
         y = node.left[1]
         d.edge(f"M {trunk} {y} H {node.left[0] - 10}", label=lbl, label_at=(trunk + 10, y - 9), label_anchor="start")
-    ix = integrity.left[0]
     for node in bnodes[:2]:
-        d.edge(f"M {node.right[0] + 5} {node.right[1]} H 760 V {integrity.left[1]} H {ix - 10}")
+        d.edge(f"M {node.right[0] + 5} {node.right[1]} H 760 V {integrity.left[1]} H {integrity.left[0] - 10}")
     d.edge(f"M {integrity.right[0] + 5} {integrity.right[1]} H 950 V {respond.left[1] - 6} H {respond.left[0] - 10}")
     for node in bnodes[2:]:
         d.edge(f"M {node.right[0] + 5} {node.right[1]} H 950 V {respond.left[1] + 6} H {respond.left[0] - 10}")
     d.edge(f"M {respond.right[0] + 5} {respond.right[1]} H 1166")
+    # error short-circuit: parse -> respond
+    d.edge(
+        f"M {parse.x - 40} {parse.cy + 70} V 650 H {respond.x} V {respond.cy + 80}",
+        dotted=True,
+        color="#FCA5A5",
+        label="state.error → respond",
+        label_at=(700, 642),
+    )
 
     head = f"M 104 {mid + 8} H {trunk}"
-    tails = []
-    for i, node in enumerate(bnodes):
+    colors = ["#E9D5FF", "#DDD6FE", "#C4B5FD", "#FDE68A", "#BAE6FD", "#BFDBFE"]
+    for i, (node, color) in enumerate(zip(bnodes, colors, strict=True)):
         y = node.left[1]
         if i < 2:
-            tails.append(f"V {y} H 760 V {integrity.left[1]} H 950 V {respond.left[1]} H 1176")
+            tail = f"V {y} H 760 V {integrity.left[1]} H 950 V {respond.left[1]} H 1176"
         else:
-            tails.append(f"V {y} H 950 V {respond.left[1]} H 1176")
-    colors = ["#E9D5FF", "#DDD6FE", "#C4B5FD", "#BAE6FD", "#BFDBFE"]
-    for i, (tail, color) in enumerate(zip(tails, colors, strict=True)):
-        d.packet(f"{head} {tail}", color, 7.5, i * 1.5)
+            tail = f"V {y} H 950 V {respond.left[1]} H 1176"
+        d.packet(f"{head} {tail}", color, 7.5, i * 1.25)
+    return d
+
+
+def system_overview() -> Diagram:
+    d = Diagram(
+        "system-overview",
+        1280,
+        700,
+        "System Overview",
+        "Từ trình duyệt tới FastAPI, PostgreSQL, 5 nhà cung cấp LLM và 3 nguồn dữ liệu học thuật",
+        pills=(("Cloud Run", BLUE), ("REST · SSE · WS", GREEN), ("Bearer JWT", AMBER)),
+        glows=((0.5, 0.45, 0.6, "#2563EB", 0.16), (0.85, 0.6, 0.4, "#DB2777", 0.12)),
+    )
+    d.panel(36, 160, 210, 500, SOFTBLUE, "BROWSER")
+    d.panel(266, 160, 230, 500, BLUE, "CLOUD RUN")
+    d.panel(516, 160, 230, 500, GREEN, "FASTAPI")
+    d.panel(766, 160, 478, 130, SKY, "PERSISTENCE")
+    d.panel(766, 306, 478, 170, PINK, "LLM PROVIDERS", "chọn trong editor · failover")
+    d.panel(766, 492, 478, 168, VIOLET, "CITATION APIs")
+    big = {"hw": 44, "bh": 22, "title_size": 14.5, "sub_size": 11.5}
+    researcher = d.block(141, 300, SOFTBLUE, code="USR", title="Researcher", sub="trình duyệt", **big)
+    ls = d.block(141, 520, AMBER, code="JWT", title="localStorage", sub="JWT + session", **big)
+    fe = d.block(
+        381,
+        380,
+        BLUE,
+        code="SSR",
+        title="TanStack Start",
+        sub="React 19 · Nitro SSR",
+        sub2="Marketing · Editor · Defense",
+        **big,
+    )
+    api = d.block(631, 330, GREEN, code="API", title="FastAPI", sub="/api/v1/*", sub2="REST · SSE · WS", **big)
+    ing = d.block(631, 545, SOFTBLUE, code="ING", title="Inngest", sub="telemetry · optional", hw=30, bh=17)
+    pg = d.block(
+        860, 220, SKY, code="PG", title="PostgreSQL", sub="Prisma schema + SQLAlchemy", hw=30, bh=17, label="right"
+    )
+    llms = [("OAI", "OpenAI"), ("ANT", "Anthropic"), ("OR", "OpenRouter"), ("GLM", "Z.AI GLM"), ("GEM", "Gemini")]
+    lx = [840 + i * 90 for i in range(5)]
+    for x, (code, title) in zip(lx, llms, strict=True):
+        d.block(x, 380, PINK, code=code, title=title, hw=24, bh=14, title_size=12.5)
+    sch = [("ARX", "arXiv"), ("DOI", "CrossRef"), ("S2", "Semantic Scholar")]
+    sx = [870 + i * 140 for i in range(3)]
+    for x, (code, title) in zip(sx, sch, strict=True):
+        d.block(x, 565, VIOLET, code=code, title=title, hw=26, bh=15, title_size=12.5)
+
+    (x1, y1), x2 = researcher.right, fe.left[0]
+    d.edge(f"M {x1 + 6} {y1} H 250 V {fe.left[1] - 8} H {x2 - 12}", label="HTTPS", label_at=(232, y1 - 12))
+    d.edge(
+        f"M {fe.left[0] - 6} {fe.left[1] + 10} H 262 V {ls.right[1]} H {ls.right[0] + 12}",
+        color="#FCD34D",
+        label="Bearer JWT",
+        label_at=(226, ls.right[1] - 12),
+    )
+    d.edge(
+        f"M {fe.right[0] + 6} {fe.right[1]} H 520 V {api.left[1]} H {api.left[0] - 12}",
+        label="REST · SSE · WS",
+        label_at=(476, fe.right[1] - 12),
+    )
+    d.edge(f"M {api.x} {api.bottom[1] + 66} V {ing.top[1] - 10}", dotted=True, color="#93C5FD")
+    trunk = 752
+    d.edge(f"M {api.right[0] + 6} {api.right[1]} H {trunk}", arrow=False)
+    d.edge(f"M {trunk} {pg.left[1]} V 572.5", arrow=False)
+    d.edge(f"M {trunk} {pg.left[1]} H {pg.left[0] - 10}")
+    d.edge(f"M {trunk} 387 H {lx[0] - 34}")
+    d.edge(f"M {lx[0] + 30} 387 H {lx[-1] - 30}", arrow=False, color="#F9A8D4")
+    d.edge(f"M {trunk} 572.5 H {sx[0] - 36}")
+    d.edge(f"M {sx[0] + 32} 572.5 H {sx[-1] - 32}", arrow=False, color="#C4B5FD")
+
+    d.packet(f"M {researcher.x} {y1} H 250 V {fe.left[1] - 8} H {fe.x}", "#BFDBFE", 4)
+    for i, (path, color) in enumerate(
+        [
+            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V {pg.left[1]} H {pg.x}", "#BAE6FD"),
+            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V 387 H {lx[-1]}", "#FBCFE8"),
+            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V 572.5 H {sx[-1]}", "#DDD6FE"),
+        ]
+    ):
+        d.packet(path, color, 6, 1 + i * 2)
+    return d
+
+
+def frontend_routes() -> Diagram:
+    d = Diagram(
+        "frontend-routes",
+        1280,
+        640,
+        "Frontend Routes & Components",
+        "File-based routing (TanStack Start) — editor shell ghép từ các panel độc lập",
+        pills=(("TanStack Router", AMBER), ("React 19", BLUE)),
+        glows=((0.6, 0.4, 0.6, "#2563EB", 0.15),),
+        margin=56,
+        header_fade=170,
+    )
+    col = (310, 445, 580, 725, 870, 1005, 1150)
+    d.lane(150, 278, SOFTBLUE, "01", "PUBLIC", "Marketing & đăng nhập")
+    d.lane(292, 420, AMBER, "02", "WORKSPACE", "Cần đăng nhập (JWT)")
+    d.lane(434, 600, VIOLET, "03", "EDITOR SHELL", "Panel trong /editor, /defense")
+
+    def node(x, cy, accent, code, title, sub, ly):
+        return d.block(x, cy, accent, code=code, title=title, sub=sub, label_y=ly)
+
+    node(col[0], 190, SOFTBLUE, "/", "Landing", "marketing · pricing", 248)
+    signin = node(col[1], 190, SOFTBLUE, "IN", "/signin · /signup", "email · Google SSO", 248)
+    node(col[2], 190, SOFTBLUE, "?", "/guide · /latex-guide", "hướng dẫn", 248)
+    tpl = node(col[0], 332, AMBER, "TPL", "/templates", "gallery", 390)
+    prj = node(col[1], 332, AMBER, "PRJ", "/projects", "dự án", 390)
+    ed = node(col[2], 332, AMBER, "ED", "/editor", "?projectId=", 390)
+    node(col[3], 332, AMBER, "ME", "/profile", "researcher profile", 390)
+    node(col[4], 332, AMBER, "ADM", "/admin", "god admin", 390)
+    dfs = node(col[6], 332, PINK, "DEF", "/defense", "?projectId=", 390)
+    shell = [
+        node(col[0], 488, VIOLET, "TEX", "LatexEditor", "+ inline diff", 546),
+        node(col[1], 488, VIOLET, "PDF", "PdfPreviewPanel", "PDF.js + SyncTeX", 546),
+        node(col[2], 488, VIOLET, "AI", "Chat dock", "Ario", 546),
+        node(col[3], 488, VIOLET, "KIT", "Tools", "info · citations · logic", 546),
+        node(col[4], 488, VIOLET, "%", "Export dialog", "paper score", 546),
+        node(col[5], 488, VIOLET, "NEW", "Onboarding", "first-run", 546),
+    ]
+    dchat = node(col[6], 488, PINK, "QA", "DefenseChatPanel", "+ PdfPreviewPanel", 546)
+
+    d.edge(
+        f"M {signin.x} {signin.bottom[1] + 46} V {prj.top[1] - 8}",
+        label="JWT",
+        label_at=(signin.x + 10, 288),
+        label_anchor="start",
+    )
+    (x1, y), x2 = tpl.right, prj.left[0]
+    d.edge(f"M {x1 + 5} {y} H {x2 - 10}", label="open", label_at=((x1 + x2) / 2, y - 10))
+    (x1, y), x2 = prj.right, ed.left[0]
+    d.edge(f"M {x1 + 5} {y} H {x2 - 10}")
+    d.edge(f"M {prj.x} {prj.top[1] - 6} V 302 H {dfs.x} V {dfs.top[1] - 8}")
+    bus = 428
+    d.edge(f"M {ed.x} 416 V {bus}", arrow=False, color="#C4B5FD")
+    d.edge(f"M {col[0]} {bus} H {col[5]}", arrow=False, color="#C4B5FD")
+    for s in shell:
+        d.edge(f"M {s.x} {bus} V {s.top[1] - 7}", color="#C4B5FD")
+    d.edge(f"M {dfs.x} {dfs.bottom[1] + 46} V {dchat.top[1] - 8}", color="#F9A8D4")
+    d.packet(f"M {col[0]} {tpl.right[1]} H {col[2]} V {bus} H {col[5]} V {shell[0].cy}", "#DDD6FE", 8)
+    d.packet(f"M {prj.x} {prj.top[1]} V 302 H {dfs.x} V {dchat.cy}", "#FBCFE8", 6, 2)
+    return d
+
+
+def api_surface() -> Diagram:
+    d = Diagram(
+        "api-surface",
+        1280,
+        640,
+        "Backend API Surface",
+        "Mọi route nằm dưới /api/v1 — router mỏng, logic nằm trong services/",
+        pills=(("FastAPI", GREEN), ("OpenAPI /docs", SKY)),
+        glows=((0.5, 0.5, 0.6, "#059669", 0.14),),
+        margin=56,
+        header_fade=170,
+    )
+    xs = [290 + i * 125.7 for i in range(8)]
+    d.lane(150, 278, BLUE, "01", "CLIENT", "Frontend · Bearer JWT")
+    d.lane(292, 440, GREEN, "02", "API /api/v1", "src/api/*")
+    d.lane(454, 600, VIOLET, "03", "SERVICES & DATA", "src/services · PostgreSQL")
+    fe = d.block(xs[0], 190, BLUE, code="UI", title="Frontend", sub="TanStack Start", label="right")
+    groups = [
+        ("AUTH", "/auth/*", "JWT · Google SSO"),
+        ("DOC", "/papers/*", "CRUD projects"),
+        ("AI", "/chat · /compile", "/citations · /stream"),
+        ("ME", "/users/me", "profile"),
+        ("LNK", "/papers/{id}/share", "read-only link"),
+        ("QA", "/defense/*", "stream · quota"),
+        ("TPL", "/templates/*", "gallery · admin"),
+        ("ADM", "/admin/*", "users · LLM keys"),
+    ]
+    api = [
+        d.block(x, 340, GREEN, code=c, title=t, sub=s, label_y=400, title_size=13, sub_size=11)
+        for x, (c, t, s) in zip(xs, groups, strict=True)
+    ]
+    db = d.block((xs[0] + xs[1]) / 2, 500, SKY, code="PG", title="PostgreSQL", sub="papers · users", label_y=560)
+    stream = d.block(xs[2] - 55, 500, VIOLET, code="SSE", title="chat_stream.py", sub="editor SSE", label_y=560)
+    lg = d.block(xs[2] + 70, 500, VIOLET, code="LG", title="LangGraph", sub="+ logic_audit", label_y=560)
+    dstream = d.block(
+        xs[5], 500, PINK, code="QA", title="defense_stream.py", sub="mock viva", label_y=560, title_size=12.5
+    )
+    tstore = d.block(
+        xs[6], 500, AMBER, code="TPL", title="template_store.py", sub="seed + CRUD", label_y=560, title_size=12.5
+    )
+
+    bus = 284
+    d.edge(f"M {fe.x} {fe.bottom[1] + 4} V {bus}", arrow=False)
+    d.edge(f"M {xs[0]} {bus} H {xs[-1]}", arrow=False)
+    for a in api:
+        d.edge(f"M {a.x} {bus} V {a.top[1] - 7}")
+    low = 446
+
+    def down(src: Box, dst: Box, color=EDGE):
+        d.edge(f"M {src.x} 420 V {low} H {dst.x} V {dst.top[1] - 7}", color=color)
+
+    down(api[0], db, "#7DD3FC")
+    down(api[1], db, "#7DD3FC")
+    down(api[2], stream, "#C4B5FD")
+    down(api[2], lg, "#C4B5FD")
+    down(api[5], dstream, "#F9A8D4")
+    down(api[6], tstore, "#FCD34D")
+    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[2]} V 420 V {low} H {lg.x} V {lg.cy}", "#BBF7D0", 6)
+    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[1]} V 420 V {low} H {db.x} V {db.cy}", "#BAE6FD", 6, 2)
+    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[5]} V 420 V {low} V {dstream.cy}", "#FBCFE8", 6, 4)
+    return d
+
+
+def export_gate() -> Diagram:
+    d = Diagram(
+        "export-gate",
+        1280,
+        520,
+        "Publication Score & Export Gate",
+        "Trước khi xuất PDF: nếu bản thảo đã đổi, chạy quick logic skim rồi chấm điểm",
+        pills=(("paper_gate_skim", AMBER), ("computePaperScore", SKY)),
+        glows=((0.55, 0.5, 0.6, "#0EA5E9", 0.15),),
+    )
+    big = {"hw": 40, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
+    exp = d.block(150, 330, BLUE, code="PDF", title="Export", sub="người dùng bấm xuất", **big)
+    gate = d.block(390, 330, AMBER, code="?", title="Bản thảo đã đổi?", sub="so fingerprint", pulse=True, **big)
+    skim = d.block(630, 220, RED, code="L", title="Quick logic skim", sub="paper_gate_skim", **big)
+    score = d.block(870, 330, SKY, code="%", title="computePaperScore", sub="dimensions + tổng điểm", **big)
+    dialog = d.block(1110, 330, GREEN, code="DL", title="Score dialog", sub="ring · dimensions · tải PDF", **big)
+    (x1, y), x2 = exp.right, gate.left[0]
+    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
+    gx, gy = gate.right
+    d.edge(f"M {gx + 6} {gy} H {score.left[0] - 12}", label="không", label_at=(560, gy - 12), color="#7DD3FC")
+    d.edge(
+        f"M {gate.x} {gate.top[1] - 6} V {skim.left[1]} H {skim.left[0] - 12}",
+        label="có",
+        label_at=(gate.x + 12, skim.left[1] - 12),
+        label_anchor="start",
+        color="#FCA5A5",
+    )
+    d.edge(f"M {skim.right[0] + 6} {skim.right[1]} H {score.x} V {score.top[1] - 8}", color="#FCA5A5")
+    (x1, y), x2 = score.right, dialog.left[0]
+    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
+    d.packet(f"M {exp.x} {y} H {gate.x} V {skim.left[1]} H {score.x} V {score.cy} V {y} H {dialog.x}", "#FECACA", 7)
+    d.packet(f"M {exp.x} {y} H {dialog.x}", "#BAE6FD", 5, 3.5)
+    return d
+
+
+def template_gallery() -> Diagram:
+    d = Diagram(
+        "template-gallery",
+        1280,
+        560,
+        "Template Gallery",
+        "Chọn template (IEEE, …) → tạo paper mới trong PostgreSQL → mở thẳng vào editor",
+        pills=(("GET /templates", GREEN), ("POST /templates/{id}/open", AMBER)),
+        glows=((0.45, 0.5, 0.6, "#D97706", 0.13),),
+    )
+    big = {"hw": 42, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
+    gal = d.block(150, 330, AMBER, code="TPL", title="/templates", sub="gallery", **big)
+    lst = d.block(450, 220, GREEN, code="GET", title="GET /templates", sub="danh sách + preview", **big)
+    store = d.block(760, 220, VIOLET, code="DB", title="template_store.py", sub="seed + admin CRUD", **big)
+    opn = d.block(450, 420, GREEN, code="NEW", title="POST /templates/{id}/open", sub="Open as Template", **big)
+    paper = d.block(760, 420, SKY, code="PG", title="Paper mới", sub="PostgreSQL", **big)
+    ed = d.block(1070, 420, BLUE, code="ED", title="/editor", sub="?projectId=", **big)
+    gx, gy = gal.right
+    d.edge(f"M {gx + 6} {gy - 6} H 300 V {lst.left[1]} H {lst.left[0] - 12}")
+    d.edge(f"M {lst.right[0] + 6} {lst.right[1]} H {store.left[0] - 12}")
+    d.edge(
+        f"M {gx + 6} {gy + 8} H 300 V {opn.left[1]} H {opn.left[0] - 12}",
+        label="open",
+        label_at=(310, opn.left[1] - 12),
+        label_anchor="start",
+    )
+    d.edge(f"M {opn.right[0] + 6} {opn.right[1]} H {paper.left[0] - 12}")
+    d.edge(f"M {paper.right[0] + 6} {paper.right[1]} H {ed.left[0] - 12}")
+    d.packet(f"M {gal.x} {gy - 6} H 300 V {lst.left[1]} H {store.x}", "#BBF7D0", 5)
+    d.packet(f"M {gal.x} {gy + 8} H 300 V {opn.left[1]} H {ed.x}", "#FDE68A", 6, 2.5)
+    return d
+
+
+def auth_session() -> Diagram:
+    d = Diagram(
+        "auth-session",
+        1280,
+        480,
+        "Auth & Session",
+        "JWT do FastAPI ký, lưu ở localStorage và gửi kèm Bearer cho mọi request cần đăng nhập",
+        pills=(("JWT 72h · remember 30d", AMBER), ("Google SSO", BLUE)),
+        glows=((0.5, 0.5, 0.6, "#CA8A04", 0.13),),
+    )
+    big = {"hw": 40, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
+    nodes = [
+        d.block(140, 300, SOFTBLUE, code="IN", title="Sign in", sub="email · Google SSO", **big),
+        d.block(380, 300, GREEN, code="API", title="/auth/*", sub="verify · issue token", **big),
+        d.block(620, 300, AMBER, code="JWT", title="Access token", sub="72h · remember 30d", **big),
+        d.block(860, 300, AMBER, code="LS", title="localStorage", sub="chia sẻ giữa các tab", **big),
+        d.block(1100, 300, GREEN, code="API", title="/api/v1/*", sub="Authorization: Bearer", **big),
+    ]
+    labels = ["credentials", "sign", "persist", "Bearer"]
+    for a, b, lbl in zip(nodes, nodes[1:], labels, strict=False):
+        (x1, y), x2 = a.right, b.left[0]
+        d.edge(f"M {x1 + 6} {y} H {x2 - 12}", label=lbl, label_at=((x1 + x2) / 2, y - 12))
+    d.edge(
+        f"M {nodes[4].x} {nodes[4].top[1] - 6} V 200 H {nodes[3].x} V {nodes[3].top[1] - 8}",
+        dotted=True,
+        color="#FCA5A5",
+        label="401 → xoá session, đăng nhập lại",
+        label_at=((nodes[3].x + nodes[4].x) / 2, 190),
+    )
+    d.packet(f"M {nodes[0].x} {nodes[0].right[1]} H {nodes[4].x}", "#FDE68A", 6)
+    return d
+
+
+def citation_verifier() -> Diagram:
+    d = Diagram(
+        "citation-verifier",
+        1280,
+        660,
+        "Citation Verifier",
+        "Mỗi cite key đi qua 3 lớp tra cứu — không có kết quả thì trả về not_found, không bao giờ bịa",
+        pills=(("arXiv → CrossRef → S2", VIOLET), ("no fabrication", RED)),
+        glows=((0.5, 0.45, 0.6, "#7C3AED", 0.16),),
+    )
+    dec = {"hw": 34, "bh": 18, "title_size": 13.5, "sub_size": 11.5}
+    src = d.block(130, 260, BLUE, code="BIB", title="BibTeX + cite keys", sub="từ bản thảo", **dec)
+    d1 = d.block(360, 260, AMBER, code="?", title="Có arXiv id?", **dec)
+    d2 = d.block(590, 260, AMBER, code="?", title="Có DOI?", **dec)
+    d3 = d.block(820, 260, AMBER, code="?", title="Có title?", **dec)
+    nf = d.block(1080, 260, RED, code="∅", title="not_found", sub="ghi nhận trung thực", **dec)
+    arx = d.block(360, 450, VIOLET, code="ARX", title="arXiv API", **dec)
+    cr = d.block(590, 450, VIOLET, code="DOI", title="CrossRef", **dec)
+    ss = d.block(820, 450, VIOLET, code="S2", title="Semantic Scholar", **dec)
+    out = d.block(1080, 450, GREEN, code="OK", title="Kết quả", sub="verified · mismatch", label="left", **dec)
+    llm = d.block(
+        1180, 600, MUTED, code="L4", title="LLM relevance", sub="(planned)", label="left", hw=26, bh=14, float_=False
+    )
+
+    (x1, y), x2 = src.right, d1.left[0]
+    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
+    for a, b in [(d1, d2), (d2, d3), (d3, nf)]:
+        (x1, y), x2 = a.right, b.left[0]
+        d.edge(f"M {x1 + 6} {y} H {x2 - 12}", label="không", label_at=((x1 + x2) / 2, y - 12), color="#FCA5A5")
+    for a, b in [(d1, arx), (d2, cr), (d3, ss)]:
+        d.edge(
+            f"M {a.x} {a.bottom[1] + 34} V {b.top[1] - 8}",
+            label="có",
+            label_at=(a.x + 10, (a.bottom[1] + b.top[1]) / 2 + 18),
+            label_anchor="start",
+            color="#86EFAC",
+        )
+    bus = 548
+    for a in (arx, cr, ss):
+        d.edge(f"M {a.x} {a.bottom[1] + 30} V {bus}", arrow=False, color="#C4B5FD")
+    d.edge(f"M {arx.x} {bus} H {out.x} V {out.bottom[1] + 8}", color="#C4B5FD")
+    d.edge(f"M {nf.x} {nf.bottom[1] + 46} V {out.top[1] - 8}", color="#FCA5A5")
+    d.edge(f"M {out.right[0] + 6} {out.right[1]} H {llm.x} V {llm.top[1] - 8}", dotted=True, color=MUTED)
+    y0 = src.right[1]
+    paths = [
+        (f"M {src.x} {y0} H {d1.x} V {arx.cy} V {bus} H {out.x} V {out.cy}", "#DDD6FE"),
+        (f"M {src.x} {y0} H {d2.x} V {cr.cy} V {bus} H {out.x} V {out.cy}", "#C4B5FD"),
+        (f"M {src.x} {y0} H {d3.x} V {ss.cy} V {bus} H {out.x} V {out.cy}", "#A78BFA"),
+        (f"M {src.x} {y0} H {nf.x} V {out.cy}", "#FCA5A5"),
+    ]
+    for i, (path, color) in enumerate(paths):
+        d.packet(path, color, 7, i * 1.75)
     return d
 
 
@@ -864,6 +1343,15 @@ DIAGRAMS = {
     "persistence": persistence,
     "guardrails": guardrails,
     "deployment": deployment,
+    "system-overview": system_overview,
+    "frontend-routes": frontend_routes,
+    "api-surface": api_surface,
+    "sse-chat": sse_chat,
+    "defense-flow": defense_flow,
+    "export-gate": export_gate,
+    "template-gallery": template_gallery,
+    "auth-session": auth_session,
+    "citation-verifier": citation_verifier,
 }
 
 
