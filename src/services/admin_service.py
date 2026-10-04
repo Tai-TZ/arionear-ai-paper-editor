@@ -4,11 +4,11 @@ import uuid
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, or_
+from sqlalchemy import case, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
-from src.db.models import AiSession, Paper, User, UserRole
+from src.db.models import AiSession, User, UserRole
 from src.models.admin_schemas import (
     AdminCostReport,
     AdminCostReportRow,
@@ -46,12 +46,26 @@ def _iso(dt: datetime | None) -> str | None:
 
 
 def _meaningful_session_filter():
-    """Ignore empty placeholder sessions created at paper init."""
+    """Ignore empty placeholder sessions created at paper init.
+
+    ``col <> ''`` is equivalent to ``coalesce(length(col), 0) > 0`` in a WHERE clause but does not count the
+    characters of every (possibly 50 KB) ``ai_output`` row.
+    """
     return or_(
         AiSession.tokens_used > 0,
-        func.coalesce(func.length(AiSession.ai_output), 0) > 0,
-        func.coalesce(func.length(AiSession.user_input), 0) > 0,
+        AiSession.ai_output != "",
+        AiSession.user_input != "",
     )
+
+
+def _json_text(column, key: str):
+    """``str(json.get(key) or "").strip()`` in SQL — ``->>`` on PostgreSQL, ``json_extract`` on SQLite."""
+    return func.trim(func.coalesce(column[key].as_string(), ""))
+
+
+def _json_text_or(column, key: str, default: str):
+    """``str(json.get(key) or default).strip()`` in SQL."""
+    return func.trim(func.coalesce(func.nullif(column[key].as_string(), ""), default))
 
 
 def _today_month_windows() -> tuple[datetime, datetime, datetime, datetime]:
@@ -67,7 +81,15 @@ def _today_month_windows() -> tuple[datetime, datetime, datetime, datetime]:
     return day_start, day_end, month_start, month_end
 
 
-def _tokens_by_user_window(db: Session, start: datetime, end: datetime) -> dict[str, int]:
+def _usage_owner_filter(user_id: uuid.UUID | None):
+    """Rows owned by ``user_id`` (or by anyone); usage rows always carry the owner — no join to papers."""
+    owner = resolved_user_id_expr()
+    return owner == user_id if user_id is not None else owner.isnot(None)
+
+
+def _tokens_by_user_window(
+    db: Session, start: datetime, end: datetime, *, user_id: uuid.UUID | None = None
+) -> dict[str, int]:
     """Return {user_id: token_count} for sessions within [start, end)."""
     token_expr = effective_tokens_expr()
     rows = (
@@ -75,8 +97,7 @@ def _tokens_by_user_window(db: Session, start: datetime, end: datetime) -> dict[
             resolved_user_id_expr().label("uid"),
             func.coalesce(func.sum(token_expr), 0),
         )
-        .outerjoin(Paper, AiSession.paper_id == Paper.id)
-        .filter(resolved_user_id_expr().isnot(None))
+        .filter(_usage_owner_filter(user_id))
         .filter(_meaningful_session_filter())
         .filter(AiSession.created_at >= start, AiSession.created_at < end)
         .group_by(resolved_user_id_expr())
@@ -85,7 +106,9 @@ def _tokens_by_user_window(db: Session, start: datetime, end: datetime) -> dict[
     return {str(uid): int(tok or 0) for uid, tok in rows if uid}
 
 
-def _usage_by_user(db: Session, *, month_start=None, month_end=None) -> dict[str, AdminUserUsage]:
+def _usage_by_user(
+    db: Session, *, month_start=None, month_end=None, user_id: uuid.UUID | None = None
+) -> dict[str, AdminUserUsage]:
     """All-time (or bounded) usage — for cost report and overview totals."""
     token_expr = effective_tokens_expr()
     query = (
@@ -94,8 +117,7 @@ def _usage_by_user(db: Session, *, month_start=None, month_end=None) -> dict[str
             func.coalesce(func.sum(token_expr), 0),
             func.count(AiSession.id),
         )
-        .outerjoin(Paper, AiSession.paper_id == Paper.id)
-        .filter(resolved_user_id_expr().isnot(None))
+        .filter(_usage_owner_filter(user_id))
         .filter(_meaningful_session_filter())
     )
     if month_start is not None and month_end is not None:
@@ -194,9 +216,9 @@ def update_admin_user(
 
 def _user_row(db: Session, user: User) -> AdminUserRow:
     day_start, day_end, month_start, month_end = _today_month_windows()
-    usage_map = _usage_by_user(db)
-    today_map = _tokens_by_user_window(db, day_start, day_end)
-    month_map = _tokens_by_user_window(db, month_start, month_end)
+    usage_map = _usage_by_user(db, user_id=user.id)
+    today_map = _tokens_by_user_window(db, day_start, day_end, user_id=user.id)
+    month_map = _tokens_by_user_window(db, month_start, month_end, user_id=user.id)
     rate = cost_rate_per_token()
     base = user_to_dict(user)
     uid = str(user.id)
@@ -228,7 +250,11 @@ def _user_row(db: Session, user: User) -> AdminUserRow:
 
 def get_usage_summary(db: Session) -> AdminUsageSummary:
     day_start, day_end, month_start, month_end = _today_month_windows()
-    users = db.query(User).all()
+    total_users, active_users, admin_users = db.query(
+        func.count(User.id),
+        func.count(case((User.is_active.is_(True), 1))),
+        func.count(case((User.role == UserRole.ADMIN, 1))),
+    ).one()
     usage_map = _usage_by_user(db)
     today_map = _tokens_by_user_window(db, day_start, day_end)
     month_map = _tokens_by_user_window(db, month_start, month_end)
@@ -241,21 +267,22 @@ def get_usage_summary(db: Session) -> AdminUsageSummary:
     month_total = sum(month_map.values())
     month_cost = round(month_total * rate, 4)
 
-    # Quota alerts — compare correct windows against limits
+    # Quota alerts — compare correct windows against limits. Limits come from each profile merged with the
+    # global defaults (and may be 0), so every user is checked — but only (id, profile_settings) is loaded.
     over_token = 0  # today's tokens > daily cap
     over_cost = 0  # this month's cost > monthly cap
-    for user in users:
-        limits = get_llm_limits_from_profile(user.profile_settings)
-        uid = str(user.id)
+    for user_id, profile_settings in db.query(User.id, User.profile_settings):
+        limits = get_llm_limits_from_profile(profile_settings)
+        uid = str(user_id)
         if today_map.get(uid, 0) >= limits.daily_token_max:
             over_token += 1
         if round(month_map.get(uid, 0) * rate, 4) >= limits.monthly_cost_cap_usd:
             over_cost += 1
 
     return AdminUsageSummary(
-        total_users=len(users),
-        active_users=sum(1 for u in users if u.is_active),
-        admin_users=sum(1 for u in users if (u.role.value if isinstance(u.role, UserRole) else u.role) == "ADMIN"),
+        total_users=int(total_users or 0),
+        active_users=int(active_users or 0),
+        admin_users=int(admin_users or 0),
         total_tokens=total_tokens,
         total_sessions=total_sessions,
         estimated_total_cost_usd=round(total_cost, 4),
@@ -266,24 +293,27 @@ def get_usage_summary(db: Session) -> AdminUsageSummary:
     )
 
 
-def _aware(dt: datetime) -> datetime:
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=UTC)
-    return dt
-
-
 def _aggregate_session_model_usage(db: Session) -> list[AdminModelUsageRow]:
-    token_expr = effective_tokens_expr()
-    rows = db.query(AiSession.metadata_, token_expr.label("tokens")).filter(_meaningful_session_filter()).all()
+    """Sessions + tokens per (provider, model) from usage metadata, grouped in SQL (not row by row)."""
+    per_row = (
+        select(
+            _json_text(AiSession.metadata_, "llm_provider").label("provider"),
+            _json_text(AiSession.metadata_, "llm_model").label("model"),
+            effective_tokens_expr().label("tokens"),
+        )
+        .where(_meaningful_session_filter())
+        .subquery()
+    )
+    rows = (
+        db.query(per_row.c.provider, per_row.c.model, func.count(), func.coalesce(func.sum(per_row.c.tokens), 0))
+        .filter(or_(per_row.c.provider != "", per_row.c.model != ""))
+        .group_by(per_row.c.provider, per_row.c.model)
+        .all()
+    )
     agg: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"sessions": 0, "tokens": 0})
-    for meta, tokens in rows:
-        md = meta or {}
-        provider = str(md.get("llm_provider") or "").strip()
-        model = str(md.get("llm_model") or "").strip()
-        if not provider and not model:
-            continue
+    for provider, model, sessions, tokens in rows:
         key = (provider or "—", model or "—")
-        agg[key]["sessions"] += 1
+        agg[key]["sessions"] += int(sessions or 0)
         agg[key]["tokens"] += int(tokens or 0)
     return sorted(
         [
@@ -300,14 +330,16 @@ def _aggregate_session_model_usage(db: Session) -> list[AdminModelUsageRow]:
 
 
 def _aggregate_user_model_preferences(db: Session) -> list[AdminUserModelPreferenceRow]:
+    """Users per preferred (provider, model), falling back to the server default — grouped in SQL."""
     settings = get_settings()
-    users = db.query(User).all()
+    per_user = select(
+        _json_text_or(User.profile_settings, "default_llm_provider", settings.llm_provider).label("provider"),
+        _json_text_or(User.profile_settings, "default_llm_model", settings.model_name).label("model"),
+    ).subquery()
+    rows = db.query(per_user.c.provider, per_user.c.model, func.count()).group_by(per_user.c.provider, per_user.c.model)
     counts: dict[tuple[str, str], int] = defaultdict(int)
-    for user in users:
-        prof = user.profile_settings or {}
-        provider = str(prof.get("default_llm_provider") or settings.llm_provider).strip()
-        model = str(prof.get("default_llm_model") or settings.model_name).strip()
-        counts[(provider, model)] += 1
+    for provider, model, user_count in rows:
+        counts[(provider, model)] += int(user_count or 0)
     return sorted(
         [
             AdminUserModelPreferenceRow(provider=provider, model=model, user_count=count)
@@ -324,13 +356,14 @@ def get_admin_overview(db: Session) -> AdminOverviewResponse:
     cutoff_7d = now - timedelta(days=7)
     cutoff_30d = now - timedelta(days=30)
 
-    users = db.query(User).order_by(User.created_at.desc()).all()
-    new_users_1d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_1d)
-    new_users_7d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_7d)
-    new_users_30d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_30d)
+    new_users_1d, new_users_7d, new_users_30d = db.query(
+        func.count(case((User.created_at >= cutoff_1d, 1))),
+        func.count(case((User.created_at >= cutoff_7d, 1))),
+        func.count(case((User.created_at >= cutoff_30d, 1))),
+    ).one()
 
     recent_users: list[AdminRecentUserRow] = []
-    for user in users[:8]:
+    for user in db.query(User).order_by(User.created_at.desc()).limit(8):
         base = user_to_dict(user)
         recent_users.append(
             AdminRecentUserRow(
@@ -346,9 +379,9 @@ def get_admin_overview(db: Session) -> AdminOverviewResponse:
 
     return AdminOverviewResponse(
         summary=summary,
-        new_users_1d=new_users_1d,
-        new_users_7d=new_users_7d,
-        new_users_30d=new_users_30d,
+        new_users_1d=int(new_users_1d or 0),
+        new_users_7d=int(new_users_7d or 0),
+        new_users_30d=int(new_users_30d or 0),
         recent_users=recent_users,
         session_model_usage=_aggregate_session_model_usage(db),
         user_model_preferences=_aggregate_user_model_preferences(db),
@@ -401,7 +434,14 @@ def get_cost_report(
     defaults = read_global_defaults()
     rate_per_1k = defaults.estimated_cost_per_1k_tokens_usd
     usage_map = _usage_by_user(db, month_start=start, month_end=end)
-    users = db.query(User).order_by(User.full_name.asc()).all()
+    users_query = db.query(User).order_by(User.full_name.asc())
+    if not include_unused:
+        # Rows without usage are skipped below anyway — only load the users that have some.
+        if not usage_map:
+            users_query = users_query.filter(false())
+        else:
+            users_query = users_query.filter(User.id.in_([uuid.UUID(uid) for uid in usage_map]))
+    users = users_query.all()
 
     rows: list[AdminCostReportRow] = []
     for user in users:
