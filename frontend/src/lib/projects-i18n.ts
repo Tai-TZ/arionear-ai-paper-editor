@@ -35,6 +35,9 @@ type ProjectsCopy = {
   renameTitle: string;
   deleteAria: string;
   deleteTitle: string;
+  openProjectAria: (name: string) => string;
+  defenseAria: string;
+  defenseTitle: string;
   creatingSample: string;
   creatingBlank: string;
   sampleProjectName: string;
@@ -48,6 +51,10 @@ type ProjectsCopy = {
   errorImport: string;
   errorRename: string;
   errorDelete: string;
+  errorLoad: string;
+  loadErrorTitle: string;
+  retry: string;
+  importSuccess: (texFiles: number, images: number, assets: number) => string;
   deleteConfirmTitle: string;
   deleteConfirmBody: (name: string) => string;
   deleteConfirmAction: string;
@@ -97,6 +104,9 @@ const EN: ProjectsCopy = {
   renameTitle: "Rename project (double-click name)",
   deleteAria: "Delete project",
   deleteTitle: "Delete project",
+  openProjectAria: (name) => `Open ${name}`,
+  defenseAria: "Defense",
+  defenseTitle: "Prepare your defense (Defense Mode)",
   creatingSample: "Creating sample project…",
   creatingBlank: "Creating blank project…",
   sampleProjectName: "IEEE IMRaD (Sample)",
@@ -110,6 +120,11 @@ const EN: ProjectsCopy = {
   errorImport: "ZIP import failed.",
   errorRename: "Failed to rename project.",
   errorDelete: "Failed to delete project.",
+  errorLoad: "Failed to load projects.",
+  loadErrorTitle: "Couldn't load your projects",
+  retry: "Retry",
+  importSuccess: (texFiles, images, assets) =>
+    `Imported ${texFiles} .tex file${texFiles === 1 ? "" : "s"} and ${images} image${images === 1 ? "" : "s"} (${assets} asset${assets === 1 ? "" : "s"}).`,
   deleteConfirmTitle: "Delete this project?",
   deleteConfirmBody: (name) =>
     `“${name}” and all of its files, chats and history will be permanently deleted. This can’t be undone.`,
@@ -163,6 +178,9 @@ const VI: ProjectsCopy = {
   renameTitle: "Đổi tên dự án (double-click tên)",
   deleteAria: "Xóa dự án",
   deleteTitle: "Xóa dự án",
+  openProjectAria: (name) => `Mở ${name}`,
+  defenseAria: "Phản biện",
+  defenseTitle: "Chuẩn bị bảo vệ (Defense Mode)",
   creatingSample: "Đang tạo dự án mẫu…",
   creatingBlank: "Đang tạo dự án trống…",
   sampleProjectName: "IEEE IMRaD (Mẫu)",
@@ -176,6 +194,11 @@ const VI: ProjectsCopy = {
   errorImport: "Nhập ZIP thất bại.",
   errorRename: "Đổi tên dự án thất bại.",
   errorDelete: "Xóa dự án thất bại.",
+  errorLoad: "Không tải được danh sách dự án.",
+  loadErrorTitle: "Không tải được dự án của bạn",
+  retry: "Thử lại",
+  importSuccess: (texFiles, images, assets) =>
+    `Đã import ${texFiles} file .tex, ${images} ảnh (${assets} assets).`,
   deleteConfirmTitle: "Xóa dự án này?",
   deleteConfirmBody: (name) =>
     `“${name}” cùng toàn bộ file, đoạn chat và lịch sử sẽ bị xóa vĩnh viễn. Không thể hoàn tác.`,

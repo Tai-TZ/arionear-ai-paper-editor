@@ -17,6 +17,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { refreshSession } from "@/lib/auth-store";
+import { useLatestRef } from "@/lib/use-latest-ref";
 import { SHOW_PROJECTS_IMPORT } from "@/components/workspace/workspace-layout";
 import {
   createPaper,
@@ -78,6 +79,7 @@ function ProjectsPage() {
   const navigate = useNavigate();
   const { locale } = useLocale();
   const t = useMemo(() => projectsCopy(locale), [locale]);
+  const copyRef = useLatestRef(t);
   const workspace = useMemo(() => commonCopy(locale).workspace, [locale]);
   const docImport = useMemo(() => documentImportCopy(locale), [locale]);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,9 @@ function ProjectsPage() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  /** Failure to load the project list only; action errors (create, import, delete) are toasts. */
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
@@ -116,7 +120,7 @@ function ProjectsPage() {
         setProjects(list);
       } catch (error) {
         if (!cancelled) {
-          setLoadError(error instanceof Error ? error.message : "Failed to load projects.");
+          setLoadError(error instanceof Error ? error.message : copyRef.current.errorLoad);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -127,17 +131,17 @@ function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt, copyRef]);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
 
   useEffect(() => {
-    if (loading || filtered.length > 0 || search.trim()) return;
+    if (loading || loadError || filtered.length > 0 || search.trim()) return;
     if (hasAcknowledgedProjectFormatNotice()) return;
     setFormatNoticeOpen(true);
-  }, [loading, filtered.length, search, setFormatNoticeOpen]);
+  }, [loading, loadError, filtered.length, search, setFormatNoticeOpen]);
 
   const openEditor = (projectId: string) => {
     if (!projectId.trim()) return;
@@ -162,7 +166,7 @@ function ProjectsPage() {
       /\.(png|jpe?g|gif|webp|svg|pdf|eps)$/i.test(a.name),
     ).length;
     toast.success(
-      `Đã import ${imported.files.length} file .tex, ${imageCount} ảnh (${(project.assets ?? []).length} assets).`,
+      t.importSuccess(imported.files.length, imageCount, (project.assets ?? []).length),
     );
     openEditor(project.id);
   };
@@ -175,7 +179,7 @@ function ProjectsPage() {
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t.errorCreate);
+      toast.error(error instanceof Error ? error.message : t.errorCreate);
     } finally {
       setCreatingLabel(null);
     }
@@ -189,7 +193,7 @@ function ProjectsPage() {
       setProjects((prev) => [project, ...prev]);
       openEditor(project.id);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t.errorCreate);
+      toast.error(error instanceof Error ? error.message : t.errorCreate);
     } finally {
       setCreatingLabel(null);
     }
@@ -201,7 +205,7 @@ function ProjectsPage() {
     if (!files.length) return;
 
     if (!files.some((f) => isTexFile(f.name))) {
-      setLoadError(t.errorNoTex);
+      toast.error(t.errorNoTex);
       return;
     }
 
@@ -211,7 +215,7 @@ function ProjectsPage() {
       const imported = await importLatexFileList(files);
       await handleImportedProject(imported);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t.errorUpload);
+      toast.error(error instanceof Error ? error.message : t.errorUpload);
     } finally {
       setCreatingLabel(null);
     }
@@ -225,15 +229,12 @@ function ProjectsPage() {
         : docImport.importingDetailDocx,
     );
     setNewMenuOpen(false);
-    setLoadError(null);
     try {
       const imported = await importDocumentFile(file, locale);
       await handleImportedProject(imported);
       notifyDocumentImportWarnings(imported.warnings, locale);
     } catch (error) {
-      const message = error instanceof Error ? error.message : docImport.errors.generic;
-      setLoadError(message);
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : docImport.errors.generic);
     } finally {
       setCreatingLabel(null);
       setCreatingDetail(null);
@@ -257,14 +258,11 @@ function ProjectsPage() {
     setCreatingLabel(t.importingZip);
     setCreatingDetail(t.importingZipDetail);
     setNewMenuOpen(false);
-    setLoadError(null);
     try {
       const imported = await importOverleafZip(file);
       await handleImportedProject(imported);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t.errorImport;
-      setLoadError(message);
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : t.errorImport);
     } finally {
       setCreatingLabel(null);
       setCreatingDetail(null);
@@ -287,7 +285,7 @@ function ProjectsPage() {
       await deletePaper(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t.errorDelete);
+      toast.error(error instanceof Error ? error.message : t.errorDelete);
     } finally {
       setDeletingIds((prev) => {
         const next = new Set(prev);
@@ -472,13 +470,20 @@ function ProjectsPage() {
               </div>
             )}
 
-            {loadError && (
-              <div className="mb-4 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {loadError}
-              </div>
-            )}
             {loading ? (
               <ProjectsListSkeleton className="flex-1 overflow-y-auto" />
+            ) : loadError ? (
+              <div className="projects-empty-editorial" role="alert">
+                <h2>{t.loadErrorTitle}</h2>
+                <p>{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => setLoadAttempt((n) => n + 1)}
+                  className="projects-header-btn projects-header-btn-primary mt-6"
+                >
+                  {t.retry}
+                </button>
+              </div>
             ) : filtered.length === 0 ? (
               <EmptyProjects
                 hasSearch={!!search.trim()}
@@ -622,6 +627,7 @@ function ProjectRow({
   onDefense: () => void;
 }) {
   const { locale } = useLocale();
+  const t = projectsCopy(locale);
   const nameRef = useRef<EditableProjectNameHandle>(null);
   const [renaming, setRenaming] = useState(false);
 
@@ -645,7 +651,7 @@ function ProjectRow({
       }}
       role="button"
       tabIndex={deleting ? -1 : 0}
-      aria-label={`Open ${project.name}`}
+      aria-label={t.openProjectAria(project.name)}
     >
       <div className="projects-col-name flex min-w-0 items-center gap-2">
         {deleting ? (
@@ -685,8 +691,8 @@ function ProjectRow({
             onDefense();
           }}
           className="projects-row-menu"
-          aria-label="Phản biện"
-          title="Chuẩn bị bảo vệ (Defense Mode)"
+          aria-label={t.defenseAria}
+          title={t.defenseTitle}
         >
           <GraduationCap className="h-4 w-4" />
         </button>
@@ -698,8 +704,8 @@ function ProjectRow({
             nameRef.current?.startEditing();
           }}
           className="projects-row-menu"
-          aria-label="Rename project"
-          title="Rename project (double-click name)"
+          aria-label={t.renameAria}
+          title={t.renameTitle}
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -711,8 +717,8 @@ function ProjectRow({
             onDelete();
           }}
           className="projects-row-menu text-destructive hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Delete project"
-          title="Delete project"
+          aria-label={t.deleteAria}
+          title={t.deleteTitle}
         >
           {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         </button>
