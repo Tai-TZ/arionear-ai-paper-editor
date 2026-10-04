@@ -67,6 +67,47 @@ jobs:
       - name: npm audit (Prisma tooling)
         run: npm audit --omit=dev --audit-level=high
 
+  licenses:
+    # Fails when a shipped (runtime/production) dependency is GPL or AGPL licensed. Weak copyleft such as
+    # psycopg2's LGPL or certifi's MPL is allowed and documented in THIRD_PARTY_NOTICES.md.
+    name: License gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: pip-licenses (runtime requirements only)
+        run: |
+          python -m venv /tmp/runtime
+          /tmp/runtime/bin/pip install --quiet -r requirements.txt
+          python -m pip install --quiet pip-licenses==5.5.5
+          # Trove classifiers, substring match: "GNU General Public License" does not occur in the
+          # "GNU Lesser/Library ... (LGPL)" classifiers, and "AGPL" does not occur in "LGPL".
+          pip-licenses --python /tmp/runtime/bin/python --from=mixed --summary --partial-match \
+            --fail-on "GNU General Public License;GNU Affero General Public License;AGPL"
+          # SPDX ids and bare names, exact match (a substring match on "GPL-3.0" would also hit "LGPL-3.0").
+          pip-licenses --python /tmp/runtime/bin/python --from=mixed --summary \
+            --fail-on "GPL;GPLv2;GPLv2+;GPLv3;GPLv3+;GPL-2.0;GPL-2.0-only;GPL-2.0-or-later;GPL-2.0+;GPL-3.0;GPL-3.0-only;GPL-3.0-or-later;GPL-3.0+" \
+            > /dev/null
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: license-checker (frontend production dependencies)
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          # Exact match on the SPDX id each package declares; LGPL/MPL ids are not in the list.
+          npx --yes license-checker-rseidelsohn@4.4.2 --production --excludePrivatePackages --summary \
+            --failOn "GPL-1.0;GPL-1.0-only;GPL-1.0-or-later;GPL-2.0;GPL-2.0-only;GPL-2.0-or-later;GPL-3.0;GPL-3.0-only;GPL-3.0-or-later;AGPL-1.0;AGPL-3.0;AGPL-3.0-only;AGPL-3.0-or-later"
+
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
