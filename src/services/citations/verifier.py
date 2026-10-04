@@ -5,6 +5,8 @@ from typing import Any
 
 import httpx
 
+from src.services.citations.openalex import fetch_openalex_by_doi, search_openalex_by_title
+
 ARXIV_RE = re.compile(r"(\d{4}\.\d{4,5})(?:v\d+)?")
 DOI_RE = re.compile(r"10\.\d{4,9}/[^\s\"]+", re.IGNORECASE)
 
@@ -82,6 +84,25 @@ async def _check_semantic_scholar(title: str, api_key: str = "") -> dict[str, An
     return {"found": False}
 
 
+async def _check_openalex(doi: str, title: str, mailto: str = "") -> dict[str, Any]:
+    """OpenAlex fallback: DOI lookup first, then title search (best title match). Never raises."""
+    try:
+        if doi:
+            work = await fetch_openalex_by_doi(doi, mailto)
+            if work.get("found"):
+                return work
+        if title.strip():
+            candidates = await search_openalex_by_title(title, mailto)
+            for candidate in candidates:
+                if _title_match(title, candidate.get("title", "")):
+                    return candidate
+            if candidates:
+                return candidates[0]
+    except Exception:
+        pass
+    return {"found": False}
+
+
 def _normalize_title(title: str) -> str:
     return re.sub(r"\s+", " ", title.lower().strip())
 
@@ -95,25 +116,30 @@ def _title_match(a: str, b: str) -> bool:
     return na in nb or nb in na
 
 
-async def verify_single_citation(
-    entry: dict,
-    semantic_scholar_api_key: str = "",
-) -> dict:
-    """4-layer citation verification (layers 1–3 deterministic)."""
-    key = entry.get("key", "")
-    title = entry.get("title", "")
-    doi = entry.get("doi", "").strip()
-    eprint = entry.get("eprint", "")
-
+def entry_identifiers(entry: dict) -> tuple[str, str]:
+    """Return (doi, arxiv_id) from a parsed bib entry (explicit fields first, then raw text)."""
+    doi = (entry.get("doi") or "").strip()
     if not doi:
         doi_match = DOI_RE.search(entry.get("raw", ""))
         if doi_match:
             doi = doi_match.group(0).rstrip(".,)")
 
     arxiv_id = ""
-    arxiv_match = ARXIV_RE.search(eprint) or ARXIV_RE.search(entry.get("raw", ""))
+    arxiv_match = ARXIV_RE.search(entry.get("eprint", "") or "") or ARXIV_RE.search(entry.get("raw", ""))
     if arxiv_match:
         arxiv_id = arxiv_match.group(1)
+    return doi, arxiv_id
+
+
+async def verify_single_citation(
+    entry: dict,
+    semantic_scholar_api_key: str = "",
+    openalex_mailto: str = "",
+) -> dict:
+    """Citation verification: arXiv → CrossRef → Semantic Scholar → OpenAlex fallback (all deterministic)."""
+    key = entry.get("key", "")
+    title = entry.get("title", "")
+    doi, arxiv_id = entry_identifiers(entry)
 
     layers: list[str] = []
     verified_meta: dict[str, Any] = {}
@@ -181,6 +207,29 @@ async def verify_single_citation(
                 "message": "Similar paper found but title differs.",
             }
 
+    if title or doi or arxiv_id:
+        # Fallback layer — only reached when the three layers above found nothing.
+        openalex_doi = doi or (f"10.48550/arXiv.{arxiv_id}" if arxiv_id else "")
+        result = await _check_openalex(openalex_doi, title, openalex_mailto)
+        if result.get("found"):
+            layers.append("openalex")
+            verified_meta = {k: v for k, v in result.items() if k != "abstract"}
+            if _title_match(title, result.get("title", "")) or not title:
+                return {
+                    "key": key,
+                    "status": "verified",
+                    "layers": layers,
+                    "metadata": verified_meta,
+                    "message": "Verified via OpenAlex.",
+                }
+            return {
+                "key": key,
+                "status": "possible_mismatch",
+                "layers": layers,
+                "metadata": verified_meta,
+                "message": "OpenAlex record found but title may not match.",
+            }
+
     if not title and not doi and not arxiv_id:
         return {
             "key": key,
@@ -202,8 +251,9 @@ async def verify_single_citation(
 async def verify_citations(
     entries: list[dict],
     semantic_scholar_api_key: str = "",
+    openalex_mailto: str = "",
 ) -> list[dict]:
     results = []
     for entry in entries:
-        results.append(await verify_single_citation(entry, semantic_scholar_api_key))
+        results.append(await verify_single_citation(entry, semantic_scholar_api_key, openalex_mailto))
     return results

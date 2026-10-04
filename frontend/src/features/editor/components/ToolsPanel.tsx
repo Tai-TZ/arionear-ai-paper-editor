@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HelpCircle, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-context";
+import { CitationRelevancePanel } from "@/components/editor/citation-relevance-panel";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
 import { StructureSuggestionsPanel } from "@/components/editor/structure-suggestions-panel";
 import { Switch } from "@/components/ui/switch";
@@ -270,6 +271,12 @@ export function ToolsPanel({
                 {t.tools.citationFixAll}
               </button>
             ) : null}
+            <CitationRelevancePanel
+              key={projectId}
+              projectId={projectId}
+              latex={latex}
+              citationResults={citationResults}
+            />
             <ul className="mt-4 space-y-2">
               {citationResults.map((r, i) => (
                 <li
