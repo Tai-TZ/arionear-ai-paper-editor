@@ -331,9 +331,9 @@ export function HeroPeerReviewFigure() {
               {citationAccepted ? (
                 "\\cite{author2024}"
               ) : citationActive ? (
-                <>\\cite{"{author2024}"} ← verify</>
+                <>{"\\cite{author2024}"} ← verify</>
               ) : (
-                <>\\cite{"{author2024}"}</>
+                "\\cite{author2024}"
               )}
             </p>
             <p
