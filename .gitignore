@@ -67,3 +67,6 @@ _vendor/
 
 # autoskills universal copies (Claude Code uses .claude/skills)
 .agents/
+
+# Claude Code agent worktrees
+.claude/worktrees/
