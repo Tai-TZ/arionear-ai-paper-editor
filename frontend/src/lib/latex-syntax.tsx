@@ -27,7 +27,7 @@ function pushTextTokens(tokens: LatexToken[], text: string) {
   }
 }
 
-export function parseLatexTokens(text: string): LatexToken[] {
+function parseLatexTokens(text: string): LatexToken[] {
   const tokens: LatexToken[] = [];
   let i = 0;
 

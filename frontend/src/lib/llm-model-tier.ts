@@ -3,7 +3,7 @@ import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
 /** User supplies their own API key — no platform billing gate for chat. */
 const BYOK_PROVIDERS: ReadonlySet<LLMProvider> = new Set(["google", "openai", "anthropic"]);
 
-export function isByokProvider(provider: LLMProvider): boolean {
+function isByokProvider(provider: LLMProvider): boolean {
   return BYOK_PROVIDERS.has(provider);
 }
 
@@ -18,7 +18,7 @@ export function isFreeModel(modelId: string, tier: string | null): boolean {
   return tier != null && /free|miễn phí/i.test(tier);
 }
 
-export function isPaidModel(modelId: string, label?: string | null): boolean {
+function isPaidModel(modelId: string, label?: string | null): boolean {
   const tier = label ? parseModelLabel(label).tier : null;
   return !isFreeModel(modelId, tier);
 }
@@ -30,17 +30,6 @@ export function isModelPaidForProvider(
 ): boolean {
   if (isByokProvider(provider)) return false;
   return isPaidModel(modelId, label);
-}
-
-export function isSelectedModelPaid(
-  providers: ProviderInfo[],
-  llmProvider: LLMProvider,
-  llmModel: string,
-): boolean {
-  if (isByokProvider(llmProvider)) return false;
-  const provider = providers.find((p) => p.id === llmProvider);
-  const model = provider?.models.find((m) => m.id === llmModel);
-  return isPaidModel(llmModel, model?.label ?? null);
 }
 
 /** First non-paid model for platform-billed providers; falls back to default_model. */

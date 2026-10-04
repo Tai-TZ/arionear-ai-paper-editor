@@ -17,7 +17,7 @@ export type InlineSuggestionView = {
   changeEndLine: number;
 };
 
-export function findOriginalRange(
+function findOriginalRange(
   latex: string,
   originalText: string,
   applyMode?: string,

@@ -142,9 +142,3 @@ export function AppLoadingScreen({
     />
   );
 }
-
-export function AppRoutePending() {
-  const { locale } = useLocale();
-  const t = useMemo(() => commonCopy(locale).shell, [locale]);
-  return <AppLoadingScreen label={t.loadingRoute} variant="fullscreen" />;
-}

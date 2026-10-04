@@ -56,7 +56,7 @@ export async function renderPageToCanvas(
   };
 }
 
-export function pdfPointFromClick(
+function pdfPointFromClick(
   viewport: PageViewport,
   canvasRect: DOMRect,
   clientX: number,
@@ -86,7 +86,7 @@ function hitSpanAtPoint(
 }
 
 /** Map a PDF.js text-layer span (% or calc positions) to PDF user-space coordinates. */
-export function pdfPointFromTextLayerSpan(
+function pdfPointFromTextLayerSpan(
   span: HTMLElement,
   viewport: PageViewport,
   canvasRect: DOMRect,
@@ -108,20 +108,6 @@ export function pdfPointFromTextLayerSpan(
   const vx = (cx - canvasRect.left) * (viewport.width / canvasRect.width);
   const vy = (cy - canvasRect.top) * (viewport.height / canvasRect.height);
   return viewport.convertToPdfPoint(vx, vy);
-}
-
-/** Prefer the PDF point under the clicked text glyph (more reliable than raw click on page 2+). */
-export function pdfPointFromTextLayerHit(
-  clientX: number,
-  clientY: number,
-  textLayer: HTMLElement | null,
-  viewport: PageViewport,
-  canvasRect: DOMRect,
-): [number, number] | null {
-  if (!textLayer) return null;
-  const span = hitSpanAtPoint(clientX, clientY, textLayer);
-  if (!span) return null;
-  return pdfPointFromTextLayerSpan(span, viewport, canvasRect);
 }
 
 /** Best-effort PDF point for SyncTeX: span style → text content → raw click. */
@@ -178,7 +164,7 @@ function bboxContains(b: TextBBox, pdfX: number, pdfY: number, pad = 3): boolean
 }
 
 /** Snap raw click to the center of the PDF text glyph box (fixes duplicate labels on one page). */
-export async function refineSynctexPoint(
+async function refineSynctexPoint(
   page: PDFPageProxy,
   pdfX: number,
   pdfY: number,

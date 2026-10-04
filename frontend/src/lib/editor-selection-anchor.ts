@@ -33,7 +33,7 @@ function measurePrefixWidth(textarea: HTMLTextAreaElement, prefix: string): numb
 }
 
 /** Caret anchor at end of selection, relative to textarea padding box (scroll-adjusted). */
-export function getSelectionAnchor(
+function getSelectionAnchor(
   textarea: HTMLTextAreaElement,
   selectionEnd: number,
 ): SelectionAnchor {

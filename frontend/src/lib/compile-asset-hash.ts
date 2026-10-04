@@ -23,7 +23,7 @@ function bytesToHex(bytes: ArrayBuffer): string {
     .join("");
 }
 
-export async function sha256HexFromDataUrl(dataUrl: string): Promise<string> {
+async function sha256HexFromDataUrl(dataUrl: string): Promise<string> {
   const payload = base64Payload(dataUrl);
   const bytes = decodeBase64ToBytes(payload);
   const digest = await crypto.subtle.digest("SHA-256", bytes);

@@ -19,7 +19,7 @@ export function hasAcknowledgedProjectFormatNotice(): boolean {
   return sessionStorage.getItem(NOTICE_KEY) === "1";
 }
 
-export function acknowledgeProjectFormatNotice(): void {
+function acknowledgeProjectFormatNotice(): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(NOTICE_KEY, "1");
 }

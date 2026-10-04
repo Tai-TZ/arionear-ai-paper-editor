@@ -7,7 +7,7 @@ export type LatexPassage = {
   level: number;
 };
 
-export function cleanLatexFragment(raw: string): string {
+function cleanLatexFragment(raw: string): string {
   return raw
     .replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^}]*\})?/g, " ")
     .replace(/[{}\\$]/g, " ")
@@ -139,14 +139,4 @@ export function findPassageById(
     passages.find((p) => p.id.includes(id) || id.includes(p.id)) ??
     null
   );
-}
-
-export function buildPassagePdfHref(label: string, passage: LatexPassage): string {
-  const params = new URLSearchParams();
-  params.set("passage", passage.id);
-  return `[${label}](#pdf?${params.toString()})`;
-}
-
-export function passageLinkQuery(passage: LatexPassage): string {
-  return `passage=${passage.id}`;
 }

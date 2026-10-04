@@ -152,10 +152,6 @@ export function streamErrorMessage(message: string, locale?: UiLanguage): string
   return toUserFacingMessage(new Error(message), locale);
 }
 
-export function citationErrorMessage(locale?: UiLanguage): string {
-  return msgs(locale).citation;
-}
-
 export function mapApiHttpError(status: number, detail: unknown, locale?: UiLanguage): string {
   const m = msgs(locale);
   if (Array.isArray(detail)) {

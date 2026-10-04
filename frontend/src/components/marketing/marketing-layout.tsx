@@ -15,7 +15,7 @@ function navLinkClass(active: boolean) {
     : "text-foreground hover:text-[color:var(--editorial-red)]";
 }
 
-export function MarketingTicker() {
+function MarketingTicker() {
   const { locale } = useLocale();
   const t = useMemo(() => commonCopy(locale), [locale]);
   const items = t.ticker;
@@ -35,7 +35,7 @@ export function MarketingTicker() {
   );
 }
 
-export function MarketingMobilePrefsDock() {
+function MarketingMobilePrefsDock() {
   return (
     <div className="marketing-mobile-prefs-dock sm:hidden" role="group" aria-label="Preferences">
       <LanguageToggle compact className="marketing-mobile-prefs-lang masthead-language-toggle" />
@@ -44,7 +44,7 @@ export function MarketingMobilePrefsDock() {
   );
 }
 
-export function MarketingMasthead() {
+function MarketingMasthead() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { locale } = useLocale();
   const t = useMemo(() => commonCopy(locale), [locale]);
@@ -139,7 +139,7 @@ export function MarketingMasthead() {
   );
 }
 
-export function MarketingColophon() {
+function MarketingColophon() {
   const { locale } = useLocale();
   const t = useMemo(() => commonCopy(locale), [locale]);
   const f = t.footer;

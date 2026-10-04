@@ -214,10 +214,6 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   return data.users;
 }
 
-export async function fetchAdminUsageSummary(): Promise<AdminUsageSummary> {
-  return fetchDedupe("admin:usage", () => adminFetch<AdminUsageSummary>("/admin/usage/summary"));
-}
-
 export async function fetchAdminOverview(): Promise<AdminOverviewResponse> {
   return fetchDedupe("admin:overview", () => adminFetch<AdminOverviewResponse>("/admin/overview"));
 }

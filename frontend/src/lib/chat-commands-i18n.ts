@@ -117,7 +117,7 @@ const VI: SlashCopy = {
   ],
 };
 
-export function slashCopy(locale: UiLanguage): SlashCopy {
+function slashCopy(locale: UiLanguage): SlashCopy {
   return locale === "vi" ? VI : EN;
 }
 

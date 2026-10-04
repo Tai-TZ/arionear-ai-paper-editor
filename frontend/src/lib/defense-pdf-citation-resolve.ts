@@ -42,7 +42,7 @@ function synonymVariants(title: string): string[] {
 }
 
 /** Build PDF heading search strings from a LaTeX section title. */
-export function buildSectionHeadingCandidates(title: string): string[] {
+function buildSectionHeadingCandidates(title: string): string[] {
   const cleaned = title.trim();
   if (!cleaned) return [];
 

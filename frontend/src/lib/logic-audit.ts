@@ -6,9 +6,9 @@ import { findSectionOutlineLine } from "@/lib/structure-suggestions";
 export type LogicAuditMode = "quick" | "deep";
 export type LogicAuditScope = "selected" | "full";
 
-export const LOGIC_AUDIT_QUICK_DEFAULTS = ["Abstract", "Introduction", "Conclusion"] as const;
-export const LOGIC_AUDIT_QUICK_FULL_MAX = 20;
-export const LOGIC_AUDIT_DEEP_FULL_MAX = 8;
+const LOGIC_AUDIT_QUICK_DEFAULTS = ["Abstract", "Introduction", "Conclusion"] as const;
+const LOGIC_AUDIT_QUICK_FULL_MAX = 20;
+const LOGIC_AUDIT_DEEP_FULL_MAX = 8;
 
 export function listLogicAuditSectionOptions(outline: LatexOutlineItem[]): string[] {
   const names = new Set<string>();
@@ -33,17 +33,6 @@ export function defaultQuickSectionSelection(options: string[]): string[] {
   return options.slice(0, 3);
 }
 
-export function logicAuditModeLabel(mode: LogicAuditMode): string {
-  return mode === "deep" ? "Deep" : "Quick";
-}
-
-export function logicAuditModeHint(_mode: LogicAuditMode, scope: LogicAuditScope = "selected"): string {
-  if (scope === "full") {
-    return "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 3.5 Flash — thường ~3–8 phút.";
-  }
-  return "Quét nhanh 2–3 phần bằng Gemini 2.5 Flash — ~1–2 phút. Không phụ thuộc provider chat.";
-}
-
 /** Client SSE timeout — must cover backend compute_logic_audit_timeout_sec (up to 900s). */
 export function logicAuditClientTimeoutMs(
   mode: LogicAuditMode = "quick",
@@ -60,7 +49,7 @@ export function isGateAuditReport(report: LogicAuditReport | null | undefined): 
   return (report as { meta?: Record<string, unknown> } | null)?.meta?.audit_mode === "gate";
 }
 
-export function manuscriptHasCrossSectionPair(sectionNames: string[]): boolean {
+function manuscriptHasCrossSectionPair(sectionNames: string[]): boolean {
   const lower = sectionNames.map((name) => name.toLowerCase());
   const hasAbstract = lower.some((name) => name.includes("abstract"));
   const hasConclusion = lower.some((name) => name.includes("conclusion"));

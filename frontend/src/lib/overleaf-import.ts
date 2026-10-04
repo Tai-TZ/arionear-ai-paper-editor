@@ -27,7 +27,7 @@ export type OverleafImportResult = LatexImportResult;
 const SKIP_PATH_RE =
   /(?:^|\/)(?:output\.(?:pdf|log|aux|bbl|blg|fls|fdb_latexmk|synctex\.gz)|\.DS_Store|Thumbs\.db|__MACOSX)(?:\/|$)|\.(?:aux|log|out|toc|lof|lot|fls|fdb_latexmk|synctex\.gz|nav|snm|vrb|bcf|run\.xml|blg|bbl)$/i;
 
-export const MAX_OVERLEAF_ZIP_BYTES = 80 * 1024 * 1024;
+const MAX_OVERLEAF_ZIP_BYTES = 80 * 1024 * 1024;
 
 function shouldSkipPath(path: string): boolean {
   return SKIP_PATH_RE.test(path);

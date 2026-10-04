@@ -9,12 +9,6 @@ export function getStoredLocale(): UiLanguage {
   return localStorage.getItem(STORAGE_KEY) === "vi" ? "vi" : "en";
 }
 
-/** Locale applied by the inline shell script before React hydrates. */
-export function readBootstrapLocale(): UiLanguage {
-  if (typeof document === "undefined") return "en";
-  return document.documentElement.lang === "vi" ? "vi" : "en";
-}
-
 export function applyLocale(locale: UiLanguage) {
   if (typeof document === "undefined") return;
   document.documentElement.lang = locale === "vi" ? "vi" : "en";

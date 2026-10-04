@@ -113,25 +113,3 @@ export function isValidPdfCitationSearch(search: string): boolean {
   if (!hasUpper && !hasHyphen && !isMultiWord && normalized.length < 6) return false;
   return true;
 }
-
-/** Find first whole-word match (avoids matching substrings inside longer tokens). */
-export function findWholeWordMatchIndex(text: string, query: string): number {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return -1;
-
-  const lower = text.toLowerCase();
-  const wordChar = (c: string) => /[\p{L}\p{N}]/u.test(c);
-  let start = 0;
-
-  while (start <= lower.length - needle.length) {
-    const idx = lower.indexOf(needle, start);
-    if (idx < 0) return -1;
-    const before = idx > 0 ? lower[idx - 1]! : " ";
-    const afterIdx = idx + needle.length;
-    const after = afterIdx < lower.length ? lower[afterIdx]! : " ";
-    if (!wordChar(before) && !wordChar(after)) return idx;
-    start = idx + 1;
-  }
-
-  return -1;
-}

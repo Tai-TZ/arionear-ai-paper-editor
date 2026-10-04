@@ -18,7 +18,7 @@ function cleanLatexFragment(raw: string): string {
     .trim();
 }
 
-export function extractLinkableTermsFromLatex(latex: string): string[] {
+function extractLinkableTermsFromLatex(latex: string): string[] {
   if (!latex.trim()) return [];
 
   const terms = new Set<string>();
@@ -58,7 +58,7 @@ const PDF_LINK_RE = /\[([^\]]+)\]\(#pdf\?([^)]*)\)/g;
  * Also normalises `passage=slug` to `search=slug` so the rest of the
  * pipeline can treat everything uniformly.
  */
-export function sanitizeDefensePdfLinks(content: string): string {
+function sanitizeDefensePdfLinks(content: string): string {
   return content.replace(PDF_LINK_RE, (full, label: string, queryString: string) => {
     const params = new URLSearchParams(queryString);
     // Passage slug links → treat the slug as a fallback search term
@@ -112,7 +112,7 @@ function escapeRegExp(s: string): string {
 }
 
 /** Wrap the first appearance of known paper terms with `#pdf?search=` links. */
-export function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
+function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
   if (!content.trim() || latexTerms.length === 0) return content;
 
   let out = content;

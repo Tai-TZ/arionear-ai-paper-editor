@@ -21,7 +21,7 @@ export type LatexImportResult = {
   compiler: LatexCompiler;
 };
 
-export function fileRelativePath(file: File): string {
+function fileRelativePath(file: File): string {
   const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath?.trim();
   return normalizeAssetName(relative || file.name);
 }

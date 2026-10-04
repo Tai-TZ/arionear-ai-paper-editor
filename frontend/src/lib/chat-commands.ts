@@ -1,7 +1,6 @@
 import type { UiLanguage } from "@/lib/researcher-profile";
 import {
   getChatSlashCommands,
-  getChatSlashHints,
   getSlashDefaultMessage,
 } from "@/lib/chat-commands-i18n";
 
@@ -33,12 +32,6 @@ const COMMAND_TO_TASK: Record<string, ChatSlashTask> = {
   edit: "edit",
   chat: "chat",
 };
-
-/** @deprecated Use getChatSlashCommands(locale) */
-export const CHAT_SLASH_COMMANDS = getChatSlashCommands("vi");
-
-/** @deprecated Use getChatSlashHints(locale) */
-export const CHAT_SLASH_HINTS = getChatSlashHints("vi");
 
 /** Prefix after `/` while picking a command, or null when menu should hide. */
 export function getSlashCommandQuery(input: string): string | null {

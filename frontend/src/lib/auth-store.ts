@@ -100,7 +100,7 @@ function writeCachedUser(user: AuthUser) {
   writeToStorage(storage, USER_KEY, JSON.stringify(user));
 }
 
-export function clearSession() {
+function clearSession() {
   if (typeof window === "undefined") return;
   for (const storage of [localStorage, sessionStorage]) {
     writeToStorage(storage, TOKEN_KEY, null);
@@ -109,7 +109,7 @@ export function clearSession() {
 }
 
 /** Clear all browser storage on sign-out (local + session). */
-export function clearAllBrowserStorage() {
+function clearAllBrowserStorage() {
   if (typeof window === "undefined") return;
   localStorage.clear();
   sessionStorage.clear();
@@ -239,12 +239,6 @@ export async function resetPassword(
   if (pwError) return { ok: false, error: pwError };
   if (!token.trim()) return { ok: false, error: "Reset link is invalid or has expired." };
   return apiResetPassword(token.trim(), password);
-}
-
-/** JWT expiry (unix seconds) for the cached access token, if decodable. */
-export function getAccessTokenExpiry(): number | null {
-  const token = readFromStorages(TOKEN_KEY);
-  return token ? decodeJwtExp(token) : null;
 }
 
 /** Validate cached session against API (optional on app load). */

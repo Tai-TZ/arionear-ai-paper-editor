@@ -100,7 +100,7 @@ export function loadLocalDefenseSession(projectId: string): StoredDefenseSession
   }
 }
 
-export function saveLocalDefenseSession(projectId: string, session: StoredDefenseSession) {
+function saveLocalDefenseSession(projectId: string, session: StoredDefenseSession) {
   try {
     const clean: StoredDefenseSession = {
       ...session,
@@ -113,7 +113,7 @@ export function saveLocalDefenseSession(projectId: string, session: StoredDefens
   }
 }
 
-export function clearLocalDefenseSession(projectId: string) {
+function clearLocalDefenseSession(projectId: string) {
   sessionStorage.removeItem(sessionStorageKey(projectId));
 }
 

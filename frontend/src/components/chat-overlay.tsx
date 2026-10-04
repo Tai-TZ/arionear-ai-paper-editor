@@ -38,7 +38,7 @@ export type ChatMessage = {
   isError?: boolean;
 };
 
-export function hasChatHistory(messages: ChatMessage[]): boolean {
+function hasChatHistory(messages: ChatMessage[]): boolean {
   return messages.some((m) => m.role === "user");
 }
 
@@ -76,7 +76,7 @@ export function ChatOverlay(props: ChatDockProps) {
   return <ChatDock {...props} />;
 }
 
-export function ChatDock({
+function ChatDock({
   open,
   onClose,
   onOpen,
@@ -396,15 +396,6 @@ function assistantHasBody(message: ChatMessage): boolean {
       (message.activities?.length ?? 0) > 0 ||
       filterDisplaySteps(message.aiSteps ?? []).length > 0,
   );
-}
-
-export function ChatProgressStrip(props: {
-  activity?: string | null;
-  steps: ChatAiStep[];
-  activities?: string[];
-  waitElapsedSec?: number | null;
-}) {
-  return <AiLoadingState compact {...props} />;
 }
 
 function ChatAiStatePanel(props: {

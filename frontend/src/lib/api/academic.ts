@@ -58,7 +58,7 @@ export function isProgressNoiseStep(stepId: string): boolean {
 }
 
 /** Steps worth showing in the chat progress UI (hide heartbeat + per-persona noise). */
-export function isDisplayProgressStep(stepId: string): boolean {
+function isDisplayProgressStep(stepId: string): boolean {
   if (isProgressNoiseStep(stepId)) return false;
   if (stepId.includes("persona-")) return false;
   return true;
@@ -87,7 +87,7 @@ export function isImportantFeedEvent(state: ChatAiStatePayload): boolean {
   return false;
 }
 
-export function formatFeedLine(state: ChatAiStatePayload): string {
+function formatFeedLine(state: ChatAiStatePayload): string {
   const prefix = state.status === "done" ? "✓ " : "● ";
   return state.detail ? `${prefix}${state.label} — ${state.detail}` : `${prefix}${state.label}`;
 }

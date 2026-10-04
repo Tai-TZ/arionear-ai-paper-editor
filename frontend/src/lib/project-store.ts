@@ -83,13 +83,6 @@ const LATEX_SUPPORT_EXTENSIONS = new Set([
 
 const TEX_EXTENSIONS = new Set([".tex", ".latex"]);
 
-const BUILTIN_ASSET_URLS: Record<string, string> = {
-  "sample.figure.eps": "/assets/sample-figure.svg",
-  "sample.figure": "/assets/sample-figure.svg",
-  "sample.figure.eps-converted-to.pdf": "/assets/sample-figure.svg",
-};
-
-const STORAGE_KEY = "arionear-projects";
 const DEFAULT_MAIN_FILE = "main.tex";
 
 /** XeLaTeX + fontspec so Vietnamese diacritics compile reliably. */
@@ -97,7 +90,7 @@ const VIETNAMESE_PREAMBLE = `\\usepackage{fontspec}
 \\setmainfont{Latin Modern Roman}
 `;
 
-export const SAMPLE_LATEX_EN = `\\documentclass[journal]{IEEEtran}
+const SAMPLE_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\usepackage{amsmath,amssymb,amsfonts}
 \\usepackage{graphicx}
@@ -185,10 +178,7 @@ Tóm tắt đóng góp và hướng phát triển tiếp theo cho độc giả.
 
 \\end{document}`;
 
-/** Default sample — Vietnamese for demo. */
-export const SAMPLE_LATEX = SAMPLE_LATEX_VI;
-
-export const BLANK_LATEX_EN = `\\documentclass[journal]{IEEEtran}
+const BLANK_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\usepackage{amsmath,amssymb,amsfonts}
 \\usepackage{graphicx}
@@ -227,7 +217,7 @@ export const BLANK_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\end{document}`;
 
-export const BLANK_LATEX_VI = `\\documentclass[journal]{IEEEtran}
+const BLANK_LATEX_VI = `\\documentclass[journal]{IEEEtran}
 
 ${VIETNAMESE_PREAMBLE}\\usepackage{amsmath,amssymb,amsfonts}
 \\usepackage{graphicx}
@@ -266,33 +256,12 @@ ${VIETNAMESE_PREAMBLE}\\usepackage{amsmath,amssymb,amsfonts}
 
 \\end{document}`;
 
-/** Default blank — Vietnamese for demo. */
-export const BLANK_LATEX = BLANK_LATEX_VI;
-
 export function sampleLatexForLocale(lang: "vi" | "en"): string {
   return lang === "vi" ? SAMPLE_LATEX_VI : SAMPLE_LATEX_EN;
 }
 
 export function blankLatexForLocale(lang: "vi" | "en"): string {
   return lang === "vi" ? BLANK_LATEX_VI : BLANK_LATEX_EN;
-}
-
-function readAll(): StoredProject[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredProject[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeProject);
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(projects: StoredProject[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 }
 
 export function normalizeProject(project: StoredProject): StoredProject {
@@ -311,49 +280,6 @@ export function normalizeProject(project: StoredProject): StoredProject {
     files,
     latex: mainContent,
   };
-}
-
-export function getProjects(): StoredProject[] {
-  return readAll().sort((a, b) => b.updatedAt - a.updatedAt);
-}
-
-export function getProject(id: string): StoredProject | null {
-  const project = readAll().find((p) => p.id === id);
-  return project ? normalizeProject(project) : null;
-}
-
-export function createProject(
-  name: string,
-  latex: string,
-  options?: {
-    files?: ProjectFile[];
-    mainFile?: string;
-    compiler?: LatexCompiler;
-    assets?: ProjectAsset[];
-  },
-): StoredProject {
-  const now = Date.now();
-  const mainFile = options?.mainFile ?? DEFAULT_MAIN_FILE;
-  const files = options?.files?.length
-    ? options.files.map((f) => ({ path: normalizeAssetName(f.path), content: f.content }))
-    : [{ path: mainFile, content: latex }];
-
-  const project: StoredProject = normalizeProject({
-    id: crypto.randomUUID(),
-    name,
-    latex,
-    files,
-    mainFile,
-    compiler: options?.compiler ?? "auto",
-    assets: options?.assets,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const projects = readAll();
-  projects.unshift(project);
-  writeAll(projects);
-  return project;
 }
 
 export function isTexFile(name: string) {
@@ -399,42 +325,6 @@ export function findProjectAsset(path: string, assets: ProjectAsset[] = []): Pro
   );
 }
 
-export function resolveProjectAsset(src: string, assets: ProjectAsset[] = []): string | null {
-  const key = normalizeAssetName(src);
-  const basename = key.split("/").pop() ?? key;
-  const stem = basename.replace(/\.[^.]+$/, "");
-
-  const candidates = [
-    key,
-    basename,
-    `${stem}.png`,
-    `${stem}.jpg`,
-    `${stem}.jpeg`,
-    `${stem}.pdf`,
-    `${stem}.svg`,
-    `${stem}.eps-converted-to.pdf`,
-  ];
-
-  for (const candidate of candidates) {
-    const match = assets.find(
-      (asset) => normalizeAssetName(asset.name).toLowerCase() === candidate.toLowerCase(),
-    );
-    if (match) return match.dataUrl;
-
-    const suffixMatch = assets.find((asset) => {
-      const assetName = normalizeAssetName(asset.name).toLowerCase();
-      return assetName.endsWith(`/${candidate.toLowerCase()}`) || assetName === candidate.toLowerCase();
-    });
-    if (suffixMatch) return suffixMatch.dataUrl;
-  }
-
-  const builtin =
-    BUILTIN_ASSET_URLS[basename] ??
-    BUILTIN_ASSET_URLS[key] ??
-    BUILTIN_ASSET_URLS[`${stem}.eps`];
-  return builtin ?? null;
-}
-
 export function readFileAsDataUrl(file: File): Promise<ProjectAsset> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -461,95 +351,6 @@ export function readFileAsText(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
     reader.readAsText(file);
   });
-}
-
-export function addProjectAssets(projectId: string, newAssets: ProjectAsset[]) {
-  const projects = readAll();
-  const index = projects.findIndex((p) => p.id === projectId);
-  if (index === -1) return null;
-
-  const existing = projects[index].assets ?? [];
-  const merged = [...existing];
-
-  for (const asset of newAssets) {
-    const normalized = normalizeAssetName(asset.name);
-    const existingIndex = merged.findIndex(
-      (item) => normalizeAssetName(item.name).toLowerCase() === normalized.toLowerCase(),
-    );
-    const next = { ...asset, name: normalized };
-    if (existingIndex >= 0) merged[existingIndex] = next;
-    else merged.push(next);
-  }
-
-  projects[index] = normalizeProject({
-    ...projects[index],
-    assets: merged,
-    updatedAt: Date.now(),
-  });
-  writeAll(projects);
-  return projects[index];
-}
-
-export function updateProject(
-  id: string,
-  patch: Partial<Pick<StoredProject, "name" | "latex" | "assets" | "files" | "mainFile" | "compiler">>,
-) {
-  const projects = readAll();
-  const index = projects.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-
-  const current = normalizeProject(projects[index]);
-  const mainFile = patch.mainFile ?? current.mainFile ?? DEFAULT_MAIN_FILE;
-  let files = patch.files ?? current.files ?? [{ path: mainFile, content: current.latex }];
-
-  if (patch.latex !== undefined && !patch.files) {
-    files = files.map((f) => (f.path === mainFile ? { ...f, content: patch.latex! } : f));
-    if (!files.some((f) => f.path === mainFile)) {
-      files = [...files, { path: mainFile, content: patch.latex }];
-    }
-  }
-
-  const mainContent = files.find((f) => f.path === mainFile)?.content ?? patch.latex ?? current.latex;
-
-  projects[index] = normalizeProject({
-    ...current,
-    ...patch,
-    files,
-    mainFile,
-    latex: mainContent,
-    updatedAt: Date.now(),
-  });
-  writeAll(projects);
-  return projects[index];
-}
-
-export function updateProjectFile(projectId: string, path: string, content: string) {
-  const projects = readAll();
-  const index = projects.findIndex((p) => p.id === projectId);
-  if (index === -1) return null;
-
-  const current = normalizeProject(projects[index]);
-  const normalizedPath = normalizeAssetName(path);
-  const files = [...(current.files ?? [])];
-  const fileIndex = files.findIndex((f) => f.path === normalizedPath);
-  if (fileIndex >= 0) files[fileIndex] = { path: normalizedPath, content };
-  else files.push({ path: normalizedPath, content });
-
-  const mainFile = current.mainFile ?? DEFAULT_MAIN_FILE;
-  const latex = normalizedPath === mainFile ? content : current.latex;
-
-  projects[index] = normalizeProject({
-    ...current,
-    files,
-    latex,
-    updatedAt: Date.now(),
-  });
-  writeAll(projects);
-  return projects[index];
-}
-
-export function deleteProject(id: string) {
-  writeAll(readAll().filter((p) => p.id !== id));
 }
 
 export function inferProjectName(latex: string, fallback = "Imported Project") {

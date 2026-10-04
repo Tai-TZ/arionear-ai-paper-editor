@@ -44,116 +44,6 @@ export function findWordRangeOnLine(
   return { start, end: start + needle.length };
 }
 
-function normalizeMatchText(text: string): string {
-  return text
-    .replace(/\\[a-zA-Z*]+\{([^}]*)\}/g, "$1")
-    .replace(/\\[a-zA-Z*]+/g, " ")
-    .replace(/[{}]/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-    .trim();
-}
-
-function resolveLineByContext(
-  latex: string,
-  context: string,
-  synctexLine: number,
-  word: string,
-): number | null {
-  const ctx = normalizeMatchText(normalizePdfWord(context));
-  if (ctx.length < 8) return null;
-
-  const needle = word.trim().toLowerCase();
-  const words = ctx.split(" ").filter(Boolean);
-  const lines = latex.split(/\r?\n/);
-
-  for (let length = words.length; length >= 2; length -= 1) {
-    for (let start = 0; start <= words.length - length; start += 1) {
-      const phrase = words.slice(start, start + length).join(" ");
-      if (phrase.length < 8) continue;
-      if (needle && !phrase.includes(needle)) continue;
-
-      const hits: number[] = [];
-      for (let idx = 0; idx < lines.length; idx += 1) {
-        if (normalizeMatchText(lines[idx] ?? "").includes(phrase)) hits.push(idx + 1);
-      }
-      if (hits.length === 1) return hits[0];
-      if (hits.length > 1) {
-        return hits.reduce((best, lineNo) =>
-          Math.abs(lineNo - synctexLine) < Math.abs(best - synctexLine) ? lineNo : best,
-        );
-      }
-    }
-  }
-
-  return null;
-}
-
-/** If synctex line is off (common with macros), search for the word in the source. */
-export function resolveSynctexWordHighlight(
-  latex: string,
-  line: number,
-  word?: string,
-  column?: number,
-  searchRadius = 5,
-  context?: string,
-): SynctexWordHighlight | null {
-  const needle = word ? normalizePdfWord(word) : "";
-  if (!needle) return null;
-
-  const lines = latex.split(/\r?\n/);
-
-  const contextLine = context
-    ? resolveLineByContext(latex, context, line, needle)
-    : null;
-  if (contextLine != null) {
-    const range = findWordRangeOnLine(lines[contextLine - 1] ?? "", needle, column);
-    if (range) {
-      return { line: contextLine, start: range.start, end: range.end };
-    }
-  }
-
-  const globalMatches: SynctexWordHighlight[] = [];
-  for (let idx = 0; idx < lines.length; idx += 1) {
-    const range = findWordRangeOnLine(lines[idx] ?? "", needle, column);
-    if (range) globalMatches.push({ line: idx + 1, start: range.start, end: range.end });
-  }
-  if (globalMatches.length === 1) return globalMatches[0];
-
-  if (globalMatches.length > 1) {
-    return globalMatches.reduce((best, hit) =>
-      Math.abs(hit.line - line) < Math.abs(best.line - line) ? hit : best,
-    );
-  }
-
-  const indices: number[] = [];
-  for (let d = 0; d <= searchRadius; d += 1) {
-    const above = line - 1 - d;
-    const below = line - 1 + d;
-    if (above >= 0) indices.push(above);
-    if (d > 0 && below < lines.length) indices.push(below);
-  }
-
-  for (const idx of indices) {
-    const range = findWordRangeOnLine(lines[idx] ?? "", needle, column);
-    if (range) {
-      return { line: idx + 1, start: range.start, end: range.end };
-    }
-  }
-  return null;
-}
-
-/** Resolve SyncTeX line to the source line that actually contains the clicked word. */
-export function resolveSynctexLine(
-  latex: string,
-  line: number,
-  word?: string,
-  column?: number,
-  context?: string,
-): number {
-  return resolveSynctexWordHighlight(latex, line, word, column, 5, context)?.line ?? line;
-}
-
 function wordFromTextNode(text: string, offset: number): string | null {
   if (!text) return null;
   let start = Math.min(offset, text.length);
@@ -190,7 +80,7 @@ function wordFromElementsAtPoint(
 }
 
 /** Read the word under a PDF text-layer double-click (Overleaf-style). */
-export function extractWordAtPoint(
+function extractWordAtPoint(
   clientX: number,
   clientY: number,
   textLayer: HTMLElement | null,
