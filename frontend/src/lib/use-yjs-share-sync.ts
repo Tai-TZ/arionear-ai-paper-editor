@@ -2,9 +2,21 @@ import { useEffect, useRef } from "react";
 import * as Y from "yjs";
 
 import { resolveWsBase } from "@/lib/api/ws-base";
+import { getAccessToken } from "@/lib/auth-store";
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 const LATEX_KEY = "latex";
+
+export const SHARE_WS_SUBPROTOCOL = "arionear-share";
+
+/**
+ * Live share sync is owner-only. Browsers cannot set headers on WebSockets, so the access token
+ * travels as a subprotocol; the server answers with SHARE_WS_SUBPROTOCOL. No token, no socket.
+ */
+export function shareSocketProtocols(accessToken: string | null): string[] | null {
+  if (!accessToken) return null;
+  return [SHARE_WS_SUBPROTOCOL, `bearer.${accessToken}`];
+}
 
 type UseYjsShareSyncOptions = {
   token: string | null;
@@ -22,7 +34,8 @@ export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjs
   const latexRef = useLatestRef(latex);
 
   useEffect(() => {
-    if (!enabled || !token) {
+    const protocols = enabled && token ? shareSocketProtocols(getAccessToken()) : null;
+    if (!enabled || !token || !protocols) {
       wsRef.current?.close();
       wsRef.current = null;
       ydocRef.current = null;
@@ -35,7 +48,7 @@ export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjs
     ydocRef.current = ydoc;
     ytextRef.current = ytext;
 
-    const ws = new WebSocket(`${resolveWsBase()}/share/${token}`);
+    const ws = new WebSocket(`${resolveWsBase()}/share/${token}`, protocols);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
@@ -111,9 +124,12 @@ export function useYjsShareViewer({
   onLatex: (latex: string) => void;
 }) {
   useEffect(() => {
+    // Anonymous viewers keep the snapshot from GET /share/{token}; only the owner can join live sync.
+    const protocols = shareSocketProtocols(getAccessToken());
+    if (!protocols) return;
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText(LATEX_KEY);
-    const ws = new WebSocket(`${resolveWsBase()}/share/${token}`);
+    const ws = new WebSocket(`${resolveWsBase()}/share/${token}`, protocols);
     ws.binaryType = "arraybuffer";
     let seeded = false;
 

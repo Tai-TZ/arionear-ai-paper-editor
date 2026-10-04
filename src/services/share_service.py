@@ -65,11 +65,13 @@ def disable_paper_share(db: Session, user_id: uuid.UUID, paper_id: uuid.UUID) ->
 
 
 def get_shared_paper(db: Session, token: str) -> Paper | None:
-    papers = db.query(Paper).all()
-    for paper in papers:
-        if get_share_token(paper.metadata_) == token:
-            return paper
-    return None
+    if not token:
+        return None
+    # Filter in the database (JSONB on Postgres, JSON1 on SQLite) instead of loading every paper.
+    paper = db.query(Paper).filter(Paper.metadata_["share"]["token"].as_string() == token).first()
+    if paper is None or get_share_token(paper.metadata_) != token:
+        return None  # e.g. the link was disabled
+    return paper
 
 
 def get_share_status(db: Session, user_id: uuid.UUID, paper_id: uuid.UUID) -> dict[str, Any]:
