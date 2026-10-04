@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
-import re
 import uuid
 from typing import Any
 
@@ -18,11 +16,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.config import get_settings
 from src.services.llm import extract_llm_text, get_llm
+from src.services.llm_json import extract_llm_json
 from src.services.logic_audit.config import resolve_logic_audit_llm
 from src.services.logic_audit.debate import (
     LogicProgressFn,
     LogicReasoningFn,
-    _strip_thinking_markup,
 )
 from src.services.logic_audit.language import resolve_audit_language
 from src.services.logic_audit.text_utils import infer_claim_text
@@ -109,21 +107,7 @@ Return the JSON object now."""
 
 
 def _extract_json(text: str) -> dict[str, Any] | None:
-    text = _strip_thinking_markup(text or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text.strip())
-    try:
-        data = json.loads(text)
-        return data if isinstance(data, dict) else None
-    except json.JSONDecodeError:
-        match = re.search(r"\{[\s\S]*\}", text)
-        if not match:
-            return None
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
+    return extract_llm_json(text, expect=dict)
 
 
 def _normalise_section(raw: dict[str, Any]) -> dict[str, Any]:

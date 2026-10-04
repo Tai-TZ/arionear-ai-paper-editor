@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from typing import Literal
 
@@ -22,6 +21,7 @@ from src.services.intent_rules import (
     looks_like_edit_followup,
     looks_like_manuscript_edit_request,
 )
+from src.services.llm_json import extract_llm_json
 from src.services.prompts import (
     build_router_system_prompt,
     render_user_prompt,
@@ -41,26 +41,8 @@ _is_casual_chat = is_casual_chat
 
 
 def parse_intent_payload(raw: str) -> IntentResult | None:
-    text = (raw or "").strip()
-    if not text:
-        return None
-
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
-        if not match:
-            return None
-        try:
-            data = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-
-    if not isinstance(data, dict):
+    data = extract_llm_json(raw, expect=dict)
+    if data is None:
         return None
 
     action = str(data.get("action", "chat")).lower().strip()

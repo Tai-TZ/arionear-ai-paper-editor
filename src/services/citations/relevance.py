@@ -10,9 +10,7 @@ abstract is missing, or the model output is not valid JSON, the verdict is
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import re
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -33,6 +31,7 @@ from src.models.citation_schemas import (
 from src.services.citations.claim_context import extract_claim_contexts
 from src.services.citations.sources import SourceText, enrich_entry_from_registry, fetch_source_text
 from src.services.llm import extract_llm_text, get_llm
+from src.services.llm_json import extract_llm_json
 from src.services.logic_audit.config import resolve_logic_audit_llm
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
 from src.services.prompts import get_prompt, render_template, render_user_prompt
@@ -49,7 +48,6 @@ RELEVANCE_CONCURRENCY = 4
 
 SourceFetcher = Callable[[dict], Awaitable[SourceText]]
 
-_THINKING_BLOCK_RE = re.compile(r"<(think|thinking|reasoning)>[\s\S]*?</\1>", re.IGNORECASE)
 _LANGUAGE_BY_LOCALE = {"vi": "Vietnamese", "en": "English"}
 
 
@@ -65,22 +63,9 @@ def build_relevance_llm(chat_provider: str | None = None) -> tuple[Any, LLMProvi
 
 
 def parse_relevance_output(raw: str) -> RelevanceLLMOutput | None:
-    """Strictly parse the model reply; ``None`` when it is not the expected JSON object."""
-    text = _THINKING_BLOCK_RE.sub("", raw or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text.strip())
-    data: Any = None
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{[\s\S]*\}", text)
-        if match:
-            try:
-                data = json.loads(match.group(0))
-            except json.JSONDecodeError:
-                data = None
-    if not isinstance(data, dict):
+    """Strictly validate the model reply; ``None`` when it is not the expected JSON object."""
+    data = extract_llm_json(raw, expect=dict)
+    if data is None:
         return None
     try:
         return RelevanceLLMOutput.model_validate(data)

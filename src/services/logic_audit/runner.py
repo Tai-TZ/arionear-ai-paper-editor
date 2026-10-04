@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import re
 import uuid
 from typing import Any
 
+from src.services.llm_json import extract_llm_json
 from src.services.logic_audit.config import (
     logic_audit_engine_label,
     logic_audit_runtime_flags,
@@ -31,24 +31,7 @@ from src.services.prompts import format_sections_summary, get_prompt
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:
-    text = _strip_thinking_markup(text or "").strip()
-    if not text:
-        return None
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-    try:
-        data = json.loads(text)
-        return data if isinstance(data, dict) else None
-    except json.JSONDecodeError:
-        match = re.search(r"\{[\s\S]*\}", text)
-        if not match:
-            return None
-        try:
-            data = json.loads(match.group(0))
-            return data if isinstance(data, dict) else None
-        except json.JSONDecodeError:
-            return None
+    return extract_llm_json(text, expect=dict)
 
 
 def _perspectives_have_substance(perspectives: dict[str, str]) -> bool:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 import uuid
@@ -36,6 +35,7 @@ from src.services.guardrails.prompt_injection import (
 from src.services.guardrails.request_guard import evaluate_user_request
 from src.services.latex_outline import build_manuscript_outline, find_latex_command_block
 from src.services.llm import extract_llm_text, get_llm, resolve_heavy_edit_model
+from src.services.llm_json import extract_llm_json
 from src.services.llm_policy import resolve_llm_temperature
 from src.services.parser.latex import (
     analyze_structure,
@@ -650,9 +650,9 @@ async def structure_node(state: AgentState) -> dict:
                     HumanMessage(content=user_content),
                 ]
             )
-            content = extract_llm_text(response)
-            if content.startswith("["):
-                llm_suggestions = json.loads(content)
+            parsed = extract_llm_json(extract_llm_text(response), expect=list)
+            if parsed:
+                llm_suggestions = [item for item in parsed if isinstance(item, dict)]
         except Exception as exc:
             logger.debug("structure_node: LLM JSON parse skipped (%s)", exc)
 

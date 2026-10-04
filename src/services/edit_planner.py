@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from dataclasses import dataclass
 from typing import Literal
@@ -10,6 +9,7 @@ from src.config import LLMProvider, get_settings
 from src.services.chat_context import prepend_conversation_history
 from src.services.editor_llm import resolve_editor_aux_llm
 from src.services.latex_outline import ManuscriptOutline
+from src.services.llm_json import extract_llm_json
 from src.services.parser.latex import find_section_for_query
 from src.services.prompts import build_system_prompt, render_user_prompt
 
@@ -92,23 +92,8 @@ def _model_in_query(query: str) -> str | None:
 
 
 def parse_edit_plan_payload(raw: str) -> EditPlan | None:
-    text = (raw or "").strip()
-    if not text:
-        return None
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
-        if not match:
-            return None
-        try:
-            data = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-    if not isinstance(data, dict):
+    data = extract_llm_json(raw, expect=dict)
+    if data is None:
         return None
 
     target_type = str(data.get("target_type", "")).strip().lower()

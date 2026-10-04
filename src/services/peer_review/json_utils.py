@@ -2,40 +2,18 @@
 
 from __future__ import annotations
 
-import json
-import re
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from src.services.logic_audit.debate import _strip_thinking_markup
+from src.services.llm_json import extract_llm_json
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
-_FENCE_OPEN_RE = re.compile(r"^```(?:json)?\s*", re.IGNORECASE)
-_FENCE_CLOSE_RE = re.compile(r"\s*```\s*$")
-
 
 def extract_json_value(text: str) -> Any | None:
-    """Return the first JSON object/array found in an LLM reply (fences/think tags tolerated)."""
-    cleaned = _strip_thinking_markup(text or "").strip()
-    if not cleaned:
-        return None
-    if cleaned.startswith("```"):
-        cleaned = _FENCE_CLOSE_RE.sub("", _FENCE_OPEN_RE.sub("", cleaned))
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        pass
-    for pattern in (r"\{[\s\S]*\}", r"\[[\s\S]*\]"):
-        match = re.search(pattern, cleaned)
-        if not match:
-            continue
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            continue
-    return None
+    """Return the first JSON object/array found in an LLM reply (fences/think tags tolerated, damage repaired)."""
+    return extract_llm_json(text)
 
 
 def _format_validation_error(exc: ValidationError, limit: int = 6) -> str:
