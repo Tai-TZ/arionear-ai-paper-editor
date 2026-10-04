@@ -104,16 +104,17 @@ async def _check_openalex(doi: str, title: str, mailto: str = "") -> dict[str, A
 
 
 def _normalize_title(title: str) -> str:
-    return re.sub(r"\s+", " ", title.lower().strip())
+    """LaTeX → plain text, casefolded, without accents, punctuation, braces or extra whitespace."""
+    from src.services.citations.title_match import normalize_title
+
+    return normalize_title(title)
 
 
 def _title_match(a: str, b: str) -> bool:
-    if not a or not b:
-        return False
-    na, nb = _normalize_title(a), _normalize_title(b)
-    if na == nb:
-        return True
-    return na in nb or nb in na
+    """Same work: equal once normalized, or fuzzy-equal at a comparable length (a prefix is not a match)."""
+    from src.services.citations.title_match import titles_match
+
+    return titles_match(a, b)
 
 
 def entry_identifiers(entry: dict) -> tuple[str, str]:
