@@ -8,13 +8,20 @@ Usage:
     python scripts/build_diagrams.py            # build every diagram
     python scripts/build_diagrams.py sequence   # build only the named diagram(s)
 
-The SVGs are self-contained (no external fonts/scripts) and animate with CSS + SMIL,
-which GitHub renders in Markdown. ``prefers-reduced-motion`` disables CSS motion.
+Visual identity follows the app's editorial "newsprint" design (``frontend/src/styles.css``):
+newsprint paper, ink line-art blocks, editorial red for the live flow, square corners, hard
+offset shadows, Playfair / Source Serif / JetBrains Mono type stacks. Colours are CSS custom
+properties with a ``prefers-color-scheme: dark`` override (the app's ``.dark`` tokens), so one
+file reads well on GitHub's light and dark themes. The SVGs are self-contained (no external
+fonts/scripts) and animate with CSS + SMIL; ``prefers-reduced-motion`` stops the motion and
+hides the moving packets. Text sizes assume the ~880px README column: nothing is set below 14px
+on the 1040px canvas (~12px on screen).
 """
 
 from __future__ import annotations
 
 import math
+import re
 import sys
 from dataclasses import dataclass
 from html import escape
@@ -23,37 +30,84 @@ from pathlib import Path
 OUT_DIR = Path(__file__).resolve().parents[1] / "docs" / "assets"
 
 ISO = math.tan(math.radians(30))  # vertical / horizontal ratio of an isometric top face
-FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-MONO = "ui-monospace, SFMono-Regular, 'Cascadia Code', Consolas, Menlo, monospace"
+W = 1040  # canvas width
+M = 40  # outer margin
+GUTTER = M + 44  # content starts here when lanes carry a rotated label in the left gutter
 
-BLUE, SKY, VIOLET, AMBER = "#60A5FA", "#38BDF8", "#A78BFA", "#FBBF24"
-RED, PINK, TEAL, GREEN, SOFTBLUE = "#F87171", "#F472B6", "#2DD4BF", "#34D399", "#93C5FD"
-EDGE, EDGE_BASE, MUTED, TEXT, SUBTEXT = "#94A3B8", "#334155", "#64748B", "#F1F5F9", "#94A3B8"
+DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif"
+SERIF = "'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif"
+# Georgia has no precomposed Vietnamese glyphs, so Vietnamese text skips it.
+DISPLAY_VI = "'Playfair Display', 'Noto Serif Display', 'Noto Serif', 'Times New Roman', Times, serif"
+SERIF_VI = "'Source Serif 4', 'Noto Serif', 'Times New Roman', Times, serif"
+MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace"
+SANS = "Inter, 'Helvetica Neue', Arial, sans-serif"
+VI_TEXT = re.compile(r"[À-ɏḀ-ỿ]")
+
+# App tokens (frontend/src/styles.css), oklch converted to the sRGB hex the browser renders.
+# light: newsprint oklch(.973 .005 90) · ink oklch(.145 0 0) · red oklch(.52 .22 27) · divider oklch(.91 .003 90)
+# dark (.dark): ink oklch(.94 .005 90) · newsprint oklch(.16 .01 90) · red oklch(.62 .22 27) · divider oklch(.28 .01 90)
+LIGHT = {
+    "pp": "#F7F6F2",  # newsprint (page)
+    "ik": "#0A0A0A",  # ink
+    "rd": "#C9000C",  # editorial red
+    "mu": "#555555",  # muted foreground
+    "tp": "#FEFDFB",  # block top face (hero surface)
+    "fl": "#E2E1DF",  # block left face (divider)
+    "fr": "#C9C7C1",  # block right face
+    "on": "#F7F6F2",  # text on red / ink
+}
+DARK = {
+    "pp": "#0F0D08",
+    "ik": "#ECEBE7",
+    "rd": "#EE3533",
+    "mu": "#A7A49E",
+    "tp": "#2E2C26",
+    "fl": "#221F1A",
+    "fr": "#181611",
+    "on": "#0F0D08",
+}
+
+
+def _vars(tokens: dict[str, str]) -> str:
+    return ";".join(f"--{k}:{v}" for k, v in tokens.items())
+
 
 CSS = (
-    ".flow{stroke-dasharray:6 8;animation:dash 1.1s linear infinite}"
-    "@keyframes dash{to{stroke-dashoffset:-28}}"
-    ".float{animation:float 5s ease-in-out infinite}"
-    "@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}"
-    ".pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.6s ease-out infinite}"
-    "@keyframes pulse{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.45)}}"
-    "@media (prefers-reduced-motion:reduce){.flow,.float,.pulse{animation:none}}"
+    f":root{{{_vars(LIGHT)}}}"
+    f"@media (prefers-color-scheme:dark){{:root{{{_vars(DARK)}}}}}"
+    f".d{{font-family:{DISPLAY}}}.dv{{font-family:{DISPLAY_VI}}}.s{{font-family:{SERIF}}}"
+    f".sv{{font-family:{SERIF_VI}}}.m{{font-family:{MONO}}}.u{{font-family:{SANS}}}"
+    ".k{letter-spacing:.12em}"
+    ".i{fill:var(--ik)}.p{fill:var(--pp)}.r{fill:var(--rd)}.q{fill:var(--mu)}"
+    ".t{fill:var(--tp)}.L{fill:var(--fl)}.R{fill:var(--fr)}.o{fill:var(--on)}"
+    ".e{stroke:var(--ik);stroke-width:1.3;stroke-linejoin:round}"
+    ".h{paint-order:stroke;stroke:var(--pp);stroke-width:5px;stroke-linejoin:round}"
+    ".ln{fill:none;stroke:var(--ik)}"
+    ".sh{fill:var(--ik);fill-opacity:.18}"
+    ".tk{fill:none;stroke:var(--ik);stroke-opacity:.42;stroke-width:1.3}"
+    ".dt{fill:none;stroke:var(--ik);stroke-opacity:.6;stroke-width:1.3;stroke-dasharray:2 5;stroke-linecap:round}"
+    ".fw{fill:none;stroke:var(--rd);stroke-width:2;stroke-dasharray:6 10;animation:fw 1.4s linear infinite}"
+    "@keyframes fw{to{stroke-dashoffset:-32}}"
+    ".pl{fill:none;stroke:var(--rd);stroke-width:1.6;transform-box:fill-box;transform-origin:center;"
+    "animation:pl 2.8s ease-out infinite}"
+    "@keyframes pl{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}"
+    "@media (prefers-reduced-motion:reduce){.fw,.pl{animation:none}.pl{opacity:.5}.pk{display:none}}"
 )
-
-
-def shade(hex_color: str, factor: float) -> str:
-    """Darken (factor < 1) or lighten (factor > 1) a hex colour."""
-    h = hex_color.lstrip("#")
-    r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
-    if factor >= 1:
-        r, g, b = (int(c + (255 - c) * (factor - 1)) for c in (r, g, b))
-    else:
-        r, g, b = (int(c * factor) for c in (r, g, b))
-    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 def pts(*points: tuple[float, float]) -> str:
     return " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+
+
+def mono_w(s: str, size: float = 14, spaced: bool = False) -> float:
+    """Approximate rendered width of monospace text (JetBrains Mono / Consolas fallbacks)."""
+    return len(s) * size * (0.6 + (0.12 if spaced else 0))
+
+
+def cols(n: int, x0: float = GUTTER, x1: float = W - M) -> list[float]:
+    """Centres of ``n`` equal columns between x0 and x1."""
+    step = (x1 - x0) / n
+    return [x0 + step * (i + 0.5) for i in range(n)]
 
 
 @dataclass(frozen=True)
@@ -87,277 +141,310 @@ class Box:
 
 
 class Diagram:
-    """Collects SVG fragments in z-ordered layers and writes the final file."""
+    """Collects SVG fragments in z-ordered layers and writes the final file.
 
-    LAYERS = ("bg", "lanes", "edges", "packets", "blocks", "labels")
+    Every figure shares the same newspaper furniture: masthead line (desk + FIG. number), red
+    kicker tag with the source reference, Playfair headline, italic deck, thick+thin double rule,
+    and an optional ink ticker band along the bottom edge.
+    """
+
+    LAYERS = ("bg", "lanes", "edges", "blocks", "packets", "labels")
 
     def __init__(
         self,
         name: str,
-        width: int,
         height: int,
+        *,
         title: str,
-        subtitle: str,
-        pills: tuple[tuple[str, str], ...] = (),
-        glows: tuple[tuple[float, float, float, str, float], ...] = ((0.7, 0.3, 0.6, "#7C3AED", 0.2),),
+        deck: str,
+        desk: str,
+        fig: str,
+        kicker: str,
+        source: str = "",
+        ticker: tuple[str, ...] = (),
         aria: str = "",
-        margin: int = 64,
-        header_fade: int = 200,
     ) -> None:
-        self.name, self.w, self.h = name, width, height
-        self.aria = aria or title
+        self.name, self.w, self.h = name, W, height
+        self.aria = aria or f"{title}. {deck}"
         self.defs: list[str] = []
         self.layers: dict[str, list[str]] = {k: [] for k in self.LAYERS}
-        self._grads: dict[str, str] = {}
-        self._blocks = 0
-        self._background(glows, header_fade)
-        self._header(title, subtitle, pills, margin)
+        self._header(title, deck, desk, fig, kicker, source)
+        if ticker:
+            self._ticker(ticker)
 
     # ---- primitives ---------------------------------------------------------
     def add(self, layer: str, fragment: str) -> None:
         self.layers[layer].append(fragment)
 
-    def text(self, x, y, s, *, size=14, fill=TEXT, weight=400, anchor="start", mono=False, layer="labels", extra=""):
-        family = MONO if mono else FONT
+    def text(
+        self, x, y, s, *, size=14, cls="u i", anchor="start", weight=None, italic=False, halo=False, layer="labels"
+    ) -> None:
+        if VI_TEXT.search(s):  # Georgia / Consolas lack precomposed Vietnamese glyphs
+            cls = " ".join({"s": "sv", "d": "dv", "m": "u"}.get(c, c) for c in cls.split())
+        attrs = f'x="{x:.1f}" y="{y:.1f}" class="{cls}{" h" if halo else ""}" font-size="{size}"'
+        if anchor != "start":
+            attrs += f' text-anchor="{anchor}"'
+        if weight:
+            attrs += f' font-weight="{weight}"'
+        if italic:
+            attrs += ' font-style="italic"'
+        self.add(layer, f"<text {attrs}>{escape(s)}</text>")
+
+    def line(self, x1, y1, x2, y2, *, width=1.0, opacity=None, layer="bg") -> None:
+        extra = f' stroke-opacity="{opacity}"' if opacity is not None else ""
         self.add(
             layer,
-            f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" font-family="{family}" font-size="{size}" '
-            f'font-weight="{weight}" fill="{fill}"{extra}>{escape(s)}</text>',
+            f'<path d="M {x1:.1f} {y1:.1f} L {x2:.1f} {y2:.1f}" class="ln" stroke-width="{width}"{extra}/>',
         )
 
-    def _top_gradient(self, accent: str) -> str:
-        if accent not in self._grads:
-            gid = f"g{len(self._grads)}"
-            self._grads[accent] = gid
-            self.defs.append(
-                f'<linearGradient id="{gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{shade(accent, 1.35)}"/>'
-                f'<stop offset="1" stop-color="{accent}"/></linearGradient>'
-            )
-        return self._grads[accent]
+    def tag(self, x, y, label, *, red=True, layer="bg", h=26) -> float:
+        """Solid tag label (the site's red "BREAKING" box). Returns its width."""
+        w = mono_w(label, 14, spaced=True) + 18
+        self.add(layer, f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h}" class="{"r" if red else "i"}"/>')
+        self.text(x + 10, y + h / 2 + 5, label, cls="m k o", weight=700, layer=layer)
+        return w
 
-    def _background(self, glows, header_fade: int) -> None:
+    def _header(self, title, deck, desk, fig, kicker, source) -> None:
         w, h = self.w, self.h
         self.defs += [
-            '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1222"/>'
-            '<stop offset="1" stop-color="#151E3A"/></linearGradient>',
-            '<linearGradient id="headfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1222" stop-opacity="0.95"/>'
-            '<stop offset="0.55" stop-color="#0D1428" stop-opacity="0.6"/><stop offset="1" stop-color="#0F1730" stop-opacity="0"/></linearGradient>',
-            f'<clipPath id="card"><rect width="{w}" height="{h}" rx="28"/></clipPath>',
-            '<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>',
-            '<filter id="dotglow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.6" result="b"/>'
-            '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>',
-            '<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" '
-            'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748B"/></marker>',
+            '<pattern id="dots" width="4" height="4" patternUnits="userSpaceOnUse">'
+            '<path d="M1 3h1v1H1zM3 1h1v1H3z" class="i" fill-opacity=".05"/></pattern>',
+            '<pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse">'
+            '<path d="M1 0V4" class="ln" stroke-width=".8" stroke-opacity=".26"/></pattern>',
+            '<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" '
+            'markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" class="i"/></marker>',
         ]
-        bg = [f'<g clip-path="url(#card)"><rect width="{w}" height="{h}" fill="url(#bg)"/>']
-        step = 46
-        for k in range(-int(h / ISO / step) - 2, int(w / step) + int(h / ISO / step) + 2):
-            x0 = k * step
-            for sgn in (1, -1):
-                bg.append(
-                    f'<line x1="{x0}" y1="0" x2="{x0 + sgn * h / ISO:.1f}" y2="{h}" stroke="#1E293B" stroke-width="1" opacity="0.5"/>'
-                )
-        for i, (cx, cy, r, color, alpha) in enumerate(glows):
-            self.defs.append(
-                f'<radialGradient id="glow{i}" cx="{cx}" cy="{cy}" r="{r}"><stop offset="0" stop-color="{color}" stop-opacity="{alpha}"/>'
-                f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></radialGradient>'
-            )
-            bg.append(f'<rect width="{w}" height="{h}" fill="url(#glow{i})"/>')
-        bg.append(f'<rect width="{w}" height="{header_fade}" fill="url(#headfade)"/></g>')
-        bg.append(f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="28" fill="none" stroke="#24304D"/>')
-        self.add("bg", "".join(bg))
+        self.add(
+            "bg",
+            f'<rect width="{w}" height="{h}" class="p"/><rect width="{w}" height="{h}" fill="url(#dots)"/>'
+            f'<rect x=".75" y=".75" width="{w - 1.5}" height="{h - 1.5}" class="ln" stroke-width="1.5"/>',
+        )
+        self.text(M, 38, f"ARIONEAR · {desk}", cls="m k i", weight=700, layer="bg")
+        self.text(w - M, 38, f"FIG. {fig}", cls="m k r", weight=700, anchor="end", layer="bg")
+        self.line(M, 50, w - M, 50)
+        tw = self.tag(M, 66, kicker)
+        if source:
+            self.text(M + tw + 14, 84, source, cls="m q", layer="bg")
+        self.text(M, 140, title, size=42, cls="d i", weight=700, layer="bg")
+        self.text(M, 172, deck, size=18, cls="s q", italic=True, layer="bg")
+        self.add("bg", f'<rect x="{M}" y="188" width="{w - 2 * M}" height="3" class="i"/>')
+        self.line(M, 196, w - M, 196)
 
-    def _header(self, title: str, subtitle: str, pills, margin: int) -> None:
-        self.text(margin, 78, title, size=30, fill="#F8FAFC", weight=700, layer="bg")
-        self.text(margin, 110, subtitle, size=15.5, fill=SUBTEXT, layer="bg")
-        x = self.w - margin
-        for label, color in reversed(pills):
-            pw = 22 + len(label) * 7.6
-            x -= pw
-            self.add(
-                "bg",
-                f'<rect x="{x:.1f}" y="58" width="{pw:.1f}" height="28" rx="14" fill="#111A30" stroke="#2A3656"/>'
-                f'<circle cx="{x + 14:.1f}" cy="72" r="4" fill="{color}"/>',
-            )
-            self.text(x + 24, 76.5, label, size=12.5, fill="#CBD5E1", layer="bg")
-            x -= 10
+    def _ticker(self, items: tuple[str, ...]) -> None:
+        y0 = self.h - 40
+        self.add("bg", f'<rect x="0" y="{y0}" width="{self.w}" height="40" class="i"/>')
+        x = M
+        for i, item in enumerate(items):
+            if i:
+                self.add("bg", f'<path d="M {x + 2:.1f} {y0 + 14} l 6 6 l -6 6 l -6 -6 z" class="r"/>')
+                x += 20
+            self.text(x, y0 + 25, item, cls="m k o", weight=700, layer="bg")
+            x += mono_w(item, 14, spaced=True) + 10
 
     # ---- building blocks ----------------------------------------------------
-    def lane(self, top, bottom, accent, number, name, caption, x0=32, x1=None) -> None:
-        x1 = self.w - 32 if x1 is None else x1
-        mid = (top + bottom) / 2
+    def lane(self, top, bottom, number, name, caption="", *, tint=False, x0=M, x1=None) -> None:
+        """Newspaper section band: rule on top, red number, mono name, italic caption."""
+        x1 = self.w - M if x1 is None else x1
+        if tint:
+            self.add(
+                "lanes",
+                f'<rect x="{x0}" y="{top}" width="{x1 - x0}" height="{bottom - top}" class="i" fill-opacity=".035"/>',
+            )
+        self.line(x0, top, x1, top, width=1.3, layer="lanes")
+        self.text(x0 + 10, top + 23, number, cls="m r", weight=700, layer="lanes")
+        nx = x0 + 10 + mono_w(number) + 12
+        self.text(nx, top + 23, name, cls="m k i", weight=700, layer="lanes")
+        if caption:
+            cx = nx + mono_w(name, 14, spaced=True) + 8
+            self.text(cx, top + 23, f"— {caption}", size=15, cls="s q", italic=True, layer="lanes")
+
+    def glane(self, top, bottom, number, name, *, tint=False) -> None:
+        """Lane whose label reads bottom-to-top in the left gutter, so vertical edges never cross it."""
+        x1 = self.w - M
+        if tint:
+            self.add(
+                "lanes",
+                f'<rect x="{M}" y="{top}" width="{x1 - M}" height="{bottom - top}" class="i" fill-opacity=".035"/>',
+            )
+        self.line(M, top, x1, top, width=1.3, layer="lanes")
+        self.line(M + 32, top + 8, M + 32, bottom - 8, opacity=0.35, layer="lanes")
         self.add(
             "lanes",
-            f'<rect x="{x0}" y="{top}" width="{x1 - x0}" height="{bottom - top}" rx="18" fill="{accent}" '
-            f'fill-opacity="0.045" stroke="{accent}" stroke-opacity="0.22"/>'
-            f'<rect x="{x0}" y="{top}" width="4" height="{bottom - top}" rx="2" fill="{accent}" fill-opacity="0.8"/>',
+            f'<g transform="translate({M + 21} {(top + bottom) / 2:.1f}) rotate(-90)"><text x="0" y="0" '
+            f'text-anchor="middle" class="m k i" font-size="14" font-weight="700"><tspan class="r">{number}</tspan> '
+            f"{escape(name)}</text></g>",
         )
-        self.text(x0 + 24, mid - 10, number, size=12, fill=accent, weight=700, mono=True, layer="lanes")
-        self.text(
-            x0 + 24, mid + 9, name, size=14.5, fill="#E2E8F0", weight=700, layer="lanes", extra=' letter-spacing="0.6"'
-        )
-        if caption:
-            self.text(x0 + 24, mid + 27, caption, size=12, fill="#7C8BA3", layer="lanes")
 
-    def panel(self, x, y, w, h, accent, title, caption=None) -> None:
-        self.add(
-            "lanes",
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="{accent}" fill-opacity="0.05" '
-            f'stroke="{accent}" stroke-opacity="0.3" stroke-dasharray="4 5"/>',
-        )
-        self.text(x + 18, y + 26, title, size=12.5, fill=accent, weight=700, mono=True, layer="lanes")
+    def panel(self, x, y, w, h, title, caption=None, *, red=False) -> None:
+        self.add("lanes", f'<rect x="{x}" y="{y}" width="{w}" height="{h}" class="ln" stroke-width="1.3"/>')
+        tw = self.tag(x, y, title, red=red, layer="lanes", h=24)
         if caption:
-            self.text(x + w - 18, y + 26, caption, size=11.5, fill="#7C8BA3", anchor="end", layer="lanes")
+            self.text(x + tw + 10, y + 17, caption, size=14, cls="s q", italic=True, layer="lanes")
 
-    def edge(
-        self, d, *, color=EDGE, arrow=True, dotted=False, label=None, label_at=None, label_anchor="middle"
-    ) -> None:
-        marker = ' marker-end="url(#arrow)"' if arrow else ""
+    def edge(self, d, *, arrow=True, flow=True, dotted=False, label=None, at=None, anchor="middle") -> None:
+        marker = ' marker-end="url(#ah)"' if arrow else ""
         if dotted:
-            self.add(
-                "edges",
-                f'<path d="{d}" fill="none" stroke="{color}" stroke-opacity="0.7" stroke-width="1.8" stroke-dasharray="2 6" '
-                f'stroke-linecap="round"{marker}/>',
-            )
+            self.add("edges", f'<path d="{d}" class="dt"{marker}/>')
         else:
-            self.add("edges", f'<path d="{d}" fill="none" stroke="{EDGE_BASE}" stroke-width="2"/>')
-            self.add(
-                "edges",
-                f'<path class="flow" d="{d}" fill="none" stroke="{color}" stroke-opacity="0.9" stroke-width="2"{marker}/>',
-            )
-        if label and label_at:
-            self.text(*label_at, label, size=11.5, fill=MUTED, anchor=label_anchor, mono=True, layer="edges")
+            self.add("edges", f'<path d="{d}" class="tk"{marker}/>')
+            if flow:
+                self.add("edges", f'<path d="{d}" class="fw"/>')
+        if label and at:
+            self.text(*at, label, cls="m q", anchor=anchor, halo=True)
 
-    def packet(self, path, color, dur, begin=0.0, *, radius=4.5, key_points=None, key_times=None, fade=True) -> None:
+    def drops(self, y, boxes, *, x_from=None, x_to=None, gap=8) -> None:
+        """Horizontal bus at ``y`` with an arrow dropping into the top of every box."""
+        xs = [b.x for b in boxes]
+        x0 = min(xs) if x_from is None else x_from
+        x1 = max(xs) if x_to is None else x_to
+        self.edge(f"M {x0:.1f} {y:.1f} H {x1:.1f}", arrow=False)
+        for b in boxes:
+            self.edge(f"M {b.x:.1f} {y:.1f} V {b.top[1] - gap:.1f}", flow=False)
+
+    def link(self, a: Box, b: Box, *, y=None, **kw) -> None:
+        """Straight horizontal arrow between two blocks on the same row (either direction)."""
+        if b.x > a.x:
+            x1, x2 = a.right[0] + 8, b.left[0] - 10
+        else:
+            x1, x2 = a.left[0] - 8, b.right[0] + 10
+        yy = a.right[1] if y is None else y
+        if "label" in kw and "at" not in kw:
+            kw["at"] = ((x1 + x2) / 2, yy - 11)
+        self.edge(f"M {x1:.1f} {yy:.1f} H {x2:.1f}", **kw)
+
+    def packet(self, path, dur, begin=0.0, *, key_points=None, key_times=None, fade=True, size=5.5) -> None:
         motion = f'dur="{dur}s" begin="{begin}s" repeatCount="indefinite" path="{path}"'
         if key_points:
             motion += f' keyPoints="{key_points}" keyTimes="{key_times}" calcMode="linear"'
         anim = f"<animateMotion {motion}/>"
         if fade:
             anim += (
-                f'<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.92;1" dur="{dur}s" '
+                f'<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.06;0.92;1" dur="{dur}s" '
                 f'begin="{begin}s" repeatCount="indefinite"/>'
             )
         opacity = ' opacity="0"' if fade else ""
-        self.add("packets", f'<circle r="{radius}" fill="{color}" filter="url(#dotglow)"{opacity}>{anim}</circle>')
+        s = size
+        self.add("packets", f'<g class="pk"{opacity}><path d="M0,{-s} L{s},0 L0,{s} L{-s},0z" class="r"/>{anim}</g>')
+
+    def terminal(self, x, y, label) -> None:
+        """START / END node: solid ink disc with a pulsing red ring."""
+        self.add(
+            "blocks",
+            f'<g class="b"><circle cx="{x}" cy="{y}" r="29" class="sh" transform="translate(3 3)"/>'
+            f'<circle class="pl" cx="{x}" cy="{y}" r="29"/><circle cx="{x}" cy="{y}" r="29" class="i"/></g>',
+        )
+        self.text(x, y + 5, label, cls="m o", weight=700, anchor="middle")
 
     def block(
         self,
         x,
         cy,
-        accent,
         *,
-        hw=32,
-        bh=18,
+        hw=26,
+        bh=16,
         code=None,
         title=None,
         sub=None,
         sub2=None,
         label="below",
         label_y=None,
-        title_size=14,
-        sub_size=11.5,
-        sub_color=SUBTEXT,
+        title_size=16,
+        mono_title=False,
         number=None,
+        key=False,
         cluster=False,
         glyphs=False,
         pulse=False,
-        float_=True,
+        muted=False,
     ) -> Box:
         box = Box(x, cy, hw, bh)
         hh = box.hh
-        g: list[str] = [
-            f'<ellipse cx="{x}" cy="{cy + hh + bh + 4:.1f}" rx="{hw * 0.95:.1f}" ry="{hh * 0.52:.1f}" fill="#000" '
-            f'opacity="0.45" filter="url(#soft)"/>'
-        ]
+        sil = pts((x - hw, cy), (x, cy - hh), (x + hw, cy), (x + hw, cy + bh), (x, cy + hh + bh), (x - hw, cy + bh))
+        g: list[str] = [f'<polygon points="{sil}" class="sh" transform="translate(4 4)"/>']
         if pulse:
-            ring = pts((x, cy - hh - 6), (x + hw + 10, cy), (x, cy + hh + 6), (x - hw - 10, cy))
-            g.append(
-                f'<polygon class="pulse" points="{ring}" fill="none" stroke="{shade(accent, 1.3)}" stroke-width="2"/>'
-            )
-        delay = (self._blocks * 0.37) % 5
-        self._blocks += 1
-        g.append(f'<g class="float" style="animation-delay:-{delay:.2f}s">' if float_ else "<g>")
+            ring = pts((x, cy - hh - 7), (x + hw + 12, cy), (x, cy + hh + 7), (x - hw - 12, cy))
+            g.append(f'<polygon class="pl" points="{ring}"/>')
+        left = pts((x - hw, cy), (x, cy + hh), (x, cy + hh + bh), (x - hw, cy + bh))
+        right = pts((x, cy + hh), (x + hw, cy), (x + hw, cy + bh), (x, cy + hh + bh))
         top = pts((x, cy - hh), (x + hw, cy), (x, cy + hh), (x - hw, cy))
-        g.append(
-            f'<polygon points="{pts((x - hw, cy), (x, cy + hh), (x, cy + hh + bh), (x - hw, cy + bh))}" fill="{shade(accent, 0.62)}"/>'
-        )
-        g.append(
-            f'<polygon points="{pts((x, cy + hh), (x + hw, cy), (x + hw, cy + bh), (x, cy + hh + bh))}" fill="{shade(accent, 0.42)}"/>'
-        )
-        g.append(f'<polygon points="{top}" fill="url(#{self._top_gradient(accent)})"/>')
-        g.append(
-            f'<polyline points="{pts((x - hw, cy), (x, cy + hh), (x + hw, cy))}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="1.1"/>'
-        )
-        g.append(f'<polygon points="{top}" fill="none" stroke="#fff" stroke-opacity="0.22"/>')
+        dash = ' stroke-dasharray="4 3"' if muted else ""
+        g.append(f'<polygon points="{left}" class="L e"{dash}/>')
+        g.append(f'<polygon points="{right}" class="R e"{dash}/><polygon points="{right}" fill="url(#hatch)"/>')
+        g.append(f'<polygon points="{top}" class="{"r" if key else "t"} e"{dash}/>')
+        face = "o" if key else "i"
         if number is not None:
-            s = 0.9 if hw <= 70 else 1.25
-            ny = cy + (28 if cluster else 0)
-            g.append(self._iso_text(x, ny, f"{number:02d}", 26, "#0B1222", s, 0.72, FONT))
+            g.append(self._iso_text(x, cy, f"{number:02d}", 30 if hw > 40 else 20, f"m {face}", 0.62))
         if code:
-            g.append(self._iso_text(x, cy, code, 12.5 if len(code) > 2 else 14, "#0B1222", 1.0, 0.75, MONO))
+            size = min(14.0, 2.0 * hw / max(len(code), 1))
+            g.append(self._iso_text(x, cy, code, round(size, 1), f"m {face}", 0.8))
         if cluster:
-            g.extend(self._cluster(box, accent, big=hw >= 90))
+            g.extend(self._cluster(box))
         if glyphs:
-            g.append(self._iso_text(x - 14, cy - 8, "✓", 22, "#064E3B", 1.0, 0.85, FONT))
-            g.append(self._iso_text(x + 14, cy + 8, "✕", 20, "#7F1D1D", 1.0, 0.8, FONT))
-        g.append("</g>")
-        self.add("blocks", "".join(g))
+            g.append(self._iso_text(x - 15, cy - 9, "✓", 24, "u i", 0.9))
+            g.append(self._iso_text(x + 15, cy + 9, "✕", 21, "u r", 0.95))
+        self.add("blocks", f'<g class="b">{"".join(g)}</g>')
 
+        style = {"size": max(14, title_size - 1.5), "cls": "m i"} if mono_title else {"size": title_size, "cls": "s i"}
         if title and label == "below":
-            ly = label_y if label_y is not None else cy + hh + bh + (34 if title_size > 15 else 22)
-            self.text(x, ly, title, size=title_size, weight=650, anchor="middle")
-            gap = 22 if title_size > 15 else 16
-            if sub:
-                self.text(x, ly + gap, sub, size=sub_size, fill=sub_color, anchor="middle")
-            if sub2:
-                self.text(x, ly + gap + 15, sub2, size=sub_size, fill=sub_color, anchor="middle")
+            lines = title.split("\n")
+            y = label_y if label_y is not None else box.bottom[1] + 26
+            for ln in lines:
+                self.text(x, y, ln, **style, weight=700, anchor="middle")
+                y += 19
+            for s in (sub, sub2):
+                if s:
+                    self.text(x, y, s, cls="u q", anchor="middle")
+                    y += 18
         elif title and label in ("left", "right"):
-            lx = x - hw - 24 if label == "left" else x + hw + 24
+            lx = x - hw - 18 if label == "left" else x + hw + 18
             anchor = "end" if label == "left" else "start"
-            self.text(lx, cy - 3, title, size=title_size, weight=650, anchor=anchor)
-            if sub:
-                self.text(lx, cy + 16, sub, size=sub_size, fill=sub_color, anchor=anchor)
+            lines = title.split("\n")
+            n = len(lines) + (sub is not None) + (sub2 is not None)
+            y = (label_y if label_y is not None else cy + bh / 2 + 5) - (n - 1) * 9
+            for ln in lines:
+                self.text(lx, y, ln, **style, weight=700, anchor=anchor)
+                y += 19
+            for s in (sub, sub2):
+                if s:
+                    self.text(lx, y, s, cls="u q", anchor=anchor)
+                    y += 18
         return box
 
     @staticmethod
-    def _iso_text(cx, cy, text, size, fill, scale, opacity, family) -> str:
-        s = scale
+    def _iso_text(cx, cy, text, size, cls, opacity) -> str:
         return (
-            f'<g transform="matrix({0.866 * s:.3f} {0.5 * s:.3f} {-0.866 * s:.3f} {0.5 * s:.3f} {cx} {cy})">'
-            f'<text x="0" y="{size * 0.36:.1f}" text-anchor="middle" font-family="{family}" font-size="{size}" '
-            f'font-weight="800" fill="{fill}" fill-opacity="{opacity}">{escape(text)}</text></g>'
+            f'<g transform="matrix(.866 .5 -.866 .5 {cx:.1f} {cy:.1f})">'
+            f'<text x="0" y="{size * 0.36:.1f}" text-anchor="middle" class="{cls}" font-size="{size}" '
+            f'font-weight="700" fill-opacity="{opacity}">{escape(text)}</text></g>'
         )
 
     @staticmethod
-    def _cluster(box: Box, accent: str, big: bool) -> list[str]:
+    def _cluster(box: Box) -> list[str]:
         """Six mini cubes on a platform — one per Ario agent."""
-        if big:
-            grid, mw, mhgt, lift = [(-50, -50), (-20, -50), (-50, -20), (10, -50), (-50, 10), (-20, -20)], 12, 9, 4
+        if box.hw >= 80:
+            grid, mw, mhgt, lift = [(-48, -48), (-16, -48), (-48, -16), (16, -48), (-48, 16), (-16, -16)], 13, 10, 4
         else:
-            grid, mw, mhgt, lift = [(u, v) for u in (-15, 0, 15) for v in (-9, 9)], 7, 6, 3
+            grid, mw, mhgt, lift = [(u, v) for u in (-15, 0, 15) for v in (-8, 8)], 7, 6, 3
         cubes = sorted(((0.866 * (u - v), 0.5 * (u + v)) for u, v in grid), key=lambda t: t[1])
         out = []
         for dx, dy in cubes:
             mx, my = box.x + dx, box.cy + dy - lift
             mh = mw * ISO
-            out.append(
-                f'<polygon points="{pts((mx - mw, my), (mx, my + mh), (mx, my + mh + mhgt), (mx - mw, my + mhgt))}" fill="{shade(accent, 0.5)}"/>'
-            )
-            out.append(
-                f'<polygon points="{pts((mx, my + mh), (mx + mw, my), (mx + mw, my + mhgt), (mx, my + mh + mhgt))}" fill="{shade(accent, 0.35)}"/>'
-            )
-            out.append(
-                f'<polygon points="{pts((mx, my - mh), (mx + mw, my), (mx, my + mh), (mx - mw, my))}" fill="{shade(accent, 1.55)}"/>'
-            )
+            for face, cls in (
+                (((mx - mw, my), (mx, my + mh), (mx, my + mh + mhgt), (mx - mw, my + mhgt)), "L"),
+                (((mx, my + mh), (mx + mw, my), (mx + mw, my + mhgt), (mx, my + mh + mhgt)), "R"),
+                (((mx, my - mh), (mx + mw, my), (mx, my + mh), (mx - mw, my)), "t"),
+            ):
+                out.append(f'<polygon points="{pts(*face)}" class="{cls} e" stroke-width="1"/>')
         return out
 
     # ---- output -------------------------------------------------------------
     def save(self) -> Path:
         body = "".join("".join(self.layers[k]) for k in self.LAYERS)
         svg = (
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.w} {self.h}" width="{self.w}" height="{self.h}" '
-            f'role="img" aria-label="{escape(self.aria)}"><defs>{"".join(self.defs)}</defs><style>{CSS}</style>{body}</svg>\n'
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.w} {self.h}" width="{self.w}" '
+            f'height="{self.h}" role="img" aria-label="{escape(self.aria)}"><title>{escape(self.aria)}</title>'
+            f"<style>{CSS}</style><defs>{''.join(self.defs)}</defs>{body}</svg>\n"
         )
         path = OUT_DIR / f"{self.name}.svg"
         path.write_text(svg, encoding="utf-8", newline="\n")
@@ -365,973 +452,1210 @@ class Diagram:
 
 
 # =============================================================================
-# Diagrams
+# Overview desk
 # =============================================================================
 
 
-def request_flow() -> Diagram:
+def system_overview() -> Diagram:
     d = Diagram(
-        "request-flow",
-        1280,
-        760,
-        "Request Flow",
-        "Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Ario đều qua guardrail và Human Gate",
-        pills=(("SSE streaming", GREEN), ("Guardrail L1–L2", RED), ("Human-in-the-loop", TEAL)),
-        glows=((0.72, 0.3, 0.6, "#7C3AED", 0.22), (0.2, 0.85, 0.5, "#0EA5E9", 0.16)),
-        aria="Arionear request flow: Editor, FastAPI, Intent Router, Ario Agents, LLM Providers, Integrity Monitor, "
-        "Human Gate, PDF compile",
-        header_fade=240,
+        "system-overview",
+        900,
+        title="System Overview",
+        deck="Từ trình duyệt tới FastAPI, PostgreSQL, 5 nhà cung cấp LLM và 4 nguồn dữ liệu học thuật",
+        desk="ARCHITECTURE DESK",
+        fig="1.1",
+        kicker="OVERVIEW",
+        source="Cloud Run · asia-east1",
+        ticker=("CLOUD RUN", "REST · SSE · WS", "BEARER JWT", "SECURITY HEADERS", "TEX LIVE SANDBOX"),
+        aria="System overview: browser, TanStack Start web service, FastAPI API service with TeX Live, PostgreSQL, "
+        "five LLM providers and four scholarly APIs",
     )
-    row1, row2, cols = 250, 570, (150, 410, 670, 960)
-    big = {"hw": 70, "bh": 34, "title_size": 17, "sub_size": 13}
-    b1 = d.block(cols[0], row1, BLUE, number=1, title="Editor", sub="React 19 · LaTeX", **big)
-    b2 = d.block(cols[1], row1, GREEN, number=2, title="FastAPI", sub="REST · SSE · WebSocket", **big)
-    b3 = d.block(cols[2], row1, AMBER, number=3, title="Intent Router", sub="rules → LLM classifier", **big)
-    b4 = d.block(cols[3], row1, VIOLET, number=4, cluster=True, hw=110, bh=34, title="Ario Agents", title_size=17)
-    b5 = d.block(cols[3], row2, PINK, number=5, title="LLM Providers", sub="Gemini · GPT · Claude · GLM", **big)
-    b6 = d.block(cols[2], row2, RED, number=6, title="Integrity Monitor", sub="numeric drift · length", **big)
-    b7 = d.block(cols[1], row2, TEAL, number=7, title="Human Gate", sub="Accept ✓  /  Reject ✕", **big)
-    b8 = d.block(cols[0], row2, SKY, number=8, title="PDF + SyncTeX", sub="TeX Live compile", **big)
+    d.panel(M, 214, 170, 610, "BROWSER")
+    d.panel(224, 214, 186, 610, "WEB")
+    d.panel(424, 214, 232, 610, "API")
+    d.panel(670, 214, 330, 118, "DATA")
+    d.panel(670, 346, 330, 238, "LLM PROVIDERS")
+    d.panel(670, 598, 330, 226, "SCHOLARLY APIS")
+    big = {"hw": 40, "bh": 20, "title_size": 17}
+    row = 330
+    researcher = d.block(125, row, code="USR", title="Researcher", sub="trình duyệt", **big)
+    store = d.block(125, 640, code="JWT", title="localStorage", sub="JWT + session", **big)
+    web = d.block(317, row, code="SSR", title="TanStack Start", sub="React 19 · Nitro SSR", sub2="Cloud Run web", **big)
+    api = d.block(540, row, code="API", title="FastAPI", sub="/api/v1 · Cloud Run", sub2="headers · quota", **big)
+    tex = d.block(490, 640, code="TEX", title="TeX Live", sub="sandboxed")
+    ing = d.block(600, 640, code="ING", title="Inngest", sub="optional", muted=True)
+    pg = d.block(712, 282, code="PG", title="PostgreSQL", sub="Prisma schema + SQLAlchemy", label="right", key=True)
+    llms = [
+        d.block(725, 410, code="OAI", title="OpenAI"),
+        d.block(835, 410, code="ANT", title="Anthropic"),
+        d.block(945, 410, code="OR", title="OpenRouter"),
+        d.block(780, 506, code="GLM", title="Z.AI GLM"),
+        d.block(890, 506, code="GEM", title="Gemini"),
+    ]
+    sch = [
+        d.block(755, 660, code="ARX", title="arXiv"),
+        d.block(915, 660, code="DOI", title="CrossRef"),
+        d.block(755, 756, code="S2", title="Semantic Scholar"),
+        d.block(915, 756, code="OA", title="OpenAlex"),
+    ]
 
-    # agent pills under the platform
-    base = b4.bottom[1]
-    for i, name in enumerate(["Style", "Edit", "Structure", "Citation", "Template", "Logic"]):
-        col, row = i % 3, i // 3
-        px, py = b4.x + (col - 1) * 88 - 40, base + 50 + row * 32
-        d.add(
-            "labels",
-            f'<rect x="{px:.1f}" y="{py:.1f}" width="80" height="24" rx="12" fill="#1B1640" stroke="{VIOLET}" stroke-opacity="0.55"/>',
-        )
-        d.text(px + 40, py + 16.5, name, size=12.5, fill="#DDD6FE", anchor="middle")
-
-    for a, b, label in [(b1, b2, "/chat/stream"), (b2, b3, "classify"), (b3, b4, "dispatch")]:
-        x1, y = a.right
-        x2 = b.left[0]
-        d.edge(f"M {x1 + 6} {y} H {x2 - 12}", label=label, label_at=((x1 + x2) / 2, y - 12))
-    for a, b, label in [(b5, b6, "edits[]"), (b6, b7, "diff · flags"), (b7, b8, "accept")]:
-        x1, y = a.left
-        x2 = b.right[0]
-        d.edge(f"M {x1 - 6} {y} H {x2 + 12}", label=label, label_at=((x1 + x2) / 2, y - 12))
-    (x1, y1), (x2, y2) = b4.right, b5.right
-    d.edge(f"M {x1 + 6} {y1} H 1170 V {y2} H {x2 + 12}")
-    d.add(
-        "edges",
-        f'<g transform="translate(1182 {(y1 + y2) / 2}) rotate(90)"><text x="0" y="0" text-anchor="middle" '
-        f'font-family="{MONO}" font-size="11.5" fill="{MUTED}">prompt · L1</text></g>',
+    y1 = researcher.right[1]
+    d.link(researcher, web, label="HTTPS")
+    d.link(web, api, label="REST · SSE · WS")
+    d.edge(
+        f"M {researcher.x} {researcher.bottom[1] + 70} V {store.top[1] - 8}",
+        label="Bearer JWT",
+        at=(researcher.x + 10, 520),
+        anchor="start",
     )
-    d.packet(f"M {cols[0]} {b1.right[1]} H 1170 V {b5.right[1]} H {cols[0]}", "#E9D5FF", 9, radius=5, fade=False)
+    d.edge(f"M {tex.x} {api.bottom[1] + 108} V {tex.top[1] - 8}", label="compile", at=(tex.x - 10, 560), anchor="end")
+    d.edge(f"M {ing.x} {api.bottom[1] + 108} V {ing.top[1] - 8}", dotted=True)
+    trunk = 662
+    d.edge(f"M {api.right[0] + 8} {y1} H {trunk}", arrow=False)
+    d.edge(f"M {trunk} {pg.left[1]} V {sch[0].left[1]}", arrow=False)
+    d.edge(f"M {trunk} {pg.left[1]} H {pg.left[0] - 10}")
+    d.edge(f"M {trunk} {llms[0].left[1]} H {llms[0].left[0] - 10}")
+    d.edge(f"M {trunk} {sch[0].left[1]} H {sch[0].left[0] - 10}")
+
+    d.packet(f"M {researcher.x} {y1} H {web.x}", 4)
+    for i, target in enumerate((pg, llms[0], sch[0])):
+        d.packet(f"M {web.x} {y1} H {trunk} V {target.left[1]} H {target.x}", 6, 1 + i * 2)
     return d
 
 
 def architecture() -> Diagram:
     d = Diagram(
         "architecture",
-        1280,
-        920,
-        "System Architecture",
-        "5 tầng xử lý — mọi đề xuất của AI đều phải qua Human Gate trước khi trở thành output",
-        pills=(("LaTeX-native", BLUE), ("Human-in-the-loop", TEAL), ("Multi-LLM failover", PINK)),
-        glows=((0.62, 0.35, 0.55, "#7C3AED", 0.18), (0.75, 0.62, 0.35, "#14B8A6", 0.16)),
+        1030,
+        title="System Architecture",
+        deck="5 tầng xử lý — mọi đề xuất của AI đều phải qua Human Gate trước khi trở thành output",
+        desk="ARCHITECTURE DESK",
+        fig="1.2",
+        kicker="OVERVIEW",
+        source="src/ · frontend/",
+        ticker=("LATEX-NATIVE", "HUMAN-IN-THE-LOOP", "MULTI-LLM FAILOVER", "QUOTA-METERED", "SANDBOXED TEX"),
         aria="Arionear system architecture: user, processing, human gate, output and infrastructure layers",
-        margin=56,
-        header_fade=170,
     )
-    col = (310, 445, 580, 725, 870, 1005, 1150)
-    lanes = [
-        (150, 278, BLUE, "01", "USER", "Tác giả & đầu vào"),
-        (292, 462, VIOLET, "02", "PROCESSING", "Router · Ario agents"),
-        (476, 604, TEAL, "03", "HUMAN GATE", "Duyệt từng thay đổi"),
-        (620, 748, AMBER, "04", "OUTPUT", "Bản thảo & báo cáo"),
-        (762, 890, GREEN, "05", "INFRASTRUCTURE", "Runtime & dữ liệu"),
-    ]
-    for lane in lanes:
-        d.lane(*lane)
+    c = cols(7)
+    bands = [(212, 368, "01", "USER"), (378, 516, "02", "PROCESSING"), (526, 644, "03", "GATE")]
+    bands += [(654, 806, "04", "OUTPUT"), (816, 974, "05", "INFRA")]
+    for i, (top, bottom, num, name) in enumerate(bands):
+        d.glane(top, bottom, num, name, tint=i % 2 == 1)
 
-    def node(x, cy, accent, code, title, sub, ly, **kw):
-        return d.block(x, cy, accent, code=code, title=title, sub=sub, label_y=ly, **kw)
+    def node(i, cy, code, title, sub, **kw):
+        return d.block(c[i], cy, code=code, title=title, sub=sub, **kw)
 
-    u_y, p_y, o_y, i_y = 190, 342, 658.5, 802
-    upload = node(col[0], u_y, BLUE, "ZIP", "LaTeX Upload", "Overleaf ZIP · Templates", 248)
-    researcher = node(col[1], u_y, SOFTBLUE, "USR", "Researcher", "tác giả bài báo", 248)
-    chat = node(col[2], u_y, BLUE, "MSG", "Chat Intent", "Style · Edit · Logic…", 248)
-    defense = node(col[6], u_y, PINK, "QA", "Defense Mode", "mock viva", 248)
-    parser = node(col[0], p_y, VIOLET, "TEX", "Document Parser", "LaTeX → sections", 412)
-    store = node(col[1], p_y, VIOLET, "DB", "Paper Store", "PostgreSQL + cache", 412)
-    router = node(col[2], p_y, AMBER, "IR", "Intent Router", "rules → LLM", 412)
-    agents = d.block(
-        col[3],
-        p_y,
-        VIOLET,
-        hw=48,
-        bh=20,
-        cluster=True,
-        title="Ario Agents",
-        sub="Style · Edit · Structure",
-        sub2="Citation · Template · Logic",
-        sub_color="#C4B5FD",
-        label_y=412,
-    )
-    integrity = node(col[4], p_y, RED, "L2", "Integrity Monitor", "guardrail L2", 412)
-    score = node(col[5], p_y, SKY, "%", "Publication Score", "pre-export gate", 412)
-    council = node(col[6], p_y, PINK, "AI", "Defense Council", "AI reviewers", 412)
+    u = 280
+    upload = node(0, u, "ZIP", "LaTeX Upload", "ZIP · templates")
+    imp = node(1, u, "DOC", "DOCX / PDF", "import → LaTeX")
+    chat = node(2, u, "MSG", "Chat Intent", "Style · Edit · …")
+    researcher = node(3, u, "USR", "Researcher", "tác giả bài báo")
+    reviews = node(5, u, "R1", "Peer Reviews", "reviewer comments")
+    defense = node(6, u, "QA", "Defense Mode", "mock viva")
+
+    p = 428
+    parser = node(0, p, "TEX", "LaTeX Parser", "sections · cites")
+    store = node(1, p, "DB", "Paper Store", "Postgres + cache")
+    router = node(2, p, "IR", "Intent Router", "rules → LLM")
+    bottom = parser.bottom[1]
+    agents = d.block(c[3], bottom - 36 * ISO - 18, hw=36, bh=18, cluster=True, title="Ario Agents", sub="6 agents · L1")
+    integrity = node(4, p, "L2", "Integrity", "monitor · retry", key=True)
+    peer = node(5, p, "PR", "Peer Review", "split → draft")
+    council = node(6, p, "AI", "AI Council", "defense panel")
+
     diff = d.block(
-        col[4],
-        528.6,
-        TEAL,
-        hw=60,
+        c[4],
+        578,
+        hw=44,
+        bh=20,
         glyphs=True,
         pulse=True,
         label="left",
         title="Diff View · Accept / Reject",
         sub="tác giả duyệt từng thay đổi — AI không tự áp dụng",
-        title_size=15,
-        sub_size=12,
+        title_size=17,
     )
+
+    o = 718
     outputs = [
-        node(col[0], o_y, AMBER, "DOC", "Revised Draft", "accepted edits", 716.5),
-        node(col[1], o_y, AMBER, "!", "Integrity Flags", "drift · scope", 716.5),
-        node(col[2], o_y, AMBER, "REF", "Citation Report", "verify per key", 716.5),
-        node(col[3], o_y, AMBER, "LOG", "Logic Audit", "conflicts · claims", 716.5),
-        node(col[4], o_y, AMBER, "AUD", "Audit Log", "every decision", 716.5),
+        node(0, o, "PDF", "Revised Draft", "PDF + SyncTeX"),
+        node(1, o, "%", "Paper Score", "export gate"),
+        node(2, o, "REF", "Citations", "verify L1–L4"),
+        node(3, o, "LOG", "Logic Audit", "comment-only"),
+        node(4, o, "AI", "AI Disclosure", "EN/VI · LaTeX"),
+        node(5, o, "TXT", "Reply Letter", "per-item drafts"),
     ]
-    transcript = node(col[6], o_y, PINK, "TXT", "Defense Transcript", "Q&A history", 716.5)
-    for x, accent, code, title, sub in [
-        (col[0], GREEN, "API", "FastAPI", "REST · SSE · WS"),
-        (col[1], GREEN, "LG", "LangGraph", "chat_stream"),
-        (col[2], PINK, "LLM", "LLM Providers", "Gemini · GPT · Claude"),
-        (col[3], BLUE, "PG", "PostgreSQL", "Prisma schema"),
-        (col[4], GREEN, "EXT", "External APIs", "arXiv · CrossRef · S2"),
-        (col[5], GREEN, "ADM", "Admin Console", "users · LLM keys"),
-        (col[6], GREEN, "$", "Billing", "FREE / PRO quotas"),
-    ]:
-        node(x, i_y, accent, code, title, sub, 860)
+    transcript = node(6, o, "Q&A", "Transcript", "defense Q&A")
 
-    def below(box: Box, extra=0.0) -> float:  # just under a block's two-line label
-        return {u_y: 248, p_y: 412, o_y: 716.5}[box.cy] + 26 + extra
+    f = 866
+    infra = [
+        node(0, f, "API", "FastAPI", "REST · SSE · WS"),
+        node(1, f, "LG", "LangGraph", "chat_stream"),
+        node(2, f, "LLM", "LLM Providers", "5 · key failover"),
+        node(3, f, "PG", "PostgreSQL", "Prisma schema"),
+        node(4, f, "TEX", "TeX Live", "sandboxed"),
+        node(5, f, "S2", "Citation APIs", "arXiv · CrossRef", sub2="S2 · OpenAlex"),
+        node(6, f, "ADM", "Admin & Plans", "keys · quotas"),
+    ]
 
-    def h(a: Box, b: Box, **kw):
-        (x1, y), x2 = a.right, b.left[0]
-        d.edge(f"M {x1 + 5:.1f} {y:.1f} H {x2 - 10:.1f}", **kw)
+    bus1 = 240
+    d.edge(f"M {researcher.x:.1f} {researcher.top[1] - 4:.1f} V {bus1}", arrow=False)
+    d.drops(bus1, [upload, imp, chat, reviews, defense])
+    for a, b in [(upload, parser), (imp, store), (chat, router), (reviews, peer), (defense, council)]:
+        d.edge(f"M {a.x:.1f} 363 V {b.top[1] - 8:.1f}", flow=False)
+    chain_y = p + 8
+    for a, b in [(parser, store), (store, router), (router, agents), (agents, integrity)]:
+        d.link(a, b, y=chain_y)
+    d.edge(f"M {integrity.x:.1f} 511 V {diff.top[1] - 8:.1f}")
+    d.edge(f"M {peer.x:.1f} 511 V {diff.right[1]:.1f} H {diff.right[0] + 10:.1f}")
+    d.edge(f"M {council.x:.1f} 511 V {transcript.top[1] - 8:.1f}")
+    bus4 = 676
+    d.edge(f"M {diff.x:.1f} {diff.bottom[1] + 4:.1f} V {bus4}", arrow=False)
+    d.drops(bus4, outputs)
+    iy = f + 8
+    d.edge(f"M {infra[0].x:.1f} {iy} H {infra[-1].x:.1f}", arrow=False)
 
-    (x1, y), x2 = researcher.left, upload.right[0]
-    d.edge(f"M {x1 - 5:.1f} {y:.1f} H {x2 + 10:.1f}")
-    h(researcher, chat)
-    d.edge(f"M {researcher.x} {researcher.top[1] - 4:.1f} V 162 H {defense.x} V {defense.top[1] - 8:.1f}")
-    for a, b in [(upload, parser), (chat, router), (defense, council)]:
-        d.edge(f"M {a.x} {below(a)} V {b.top[1] - 8:.1f}")
-    for a, b in [(parser, store), (store, router), (router, agents), (agents, integrity), (integrity, score)]:
-        h(a, b)
-    d.edge(f"M {integrity.x} {below(integrity)} V {diff.top[1] - 8:.1f}")
-    d.edge(f"M {score.x} {below(score)} V {diff.right[1]:.1f} H {diff.right[0] + 10:.1f}")
-    bus = 612
-    d.edge(f"M {diff.x} {diff.bottom[1] + 4:.1f} V {bus}", color="#5EEAD4", arrow=False)
-    d.edge(f"M {col[0]} {bus} H {diff.x}", color="#5EEAD4", arrow=False)
-    for out in outputs:
-        d.edge(f"M {out.x} {bus} V {out.top[1] - 7:.1f}", color="#5EEAD4")
-    d.edge(f"M {council.x} {below(council)} V {transcript.top[1] - 8:.1f}", color="#F9A8D4")
-    iy = i_y + 9
-    d.edge(f"M {col[0]} {iy} H {col[6]}", color="#6EE7B7", arrow=False)
+    d.packet(
+        f"M {c[3]:.1f} 260 V {bus1} H {c[2]:.1f} V {chain_y} H {c[4]:.1f} V {diff.cy} V {bus4} H {c[0]:.1f} V {o}", 12
+    )
+    d.packet(f"M {c[3]:.1f} 260 V {bus1} H {c[5]:.1f} V {diff.right[1]:.1f} H {c[4]:.1f}", 7, 3)
+    d.packet(f"M {c[3]:.1f} 260 V {bus1} H {c[6]:.1f} V {o}", 6, 1.5)
+    d.packet(f"M {c[0]:.1f} {iy} H {c[6]:.1f}", 10, key_points="0;1;0", key_times="0;0.5;1", fade=False)
+    return d
 
-    d.packet(f"M {col[0]} 264 V 351 H {col[4]} V {bus} H {col[0]} V 650", "#E9D5FF", 11)
-    d.packet(f"M {col[2]} 264 V 351 H {col[4]} V 650", "#99F6E4", 8, 2.5)
-    d.packet(f"M {col[6]} 264 V 650", "#FBCFE8", 5, 1)
-    d.packet(f"M {col[0]} {iy} H {col[6]}", "#A7F3D0", 9, radius=4, key_points="0;1;0", key_times="0;0.5;1", fade=False)
+
+def request_flow() -> Diagram:
+    d = Diagram(
+        "request-flow",
+        790,
+        title="Request Flow",
+        deck="Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Ario đều qua guardrail và Human Gate",
+        desk="ARCHITECTURE DESK",
+        fig="1.3",
+        kicker="PIPELINE",
+        source="POST /api/v1/chat/stream",
+        ticker=("SSE STREAMING", "LLM QUOTA METERED", "GUARDRAIL L1–L2", "HUMAN GATE", "SANDBOXED TEX"),
+        aria="Arionear request flow: Editor, FastAPI, Intent Router, Ario Agents, LLM Providers, Integrity Monitor, "
+        "Human Gate, PDF compile",
+    )
+    cx, row1, row2 = (120, 360, 600, 860), 330, 604
+    big = {"hw": 56, "bh": 28, "title_size": 18}
+    b1 = d.block(cx[0], row1, code="UI", title="Editor", sub="React 19 · LaTeX", **big)
+    b2 = d.block(cx[1], row1, code="API", title="FastAPI", sub="Bearer JWT · quota", **big)
+    b3 = d.block(cx[2], row1, code="IR", title="Intent Router", sub="rules → LLM classifier", **big)
+    b4 = d.block(cx[3], row1 + 32.3 - 57.7, hw=100, bh=28, cluster=True, title="Ario Agents", title_size=18)
+    b5 = d.block(cx[3], row2, code="LLM", title="LLM Providers", sub="GLM · Gemini · GPT · Claude", **big)
+    b6 = d.block(cx[2], row2, code="L2", title="Integrity Monitor", sub="numeric drift · scope", key=True, **big)
+    b7 = d.block(cx[1], row2, glyphs=True, pulse=True, title="Human Gate", sub="Accept ✓ / Reject ✕", **big)
+    b8 = d.block(cx[0], row2, code="PDF", title="PDF + SyncTeX", sub="TeX Live sandbox", **big)
+    for i, b in enumerate((b1, b2, b3, b4, b5, b6, b7, b8), start=1):
+        d.text(b.x, b.top[1] - 13, f"{i:02d}", cls="m r", weight=700, anchor="middle")
+
+    py0 = b4.bottom[1] + 52
+    for i, name in enumerate(["Style", "Edit", "Structure", "Citation", "Template", "Logic"]):
+        col, row = i % 3, i // 3
+        px, py = b4.x + (col - 1) * 92 - 43, py0 + row * 32
+        d.add("labels", f'<rect x="{px:.1f}" y="{py:.1f}" width="86" height="25" class="t e"/>')
+        d.text(px + 43, py + 17.5, name, anchor="middle")
+
+    for a, b, label in [(b1, b2, "/chat/stream"), (b2, b3, "classify"), (b3, b4, "dispatch")]:
+        d.link(a, b, y=a.right[1], label=label)
+    for a, b, label in [(b5, b6, "edits[]"), (b6, b7, "diff · flags"), (b7, b8, "accept")]:
+        d.link(a, b, label=label)
+    ytop = py0 + 64
+    d.edge(
+        f"M {b4.x} {ytop:.1f} V {b5.top[1] - 30:.1f}",
+        label="prompt + L1",
+        at=(b4.x + 12, (ytop + b5.top[1]) / 2 - 8),
+        anchor="start",
+    )
+    d.packet(f"M {cx[0]} {b1.right[1]} H {b4.x} V {b5.cy} H {cx[0]}", 9, fade=False)
     return d
 
 
 def _sequence(
     name: str,
-    title: str,
-    subtitle: str,
-    parts: list[tuple[str, str, str]],
-    msgs: list[tuple[int, int, str, bool]],
     *,
-    pills: tuple[tuple[str, str], ...] = (),
+    parts: list[tuple[str, str]],
+    msgs: list[tuple[int, int, str, bool]],
     frames: tuple[dict, ...] = (),
-    aria: str = "",
-    glows: tuple[tuple[float, float, float, str, float], ...] = (
-        (0.65, 0.25, 0.6, "#7C3AED", 0.16),
-        (0.2, 0.8, 0.5, "#0EA5E9", 0.12),
-    ),
-    x_span: tuple[float, float] = (135, 1150),
+    x_span: tuple[float, float] = (130, 960),
+    **header,
 ) -> Diagram:
     """Animated sequence diagram: messages light up in order, each with a travelling packet.
 
-    ``msgs`` items are ``(from, to, label, is_return)``; ``from == to`` draws a self-call.
-    ``frames`` items are ``{"cols": (a, b), "branches": [(msg_index, label), ...], "color": hex}``.
+    ``parts`` items are ``(title, code)`` (``\\n`` in a title breaks the line); ``msgs`` items are
+    ``(from, to, label, is_return)``; ``from == to`` draws a self-call. ``frames`` items are
+    ``{"cols": (a, b), "branches": [(msg_index, label), ...], "end": msg_index}``.
     """
-    top, row_h = 268, 33
-    d = Diagram(name, 1280, top + len(msgs) * row_h + 70, title, subtitle, pills=pills, glows=glows, aria=aria or title)
-    x0, x1 = x_span
-    xs = [x0 + i * (x1 - x0) / (len(parts) - 1) for i in range(len(parts))]
-    life_end = top + len(msgs) * row_h + 10
-    for x, (pname, accent, code) in zip(xs, parts, strict=True):
-        d.add(
-            "lanes",
-            f'<line x1="{x:.1f}" y1="236" x2="{x:.1f}" y2="{life_end}" stroke="{accent}" stroke-opacity="0.35" '
-            f'stroke-dasharray="3 6"/>',
-        )
-        d.block(x, 160, accent, hw=28, bh=16, code=code, title=pname, label_y=222, title_size=13.5)
+    row_h, first = 36, 354
+    starts = sorted(idx for fr in frames for idx, _ in fr["branches"])
 
     def row_y(i: int) -> float:
-        return top + (i + 1) * row_h
+        return first + i * row_h + 18 * sum(1 for s in starts if s <= i)
+
+    last = row_y(len(msgs) - 1)
+    d = Diagram(name, int(last + 30 + 40 + 24), **header)
+    x0, x1 = x_span
+    xs = [x0 + i * (x1 - x0) / (len(parts) - 1) for i in range(len(parts))]
+    life_end = last + 22
+    for x, (pname, code) in zip(xs, parts, strict=True):
+        d.add(
+            "lanes",
+            f'<path d="M {x:.1f} 322 V {life_end:.1f}" class="ln" stroke-opacity=".3" stroke-dasharray="3 5"/>',
+        )
+        d.block(x, 242, code=code, title=pname, label_y=296)
 
     for frame in frames:
         a, b = frame["cols"]
-        color = frame.get("color", RED)
         branches = frame["branches"]
-        last = frame.get("end", branches[-1][0])
-        fx0, fx1 = xs[a] - 45, xs[b] + 45
-        fy0, fy1 = row_y(branches[0][0]) - row_h + 6, row_y(last) + 9
+        end = frame.get("end", branches[-1][0])
+        fx0, fx1 = xs[a] - 48, xs[b] + 48
+        fy0, fy1 = row_y(branches[0][0]) - row_h - 6, row_y(end) + 12
         d.add(
             "lanes",
-            f'<rect x="{fx0:.1f}" y="{fy0:.1f}" width="{fx1 - fx0:.1f}" height="{fy1 - fy0:.1f}" rx="10" fill="{color}" '
-            f'fill-opacity="0.05" stroke="{color}" stroke-opacity="0.45" stroke-dasharray="4 4"/>',
+            f'<rect x="{fx0:.1f}" y="{fy0:.1f}" width="{fx1 - fx0:.1f}" height="{fy1 - fy0:.1f}" class="ln" '
+            f'stroke-opacity=".55" stroke-dasharray="5 4"/>',
         )
         for k, (idx, label) in enumerate(branches):
-            sy = row_y(idx) - row_h + 6
+            sy = row_y(idx) - row_h - 6
             if k:
                 d.add(
                     "lanes",
-                    f'<line x1="{fx0:.1f}" y1="{sy:.1f}" x2="{fx1:.1f}" y2="{sy:.1f}" stroke="{color}" '
-                    f'stroke-opacity="0.35" stroke-dasharray="3 5"/>',
+                    f'<path d="M {fx0:.1f} {sy:.1f} H {fx1:.1f}" class="ln" stroke-opacity=".4" stroke-dasharray="3 4"/>',
                 )
-            prefix = "alt " if k == 0 else ""
-            d.text(fx0 + 8, sy + 13, f"{prefix}[{label}]", size=10.5, fill=shade(color, 1.3), mono=True, layer="lanes")
+            tw = d.tag(fx0, sy, "ALT" if k == 0 else "ELSE", red=False, layer="lanes", h=22)
+            d.text(fx0 + tw + 8, sy + 16, f"[{label}]", cls="m r", weight=700, layer="lanes")
 
     step, move, hold = 0.85, 0.7, 2.5
     total = len(msgs) * step + hold
     for i, (a, b, label, ret) in enumerate(msgs):
         y = row_y(i)
-        accent = parts[a][1]
         dash = ' stroke-dasharray="5 5"' if ret else ""
         if a == b:
             x = xs[a]
-            path = f"M {x + 5:.1f} {y - 9:.1f} h 34 v 13 h -28"
-            label_xy, anchor = (x + 48, y - 1), "start"
+            path = f"M {x + 5:.1f} {y - 10:.1f} h 34 v 14 h -27"
+            label_xy, anchor = (x + 48, y), "start"
         else:
             x1_, x2_ = xs[a], xs[b]
             direction = 1 if x2_ > x1_ else -1
             path = f"M {x1_ + 5 * direction:.1f} {y} H {x2_ - 9 * direction:.1f}"
-            label_xy, anchor = ((x1_ + x2_) / 2, y - 7), "middle"
-        d.add(
-            "edges",
-            f'<path d="{path}" fill="none" stroke="{EDGE}" stroke-opacity="0.35" stroke-width="1.6"{dash} '
-            f'marker-end="url(#arrow)"/>',
-        )
+            label_xy, anchor = ((x1_ + x2_) / 2, y - 8), "middle"
+        d.add("edges", f'<path d="{path}" class="tk"{dash} marker-end="url(#ah)"/>')
         s, e = (i * step + 0.4) / total, (i * step + 0.4 + move) / total
         reveal = f'values="0;0;1;1;0" keyTimes="0;{s:.4f};{e:.4f};0.985;1" dur="{total:.2f}s" repeatCount="indefinite"'
         d.add(
             "edges",
-            f'<path d="{path}" fill="none" stroke="{accent}" stroke-width="2"{dash} opacity="0">'
-            f'<animate attributeName="opacity" {reveal}/></path>',
+            f'<path d="{path}" class="ln pk" style="stroke:var(--rd)" stroke-width="2"{dash} '
+            f'opacity="0"><animate attributeName="opacity" {reveal}/></path>',
         )
-        d.text(*label_xy, label, size=11.5, fill="#CBD5E1", anchor=anchor)
-        d.text(48, y + 4, f"{i + 1:02d}", size=11, fill="#475569", mono=True, weight=700, layer="lanes")
+        d.text(*label_xy, label, anchor=anchor, halo=True)
+        d.text(M, y + 5, f"{i + 1:02d}", cls="m q", weight=700, layer="lanes")
         d.add(
             "lanes",
-            f'<text x="48" y="{y + 4}" font-family="{MONO}" font-size="11" font-weight="700" fill="{accent}" opacity="0">'
+            f'<text x="{M}" y="{y + 5}" class="m r pk" font-size="14" font-weight="700" opacity="0">'
             f'{i + 1:02d}<animate attributeName="opacity" {reveal}/></text>',
         )
         d.add(
             "packets",
-            f'<circle r="4.2" fill="{shade(accent, 1.4)}" filter="url(#dotglow)" opacity="0">'
+            f'<g class="pk" opacity="0"><path d="M0,-5 L5,0 L0,5 L-5,0z" class="r"/>'
             f'<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;{s:.4f};{s + 0.004:.4f};{e:.4f};'
             f'{e + 0.004:.4f};1" dur="{total:.2f}s" repeatCount="indefinite"/>'
             f'<animateMotion path="{path}" keyPoints="0;0;1;1" keyTimes="0;{s:.4f};{e:.4f};1" calcMode="linear" '
-            f'dur="{total:.2f}s" repeatCount="indefinite"/></circle>',
+            f'dur="{total:.2f}s" repeatCount="indefinite"/></g>',
         )
     return d
 
 
 def sequence() -> Diagram:
     parts = [
-        ("Researcher", SOFTBLUE, "USR"),
-        ("Editor", BLUE, "UI"),
-        ("FastAPI", GREEN, "API"),
-        ("Intent Router", AMBER, "IR"),
-        ("Ario Agent", VIOLET, "AG"),
-        ("Integrity", RED, "L2"),
-        ("LLM", PINK, "LLM"),
-        ("PostgreSQL", SKY, "PG"),
+        ("Researcher", "USR"),
+        ("Editor", "UI"),
+        ("FastAPI", "API"),
+        ("Intent\nRouter", "IR"),
+        ("Ario\nAgent", "AG"),
+        ("Integrity", "L2"),
+        ("LLM", "LLM"),
+        ("PostgreSQL", "PG"),
     ]
     msgs = [
         (0, 1, "Mở project", False),
-        (1, 7, "GET / PATCH /papers/{id}  (bearer JWT)", False),
+        (1, 7, "GET /papers/{id}  (Bearer JWT)", False),
         (1, 2, "syncSession() — best-effort", False),
         (0, 1, "Chat: “rút gọn intro”, “sườn IMRaD”…", False),
-        (1, 2, "POST /chat/stream  (SSE, bearer)", False),
+        (1, 2, "POST /chat/stream  (SSE, Bearer)", False),
+        (2, 2, "LLM quota + rate limit · request guard", False),
         (2, 3, "classify_intent (rules → LLM)", False),
-        (3, 1, "event: activity", True),
+        (3, 1, "event: state · activity", True),
         (3, 4, "dispatch task", False),
         (4, 6, "prompt + guardrail L1", False),
         (6, 4, "suggestion / edits[]", True),
-        (4, 5, "L2 validate — numeric drift, length", False),
-        (5, 4, "blocking flag → safe fallback", True),
+        (4, 5, "L2 validate — numeric drift, scope", False),
+        (5, 4, "blocking flag → retry / safe fallback", True),
         (5, 2, "suggestion · diff · edits · flags", True),
         (2, 1, "event: token … event: done", True),
         (1, 0, "Diff đỏ/xanh + Accept / Reject", True),
         (0, 1, "Accept", False),
-        (1, 7, "PATCH paper (coalesced saves)", False),
-        (1, 2, "POST /compile (delta assets, gzip)", False),
-        (2, 1, "PDF base64 + SyncTeX", True),
         (1, 2, "POST /revisions/{session}/{id}  accepted", False),
+        (1, 7, "PATCH /papers/{id}  (coalesced save)", False),
+        (1, 2, "POST /compile  (gzip, ≤ 64 MB)", False),
+        (2, 1, "PDF base64 + SyncTeX", True),
     ]
     return _sequence(
         "sequence",
-        "End-to-end Sequence",
-        "Một vòng chỉnh sửa: chat → agent → guardrail → diff → Accept → lưu & compile",
-        parts,
-        msgs,
-        pills=(("SSE", GREEN), ("JWT bearer", BLUE), ("Human Gate", TEAL)),
-        frames=({"cols": (2, 5), "branches": [(11, "blocked"), (12, "ok")]},),
+        parts=parts,
+        msgs=msgs,
+        frames=({"cols": (2, 5), "branches": [(12, "blocked"), (13, "ok")]},),
+        title="End-to-end Sequence",
+        deck="Một vòng chỉnh sửa: chat → agent → guardrail → diff → Accept → lưu & compile",
+        desk="ARCHITECTURE DESK",
+        fig="1.4",
+        kicker="SEQUENCE",
+        source="editor ⇄ /api/v1",
+        ticker=("SSE", "JWT BEARER", "QUOTA GATE", "HUMAN GATE", "COALESCED SAVES"),
         aria="End-to-end sequence between researcher, editor, FastAPI, intent router, agent, integrity monitor, "
         "LLM and PostgreSQL",
     )
 
 
-def sse_chat() -> Diagram:
-    parts = [
-        ("Editor", BLUE, "UI"),
-        ("chat_stream.py", GREEN, "SSE"),
-        ("logic_audit", AMBER, "LA"),
-        ("LLM", PINK, "LLM"),
-        ("integrity.py", RED, "L2"),
-    ]
-    msgs = [
-        (0, 1, "POST /chat/stream {task, latex}", False),
-        (1, 1, "intent / task detect", False),
-        (1, 2, "multi-agent debate + synthesize", False),
-        (1, 0, "done {logic_audit_report}", True),
-        (1, 3, "style + optional reasoning stream", False),
-        (1, 4, "L2 integrity + retry", False),
-        (1, 0, "done {suggestion, diff, flags}", True),
-        (1, 0, "done {apply_mode: document}", True),
-        (1, 3, "task handler", False),
-        (1, 0, "done", True),
-        (0, 0, "Diff Accept / Reject hoặc panel chỉ đọc", False),
-    ]
-    return _sequence(
-        "sse-chat",
-        "SSE — Editor Chat",
-        "POST /chat/stream rẽ nhánh theo task — chỉ chỉnh sửa văn bản mới qua integrity L2",
-        parts,
-        msgs,
-        pills=(("text/event-stream", GREEN), ("L2 retry", RED)),
-        frames=(
-            {
-                "cols": (0, 4),
-                "branches": [(2, "logic"), (4, "style"), (7, "template"), (8, "citation / structure / chat")],
-                "end": 9,
-                "color": AMBER,
-            },
-        ),
-        aria="SSE editor chat: the stream service branches by task into logic audit, style with integrity check, "
-        "template, or other handlers",
-    )
-
-
-def defense_flow() -> Diagram:
-    parts = [
-        ("Researcher", SOFTBLUE, "USR"),
-        ("/defense", PINK, "UI"),
-        ("defense_stream.py", GREEN, "SSE"),
-        ("LLM persona", VIOLET, "AI"),
-    ]
-    msgs = [
-        (0, 1, "Mở Defense từ project", False),
-        (1, 1, "Compile PDF preview", False),
-        (0, 1, "Chọn chế độ Proactive hoặc Q&A", False),
-        (1, 2, "POST /defense/stream  (Bearer)", False),
-        (2, 3, "council prompt + manuscript context", False),
-        (3, 2, "streamed tokens", True),
-        (2, 1, "SSE token … done", True),
-        (1, 1, "Highlight + deep-link trích dẫn trong PDF", False),
-    ]
-    return _sequence(
-        "defense-flow",
-        "Defense Mode",
-        "Phản biện thử (mock viva) — hội đồng AI đặt câu hỏi dựa trên chính bản thảo",
-        parts,
-        msgs,
-        pills=(("SSE", GREEN), ("quota per tier", PINK)),
-        aria="Defense mode sequence between researcher, defense page, defense stream service and LLM persona",
-        x_span=(170, 1110),
-    )
-
-
-def langgraph() -> Diagram:
-    d = Diagram(
-        "langgraph",
-        1280,
-        690,
-        "LangGraph Orchestrator",
-        "Sync path POST /chat — parse_node rẽ theo task; chỉnh sửa văn bản (style · edit) đi qua integrity_node",
-        pills=(("src/agents/graph.py", VIOLET),),
-        glows=((0.55, 0.45, 0.6, "#7C3AED", 0.18),),
-    )
-    mid = 370
-    rows = [170, 250, 330, 410, 490, 570]
-    small = {"hw": 26, "bh": 15, "title_size": 13.5}
-
-    def terminal(x, label, accent):
-        d.add(
-            "blocks",
-            f'<circle cx="{x}" cy="{mid + 8}" r="24" fill="#0F172A" stroke="{accent}" stroke-width="2"/>'
-            f'<circle class="pulse" cx="{x}" cy="{mid + 8}" r="24" fill="none" stroke="{accent}" stroke-width="2"/>',
-        )
-        d.text(x, mid + 12.5, label, size=11.5, fill=accent, weight=700, anchor="middle", mono=True)
-
-    terminal(80, "START", GREEN)
-    terminal(1200, "END", GREEN)
-    route = d.block(215, mid, AMBER, code="IR", title="route_node", sub="intent", **small)
-    parse = d.block(360, mid, AMBER, code="TEX", title="parse_node", sub="sections", **small)
-    branches = [
-        ("style_node", "style", VIOLET, "STY"),
-        ("edit_node", "edit", VIOLET, "EDT"),
-        ("structure_node", "structure", VIOLET, "STR"),
-        ("logic_node", "logic", AMBER, "LOG"),
-        ("citation_node", "citation", SKY, "REF"),
-        ("chat_node", "chat · template", BLUE, "MSG"),
-    ]
-    bnodes = [
-        d.block(640, y, acc, code=code, title=t, **small) for (t, _l, acc, code), y in zip(branches, rows, strict=True)
-    ]
-    integrity = d.block(
-        850, (rows[0] + rows[1]) / 2, RED, code="L2", title="integrity_node", sub="guardrail L2", **small
-    )
-    respond = d.block(1050, mid, GREEN, code="OUT", title="respond_node", sub="SSE / JSON", **small)
-
-    d.edge(f"M 106 {mid + 8} H {route.left[0] - 10}")
-    d.edge(f"M {route.right[0] + 5} {route.right[1]} H {parse.left[0] - 10}")
-    trunk = 470
-    d.edge(f"M {parse.right[0] + 5} {parse.right[1]} H {trunk}", arrow=False)
-    d.edge(f"M {trunk} {bnodes[0].left[1]} V {bnodes[-1].left[1]}", arrow=False)
-    for node, (_t, lbl, _a, _c) in zip(bnodes, branches, strict=True):
-        y = node.left[1]
-        d.edge(f"M {trunk} {y} H {node.left[0] - 10}", label=lbl, label_at=(trunk + 10, y - 9), label_anchor="start")
-    for node in bnodes[:2]:
-        d.edge(f"M {node.right[0] + 5} {node.right[1]} H 760 V {integrity.left[1]} H {integrity.left[0] - 10}")
-    d.edge(f"M {integrity.right[0] + 5} {integrity.right[1]} H 950 V {respond.left[1] - 6} H {respond.left[0] - 10}")
-    for node in bnodes[2:]:
-        d.edge(f"M {node.right[0] + 5} {node.right[1]} H 950 V {respond.left[1] + 6} H {respond.left[0] - 10}")
-    d.edge(f"M {respond.right[0] + 5} {respond.right[1]} H 1166")
-    # error short-circuit: parse -> respond
-    d.edge(
-        f"M {parse.x - 40} {parse.cy + 70} V 650 H {respond.x} V {respond.cy + 80}",
-        dotted=True,
-        color="#FCA5A5",
-        label="state.error → respond",
-        label_at=(700, 642),
-    )
-
-    head = f"M 104 {mid + 8} H {trunk}"
-    colors = ["#E9D5FF", "#DDD6FE", "#C4B5FD", "#FDE68A", "#BAE6FD", "#BFDBFE"]
-    for i, (node, color) in enumerate(zip(bnodes, colors, strict=True)):
-        y = node.left[1]
-        if i < 2:
-            tail = f"V {y} H 760 V {integrity.left[1]} H 950 V {respond.left[1]} H 1176"
-        else:
-            tail = f"V {y} H 950 V {respond.left[1]} H 1176"
-        d.packet(f"{head} {tail}", color, 7.5, i * 1.25)
-    return d
-
-
-def system_overview() -> Diagram:
-    d = Diagram(
-        "system-overview",
-        1280,
-        700,
-        "System Overview",
-        "Từ trình duyệt tới FastAPI, PostgreSQL, 5 nhà cung cấp LLM và 3 nguồn dữ liệu học thuật",
-        pills=(("Cloud Run", BLUE), ("REST · SSE · WS", GREEN), ("Bearer JWT", AMBER)),
-        glows=((0.5, 0.45, 0.6, "#2563EB", 0.16), (0.85, 0.6, 0.4, "#DB2777", 0.12)),
-    )
-    d.panel(36, 160, 210, 500, SOFTBLUE, "BROWSER")
-    d.panel(266, 160, 230, 500, BLUE, "CLOUD RUN")
-    d.panel(516, 160, 230, 500, GREEN, "FASTAPI")
-    d.panel(766, 160, 478, 130, SKY, "PERSISTENCE")
-    d.panel(766, 306, 478, 170, PINK, "LLM PROVIDERS", "chọn trong editor · failover")
-    d.panel(766, 492, 478, 168, VIOLET, "CITATION APIs")
-    big = {"hw": 44, "bh": 22, "title_size": 14.5, "sub_size": 11.5}
-    researcher = d.block(141, 300, SOFTBLUE, code="USR", title="Researcher", sub="trình duyệt", **big)
-    ls = d.block(141, 520, AMBER, code="JWT", title="localStorage", sub="JWT + session", **big)
-    fe = d.block(
-        381,
-        380,
-        BLUE,
-        code="SSR",
-        title="TanStack Start",
-        sub="React 19 · Nitro SSR",
-        sub2="Marketing · Editor · Defense",
-        **big,
-    )
-    api = d.block(631, 330, GREEN, code="API", title="FastAPI", sub="/api/v1/*", sub2="REST · SSE · WS", **big)
-    ing = d.block(631, 545, SOFTBLUE, code="ING", title="Inngest", sub="telemetry · optional", hw=30, bh=17)
-    pg = d.block(
-        860, 220, SKY, code="PG", title="PostgreSQL", sub="Prisma schema + SQLAlchemy", hw=30, bh=17, label="right"
-    )
-    llms = [("OAI", "OpenAI"), ("ANT", "Anthropic"), ("OR", "OpenRouter"), ("GLM", "Z.AI GLM"), ("GEM", "Gemini")]
-    lx = [840 + i * 90 for i in range(5)]
-    for x, (code, title) in zip(lx, llms, strict=True):
-        d.block(x, 380, PINK, code=code, title=title, hw=24, bh=14, title_size=12.5)
-    sch = [("ARX", "arXiv"), ("DOI", "CrossRef"), ("S2", "Semantic Scholar")]
-    sx = [870 + i * 140 for i in range(3)]
-    for x, (code, title) in zip(sx, sch, strict=True):
-        d.block(x, 565, VIOLET, code=code, title=title, hw=26, bh=15, title_size=12.5)
-
-    (x1, y1), x2 = researcher.right, fe.left[0]
-    d.edge(f"M {x1 + 6} {y1} H 250 V {fe.left[1] - 8} H {x2 - 12}", label="HTTPS", label_at=(232, y1 - 12))
-    d.edge(
-        f"M {fe.left[0] - 6} {fe.left[1] + 10} H 262 V {ls.right[1]} H {ls.right[0] + 12}",
-        color="#FCD34D",
-        label="Bearer JWT",
-        label_at=(226, ls.right[1] - 12),
-    )
-    d.edge(
-        f"M {fe.right[0] + 6} {fe.right[1]} H 520 V {api.left[1]} H {api.left[0] - 12}",
-        label="REST · SSE · WS",
-        label_at=(476, fe.right[1] - 12),
-    )
-    d.edge(f"M {api.x} {api.bottom[1] + 66} V {ing.top[1] - 10}", dotted=True, color="#93C5FD")
-    trunk = 752
-    d.edge(f"M {api.right[0] + 6} {api.right[1]} H {trunk}", arrow=False)
-    d.edge(f"M {trunk} {pg.left[1]} V 572.5", arrow=False)
-    d.edge(f"M {trunk} {pg.left[1]} H {pg.left[0] - 10}")
-    d.edge(f"M {trunk} 387 H {lx[0] - 34}")
-    d.edge(f"M {lx[0] + 30} 387 H {lx[-1] - 30}", arrow=False, color="#F9A8D4")
-    d.edge(f"M {trunk} 572.5 H {sx[0] - 36}")
-    d.edge(f"M {sx[0] + 32} 572.5 H {sx[-1] - 32}", arrow=False, color="#C4B5FD")
-
-    d.packet(f"M {researcher.x} {y1} H 250 V {fe.left[1] - 8} H {fe.x}", "#BFDBFE", 4)
-    for i, (path, color) in enumerate(
-        [
-            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V {pg.left[1]} H {pg.x}", "#BAE6FD"),
-            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V 387 H {lx[-1]}", "#FBCFE8"),
-            (f"M {fe.x} {fe.right[1]} H 520 V {api.left[1]} H {trunk} V 572.5 H {sx[-1]}", "#DDD6FE"),
-        ]
-    ):
-        d.packet(path, color, 6, 1 + i * 2)
-    return d
-
-
-def frontend_routes() -> Diagram:
-    d = Diagram(
-        "frontend-routes",
-        1280,
-        640,
-        "Frontend Routes & Components",
-        "File-based routing (TanStack Start) — editor shell ghép từ các panel độc lập",
-        pills=(("TanStack Router", AMBER), ("React 19", BLUE)),
-        glows=((0.6, 0.4, 0.6, "#2563EB", 0.15),),
-        margin=56,
-        header_fade=170,
-    )
-    col = (310, 445, 580, 725, 870, 1005, 1150)
-    d.lane(150, 278, SOFTBLUE, "01", "PUBLIC", "Marketing & đăng nhập")
-    d.lane(292, 420, AMBER, "02", "WORKSPACE", "Cần đăng nhập (JWT)")
-    d.lane(434, 600, VIOLET, "03", "EDITOR SHELL", "Panel trong /editor, /defense")
-
-    def node(x, cy, accent, code, title, sub, ly):
-        return d.block(x, cy, accent, code=code, title=title, sub=sub, label_y=ly)
-
-    node(col[0], 190, SOFTBLUE, "/", "Landing", "marketing · pricing", 248)
-    signin = node(col[1], 190, SOFTBLUE, "IN", "/signin · /signup", "email · Google SSO", 248)
-    node(col[2], 190, SOFTBLUE, "?", "/guide · /latex-guide", "hướng dẫn", 248)
-    tpl = node(col[0], 332, AMBER, "TPL", "/templates", "gallery", 390)
-    prj = node(col[1], 332, AMBER, "PRJ", "/projects", "dự án", 390)
-    ed = node(col[2], 332, AMBER, "ED", "/editor", "?projectId=", 390)
-    node(col[3], 332, AMBER, "ME", "/profile", "researcher profile", 390)
-    node(col[4], 332, AMBER, "ADM", "/admin", "god admin", 390)
-    dfs = node(col[6], 332, PINK, "DEF", "/defense", "?projectId=", 390)
-    shell = [
-        node(col[0], 488, VIOLET, "TEX", "LatexEditor", "+ inline diff", 546),
-        node(col[1], 488, VIOLET, "PDF", "PdfPreviewPanel", "PDF.js + SyncTeX", 546),
-        node(col[2], 488, VIOLET, "AI", "Chat dock", "Ario", 546),
-        node(col[3], 488, VIOLET, "KIT", "Tools", "info · citations · logic", 546),
-        node(col[4], 488, VIOLET, "%", "Export dialog", "paper score", 546),
-        node(col[5], 488, VIOLET, "NEW", "Onboarding", "first-run", 546),
-    ]
-    dchat = node(col[6], 488, PINK, "QA", "DefenseChatPanel", "+ PdfPreviewPanel", 546)
-
-    d.edge(
-        f"M {signin.x} {signin.bottom[1] + 46} V {prj.top[1] - 8}",
-        label="JWT",
-        label_at=(signin.x + 10, 288),
-        label_anchor="start",
-    )
-    (x1, y), x2 = tpl.right, prj.left[0]
-    d.edge(f"M {x1 + 5} {y} H {x2 - 10}", label="open", label_at=((x1 + x2) / 2, y - 10))
-    (x1, y), x2 = prj.right, ed.left[0]
-    d.edge(f"M {x1 + 5} {y} H {x2 - 10}")
-    d.edge(f"M {prj.x} {prj.top[1] - 6} V 302 H {dfs.x} V {dfs.top[1] - 8}")
-    bus = 428
-    d.edge(f"M {ed.x} 416 V {bus}", arrow=False, color="#C4B5FD")
-    d.edge(f"M {col[0]} {bus} H {col[5]}", arrow=False, color="#C4B5FD")
-    for s in shell:
-        d.edge(f"M {s.x} {bus} V {s.top[1] - 7}", color="#C4B5FD")
-    d.edge(f"M {dfs.x} {dfs.bottom[1] + 46} V {dchat.top[1] - 8}", color="#F9A8D4")
-    d.packet(f"M {col[0]} {tpl.right[1]} H {col[2]} V {bus} H {col[5]} V {shell[0].cy}", "#DDD6FE", 8)
-    d.packet(f"M {prj.x} {prj.top[1]} V 302 H {dfs.x} V {dchat.cy}", "#FBCFE8", 6, 2)
-    return d
+# =============================================================================
+# Backend desk
+# =============================================================================
 
 
 def api_surface() -> Diagram:
     d = Diagram(
         "api-surface",
-        1280,
-        640,
-        "Backend API Surface",
-        "Mọi route nằm dưới /api/v1 — router mỏng, logic nằm trong services/",
-        pills=(("FastAPI", GREEN), ("OpenAPI /docs", SKY)),
-        glows=((0.5, 0.5, 0.6, "#059669", 0.14),),
-        margin=56,
-        header_fade=170,
+        1070,
+        title="Backend API Surface",
+        deck="Mọi route nằm dưới /api/v1 — router mỏng, logic nằm trong services/",
+        desk="BACKEND DESK",
+        fig="2.1",
+        kicker="API",
+        source="src/api/*.py → src/services/",
+        ticker=("FASTAPI", "OPENAPI /docs", "RED TOP = LLM QUOTA", "SECURITY HEADERS", "HSTS IN PROD"),
+        aria="Backend API surface: route groups under /api/v1, the services behind them, and shared data stores",
     )
-    xs = [290 + i * 125.7 for i in range(8)]
-    d.lane(150, 278, BLUE, "01", "CLIENT", "Frontend · Bearer JWT")
-    d.lane(292, 440, GREEN, "02", "API /api/v1", "src/api/*")
-    d.lane(454, 600, VIOLET, "03", "SERVICES & DATA", "src/services · PostgreSQL")
-    fe = d.block(xs[0], 190, BLUE, code="UI", title="Frontend", sub="TanStack Start", label="right")
-    groups = [
-        ("AUTH", "/auth/*", "JWT · Google SSO"),
-        ("DOC", "/papers/*", "CRUD projects"),
-        ("AI", "/chat · /compile", "/citations · /stream"),
-        ("ME", "/users/me", "profile"),
-        ("LNK", "/papers/{id}/share", "read-only link"),
-        ("QA", "/defense/*", "stream · quota"),
-        ("TPL", "/templates/*", "gallery · admin"),
-        ("ADM", "/admin/*", "users · LLM keys"),
+    d.glane(212, 316, "01", "CLIENT")
+    d.glane(326, 826, "02", "API /api/v1", tint=True)
+    d.glane(836, 1014, "03", "SHARED")
+    c = cols(5)
+    fe = d.block(c[0], 262, code="UI", title="Frontend", sub="Authorization: Bearer <JWT>", label="right")
+    d.text(c[2] + 10, 256, "middleware  CORS · SecurityHeaders", cls="m i", weight=700)
+    d.text(c[2] + 10, 276, "nosniff · DENY · CSP · HSTS (production)", cls="m q")
+
+    rows = [
+        [
+            ("SSE", "/chat/stream", "SSE · intent · L2", "chat_stream.py", True),
+            ("LG", "/chat", "+ /edit/style (sync)", "agents/graph.py", True),
+            ("TEX", "/compile", "sandbox · 64 MB cap", "latex_compile.py", False),
+            ("REF", "/citations/*", "verify · relevance L4", "citations/", True),
+            ("R1", "/review/respond", "peer-review drafts", "peer_review/", True),
+        ],
+        [
+            ("DOC", "/import/document", "DOCX/PDF ≤ 15 MB", "document_import/", False),
+            ("PG", "/papers/*", "CRUD · share links", "paper_service.py", False),
+            ("AI", "…/ai-disclosure", "AI contribution report", "ai_disclosure.py", False),
+            ("WS", "/ws/share/{token}", "live sync · owner-only", "share_room.py", False),
+            ("TPL", "/templates/*", "gallery · admin CRUD", "template_store.py", False),
+        ],
+        [
+            ("JWT", "/auth/*", "JWT · Google · /users/me", "auth_service.py", False),
+            ("SES", "/sessions/*", "revisions · citations", "sessions.py", False),
+            ("QA", "/defense/*", "turn quota · SSE", "defense_stream.py", True),
+            ("$", "/billing/*", "demo checkout off in prod", "billing_service.py", False),
+            ("ADM", "/admin/*", "god admin · LLM keys", "admin_service.py", False),
+        ],
     ]
-    api = [
-        d.block(x, 340, GREEN, code=c, title=t, sub=s, label_y=400, title_size=13, sub_size=11)
-        for x, (c, t, s) in zip(xs, groups, strict=True)
+    spine = GUTTER + 6
+    d.edge(f"M {fe.x:.1f} {fe.bottom[1] + 4:.1f} V 300 H {spine} V 866", arrow=False)
+    row_cy = (400, 562, 724)
+    for cy, row in zip(row_cy, rows, strict=True):
+        boxes = []
+        for x, (code, path, sub, svc, llm) in zip(c, row, strict=True):
+            b = d.block(x, cy, code=code, title=path, sub=sub, mono_title=True, key=llm)
+            d.text(x, b.bottom[1] + 26 + 19 + 18, svc, cls="m q", anchor="middle")
+            boxes.append(b)
+        d.drops(cy - 40, boxes, x_from=spine)
+
+    shared = [
+        d.block(c[0], 905, code="Q", title="quota_policy.py", sub="mọi đường LLM", mono_title=True, key=True),
+        d.block(c[1], 905, code="PG", title="PostgreSQL", sub="papers · suggestions"),
+        d.block(c[2], 905, code="LLM", title="LLM Providers", sub="llm_failover.py"),
+        d.block(c[3], 905, code="TEX", title="TeX Live", sub="env allowlist · no shell"),
+        d.block(c[4], 905, code="S2", title="Citation APIs", sub="arXiv · CrossRef · S2", sub2="OpenAlex"),
     ]
-    db = d.block((xs[0] + xs[1]) / 2, 500, SKY, code="PG", title="PostgreSQL", sub="papers · users", label_y=560)
-    stream = d.block(xs[2] - 55, 500, VIOLET, code="SSE", title="chat_stream.py", sub="editor SSE", label_y=560)
-    lg = d.block(xs[2] + 70, 500, VIOLET, code="LG", title="LangGraph", sub="+ logic_audit", label_y=560)
-    dstream = d.block(
-        xs[5], 500, PINK, code="QA", title="defense_stream.py", sub="mock viva", label_y=560, title_size=12.5
-    )
-    tstore = d.block(
-        xs[6], 500, AMBER, code="TPL", title="template_store.py", sub="seed + CRUD", label_y=560, title_size=12.5
-    )
-
-    bus = 284
-    d.edge(f"M {fe.x} {fe.bottom[1] + 4} V {bus}", arrow=False)
-    d.edge(f"M {xs[0]} {bus} H {xs[-1]}", arrow=False)
-    for a in api:
-        d.edge(f"M {a.x} {bus} V {a.top[1] - 7}")
-    low = 446
-
-    def down(src: Box, dst: Box, color=EDGE):
-        d.edge(f"M {src.x} 420 V {low} H {dst.x} V {dst.top[1] - 7}", color=color)
-
-    down(api[0], db, "#7DD3FC")
-    down(api[1], db, "#7DD3FC")
-    down(api[2], stream, "#C4B5FD")
-    down(api[2], lg, "#C4B5FD")
-    down(api[5], dstream, "#F9A8D4")
-    down(api[6], tstore, "#FCD34D")
-    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[2]} V 420 V {low} H {lg.x} V {lg.cy}", "#BBF7D0", 6)
-    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[1]} V 420 V {low} H {db.x} V {db.cy}", "#BAE6FD", 6, 2)
-    d.packet(f"M {fe.x} {fe.bottom[1]} V {bus} H {xs[5]} V 420 V {low} V {dstream.cy}", "#FBCFE8", 6, 4)
+    d.drops(866, shared, x_from=spine)
+    d.packet(f"M {fe.x} {fe.bottom[1]} V 300 H {spine} V 360 H {c[0]} V 400", 5)
+    d.packet(f"M {fe.x} {fe.bottom[1]} V 300 H {spine} V 684 H {c[2]} V 724", 6, 1.5)
+    d.packet(f"M {fe.x} {fe.bottom[1]} V 300 H {spine} V 866 H {c[1]} V 905", 7, 3)
     return d
 
 
-def export_gate() -> Diagram:
+def langgraph() -> Diagram:
     d = Diagram(
-        "export-gate",
-        1280,
-        520,
-        "Publication Score & Export Gate",
-        "Trước khi xuất PDF: nếu bản thảo đã đổi, chạy quick logic skim rồi chấm điểm",
-        pills=(("paper_gate_skim", AMBER), ("computePaperScore", SKY)),
-        glows=((0.55, 0.5, 0.6, "#0EA5E9", 0.15),),
+        "langgraph",
+        800,
+        title="LangGraph Orchestrator",
+        deck="Sync path POST /chat — parse_node rẽ theo task; chỉnh sửa văn bản (style · edit) đi qua integrity_node",
+        desk="BACKEND DESK",
+        fig="2.2",
+        kicker="AGENT GRAPH",
+        source="src/agents/graph.py",
+        ticker=("STATEGRAPH", "QUOTA BEFORE INVOKE", "L2 ON STYLE + EDIT", "ERROR SHORT-CIRCUIT"),
     )
-    big = {"hw": 40, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
-    exp = d.block(150, 330, BLUE, code="PDF", title="Export", sub="người dùng bấm xuất", **big)
-    gate = d.block(390, 330, AMBER, code="?", title="Bản thảo đã đổi?", sub="so fingerprint", pulse=True, **big)
-    skim = d.block(630, 220, RED, code="L", title="Quick logic skim", sub="paper_gate_skim", **big)
-    score = d.block(870, 330, SKY, code="%", title="computePaperScore", sub="dimensions + tổng điểm", **big)
-    dialog = d.block(1110, 330, GREEN, code="DL", title="Score dialog", sub="ring · dimensions · tải PDF", **big)
-    (x1, y), x2 = exp.right, gate.left[0]
-    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
-    gx, gy = gate.right
-    d.edge(f"M {gx + 6} {gy} H {score.left[0] - 12}", label="không", label_at=(560, gy - 12), color="#7DD3FC")
-    d.edge(
-        f"M {gate.x} {gate.top[1] - 6} V {skim.left[1]} H {skim.left[0] - 12}",
-        label="có",
-        label_at=(gate.x + 12, skim.left[1] - 12),
-        label_anchor="start",
-        color="#FCA5A5",
-    )
-    d.edge(f"M {skim.right[0] + 6} {skim.right[1]} H {score.x} V {score.top[1] - 8}", color="#FCA5A5")
-    (x1, y), x2 = score.right, dialog.left[0]
-    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
-    d.packet(f"M {exp.x} {y} H {gate.x} V {skim.left[1]} H {score.x} V {score.cy} V {y} H {dialog.x}", "#FECACA", 7)
-    d.packet(f"M {exp.x} {y} H {dialog.x}", "#BAE6FD", 5, 3.5)
-    return d
-
-
-def template_gallery() -> Diagram:
-    d = Diagram(
-        "template-gallery",
-        1280,
-        560,
-        "Template Gallery",
-        "Chọn template (IEEE, …) → tạo paper mới trong PostgreSQL → mở thẳng vào editor",
-        pills=(("GET /templates", GREEN), ("POST /templates/{id}/open", AMBER)),
-        glows=((0.45, 0.5, 0.6, "#D97706", 0.13),),
-    )
-    big = {"hw": 42, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
-    gal = d.block(150, 330, AMBER, code="TPL", title="/templates", sub="gallery", **big)
-    lst = d.block(450, 220, GREEN, code="GET", title="GET /templates", sub="danh sách + preview", **big)
-    store = d.block(760, 220, VIOLET, code="DB", title="template_store.py", sub="seed + admin CRUD", **big)
-    opn = d.block(450, 420, GREEN, code="NEW", title="POST /templates/{id}/open", sub="Open as Template", **big)
-    paper = d.block(760, 420, SKY, code="PG", title="Paper mới", sub="PostgreSQL", **big)
-    ed = d.block(1070, 420, BLUE, code="ED", title="/editor", sub="?projectId=", **big)
-    gx, gy = gal.right
-    d.edge(f"M {gx + 6} {gy - 6} H 300 V {lst.left[1]} H {lst.left[0] - 12}")
-    d.edge(f"M {lst.right[0] + 6} {lst.right[1]} H {store.left[0] - 12}")
-    d.edge(
-        f"M {gx + 6} {gy + 8} H 300 V {opn.left[1]} H {opn.left[0] - 12}",
-        label="open",
-        label_at=(310, opn.left[1] - 12),
-        label_anchor="start",
-    )
-    d.edge(f"M {opn.right[0] + 6} {opn.right[1]} H {paper.left[0] - 12}")
-    d.edge(f"M {paper.right[0] + 6} {paper.right[1]} H {ed.left[0] - 12}")
-    d.packet(f"M {gal.x} {gy - 6} H 300 V {lst.left[1]} H {store.x}", "#BBF7D0", 5)
-    d.packet(f"M {gal.x} {gy + 8} H 300 V {opn.left[1]} H {ed.x}", "#FDE68A", 6, 2.5)
-    return d
-
-
-def auth_session() -> Diagram:
-    d = Diagram(
-        "auth-session",
-        1280,
-        480,
-        "Auth & Session",
-        "JWT do FastAPI ký, lưu ở localStorage và gửi kèm Bearer cho mọi request cần đăng nhập",
-        pills=(("JWT 72h · remember 30d", AMBER), ("Google SSO", BLUE)),
-        glows=((0.5, 0.5, 0.6, "#CA8A04", 0.13),),
-    )
-    big = {"hw": 40, "bh": 20, "title_size": 14.5, "sub_size": 11.5}
-    nodes = [
-        d.block(140, 300, SOFTBLUE, code="IN", title="Sign in", sub="email · Google SSO", **big),
-        d.block(380, 300, GREEN, code="API", title="/auth/*", sub="verify · issue token", **big),
-        d.block(620, 300, AMBER, code="JWT", title="Access token", sub="72h · remember 30d", **big),
-        d.block(860, 300, AMBER, code="LS", title="localStorage", sub="chia sẻ giữa các tab", **big),
-        d.block(1100, 300, GREEN, code="API", title="/api/v1/*", sub="Authorization: Bearer", **big),
+    rows = [250, 330, 410, 490, 570, 650]
+    mid = 450
+    sx, rx, px, trunk, bx, ix, jx, rspx, ex = 70, 168, 282, 372, 560, 735, 812, 880, 970
+    d.text(sx, mid - 50, "POST /chat", cls="m q", anchor="middle")
+    d.text(sx, mid + 56, "quota gate", cls="u q", anchor="middle")
+    d.terminal(sx, mid, "START")
+    d.terminal(ex, mid, "END")
+    small = {"mono_title": True, "title_size": 16}
+    route = d.block(rx, mid - 7.5, code="IR", title="route_node", sub="intent", **small)
+    parse = d.block(px, mid - 7.5, code="TEX", title="parse_node", sub="sections", **small)
+    branches = [
+        ("style_node", "style", "STY"),
+        ("edit_node", "edit", "EDT"),
+        ("structure_node", "structure", "STR"),
+        ("logic_node", "logic", "LOG"),
+        ("citation_node", "citation", "REF"),
+        ("chat_node", "chat · template", "MSG"),
     ]
-    labels = ["credentials", "sign", "persist", "Bearer"]
-    for a, b, lbl in zip(nodes, nodes[1:], labels, strict=False):
-        (x1, y), x2 = a.right, b.left[0]
-        d.edge(f"M {x1 + 6} {y} H {x2 - 12}", label=lbl, label_at=((x1 + x2) / 2, y - 12))
+    bnodes = [d.block(bx, y, code=code, title=t, **small) for (t, _l, code), y in zip(branches, rows, strict=True)]
+    integrity = d.block(
+        ix, (rows[0] + rows[1]) / 2, code="L2", title="integrity_node", sub="guardrail L2", key=True, **small
+    )
+    respond = d.block(rspx, mid - 7.5, code="OUT", title="respond_node", sub="format reply", **small)
+
+    d.edge(f"M {sx + 30} {mid} H {route.left[0] - 10}")
+    d.link(route, parse, y=mid)
+    d.edge(f"M {parse.right[0] + 8} {mid} H {trunk}", arrow=False)
+    d.edge(f"M {trunk} {bnodes[0].left[1]} V {bnodes[-1].left[1]}", arrow=False)
+    for node, (_t, lbl, _c) in zip(bnodes, branches, strict=True):
+        y = node.left[1]
+        d.edge(f"M {trunk} {y} H {node.left[0] - 10}", label=lbl, at=(trunk + 12, y - 9), anchor="start")
+    for node in bnodes[:2]:
+        d.edge(f"M {node.right[0] + 8} {node.right[1]} H 650 V {integrity.left[1]} H {integrity.left[0] - 10}")
+    d.edge(f"M {integrity.right[0] + 8} {integrity.right[1]} H {jx} V {mid - 6} H {respond.left[0] - 10}")
+    for node in bnodes[2:]:
+        d.edge(f"M {node.right[0] + 8} {node.right[1]} H {jx} V {mid + 6} H {respond.left[0] - 10}")
+    d.edge(f"M {respond.right[0] + 8} {mid} H {ex - 31}")
     d.edge(
-        f"M {nodes[4].x} {nodes[4].top[1] - 6} V 200 H {nodes[3].x} V {nodes[3].top[1] - 8}",
+        f"M {px} {parse.bottom[1] + 64} V 735 H {rspx} V {respond.bottom[1] + 64}",
         dotted=True,
-        color="#FCA5A5",
-        label="401 → xoá session, đăng nhập lại",
-        label_at=((nodes[3].x + nodes[4].x) / 2, 190),
+        label="state.error → respond",
+        at=((px + rspx) / 2, 729),
     )
-    d.packet(f"M {nodes[0].x} {nodes[0].right[1]} H {nodes[4].x}", "#FDE68A", 6)
+
+    head = f"M {sx} {mid} H {trunk}"
+    for i, node in enumerate(bnodes):
+        y = node.left[1]
+        if i < 2:
+            tail = f"V {y} H 650 V {integrity.left[1]} H {jx} V {mid} H {ex}"
+        else:
+            tail = f"V {y} H {jx} V {mid} H {ex}"
+        d.packet(f"{head} {tail}", 7.5, i * 1.25)
     return d
+
+
+def sse_chat() -> Diagram:
+    parts = [
+        ("Editor", "UI"),
+        ("chat_stream.py", "SSE"),
+        ("logic_audit", "LA"),
+        ("LLM", "LLM"),
+        ("integrity.py", "L2"),
+    ]
+    msgs = [
+        (0, 1, "POST /chat/stream {task, latex}", False),
+        (1, 1, "quota + rate limit · request guard", False),
+        (1, 1, "intent / task detect", False),
+        (1, 2, "multi-agent debate + synthesize", False),
+        (1, 0, "event: logic_section … done {report}", True),
+        (1, 3, "rewrite (+ reasoning stream)", False),
+        (1, 4, "L2 integrity + retry", False),
+        (1, 0, "done {suggestion, diff, flags}", True),
+        (1, 0, "done {apply_mode: document}", True),
+        (1, 3, "task handler", False),
+        (1, 0, "token … done", True),
+        (0, 0, "Diff Accept / Reject hoặc panel chỉ đọc", False),
+    ]
+    return _sequence(
+        "sse-chat",
+        parts=parts,
+        msgs=msgs,
+        frames=(
+            {
+                "cols": (0, 4),
+                "branches": [(3, "logic"), (5, "style · edit"), (8, "template"), (9, "citation · structure · chat")],
+                "end": 10,
+            },
+        ),
+        x_span=(150, 900),
+        title="SSE — Editor Chat",
+        deck="POST /chat/stream rẽ nhánh theo task — chỉ chỉnh sửa văn bản (style · edit) mới qua integrity L2",
+        desk="BACKEND DESK",
+        fig="2.3",
+        kicker="STREAM",
+        source="src/services/chat_stream.py",
+        ticker=("TEXT/EVENT-STREAM", "STATE · ACTIVITY · TOKEN · DONE", "QUOTA → EVENT: ERROR", "L2 RETRY"),
+        aria="SSE editor chat: the stream service checks quota, then branches by task into logic audit, style and "
+        "edit with integrity check, template, or other handlers",
+    )
 
 
 def citation_verifier() -> Diagram:
     d = Diagram(
         "citation-verifier",
-        1280,
-        660,
-        "Citation Verifier",
-        "Mỗi cite key đi qua 3 lớp tra cứu — không có kết quả thì trả về not_found, không bao giờ bịa",
-        pills=(("arXiv → CrossRef → S2", VIOLET), ("no fabrication", RED)),
-        glows=((0.5, 0.45, 0.6, "#7C3AED", 0.16),),
+        910,
+        title="Citation Verifier",
+        deck="Mỗi cite key qua tối đa 4 nguồn — không khớp thì trả not_found, không bao giờ bịa",
+        desk="BACKEND DESK",
+        fig="2.4",
+        kicker="CITATIONS",
+        source="src/services/citations/",
+        ticker=("ARXIV → CROSSREF → S2 → OPENALEX", "NO FABRICATION", "L4 COMMENT-ONLY", "≤ 15 KEYS / CALL"),
+        aria="Citation verifier: arXiv, CrossRef, Semantic Scholar then OpenAlex fallback, not_found otherwise; "
+        "layer 4 LLM relevance check",
     )
-    dec = {"hw": 34, "bh": 18, "title_size": 13.5, "sub_size": 11.5}
-    src = d.block(130, 260, BLUE, code="BIB", title="BibTeX + cite keys", sub="từ bản thảo", **dec)
-    d1 = d.block(360, 260, AMBER, code="?", title="Có arXiv id?", **dec)
-    d2 = d.block(590, 260, AMBER, code="?", title="Có DOI?", **dec)
-    d3 = d.block(820, 260, AMBER, code="?", title="Có title?", **dec)
-    nf = d.block(1080, 260, RED, code="∅", title="not_found", sub="ghi nhận trung thực", **dec)
-    arx = d.block(360, 450, VIOLET, code="ARX", title="arXiv API", **dec)
-    cr = d.block(590, 450, VIOLET, code="DOI", title="CrossRef", **dec)
-    ss = d.block(820, 450, VIOLET, code="S2", title="Semantic Scholar", **dec)
-    out = d.block(1080, 450, GREEN, code="OK", title="Kết quả", sub="verified · mismatch", label="left", **dec)
-    llm = d.block(
-        1180, 600, MUTED, code="L4", title="LLM relevance", sub="(planned)", label="left", hw=26, bh=14, float_=False
-    )
-
-    (x1, y), x2 = src.right, d1.left[0]
-    d.edge(f"M {x1 + 6} {y} H {x2 - 12}")
-    for a, b in [(d1, d2), (d2, d3), (d3, nf)]:
-        (x1, y), x2 = a.right, b.left[0]
-        d.edge(f"M {x1 + 6} {y} H {x2 - 12}", label="không", label_at=((x1 + x2) / 2, y - 12), color="#FCA5A5")
-    for a, b in [(d1, arx), (d2, cr), (d3, ss)]:
-        d.edge(
-            f"M {a.x} {a.bottom[1] + 34} V {b.top[1] - 8}",
-            label="có",
-            label_at=(a.x + 10, (a.bottom[1] + b.top[1]) / 2 + 18),
-            label_anchor="start",
-            color="#86EFAC",
-        )
-    bus = 548
-    for a in (arx, cr, ss):
-        d.edge(f"M {a.x} {a.bottom[1] + 30} V {bus}", arrow=False, color="#C4B5FD")
-    d.edge(f"M {arx.x} {bus} H {out.x} V {out.bottom[1] + 8}", color="#C4B5FD")
-    d.edge(f"M {nf.x} {nf.bottom[1] + 46} V {out.top[1] - 8}", color="#FCA5A5")
-    d.edge(f"M {out.right[0] + 6} {out.right[1]} H {llm.x} V {llm.top[1] - 8}", dotted=True, color=MUTED)
-    y0 = src.right[1]
-    paths = [
-        (f"M {src.x} {y0} H {d1.x} V {arx.cy} V {bus} H {out.x} V {out.cy}", "#DDD6FE"),
-        (f"M {src.x} {y0} H {d2.x} V {cr.cy} V {bus} H {out.x} V {out.cy}", "#C4B5FD"),
-        (f"M {src.x} {y0} H {d3.x} V {ss.cy} V {bus} H {out.x} V {out.cy}", "#A78BFA"),
-        (f"M {src.x} {y0} H {nf.x} V {out.cy}", "#FCA5A5"),
+    xs = (110, 270, 450, 630, 810, 950)
+    r1, r2, bus = 270, 440, 548
+    src = d.block(xs[0], r1, code="BIB", title="BibTeX", sub="bibtexparser v2")
+    d1 = d.block(xs[1], r1, code="?", title="arXiv id?")
+    d2 = d.block(xs[2], r1, code="?", title="DOI?")
+    d3 = d.block(xs[3], r1, code="?", title="Title?")
+    d4 = d.block(xs[4], r1, code="?", title="Any id?")
+    nf = d.block(xs[5], r1, code="∅", title="not_found", sub="ghi nhận thật", mono_title=True, key=True)
+    apis = [
+        d.block(xs[1], r2, code="ARX", title="arXiv API"),
+        d.block(xs[2], r2, code="DOI", title="CrossRef"),
+        d.block(xs[3], r2, code="S2", title="Sem. Scholar"),
+        d.block(xs[4], r2, code="OA", title="OpenAlex", sub="fallback"),
     ]
-    for i, (path, color) in enumerate(paths):
-        d.packet(path, color, 7, i * 1.75)
+    out = d.block(xs[5], bus - 8, code="OK", title="verified", sub="| possible_mismatch", mono_title=True)
+
+    d.link(src, d1)
+    for a, b in [(d1, d2), (d2, d3), (d3, d4), (d4, nf)]:
+        d.link(a, b, label="không")
+    for a, b in zip((d1, d2, d3, d4), apis, strict=True):
+        d.edge(f"M {a.x} {a.bottom[1] + 36} V {b.top[1] - 8}", label="có", at=(a.x + 10, 382), anchor="start")
+    # a lookup that finds nothing falls through to the next layer
+    ry = d1.right[1]
+    for i, api in enumerate(apis[:3]):
+        mx = (xs[i + 1] + xs[i + 2]) / 2
+        d.edge(f"M {api.right[0] + 8} {api.right[1]} H {mx} V {ry + 3}", dotted=True, arrow=False)
+    d.edge(f"M {apis[3].right[0] + 8} {apis[3].right[1]} H 880 V {ry + 4} H {nf.left[0] - 10}", dotted=True)
+    d.text(xs[1] + 44, r2 + 28, "không thấy", cls="u q", anchor="start", halo=True)
+    for a in apis:
+        d.edge(f"M {a.x} {r2 + 84} V {bus}", arrow=False)
+    d.edge(f"M {xs[1]} {bus} H {out.left[0] - 10}")
+    d.text((xs[1] + xs[3]) / 2, bus - 10, "tìm thấy → so tiêu đề (rapidfuzz)", anchor="middle", cls="u q", halo=True)
+
+    d.lane(662, 852, "L4", "RELEVANCE", "POST /citations/relevance · comment-only")
+    l4 = cols(4, M, W - M)
+    blocks = [
+        d.block(l4[0], 745, code="CLM", title="Claim context", sub="câu chứa \\cite{key}"),
+        d.block(l4[1], 745, code="ABS", title="Source abstract", sub="OpenAlex · S2"),
+        d.block(l4[2], 745, code="LLM", title="LLM judge", sub="quota-metered", sub2="json-repair → JSON", key=True),
+        d.block(l4[3], 745, code="V", title="Verdict", sub="supports · partial", sub2="unrelated · insufficient"),
+    ]
+    for a, b in zip(blocks, blocks[1:], strict=False):
+        d.link(a, b)
+
+    y0 = src.right[1]
+    for i, dec in enumerate((d1, d2, d3)):
+        d.packet(f"M {src.x} {y0} H {dec.x} V {bus} H {out.x}", 7, i * 1.75)
+    d.packet(f"M {src.x} {y0} H {nf.x}", 7, 5.25)
+    d.packet(f"M {l4[0]} {blocks[0].right[1]} H {l4[3]}", 6, 0.5)
     return d
 
 
 def persistence() -> Diagram:
     d = Diagram(
         "persistence",
-        1280,
-        500,
-        "Paper & Session Persistence",
-        "Ba lớp lưu trữ có chủ đích — UI phản hồi tức thì, PostgreSQL là nguồn sự thật",
-        pills=(("coalesced saves", BLUE), ("best-effort sync", VIOLET)),
-        glows=((0.5, 0.5, 0.6, "#0EA5E9", 0.14),),
+        630,
+        title="Paper & Session Persistence",
+        deck="Ba lớp lưu trữ có chủ đích — UI phản hồi tức thì, PostgreSQL là nguồn sự thật",
+        desk="BACKEND DESK",
+        fig="2.5",
+        kicker="STORAGE",
+        source="project-store.ts · sessions.py · paper_repository.py",
+        ticker=("COALESCED SAVES", "BEST-EFFORT SYNC", "POSTGRESQL = SOURCE OF TRUTH"),
     )
-    big = {"hw": 62, "bh": 28, "title_size": 16, "sub_size": 12.5}
-    fe = d.block(250, 275, BLUE, code="LS", title="Frontend cache", sub="localStorage · project-store", **big)
-    db = d.block(1010, 205, SKY, code="PG", title="PostgreSQL", sub="papers · users · audit", **big)
-    ss = d.block(640, 330, VIOLET, code="MEM", title="Session store", sub="in-memory · citations · revisions", **big)
-    (x1, y1), (x2, y2) = fe.right, db.left
-    d.edge(f"M {x1 + 6} {y1 - 6} H 560 V {y2} H {x2 - 12}", label="PATCH — coalesced", label_at=(700, y2 - 12))
+    big = {"hw": 56, "bh": 28, "title_size": 18}
+    fe = d.block(170, 290, code="LS", title="Frontend cache", sub="localStorage · project-store", **big)
+    db = d.block(
+        830,
+        290,
+        code="PG",
+        title="PostgreSQL",
+        sub="papers · users · suggestions",
+        sub2="ai_sessions · usage",
+        key=True,
+        **big,
+    )
+    ss = d.block(500, 470, code="MEM", title="Session store", sub="in-memory · citations · revisions", **big)
+    (x1, y1), (x2, _y2) = fe.right, db.left
+    d.edge(f"M {x1 + 8} {y1} H {x2 - 10}", label="PATCH /papers — coalesced", at=((x1 + x2) / 2, y1 - 11))
     d.edge(
-        f"M {x1 + 6} {y1 + 8} H 470 V {ss.left[1]} H {ss.left[0] - 12}",
-        label="best-effort",
-        label_at=(520, ss.left[1] - 12),
+        f"M {fe.x} {fe.bottom[1] + 72} V {ss.left[1]} H {ss.left[0] - 10}",
+        label="best-effort sync",
+        at=(fe.x + 12, ss.left[1] - 11),
+        anchor="start",
     )
     d.edge(
-        f"M {ss.right[0] + 6} {ss.right[1]} H 1160 V {db.right[1]} H {db.right[0] + 12}",
+        f"M {ss.right[0] + 8} {ss.right[1]} H 978 V {db.right[1]} H {db.right[0] + 10}",
         dotted=True,
-        color="#C4B5FD",
-        label="khi DB sẵn sàng",
-        label_at=(1150, ss.right[1] + 20),
-        label_anchor="end",
+        label="refresh khi DB sẵn sàng",
+        at=((ss.right[0] + 978) / 2, ss.right[1] - 11),
     )
-    d.packet(f"M {x1} {y1 - 6} H 560 V {y2} H {db.x}", "#BFDBFE", 4.5)
-    d.packet(f"M {x1} {y1 + 8} H 470 V {ss.left[1]} H {ss.x}", "#DDD6FE", 4.5, 1.6)
-    d.packet(f"M {ss.x} {ss.right[1]} H 1160 V {db.right[1]} H {db.x}", "#C4B5FD", 6, 3)
+    d.packet(f"M {fe.x} {y1} H {db.x}", 4.5)
+    d.packet(f"M {fe.x} {fe.bottom[1] + 60} V {ss.left[1]} H {ss.x}", 4.5, 1.6)
     return d
+
+
+# =============================================================================
+# Frontend desk
+# =============================================================================
+
+
+def frontend_routes() -> Diagram:
+    d = Diagram(
+        "frontend-routes",
+        800,
+        title="Frontend Routes & Components",
+        deck="File-based routing (TanStack Start) — editor shell ghép từ các panel độc lập",
+        desk="FRONTEND DESK",
+        fig="3.1",
+        kicker="ROUTES",
+        source="frontend/src/routes/",
+        ticker=("TANSTACK ROUTER", "REACT 19", "REQUIREAUTH()", "PDF LINKS: HTTP(S) · MAILTO"),
+    )
+    c = cols(6)
+    d.glane(212, 380, "01", "PUBLIC")
+    d.glane(390, 560, "02", "WORKSPACE", tint=True)
+    d.glane(570, 740, "03", "SHELL")
+    mt = {"mono_title": True}
+
+    def node(i, cy, code, title, sub, **kw):
+        return d.block(c[i], cy, code=code, title=title, sub=sub, **mt, **kw)
+
+    signin = node(0, 262, "IN", "/signin", "/signup · Google SSO")
+    tpl = node(1, 262, "TPL", "/templates", "gallery · public")
+    node(2, 262, "/", "/", "landing · /pricing …")
+    node(3, 262, "LNK", "/share/$token", "read-only snapshot")
+    node(4, 262, "?", "/latex-guide", "LaTeX primer")
+    node(5, 262, "MKT", "/features", "/about · /workflow …")
+
+    prj = node(0, 452, "PRJ", "/projects", "+ DOCX/PDF import")
+    ed = node(1, 452, "ED", "/editor", "?projectId=")
+    node(2, 452, "ME", "/profile", "/plan · /guide")
+    node(3, 452, "ADM", "/admin", "god admin only")
+    dfs = node(5, 452, "DEF", "/defense", "?projectId=")
+
+    shell = [
+        node(0, 632, "TEX", "LatexEditor", "+ inline diff"),
+        node(1, 632, "PDF", "PdfPreviewPanel", "PDF.js · SyncTeX"),
+        node(2, 632, "AI", "ChatOverlay", "Ario · SSE"),
+        node(3, 632, "KIT", "ToolsPanel", "versions · logic …"),
+        node(4, 632, "%", "Export dialog", "score + AI disclosure"),
+    ]
+    dchat = node(5, 632, "QA", "DefenseChat", "+ PdfPreviewPanel")
+
+    d.edge(f"M {signin.x:.1f} 355 V {prj.top[1] - 8:.1f}", label="JWT", at=(signin.x + 10, 386), anchor="start")
+    d.edge(f"M {tpl.x:.1f} 355 V {ed.top[1] - 8:.1f}", label="open", at=(tpl.x + 10, 386), anchor="start")
+    d.link(prj, ed)
+    jx = (c[1] + c[2]) / 2
+    d.edge(f"M {ed.right[0] + 8:.1f} {ed.right[1]:.1f} H {jx:.1f} V 408 H {dfs.x:.1f} V {dfs.top[1] - 8:.1f}")
+    d.text((c[3] + c[5]) / 2, 426, "defense", cls="m q", anchor="middle")
+    bus = 590
+    d.edge(f"M {ed.x:.1f} 533 V {bus}", arrow=False)
+    d.drops(bus, shell)
+    d.edge(f"M {dfs.x:.1f} 533 V {dchat.top[1] - 8:.1f}")
+    d.packet(f"M {c[0]:.1f} 300 V {prj.cy} H {ed.x:.1f} V {bus} H {c[4]:.1f} V {shell[4].cy}", 8)
+    d.packet(f"M {ed.x:.1f} {ed.right[1]:.1f} H {jx:.1f} V 408 H {dfs.x:.1f} V {dchat.cy}", 6, 2)
+    return d
+
+
+def auth_session() -> Diagram:
+    d = Diagram(
+        "auth-session",
+        720,
+        title="Auth & Session",
+        deck="JWT do FastAPI ký (HS256), lưu ở localStorage và gửi kèm Bearer cho mọi request cần đăng nhập",
+        desk="FRONTEND DESK",
+        fig="3.2",
+        kicker="AUTH",
+        source="auth_service.py · auth-store.ts",
+        ticker=("JWT 72H · REMEMBER 30D", "GOOGLE SSO", "SECRET ≥ 32 CHARS IN PROD", "WS: bearer.<jwt>"),
+    )
+    xs = (120, 320, 520, 720, 920)
+    big = {"hw": 38, "bh": 20, "title_size": 17}
+    nodes = [
+        d.block(xs[0], 330, code="IN", title="Sign in", sub="email code · Google", **big),
+        d.block(xs[1], 330, code="API", title="/auth/*", sub="verify · PyJWT", mono_title=True, **big),
+        d.block(xs[2], 330, code="JWT", title="Access token", sub="72h · remember 30d", key=True, **big),
+        d.block(xs[3], 330, code="LS", title="localStorage", sub="chia sẻ giữa các tab", **big),
+        d.block(xs[4], 330, code="API", title="/api/v1/*", sub="Authorization: Bearer", mono_title=True, **big),
+    ]
+    for a, b, lbl in zip(nodes, nodes[1:], ["credentials", "sign", "persist", "Bearer"], strict=False):
+        d.link(a, b, label=lbl)
+    d.edge(
+        f"M {nodes[4].x} {nodes[4].top[1] - 22} V 228 H {nodes[3].x} V {nodes[3].top[1] - 22}",
+        dotted=True,
+        label="401 → xoá session, đăng nhập lại",
+        at=((nodes[3].x + nodes[4].x) / 2, 221),
+    )
+    sec = d.block(
+        xs[1], 540, code="KEY", title="AUTH_SECRET_KEY", sub="prod: ≥ 32 ký tự, khác mặc định", mono_title=True
+    )
+    ws = d.block(xs[3], 540, code="WS", title="/ws/share/{token}", sub="subprotocol bearer.<jwt>", mono_title=True)
+    adm = d.block(xs[4], 540, code="ADM", title="get_admin_user", sub="god admin → 403 khác", mono_title=True)
+    d.text(ws.x, ws.bottom[1] + 26 + 19 + 18, "owner-only · 4401 / 4403", cls="u q", anchor="middle")
+    d.text(adm.x, adm.bottom[1] + 26 + 19 + 18, "/admin · /billing/upgrade", cls="u q", anchor="middle")
+    d.edge(
+        f"M {sec.x} {sec.top[1] - 8} V {nodes[1].bottom[1] + 66}",
+        dotted=True,
+        label="HS256",
+        at=(sec.x + 10, 465),
+        anchor="start",
+    )
+    d.edge(
+        f"M {nodes[3].x} {nodes[3].bottom[1] + 66} V {ws.top[1] - 8}",
+        label="live sync",
+        at=(ws.x + 10, 465),
+        anchor="start",
+    )
+    d.edge(
+        f"M {nodes[4].x} {nodes[4].bottom[1] + 66} V {adm.top[1] - 8}",
+        label="admin",
+        at=(adm.x + 10, 465),
+        anchor="start",
+    )
+    d.packet(f"M {nodes[0].x} {nodes[0].right[1]} H {nodes[4].x}", 6)
+    return d
+
+
+def template_gallery() -> Diagram:
+    d = Diagram(
+        "template-gallery",
+        660,
+        title="Template Gallery",
+        deck="Chọn template (IEEE, Springer LNCS, Elsevier) → tạo paper mới trong PostgreSQL → mở thẳng vào editor",
+        desk="FRONTEND DESK",
+        fig="3.3",
+        kicker="TEMPLATES",
+        source="template_store.py · template_builtins.py",
+        ticker=("GET /templates", "POST /templates/{id}/open", "IEEE · LNCS · ELSEVIER", "ADMIN CRUD"),
+    )
+    xs = (120, 365, 615, 880)
+    big = {"hw": 38, "bh": 20, "title_size": 17}
+    gal = d.block(xs[0], 300, code="TPL", title="/templates", sub="gallery · public", mono_title=True, **big)
+    lst = d.block(xs[1], 300, code="GET", title="GET /templates", sub="list · preview · PDF", mono_title=True, **big)
+    store = d.block(xs[2], 300, code="REG", title="template_store", sub="data/templates/", mono_title=True, **big)
+    d.text(store.x, store.bottom[1] + 26 + 19 + 18, "registry.json", cls="m q", anchor="middle")
+    seed = d.block(xs[3], 300, code="SD", title="Built-ins", sub="IEEE · LNCS · Elsevier", key=True, **big)
+    d.text(seed.x, seed.bottom[1] + 26 + 19 + 18, "+ admin CRUD", cls="u q", anchor="middle")
+    opn = d.block(xs[1], 500, code="NEW", title="Open as Template", sub="POST …/{id}/open", **big)
+    paper = d.block(xs[2], 500, code="PG", title="Paper mới", sub="PostgreSQL", **big)
+    ed = d.block(xs[3], 500, code="ED", title="/editor", sub="?projectId=", mono_title=True, **big)
+    d.link(gal, lst)
+    d.link(lst, store, label="read")
+    d.link(seed, store, label="seed")
+    d.edge(
+        f"M {gal.x} {gal.bottom[1] + 70} V {opn.left[1]} H {opn.left[0] - 10}",
+        label="Bearer",
+        at=(gal.x + 12, opn.left[1] - 11),
+        anchor="start",
+    )
+    d.link(opn, paper, label="create")
+    d.link(paper, ed, label="open")
+    d.edge(
+        f"M {store.x} {store.bottom[1] + 74} V {paper.top[1] - 8}",
+        dotted=True,
+        label="copy files",
+        at=(store.x + 10, 446),
+        anchor="start",
+    )
+    d.packet(f"M {gal.x} {gal.right[1]} H {store.x}", 5)
+    d.packet(f"M {gal.x} {gal.bottom[1]} V {opn.left[1]} H {ed.x}", 6, 2.5)
+    return d
+
+
+def export_gate() -> Diagram:
+    d = Diagram(
+        "export-gate",
+        710,
+        title="Publication Score & Export Gate",
+        deck="Trước khi tải PDF: nếu bản thảo đã đổi, chạy quick logic skim rồi chấm điểm + báo cáo AI disclosure",
+        desk="FRONTEND DESK",
+        fig="3.4",
+        kicker="EXPORT",
+        source="useEditorTools.ts · paper-score.ts",
+        ticker=("GATE AUDIT: ABSTRACT · INTRO · CONCLUSION", "COMPUTEPAPERSCORE", "AI DISCLOSURE"),
+    )
+    big = {"hw": 38, "bh": 20, "title_size": 17}
+    row = 370
+    exp = d.block(110, row, code="PDF", title="Export", sub="mở hộp thoại xuất", **big)
+    gate = d.block(310, row, code="?", title="Bản thảo đã đổi?", sub="so fingerprint", pulse=True, **big)
+    skim = d.block(520, 250, code="L", title="Quick logic skim", sub="gate mode · /chat/stream", key=True, **big)
+    score = d.block(720, row, code="%", title="computePaperScore", sub="4 dimensions", mono_title=True, **big)
+    dialog = d.block(925, row, code="UI", title="Score dialog", sub="ring · dimensions", **big)
+    disc = d.block(720, 572, code="AI", title="AI Disclosure", sub="GET …/ai-disclosure", **big)
+    pdf = d.block(925, 572, code="PDF", title="Tải PDF", sub="khi PDF đã compile", **big)
+    d.text(score.x, score.bottom[1] + 26 + 19 + 18, "structure · completeness", cls="u q", anchor="middle")
+    d.text(score.x, score.bottom[1] + 26 + 19 + 36, "citations · logic", cls="u q", anchor="middle")
+    d.link(exp, gate)
+    d.link(gate, score, label="không")
+    d.edge(
+        f"M {gate.x} {gate.top[1] - 8} V {skim.left[1]} H {skim.left[0] - 10}",
+        label="có",
+        at=(gate.x + 12, skim.left[1] - 11),
+        anchor="start",
+    )
+    d.edge(f"M {skim.right[0] + 8} {skim.right[1]} H {score.x} V {score.top[1] - 8}")
+    d.link(score, dialog)
+    d.edge(
+        f"M {disc.right[0] + 8} {disc.right[1]} H 830 V {dialog.left[1] + 16} H {dialog.left[0] - 10}",
+        label="report",
+        at=(838, 512),
+        anchor="start",
+    )
+    d.edge(f"M {dialog.x} {dialog.bottom[1] + 66} V {pdf.top[1] - 8}")
+    y = exp.right[1]
+    d.packet(f"M {exp.x} {y} H {gate.x} V {skim.left[1]} H {score.x} V {y} H {dialog.x}", 7)
+    d.packet(f"M {exp.x} {y} H {dialog.x} V {pdf.cy}", 6, 3.5)
+    return d
+
+
+def defense_flow() -> Diagram:
+    parts = [
+        ("Researcher", "USR"),
+        ("/defense", "UI"),
+        ("defense_stream", "SSE"),
+        ("defense_quota", "Q"),
+        ("LLM persona", "AI"),
+    ]
+    msgs = [
+        (0, 1, "Mở Defense từ project / editor", False),
+        (1, 1, "Compile PDF preview", False),
+        (0, 1, "Chọn chế độ Proactive hoặc Q&A", False),
+        (1, 2, "POST /defense/stream  (Bearer)", False),
+        (2, 3, "assert_defense_allowed — lượt theo tier", False),
+        (2, 4, "council prompt + manuscript context", False),
+        (4, 2, "streamed tokens", True),
+        (2, 1, "SSE activity · token … done", True),
+        (2, 3, "record_defense_turn (bỏ qua nếu disconnect)", False),
+        (1, 1, "Highlight + deep-link trích dẫn trong PDF", False),
+    ]
+    return _sequence(
+        "defense-flow",
+        parts=parts,
+        msgs=msgs,
+        x_span=(150, 900),
+        title="Defense Mode",
+        deck="Phản biện thử (mock viva) — hội đồng AI đặt câu hỏi dựa trên chính bản thảo",
+        desk="FRONTEND DESK",
+        fig="3.5",
+        kicker="DEFENSE",
+        source="defense_stream.py · defense_quota.py",
+        ticker=("SSE", "QUOTA PER TIER", "NO CHARGE ON DISCONNECT", "PDF DEEP-LINKS"),
+        aria="Defense mode sequence between researcher, defense page, defense stream service, defense quota and "
+        "LLM persona",
+    )
+
+
+# =============================================================================
+# Integrity desk
+# =============================================================================
 
 
 def guardrails() -> Diagram:
     d = Diagram(
         "guardrails",
-        1280,
-        780,
-        "Guardrail Architecture",
-        "4 lớp phòng vệ — một vi phạm ở lớp 2 sẽ bị chặn trước khi tới tay tác giả",
-        pills=(("blocking flags", RED), ("audit trail", AMBER)),
-        glows=((0.6, 0.45, 0.6, "#DC2626", 0.12), (0.25, 0.3, 0.5, "#7C3AED", 0.14)),
+        1050,
+        title="Guardrail Architecture",
+        deck="4 lớp phòng vệ cho output của AI — vi phạm ở lớp 2 bị chặn trước khi tới tay tác giả",
+        desk="INTEGRITY DESK",
+        fig="4.1",
+        kicker="GUARDRAILS",
+        source="src/services/guardrails/ · docs/GUARDRAILS.md",
+        ticker=("BLOCKING FLAGS", "AUDIT TRAIL", "QUOTA ON EVERY LLM PATH", "SANDBOXED COMPILE"),
     )
     lanes = [
-        (150, 290, VIOLET, "L1", "PROMPT", "Ràng buộc trước khi gọi LLM"),
-        (304, 444, RED, "L2", "OUTPUT CHECK", "Kiểm tra output của LLM"),
-        (458, 598, TEAL, "L3", "DIFF DISPLAY", "Không ghi đè âm thầm"),
-        (612, 752, AMBER, "L4", "AUDIT LOG", "Lưu vết mọi quyết định"),
+        (212, 352, "L1", "PROMPT", "ràng buộc trước khi gọi LLM"),
+        (352, 492, "L2", "OUTPUT CHECK", "kiểm tra output của LLM"),
+        (492, 632, "L3", "DIFF DISPLAY", "không ghi đè âm thầm"),
+        (632, 772, "L4", "AUDIT", "lưu vết mọi quyết định"),
     ]
-    for lane in lanes:
-        d.lane(*lane)
-    spine = 300
     items = [
-        [("SYS", "System prompt rules", "prompts.default.yaml"), ("INJ", "Injection guard", "request_guard.py")],
+        [
+            ("SYS", "System prompt", "prompts.default.yaml"),
+            ("INJ", "Injection guard", "prompt_injection.py"),
+            ("REQ", "Request guard", "prompt-leak refusal"),
+        ],
         [
             ("NUM", "Numeric drift", "metric changes"),
             ("LEN", "Length / semantic", "rewrite bounds"),
-            ("SCP", "Editor scope", "off-topic guard"),
-            ("SAN", "Output sanitize", "strip unsafe"),
+            ("SCP", "Edit scope", "validate_proposed_edit"),
+            ("SAN", "Output sanitize", "strip meta text"),
         ],
-        [("DIF", "Line diff", "no silent overwrite"), ("BLK", "Blocking flags", "disable Accept")],
         [
-            ("REV", "Revision history", "AuditLog DB"),
-            ("ACK", "Accept → API", "revision record"),
+            ("DIF", "Line diff", "no silent overwrite"),
+            ("BLK", "Blocking flags", "Accept disabled"),
+            ("ACC", "Accept / Reject", "Ctrl+Enter · Esc"),
+        ],
+        [
+            ("REV", "Revision history", "suggestions table"),
+            ("ACK", "Accept → API", "POST /revisions"),
             ("FPR", "Score fingerprint", "publication gate"),
+            ("AI", "AI Disclosure", "contribution report"),
         ],
     ]
-    xs = [440, 640, 840, 1040]
-    for (top, bottom, accent, *_r), row in zip(lanes, items, strict=True):
-        cy = top + 46
-        d.edge(f"M {spine} {cy + 9} H {xs[len(row) - 1]}", color=shade(accent, 1.2), arrow=False)
-        for x, (code, title, sub) in zip(xs[: len(row)], row, strict=True):
-            d.block(x, cy, accent, code=code, title=title, sub=sub, label_y=cy + 62)
-    for (_t, b0, *_), (t1, *_r) in zip(lanes, lanes[1:]):
-        d.edge(f"M {spine} {b0 - 30} V {t1 + 30}")
-    d.add("edges", f'<path d="M {spine} 186 V 721" fill="none" stroke="{EDGE_BASE}" stroke-width="2"/>')
-    d.text(spine, 172, "LLM request", size=11.5, fill=MUTED, anchor="middle", mono=True, layer="edges")
-    # a clean packet passes every layer; a second one is blocked at L2
-    d.packet(f"M {spine} 186 V 721", "#E9D5FF", 7)
+    spine = 66
+    xs = (230, 420, 610, 800)
+    for i, ((top, bottom, num, name, cap), row) in enumerate(zip(lanes, items, strict=True)):
+        d.lane(top, bottom, num, name, cap, tint=i % 2 == 1, x0=spine + 16)
+        cy = top + 62
+        d.edge(f"M {spine} {cy + 7.5} H {xs[len(row) - 1]}", arrow=False, flow=False)
+        for x, (code, title, sub) in zip(xs, row, strict=False):
+            d.block(x, cy, code=code, title=title, sub=sub, key=(num == "L2" and code == "NUM"))
+    d.add("edges", f'<path d="M {spine} 228 V 760" class="tk"/>')
+    d.text(spine, 219, "LLM", cls="m q", anchor="middle")
+    d.packet(f"M {spine} 228 V 760", 7)
+    blk = (spine, 422)
     d.add(
         "packets",
-        f'<circle r="4.5" fill="#FCA5A5" filter="url(#dotglow)" opacity="0">'
+        f'<g class="pk" opacity="0"><path d="M0,-5 L5,0 L0,5 L-5,0z" class="r"/>'
         f'<animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.05;0.4;0.43;1" dur="7s" begin="3.5s" '
-        f'repeatCount="indefinite"/><animateMotion path="M {spine} 186 V 359" keyPoints="0;1;1" keyTimes="0;0.4;1" '
-        f'calcMode="linear" dur="7s" begin="3.5s" repeatCount="indefinite"/></circle>',
+        f'repeatCount="indefinite"/><animateMotion path="M {spine} 228 V {blk[1]}" keyPoints="0;1;1" '
+        f'keyTimes="0;0.4;1" calcMode="linear" dur="7s" begin="3.5s" repeatCount="indefinite"/></g>',
     )
-    blk = (spine, 359)
-    total = 7
     d.add(
         "packets",
-        f'<g opacity="0" transform="translate({blk[0]} {blk[1]})"><circle r="15" fill="#7F1D1D" stroke="{RED}" stroke-width="2"/>'
-        f'<path d="M -6 -6 L 6 6 M 6 -6 L -6 6" stroke="#FECACA" stroke-width="2.6" stroke-linecap="round"/>'
-        f'<text x="-26" y="5" text-anchor="end" font-family="{MONO}" font-size="11.5" fill="#FCA5A5">blocked</text>'
-        f'<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4;0.43;0.75;0.8" dur="{total}s" begin="3.5s" '
-        f'repeatCount="indefinite"/></g>',
+        f'<g class="pk" opacity="0" transform="translate({blk[0]} {blk[1]})"><rect x="-14" y="-14" width="28" '
+        f'height="28" class="r"/><path d="M -6 -6 L 6 6 M 6 -6 L -6 6" class="ln" style="stroke:var(--on)" '
+        f'stroke-width="2.6"/><text x="22" y="5" class="m r h" font-size="14" font-weight="700">BLOCKED</text>'
+        f'<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4;0.43;0.75;0.8" dur="7s" '
+        f'begin="3.5s" repeatCount="indefinite"/></g>',
     )
+
+    # platform hardening sidebar
+    y0 = 792
+    d.panel(M, y0, W - 2 * M, 198, "PLATFORM HARDENING", "ngoài 4 lớp — bảo vệ hạ tầng & chi phí", red=True)
+    notes = [
+        ("LLM quota", "quota_policy.py trên mọi đường LLM"),
+        ("TeX sandbox", "env allowlist · openin/openout = p"),
+        ("Compile caps", "≤ 64 MB body/gzip · main_file an toàn"),
+        ("Rate limit key", "user đã xác thực, không theo token"),
+        ("Security headers", "nosniff · DENY · CSP · HSTS prod"),
+        ("Share WS", "owner-only · bearer.<jwt> · caps"),
+        ("Prod settings", "AUTH_SECRET_KEY ≥ 32 ký tự"),
+        ("Billing · PDF", "demo checkout off · link http(s)"),
+    ]
+    for i, (title, desc) in enumerate(notes):
+        colx = M + 20 + (i // 4) * 480
+        y = y0 + 58 + (i % 4) * 36
+        d.add("labels", f'<rect x="{colx}" y="{y - 10}" width="8" height="8" class="r"/>')
+        d.text(colx + 18, y, title, cls="m i", weight=700)
+        d.text(colx + 18 + mono_w(title) + 12, y, desc, cls="u q")
     return d
+
+
+# =============================================================================
+# Operations desk
+# =============================================================================
 
 
 def deployment() -> Diagram:
     d = Diagram(
         "deployment",
-        1280,
-        620,
-        "Deployment",
-        "Hai service trên Google Cloud Run (asia-east1) — custom domain, secrets qua Secret Manager",
-        pills=(("Cloud Run", BLUE), ("Docker", SKY), ("HTTPS", GREEN)),
-        glows=((0.45, 0.5, 0.6, "#2563EB", 0.16), (0.85, 0.4, 0.4, "#DB2777", 0.12)),
+        760,
+        title="Deployment",
+        deck="Hai service trên Google Cloud Run (asia-east1) — custom domain, secrets qua Secret Manager",
+        desk="OPERATIONS DESK",
+        fig="5.1",
+        kicker="DEPLOY",
+        source="scripts/deploy-cloudrun-*.ps1",
+        ticker=("CLOUD RUN", "DOCKER", "HTTPS + HSTS", "SECRET MANAGER", "CI DOES NOT DEPLOY"),
     )
-    d.panel(36, 170, 200, 400, SOFTBLUE, "CLIENT")
-    d.panel(262, 170, 520, 400, BLUE, "GOOGLE CLOUD RUN", "asia-east1")
-    d.panel(808, 170, 436, 120, SKY, "DATA")
-    d.panel(808, 310, 436, 260, PINK, "EXTERNAL")
-    big = {"hw": 50, "bh": 24, "title_size": 15, "sub_size": 12}
-    browser = d.block(136, 370, SOFTBLUE, code="WEB", title="Browser", sub="researcher", **big)
-    fe = d.block(400, 370, BLUE, code="SSR", title="arionear-web", sub="TanStack Start · Nitro SSR", **big)
-    be = d.block(640, 370, GREEN, code="API", title="arionear-api", sub="FastAPI + TeX Live", **big)
-    small = {"hw": 30, "bh": 17, "label": "right", "title_size": 13.5, "sub_size": 11.5}
-    db = d.block(880, 220, SKY, code="PG", title="PostgreSQL", sub="Prisma Accelerate", **small)
-    llm = d.block(880, 370, PINK, code="LLM", title="LLM Providers", sub="Z.AI · Google · OpenRouter · …", **small)
-    sch = d.block(880, 445, PINK, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · Semantic Scholar", **small)
-    smtp = d.block(880, 520, PINK, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **small)
-    (x1, y1), x2 = browser.right, fe.left[0]
-    d.edge(f"M {x1 + 6} {y1} H {x2 - 12}", label="HTTPS", label_at=((x1 + x2) / 2, y1 - 12))
-    (x1, y1), x2 = fe.right, be.left[0]
-    d.edge(f"M {x1 + 6} {y1} H {x2 - 12}", label="REST · SSE · WS", label_at=((x1 + x2) / 2, y1 - 12))
-    trunk = 760
+    d.panel(M, 214, 160, 470, "CLIENT")
+    d.panel(214, 214, 430, 470, "GOOGLE CLOUD", "Cloud Run · asia-east1")
+    d.panel(658, 214, 342, 128, "DATA")
+    d.panel(658, 356, 342, 328, "EXTERNAL")
+    big = {"hw": 40, "bh": 20, "title_size": 17}
+    browser = d.block(120, 370, code="WEB", title="Browser", sub="researcher", **big)
+    fe = d.block(
+        320,
+        370,
+        code="SSR",
+        title="arionear-web",
+        sub="TanStack · Nitro",
+        sub2="arionear.id.vn",
+        mono_title=True,
+        **big,
+    )
+    be = d.block(
+        530,
+        370,
+        code="API",
+        title="arionear-api",
+        sub="FastAPI + TeX Live",
+        sub2="api.arionear.id.vn",
+        mono_title=True,
+        key=True,
+        **big,
+    )
+    build = d.block(320, 590, code="CB", title="Cloud Build", sub="gcloud builds submit")
+    secrets = d.block(530, 590, code="KEY", title="Secret Manager", sub="--set-secrets")
+    right = {"label": "right"}
+    db = d.block(700, 282, code="PG", title="PostgreSQL", sub="DIRECT_DATABASE_URL", **right)
+    targets = [
+        db,
+        d.block(700, 420, code="LLM", title="LLM Providers", sub="Z.AI · Gemini · OpenRouter …", **right),
+        d.block(700, 510, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · S2 · OpenAlex", **right),
+        d.block(700, 600, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **right),
+    ]
+    d.link(browser, fe, label="HTTPS")
+    d.link(fe, be, label="REST · SSE")
+    trunk = 651
     bx, by = be.right
-    d.edge(f"M {bx + 6} {by} H {trunk}", arrow=False)
-    d.edge(f"M {trunk} {db.left[1]} V {smtp.left[1]}", arrow=False)
-    for target in (db, llm, sch, smtp):
-        d.edge(f"M {trunk} {target.left[1]} H {target.left[0] - 10}")
-    d.packet(f"M {browser.x} {browser.right[1]} H {be.x}", "#BFDBFE", 4.5)
-    for i, target in enumerate((db, llm, sch, smtp)):
-        d.packet(f"M {be.x} {by} H {trunk} V {target.left[1]} H {target.x}", "#FBCFE8", 4, 1.2 + i * 0.9)
+    d.edge(f"M {bx + 8} {by} H {trunk}", arrow=False)
+    d.edge(f"M {trunk} {db.left[1]} V {targets[-1].left[1]}", arrow=False)
+    for t in targets:
+        d.edge(f"M {trunk} {t.left[1]} H {t.left[0] - 10}")
+    d.edge(
+        f"M {build.x} {build.top[1] - 8} V {fe.bottom[1] + 88}",
+        dotted=True,
+        label="image",
+        at=(build.x + 10, 520),
+        anchor="start",
+    )
+    d.edge(f"M {build.right[0] + 8} {build.right[1]} H 470 V {be.bottom[1] + 88}", dotted=True)
+    d.edge(
+        f"M {secrets.x} {secrets.top[1] - 8} V {be.bottom[1] + 88}",
+        dotted=True,
+        label="secrets",
+        at=(secrets.x + 10, 520),
+        anchor="start",
+    )
+    d.packet(f"M {browser.x} {browser.right[1]} H {be.x}", 4.5)
+    for i, t in enumerate(targets):
+        d.packet(f"M {be.x} {by} H {trunk} V {t.left[1]} H {t.x}", 4, 1.2 + i * 0.9)
+    return d
+
+
+def ci_cd() -> Diagram:
+    d = Diagram(
+        "ci-cd",
+        1102,
+        title="CI/CD Pipeline",
+        deck="Pre-commit gate cục bộ → GitHub Actions kiểm tra mọi push/PR; tag vX.Y.Z tạo Release — không deploy",
+        desk="OPERATIONS DESK",
+        fig="5.2",
+        kicker="CI/CD",
+        source=".github/workflows/ · .pre-commit-config.yaml",
+        ticker=("NO DEPLOYMENT", "PUSH: FALSE", "PYTHON 3.11 + 3.12", "NODE 22", "WEEKLY CRON"),
+        aria="CI/CD pipeline: pre-commit gate, push or pull request, then CI, Security, Docker and LaTeX workflows; "
+        "a version tag creates a GitHub Release; Dependabot opens update PRs; nothing is deployed",
+    )
+    xs = cols(5, GUTTER, W - M)
+    top = d.block
+    dev = top(xs[0], 262, code="DEV", title="Developer", sub="git commit")
+    pre = top(
+        xs[1], 262, code="PC", title="pre-commit", sub="ruff · prettier · eslint", sub2="hygiene hooks", mono_title=True
+    )
+    push = top(xs[2], 262, code="GH", title="push · PR", sub="main · pull_request", key=True, pulse=True)
+    mk = top(xs[3], 262, code="MK", title="make ci", sub="CI checks, cục bộ", mono_title=True)
+    bot = top(xs[4], 262, code="BOT", title="Dependabot", sub="pip · npm weekly", sub2="actions monthly")
+    d.link(dev, pre)
+    d.link(pre, push)
+    d.edge(
+        f"M {mk.left[0] - 8} {mk.left[1]} H {push.right[0] + 10}",
+        dotted=True,
+        label="tuỳ chọn",
+        at=((mk.x + push.x) / 2, mk.left[1] - 11),
+    )
+    d.edge(
+        f"M {bot.x} {bot.top[1] - 8} V 226 H {push.x + 12} V {push.top[1] - 10}",
+        dotted=True,
+        label="update PRs",
+        at=((bot.x + push.x) / 2, 220),
+    )
+
+    spine = M + 18
+    tops = (382, 550, 718, 886)
+    bands = [
+        ("CI", "ci.yml — push main · PR"),
+        ("SECURITY", "security.yml — push · PR · weekly"),
+        ("DOCKER", "docker.yml — path filters · weekly"),
+        ("LATEX · RELEASE", "latex.yml · release.yml — tag v*.*.*"),
+    ]
+    for i, (t, (name, cap)) in enumerate(zip(tops, bands, strict=True)):
+        d.lane(t, t + 162, f"{i + 1:02d}", name, cap, tint=i % 2 == 1, x0=spine + 14)
+    d.edge(f"M {push.x} {push.bottom[1] + 54} V 368 H {spine} V {tops[-1] + 40}", arrow=False)
+
+    def band(t, jobs, *, chain=()):
+        cy = t + 74
+        boxes = [
+            d.block(x, cy, code=code, title=title, sub=sub, mono_title=mono, muted=code == "∅")
+            for x, (code, title, sub, mono) in zip(xs, jobs, strict=False)
+        ]
+        feed = [b for i, b in enumerate(boxes) if i not in {j for _a, j in chain}]
+        d.drops(t + 40, feed, x_from=spine)
+        for a, b in chain:
+            d.link(boxes[a], boxes[b])
+        return boxes
+
+    ci = band(
+        tops[0],
+        [
+            ("RUF", "Ruff", "check · format", False),
+            ("PY", "pytest", "3.11 + 3.12 · coverage", True),
+            ("FE", "Frontend", "lint · tsc · vitest · build", False),
+            ("DB", "Prisma", "migrate deploy · drift", False),
+            ("PG", "Postgres 16", "service container", False),
+        ],
+        chain=((3, 4),),
+    )
+    sec = band(
+        tops[1],
+        [
+            ("CQL", "CodeQL", "python · js/ts", False),
+            ("PIP", "pip-audit", "requirements.txt", True),
+            ("NPM", "npm audit", "prod deps · high", True),
+            ("GL", "gitleaks", "secret scan", True),
+            ("DEP", "Dep. review", "pull requests only", False),
+        ],
+    )
+    band(
+        tops[2],
+        [
+            ("API", "API image", "FastAPI + TeX Live", False),
+            ("OK", "Smoke test", "/health · /compile/status", False),
+            ("WEB", "Web image", "TanStack · Nitro", False),
+            ("OK", "Smoke test", "GET / → HTML", False),
+            ("∅", "Nothing pushed", "push: false", False),
+        ],
+        chain=((0, 1), (2, 3)),
+    )
+    last = band(
+        tops[3],
+        [
+            ("TEX", "TeX Live", "apt texlive-*", False),
+            ("PY", "pytest", "full suite · no skips", True),
+            ("TAG", "tag vX.Y.Z", "git push --tags", True),
+            ("GH", "gh release", "--generate-notes", True),
+            ("REL", "GitHub Release", "không deploy", False),
+        ],
+        chain=((0, 1), (2, 3), (3, 4)),
+    )
+    d.line(xs[1] + 92, tops[3] + 52, xs[1] + 92, tops[3] + 156, opacity=0.4, layer="lanes")
+    head = f"M {push.x} {push.cy} V 368 H {spine}"
+    d.packet(f"M {dev.x} {dev.right[1]} H {push.x} V 368 H {spine} V {tops[0] + 40} H {xs[4]} V {ci[4].cy}", 10)
+    d.packet(f"{head} V {tops[1] + 40} H {xs[2]} V {sec[2].cy}", 9, 3)
+    d.packet(f"{head} V {tops[3] + 40} H {xs[2]} V {last[2].cy} H {xs[4]}", 10, 6)
     return d
 
 
@@ -1352,6 +1676,7 @@ DIAGRAMS = {
     "template-gallery": template_gallery,
     "auth-session": auth_session,
     "citation-verifier": citation_verifier,
+    "ci-cd": ci_cd,
 }
 
 
@@ -1364,7 +1689,7 @@ def main(argv: list[str]) -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name in names:
         path = DIAGRAMS[name]().save()
-        print(f"wrote {path.relative_to(OUT_DIR.parents[1])}")
+        print(f"wrote {path.relative_to(OUT_DIR.parents[1])} ({path.stat().st_size / 1024:.1f} KB)")
     return 0
 
 
