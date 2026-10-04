@@ -65,12 +65,7 @@ export type PeerReviewRequest = {
 };
 
 export type PeerReviewErrorCode =
-  | "quota_exceeded"
-  | "llm_error"
-  | "parse_failed"
-  | "timeout"
-  | "network"
-  | "http";
+  "quota_exceeded" | "llm_error" | "parse_failed" | "timeout" | "network" | "http";
 
 export class PeerReviewApiError extends Error {
   readonly code: PeerReviewErrorCode;

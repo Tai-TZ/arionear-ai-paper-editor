@@ -1,15 +1,7 @@
 import type { UiLanguage } from "@/lib/researcher-profile";
 
 export type GuideDemoId =
-  | "projects"
-  | "editor"
-  | "chat"
-  | "compile"
-  | "defense"
-  | "account"
-  | "slash"
-  | "tools"
-  | "score";
+  "projects" | "editor" | "chat" | "compile" | "defense" | "account" | "slash" | "tools" | "score";
 
 export type GuideStep = {
   id: GuideDemoId;

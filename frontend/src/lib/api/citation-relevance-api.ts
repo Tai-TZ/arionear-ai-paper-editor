@@ -12,11 +12,7 @@ export type CitationRelevanceVerdict = "supports" | "partial" | "unrelated" | "i
 
 /** Why a verdict was produced; explains `insufficient_info` without inventing text. */
 export type CitationRelevanceReason =
-  | "judged"
-  | "not_cited"
-  | "no_abstract"
-  | "llm_error"
-  | "invalid_output";
+  "judged" | "not_cited" | "no_abstract" | "llm_error" | "invalid_output";
 
 export type CitationRelevanceItem = {
   key: string;

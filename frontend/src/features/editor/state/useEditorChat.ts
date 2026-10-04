@@ -817,8 +817,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
               file: editFile,
               section: e.section,
               applyMode: (e.apply_mode ?? result.apply_mode ?? "selection") as
-                | "selection"
-                | "document",
+                "selection" | "document",
               originalText: anchor ? fileContent.slice(anchor.start, anchor.end) : e.original_text,
               replacementText: anchor
                 ? clampSelectionReplacement(

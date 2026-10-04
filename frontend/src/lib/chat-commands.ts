@@ -2,13 +2,7 @@ import type { UiLanguage } from "@/lib/researcher-profile";
 import { getChatSlashCommands, getSlashDefaultMessage } from "@/lib/chat-commands-i18n";
 
 export type ChatSlashTask =
-  | "style"
-  | "structure"
-  | "logic"
-  | "citation"
-  | "chat"
-  | "edit"
-  | "template";
+  "style" | "structure" | "logic" | "citation" | "chat" | "edit" | "template";
 
 export type SlashCommandDef = {
   /** Shown in menu and used for filter prefix (may include spaces, e.g. "logic full"). */
