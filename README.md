@@ -8,6 +8,8 @@
 
 [![CI](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml)
 [![Security](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml)
+[![Docker](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml)
+[![LaTeX](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml)
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -18,7 +20,7 @@
 ![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=for-the-badge&logo=latex&logoColor=white)
 ![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 
-[Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Cấu trúc](#-cấu-trúc-thư-mục)
+[Giao diện](#️-giao-diện) · [Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Cấu trúc](#-cấu-trúc-thư-mục)
 
 </div>
 
@@ -42,6 +44,50 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 | 🛡️ | **Integrity Guard** | Không thay đổi ý nghĩa khoa học, không bịa dữ liệu, kết quả hay trích dẫn |
 | 🧱 | **Guardrail 4 lớp** | Prompt constraints → kiểm tra numeric drift / độ dài → Human Gate → audit log |
 | 🔌 | **Model-agnostic** | Chọn provider/model ngay trong editor; admin cấu hình platform keys với failover theo độ ưu tiên |
+
+---
+
+## 🖼️ Giao diện
+
+<p align="center">
+  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Arionear: đoạn mở đầu được Ario viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
+</p>
+<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Ario viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Arionear theo phong cách báo in">
+  <br><sub><b>Trang chủ</b> — phong cách báo in, demo phiên biên tập trực tiếp</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Ario">
+  <br><sub><b>Dark mode</b> — cùng phiên biên tập ở giao diện tối</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/04-defense.webp" alt="Defense Mode: hội đồng AI đặt câu hỏi phản biện kèm link tới đoạn trong PDF">
+  <br><sub><b>Defense Mode</b> — hội đồng AI hỏi bám sát bài, link nhảy thẳng tới đoạn liên quan trong PDF</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/06-templates.webp" alt="Template gallery với mẫu IEEE, Springer LNCS và Elsevier">
+  <br><sub><b>Template gallery</b> — IEEE, Springer LNCS, Elsevier</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/05-projects.webp" alt="Danh sách dự án của nhà nghiên cứu">
+  <br><sub><b>Dự án</b> — bàn làm việc của nhà nghiên cứu</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/07-admin.webp" alt="Admin console: người dùng, token và chi phí LLM">
+  <br><sub><b>Admin console</b> — người dùng, token, chi phí và chính sách LLM</sub>
+</td>
+</tr>
+</table>
+
+<sub>Ảnh chụp từ bản chạy local với dữ liệu demo; phản hồi AI trong ảnh lấy từ một LLM giả lập (OpenAI-compatible) để có thể tái lập.</sub>
 
 ---
 
@@ -81,7 +127,7 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 - Compile PDF phía server (TeX Live) + **SyncTeX** nhảy qua lại code ↔ PDF
 - Import **Overleaf ZIP**, **Word (.docx)** và **PDF** (text) thành LaTeX
 - **Template gallery**: IEEE, Springer LNCS, Elsevier (elsarticle)
-- Chia sẻ bản thảo bằng **link read-only** (Yjs + WebSocket)
+- Chia sẻ bản thảo bằng **link read-only**; đồng bộ live (Yjs + WebSocket) chỉ mở cho chủ sở hữu
 
 </td>
 <td width="50%" valign="top">
@@ -223,12 +269,15 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 | `GOOGLE_API_KEY` / `OPENROUTER_API_KEY` / … | ✅ | Ít nhất một key khớp với `LLM_PROVIDER` |
 | `DIRECT_DATABASE_URL` | ✅ | PostgreSQL TCP cho FastAPI / SQLAlchemy |
 | `DATABASE_URL` | ✅ | URL cho Prisma CLI (có thể là `prisma+postgres://`) |
-| `AUTH_SECRET_KEY` | ✅ | JWT secret — tạo bằng `openssl rand -hex 32` |
+| `AUTH_SECRET_KEY` | ✅ | JWT secret — tạo bằng `openssl rand -hex 32`; production từ chối khởi động nếu để mặc định hoặc ngắn hơn 32 ký tự |
+| `APP_ENV` · `LOG_LEVEL` | | `production` bật kiểm tra cấu hình, HSTS và log JSON (Cloud Logging); `development` log dạng text |
 | `FRONTEND_BASE_URL` · `BACKEND_BASE_URL` · `CORS_ORIGINS` | | URL công khai và origins được phép |
 | `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | | Đăng nhập Google SSO |
 | `SMTP_*` | | Gửi email xác minh (dev: mã in ra log) |
+| `BILLING_DEMO_CHECKOUT` | | Bật checkout QR demo (không thu tiền) — mặc định **tắt** ở production |
+| `PLATFORM_REQUEST_TIMEOUT_SEC` · `GCP_PROJECT_ID` | | Giới hạn thời gian request của nền tảng (Cloud Run: 300s) · gắn log với Cloud Trace |
 | `LANGCHAIN_API_KEY` · `LANGCHAIN_TRACING_V2` | | LangSmith tracing |
-| `VITE_API_URL` | | API URL khi build frontend production |
+| `VITE_API_URL` | | API URL khi build frontend production (bỏ trống → cùng origin `/api/v1`) |
 
 ---
 
@@ -275,10 +324,10 @@ Tất cả endpoint nằm dưới prefix `/api/v1`. Tài liệu tương tác (Sw
 | | `POST /import/document` | Import DOCX / PDF → LaTeX |
 | | `GET /papers/{id}/ai-disclosure` | Báo cáo đóng góp của AI |
 | | `POST /revisions/{session}/{id}` | Ghi nhận Accept / Reject |
-| **Chia sẻ** | `/papers/{id}/share` · `WS /ws/share/{token}` | Link read-only realtime |
+| **Chia sẻ** | `/papers/{id}/share` · `GET /share/{token}` · `WS /ws/share/{token}` | Link read-only; WebSocket đồng bộ live chỉ cho chủ sở hữu (subprotocol `bearer.<token>`) |
 | **Tài khoản** | `/auth/*` · `/users/me/profile` · `/billing/*` | Đăng nhập, SSO, hồ sơ, gói dịch vụ |
 | **Quản trị** | `/admin/*` | Người dùng, LLM keys & policy, báo cáo chi phí |
-| **Hệ thống** | `GET /health` · `GET /status` · `GET /providers` | Health check, trạng thái agent, provider khả dụng |
+| **Hệ thống** | `GET /health` · `GET /ready` · `GET /status` · `GET /providers` | Liveness, readiness (DB + TeX), trạng thái agent, provider khả dụng |
 
 ---
 
