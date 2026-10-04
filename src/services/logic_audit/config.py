@@ -163,6 +163,17 @@ def logic_audit_runtime_flags(
     }
 
 
+# Seconds kept free under the platform request timeout to cancel the audit, build the partial report
+# and send the final SSE events.
+PLATFORM_TIMEOUT_HEADROOM_SEC = 15.0
+
+
+def _stream_timeout_cap_sec(settings) -> float:
+    """Upper bound for the audit stream budget: the configured max, never past the platform timeout."""
+    platform_cap = float(settings.platform_request_timeout_sec) - PLATFORM_TIMEOUT_HEADROOM_SEC
+    return min(settings.logic_audit_stream_timeout_max_sec, platform_cap)
+
+
 def compute_logic_audit_timeout_sec(
     mode: str,
     scope: str,
@@ -173,14 +184,15 @@ def compute_logic_audit_timeout_sec(
     section_char_limit: int = 6000,
     section_concurrency: int = 2,
 ) -> float:
-    """Estimate stream timeout from mode, scope, section count, and chunking."""
+    """Estimate stream timeout from mode, scope, section count, and chunking.
+
+    The result is clamped to ``platform_request_timeout_sec - 15`` so the stream reaches its own timeout
+    (and returns the sections finished so far) before the hosting platform drops the request.
+    """
     settings = get_settings()
     normalized_mode = (mode or "quick").strip().lower()
     if normalized_mode == "gate":
-        return min(
-            settings.logic_audit_gate_timeout_sec + 20.0,
-            settings.logic_audit_stream_timeout_max_sec,
-        )
+        return min(settings.logic_audit_gate_timeout_sec + 20.0, _stream_timeout_cap_sec(settings))
     is_full = (scope or LOGIC_AUDIT_SCOPE_SELECTED).strip().lower() == LOGIC_AUDIT_SCOPE_FULL
     count = max(1, section_count)
 
@@ -222,7 +234,7 @@ def compute_logic_audit_timeout_sec(
     if run_cross_section:
         total += persona_t + synth_t + 20.0
 
-    return min(max(total, floor), settings.logic_audit_stream_timeout_max_sec)
+    return min(max(total, floor), _stream_timeout_cap_sec(settings))
 
 
 def split_section_text(text: str, limit: int, *, max_chunks: int = 2) -> list[str]:

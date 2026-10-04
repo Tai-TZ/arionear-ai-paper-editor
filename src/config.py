@@ -204,6 +204,10 @@ class Settings(BaseSettings):
     # Observability — GCP project for Cloud Logging trace links (falls back to GOOGLE_CLOUD_PROJECT)
     gcp_project_id: str = ""
 
+    # Hosting platform's hard request timeout (Cloud Run default 300s). Long streams (logic audit) end
+    # themselves before it so their partial-result path runs instead of the platform cutting the request.
+    platform_request_timeout_sec: int = Field(default=300, ge=60, le=3600)
+
 
 def validate_production_settings(settings: Settings) -> None:
     """Refuse to start in production with a guessable JWT signing secret."""

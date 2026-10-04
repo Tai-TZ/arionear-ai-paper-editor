@@ -1,3 +1,5 @@
+import pytest
+
 from src.services.logic_audit.config import (
     compute_logic_audit_timeout_sec,
     logic_audit_engine_label,
@@ -137,10 +139,43 @@ def test_compute_logic_audit_timeout_quick_selected(monkeypatch):
 def test_compute_logic_audit_timeout_deep_full(monkeypatch):
     from src.config import get_settings
 
+    # A platform without the 300s cap: the deep/full floor and the configured max apply.
+    monkeypatch.setenv("PLATFORM_REQUEST_TIMEOUT_SEC", "3600")
     get_settings.cache_clear()
-    timeout = compute_logic_audit_timeout_sec("deep", "full", 8, run_cross_section=True)
+    try:
+        timeout = compute_logic_audit_timeout_sec("deep", "full", 8, run_cross_section=True)
+    finally:
+        get_settings.cache_clear()
     assert timeout >= 600.0
     assert timeout <= 900.0
+
+
+@pytest.mark.parametrize(
+    ("mode", "scope", "sections"),
+    [("deep", "full", 8), ("deep", "selected", 2), ("quick", "full", 6), ("quick", "selected", 3)],
+)
+def test_compute_logic_audit_timeout_stays_under_platform_timeout(monkeypatch, mode, scope, sections):
+    from src.config import get_settings
+
+    monkeypatch.delenv("PLATFORM_REQUEST_TIMEOUT_SEC", raising=False)
+    get_settings.cache_clear()
+    try:
+        timeout = compute_logic_audit_timeout_sec(mode, scope, sections, run_cross_section=scope == "full")
+    finally:
+        get_settings.cache_clear()
+    assert timeout == 285.0  # Cloud Run's 300s minus 15s headroom for the partial result
+
+
+def test_compute_logic_audit_timeout_follows_platform_setting(monkeypatch):
+    from src.config import get_settings
+
+    monkeypatch.setenv("PLATFORM_REQUEST_TIMEOUT_SEC", "120")
+    get_settings.cache_clear()
+    try:
+        assert compute_logic_audit_timeout_sec("gate", "selected", 5) == 105.0
+        assert compute_logic_audit_timeout_sec("quick", "selected", 1) == 105.0
+    finally:
+        get_settings.cache_clear()
 
 
 def test_split_section_text_single_chunk():
