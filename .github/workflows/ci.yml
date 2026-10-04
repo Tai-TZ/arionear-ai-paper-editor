@@ -86,6 +86,10 @@ jobs:
             lightningcss-linux-x64-gnu \
             @tailwindcss/oxide-linux-x64-gnu
 
+      - name: Type check
+        working-directory: frontend
+        run: npm run typecheck
+
       - name: Run unit tests
         working-directory: frontend
         run: npm test

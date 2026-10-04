@@ -296,9 +296,10 @@ pytest tests/ -v                 # 300+ test backend (API, services, guardrails)
 ruff check src tests             # lint Python
 ruff format --check src tests    # kiểm tra format
 cd frontend && npm test          # unit test frontend (Vitest)
+npm run typecheck                # TypeScript (tsc --noEmit)
 ```
 
-CI trên GitHub Actions tự động chạy lint + format check, test backend, test và build frontend cho mỗi push/PR. Hoặc chạy toàn bộ kiểm tra backend bằng `make check`.
+CI trên GitHub Actions tự động chạy lint + format check, test backend, type check, test và build frontend cho mỗi push/PR. Hoặc chạy toàn bộ kiểm tra backend bằng `make check`.
 
 ---
 

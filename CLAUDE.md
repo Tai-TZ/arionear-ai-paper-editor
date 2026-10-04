@@ -24,7 +24,7 @@ npm test           # vitest run
 npm run build
 npm run lint       # eslint (prettier enforced as a lint rule)
 npm run format     # prettier --write .
-npx tsc --noEmit -p .   # type check (see "Known state")
+npm run typecheck  # tsc --noEmit — must stay at 0 errors (CI enforces it)
 ```
 
 Database (repo root): `npm install && npm run db:generate && npm run db:migrate`. Diagrams: `python scripts/build_diagrams.py [name]` regenerates every SVG in `docs/assets/`.
@@ -52,7 +52,8 @@ Core invariant: AI output never applies itself — every edit goes through the I
 
 ## Known state
 
-- `npx tsc --noEmit` reports 25 pre-existing type errors (Vite builds without type-checking). Don't add new ones; fixing existing ones may change behaviour, so verify carefully.
+- Vite builds without type-checking, so run `npm run typecheck` yourself; CI fails on any type error.
+- pdf.js is v5: `AnnotationLayer` takes `linkService` in its constructor (render() ignores it) and `page.render()` needs `canvas`.
 - One vitest test is timing-sensitive and can fail once under heavy CPU load; re-run before investigating.
 
 ## Tooling
