@@ -267,3 +267,5 @@ arionear-ai-paper-editor/
 ## 📄 License
 
 Phát hành theo giấy phép [MIT](./LICENSE).
+
+Thư viện, font, file LaTeX và nguồn dữ liệu bên thứ ba cùng giấy phép của chúng được liệt kê trong [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md); toàn văn các giấy phép nằm trong [LICENSES/](./LICENSES).
