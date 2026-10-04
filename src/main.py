@@ -10,6 +10,7 @@ from src.api.ai_disclosure_routes import router as ai_disclosure_router
 from src.api.auth_routes import router as auth_router
 from src.api.billing_routes import router as billing_router
 from src.api.defense_routes import router as defense_router
+from src.api.health_routes import router as health_router
 from src.api.import_routes import router as import_router
 from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
@@ -107,6 +108,8 @@ app.include_router(import_router, prefix="/api/v1")
 
 if settings.inngest_serve_enabled():
     inngest.fast_api.serve(app, inngest_client, INNGEST_FUNCTIONS)
+
+app.include_router(health_router)
 
 
 @app.get("/health")

@@ -193,6 +193,12 @@ def db_is_ready() -> bool:
     return _db_ready
 
 
+def ping_db() -> None:
+    """Round-trip ``SELECT 1`` on a pooled connection (raises on failure). Blocking — run in a thread."""
+    with _get_engine().connect() as conn:
+        conn.execute(text("SELECT 1"))
+
+
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
     if _SessionLocal is None:
