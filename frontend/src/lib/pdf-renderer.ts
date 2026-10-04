@@ -22,7 +22,8 @@ export type PdfPageRenderResult = {
 };
 
 export async function loadPdfDocument(data: Uint8Array): Promise<PDFDocumentProxy> {
-  const loadingTask = getDocument({ data: data.slice() });
+  // isEvalSupported: false — never compile PDF-supplied code (fonts/functions) with eval/new Function.
+  const loadingTask = getDocument({ data: data.slice(), isEvalSupported: false });
   return loadingTask.promise;
 }
 

@@ -1,4 +1,5 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
+import { safeExternalPdfUrl } from "@/lib/pdf-safe-url";
 
 /** Minimal link service so PDF.js annotation layer can navigate internal citations. */
 export class PdfLinkService {
@@ -96,12 +97,19 @@ export class PdfLinkService {
       return;
     }
 
+    const safeUrl = safeExternalPdfUrl(url);
+    if (!safeUrl) {
+      // javascript:, data:, relative ... from user LaTeX: render inert, never as an href.
+      link.title = `Blocked link: ${url}`;
+      link.onclick = () => false;
+      return;
+    }
     if (this.externalLinkEnabled) {
-      link.href = url;
-      link.title = url;
+      link.href = safeUrl;
+      link.title = safeUrl;
     } else {
       link.href = "";
-      link.title = `Disabled: ${url}`;
+      link.title = `Disabled: ${safeUrl}`;
       link.onclick = () => false;
     }
     if (newWindow) {
