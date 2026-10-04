@@ -230,7 +230,7 @@ flowchart TB
 
 #### 2.5 Structure & Template nâng cao ⚠️ *(journal templates ✅)*
 
-Springer LNCS, Elsevier (elsarticle), ACM (acmart) seed trong `src/services/template_builtins.py`.
+Springer LNCS, Elsevier (elsarticle) seed trong `src/services/template_builtins.py`. ACM (acmart) chưa đưa vào: class cần font Libertine/newtx trong `texlive-fonts-extra` (~1 GB) mà image production không cài.
 
 | Task | Mô tả |
 |------|--------|
@@ -331,12 +331,13 @@ gantt
 
 ## 9. Việc tiếp theo (Phase 2)
 
-Đã xong trong đợt này: Peer-Review Response Agent, DOCX/PDF import, OpenAlex + Citation L4, journal templates (Springer/Elsevier/ACM), AI Contribution Report.
+Đã xong trong đợt này: Peer-Review Response Agent, DOCX/PDF import, OpenAlex + Citation L4, journal templates (Springer/Elsevier), AI Contribution Report.
 
 1. **Collaborative edit** — mở link chia sẻ Yjs sang chế độ cùng sửa (phân quyền, presence, đồng bộ với coalesced saves)  
 2. **Citation reformat** — IEEE / APA / Vancouver theo luật cố định + DataCite fallback  
 3. **PDF import** — dựng lại bảng/hình (hiện chỉ text)  
 4. **Structure auto-apply** — diff cho từng gợi ý, bật/tắt theo người dùng  
+5. **Template ACM** — cần font Libertine/newtx (`texlive-fonts-extra` hoặc gói font tối thiểu) trong image  
 
 ---
 

@@ -16,7 +16,6 @@ EXPECTED_CLASSES = {
     "ieee-journal": ("IEEEtran", "journal", "IEEEtran"),
     "springer-lncs": ("llncs", "runningheads", "splncs04"),
     "elsevier-elsarticle": ("elsarticle", "preprint", "elsarticle-num"),
-    "acm-sigconf": ("acmart", "sigconf", "ACM-Reference-Format"),
 }
 _DOCUMENTCLASS_RE = re.compile(r"\\documentclass\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}")
 
@@ -94,7 +93,7 @@ def test_existing_ieee_only_registry_gets_publisher_templates(templates_root: Pa
     ts.ensure_template_seed()
 
     registry = _registry(templates_root)
-    assert _ids(templates_root) == ["ieee-journal", "springer-lncs", "elsevier-elsarticle", "acm-sigconf"]
+    assert _ids(templates_root) == ["ieee-journal", "springer-lncs", "elsevier-elsarticle"]
     assert registry["templates"][0] == ieee_row
     assert (templates_root / "ieee-journal" / "main.tex").read_text(encoding="utf-8") == "% admin-edited IEEE source\n"
     assert registry["seeded_builtins"] == list(ts.BUILTIN_TEMPLATE_IDS)
@@ -103,18 +102,18 @@ def test_existing_ieee_only_registry_gets_publisher_templates(templates_root: Pa
 def test_seed_keeps_admin_edits(templates_root: Path):
     ts.ensure_template_seed()
     ts.update_template(
-        "acm-sigconf",
-        PaperTemplateUpdateRequest(title="Our lab ACM template", tags=["Lab"], main_tex="% custom acm\n"),
+        "elsevier-elsarticle",
+        PaperTemplateUpdateRequest(title="Our lab Elsevier template", tags=["Lab"], main_tex="% custom elsevier\n"),
     )
     ts.update_template("ieee-journal", PaperTemplateUpdateRequest(featured=False))
 
     ts.ensure_template_seed()
 
     rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
-    assert rows["acm-sigconf"]["title"] == "Our lab ACM template"
-    assert rows["acm-sigconf"]["tags"] == ["Lab"]
+    assert rows["elsevier-elsarticle"]["title"] == "Our lab Elsevier template"
+    assert rows["elsevier-elsarticle"]["tags"] == ["Lab"]
     assert rows["ieee-journal"]["featured"] is False
-    assert (templates_root / "acm-sigconf" / "main.tex").read_text(encoding="utf-8") == "% custom acm\n"
+    assert (templates_root / "elsevier-elsarticle" / "main.tex").read_text(encoding="utf-8") == "% custom elsevier\n"
 
 
 def test_seed_does_not_resurrect_deleted_or_renamed_builtins(templates_root: Path):
@@ -133,17 +132,19 @@ def test_seed_does_not_resurrect_deleted_or_renamed_builtins(templates_root: Pat
 def test_seed_skips_admin_row_that_reuses_a_builtin_id(templates_root: Path):
     _legacy_ieee_only_registry(templates_root)
     data = _registry(templates_root)
-    data["templates"].append({"id": "acm-sigconf", "slug": "acm-sigconf", "title": "Admin ACM", "format": "acm"})
+    data["templates"].append(
+        {"id": "springer-lncs", "slug": "springer-lncs", "title": "Admin LNCS", "format": "springer"}
+    )
     (templates_root / "registry.json").write_text(json.dumps(data), encoding="utf-8")
-    (templates_root / "acm-sigconf").mkdir()
-    (templates_root / "acm-sigconf" / "main.tex").write_text("% admin acm\n", encoding="utf-8")
+    (templates_root / "springer-lncs").mkdir()
+    (templates_root / "springer-lncs" / "main.tex").write_text("% admin lncs\n", encoding="utf-8")
 
     ts.ensure_template_seed()
 
     rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
     assert len(rows) == len(EXPECTED_CLASSES)
-    assert rows["acm-sigconf"]["title"] == "Admin ACM"
-    assert (templates_root / "acm-sigconf" / "main.tex").read_text(encoding="utf-8") == "% admin acm\n"
+    assert rows["springer-lncs"]["title"] == "Admin LNCS"
+    assert (templates_root / "springer-lncs" / "main.tex").read_text(encoding="utf-8") == "% admin lncs\n"
 
 
 @pytest.mark.parametrize("template_id", sorted(EXPECTED_CLASSES))
@@ -171,7 +172,7 @@ def test_publisher_template_metadata_and_citations(templates_root: Path, spec: B
     assert detail.abstract and detail.abstract_vi
     assert detail.is_official is True
     assert detail.featured is False
-    assert detail.format in {"springer", "elsevier", "acm"}
+    assert detail.format in {"springer", "elsevier"}
     assert detail.venue in {"journal", "conference"}
     assert "Bibliographies" in detail.tags
     assert detail.has_preview and detail.preview_url
@@ -203,9 +204,8 @@ def test_ieee_template_unchanged(templates_root: Path):
         ("IEEE", {"ieee-journal"}),
         ("Springer", {"springer-lncs"}),
         ("Elsevier", {"elsevier-elsarticle"}),
-        ("ACM", {"acm-sigconf"}),
         ("Journal", {"ieee-journal", "elsevier-elsarticle"}),
-        ("Conference", {"springer-lncs", "acm-sigconf"}),
+        ("Conference", {"springer-lncs"}),
         ("Bibliographies", set(EXPECTED_CLASSES)),
     ],
 )

@@ -5,7 +5,6 @@ export const TEMPLATE_FORMATS = [
   { value: "ieee", label: "IEEE" },
   { value: "springer", label: "Springer" },
   { value: "elsevier", label: "Elsevier" },
-  { value: "acm", label: "ACM" },
 ] as const;
 
 export type TemplateFormat = (typeof TEMPLATE_FORMATS)[number]["value"];
@@ -25,7 +24,7 @@ export function templateVenueLabel(venue: string, locale: UiLanguage): string {
   return VENUE_LABELS[locale][key] ?? venue.trim();
 }
 
-/** Gallery card eyebrow such as "ACM · Conference"; falls back to the author when both are empty. */
+/** Gallery card eyebrow such as "Springer · Conference"; falls back to the author when both are empty. */
 export function templateEyebrow(
   item: { format?: string | null; venue?: string | null; author?: string | null },
   locale: UiLanguage,

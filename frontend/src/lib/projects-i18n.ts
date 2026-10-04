@@ -59,7 +59,7 @@ type ProjectsCopy = {
 const EN: ProjectsCopy = {
   pageTitle: "Your Projects — Arionear",
   pageDescription:
-    "Write IMRaD scientific papers with IEEE, Springer, Elsevier or ACM templates, or import an existing project.",
+    "Write IMRaD scientific papers with IEEE, Springer or Elsevier templates, or import an existing project.",
   headerTitle: "Your Projects",
   searchPlaceholder: "Search",
   searchAria: "Search projects",
@@ -108,7 +108,7 @@ const EN: ProjectsCopy = {
   errorDelete: "Failed to delete project.",
   formatNoticeTitle: "Journal templates & IMRaD",
   formatNoticeBody:
-    "Arionear works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS, Elsevier (elsarticle) or ACM (acmart).",
+    "Arionear works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS or Elsevier (elsarticle).",
   formatNoticeImradLabel: "IMRaD sections",
   formatNoticeImradDetail:
     "Introduction · Methods · Results · Discussion — plus Abstract and keywords.",
@@ -120,7 +120,7 @@ const EN: ProjectsCopy = {
 const VI: ProjectsCopy = {
   pageTitle: "Dự án của bạn — Arionear",
   pageDescription:
-    "Viết bài báo khoa học theo IMRaD với mẫu IEEE, Springer, Elsevier hoặc ACM, hoặc nhập dự án có sẵn.",
+    "Viết bài báo khoa học theo IMRaD với mẫu IEEE, Springer hoặc Elsevier, hoặc nhập dự án có sẵn.",
   headerTitle: "Dự án của bạn",
   searchPlaceholder: "Tìm kiếm",
   searchAria: "Tìm dự án",
@@ -169,7 +169,7 @@ const VI: ProjectsCopy = {
   errorDelete: "Xóa dự án thất bại.",
   formatNoticeTitle: "Mẫu tạp chí & IMRaD",
   formatNoticeBody:
-    "Arionear hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS, Elsevier (elsarticle) hoặc ACM (acmart).",
+    "Arionear hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS hoặc Elsevier (elsarticle).",
   formatNoticeImradLabel: "Các phần IMRaD",
   formatNoticeImradDetail:
     "Giới thiệu · Phương pháp · Kết quả · Thảo luận — kèm Tóm tắt (Abstract) và từ khóa.",

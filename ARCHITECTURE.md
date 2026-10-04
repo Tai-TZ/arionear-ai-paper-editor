@@ -420,7 +420,7 @@ cd frontend && npm run dev
 | Paper Store | PostgreSQL + session cache + localStorage | Full offline sync |
 | Routing Engine | Rules + LLM classifier | Fine-tune classifier |
 | Style / Edit Agent | LLM + L2 retry + scope planner | ✅ stable |
-| Template Generator | IMRAD EN/VI + gallery: IEEE, Springer LNCS, Elsevier, ACM | Thêm venue theo nhu cầu |
+| Template Generator | IMRAD EN/VI + gallery: IEEE, Springer LNCS, Elsevier | ACM (cần `texlive-fonts-extra`) |
 | Structure Analyzer | Rules + LLM suggestions | Auto-apply optional diff |
 | Logic Audit | Persona debate + gate skim | Peer-review linkage |
 | Citation Verifier | arXiv → CrossRef → S2 → OpenAlex + L4 LLM relevance | Reformat IEEE/APA/Vancouver, DataCite |

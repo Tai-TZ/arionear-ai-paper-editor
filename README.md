@@ -80,7 +80,7 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 - Editor đa file với outline, upload hình ảnh và tài nguyên
 - Compile PDF phía server (TeX Live) + **SyncTeX** nhảy qua lại code ↔ PDF
 - Import **Overleaf ZIP**, **Word (.docx)** và **PDF** (text) thành LaTeX
-- **Template gallery**: IEEE, Springer LNCS, Elsevier (elsarticle), ACM (acmart)
+- **Template gallery**: IEEE, Springer LNCS, Elsevier (elsarticle)
 - Chia sẻ bản thảo bằng **link read-only** (Yjs + WebSocket)
 
 </td>

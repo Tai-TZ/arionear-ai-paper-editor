@@ -535,7 +535,7 @@ def _seed_publisher_template(spec: BuiltinTemplate, now: str) -> dict[str, Any]:
 
 
 def ensure_template_seed() -> None:
-    """Seed the built-in gallery templates (IEEE, Springer LNCS, Elsevier, ACM).
+    """Seed the built-in gallery templates (IEEE, Springer LNCS, Elsevier).
 
     Idempotent: each built-in is added at most once, also to an existing registry. Rows already
     present (admin-edited built-ins or admin rows reusing a built-in id) are never overwritten,

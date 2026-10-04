@@ -9,12 +9,7 @@ import {
 
 describe("template formats", () => {
   it("lists every built-in publisher format", () => {
-    expect(TEMPLATE_FORMATS.map((item) => item.value)).toEqual([
-      "ieee",
-      "springer",
-      "elsevier",
-      "acm",
-    ]);
+    expect(TEMPLATE_FORMATS.map((item) => item.value)).toEqual(["ieee", "springer", "elsevier"]);
   });
 
   it("labels known formats and upper-cases unknown ones", () => {
