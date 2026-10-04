@@ -28,6 +28,7 @@ import {
 } from "@/lib/pdf-renderer";
 import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord } from "@/lib/synctex-highlight";
+import { useLatestRef } from "@/lib/use-latest-ref";
 import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
@@ -98,7 +99,24 @@ function IconBtn({
   );
 }
 
-function PdfPageView({
+type PageSize = { width: number; height: number };
+
+const sameSize = (a: PageSize | null, b: PageSize) =>
+  a !== null && a.width === b.width && a.height === b.height;
+
+/** Fit-to-width zoom snaps to 5% steps so small panel resizes do not re-render every page. */
+const FIT_SCALE_STEPS_PER_UNIT = 20;
+const FIT_SCALE_DEBOUNCE_MS = 150;
+
+function roundFitScale(scale: number): number {
+  return Math.round(scale * FIT_SCALE_STEPS_PER_UNIT) / FIT_SCALE_STEPS_PER_UNIT;
+}
+
+/**
+ * One PDF page. Kept mounted across zoom changes and recompiles (keyed by page number): the
+ * canvas and text/annotation layers are re-rendered in place, cancelling any in-flight render.
+ */
+const PdfPageView = memo(function PdfPageView({
   pdf,
   pageNumber,
   scale,
@@ -156,6 +174,11 @@ function PdfPageView({
 
     const token = ++renderTokenRef.current;
     let cancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
+    // The page proxy may belong to a document that was just replaced (and destroyed); until this
+    // render resolves the new one, SyncTeX clicks fall back to `pdf.getPage`.
+    pageRef.current = null;
 
     (async () => {
       try {
@@ -163,26 +186,39 @@ function PdfPageView({
         if (cancelled || token !== renderTokenRef.current) return;
         pageRef.current = page;
 
-        const rendered: PdfPageRenderResult = await renderPageToCanvas(page, canvas, scale);
+        // Size the sheet for the new scale right away so the layout does not jump mid-render.
+        const target = page.getViewport({ scale });
+        const targetSize = { width: target.width, height: target.height };
+        setDimensions((prev) => (sameSize(prev, targetSize) ? prev : targetSize));
+
+        const rendered: PdfPageRenderResult = await renderPageToCanvas(page, canvas, scale, signal);
         if (cancelled || token !== renderTokenRef.current) return;
 
         viewportRef.current = rendered.viewport;
-        setDimensions({ width: rendered.width, height: rendered.height });
+        const renderedSize = { width: rendered.width, height: rendered.height };
+        setDimensions((prev) => (sameSize(prev, renderedSize) ? prev : renderedSize));
         setPageViewport(rendered.viewport);
 
         try {
-          await renderPageTextLayer(page, textLayer, rendered.viewport);
+          await renderPageTextLayer(page, textLayer, rendered.viewport, signal);
         } catch {
           /* SyncTeX still works via canvas + text-content fallback */
         }
         if (cancelled || token !== renderTokenRef.current) return;
 
         try {
-          await renderPageAnnotationLayer(page, annotationLayer, rendered.viewport, linkService);
+          await renderPageAnnotationLayer(
+            page,
+            annotationLayer,
+            rendered.viewport,
+            linkService,
+            signal,
+          );
         } catch {
           /* citation links are optional */
         }
       } catch {
+        // Includes RenderingCancelledException from a superseded render (cancelled === true).
         if (!cancelled) {
           viewportRef.current = null;
           pageRef.current = null;
@@ -194,6 +230,7 @@ function PdfPageView({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [pdf, pageNumber, scale, linkService]);
 
@@ -252,7 +289,7 @@ function PdfPageView({
       </div>
     </div>
   );
-}
+});
 
 export const PdfPreviewPanel = memo(function PdfPreviewPanel({
   pdfData,
@@ -359,7 +396,11 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
 
     loadPdfDocument(pdfData)
       .then(async (doc) => {
-        if (cancelled) return;
+        if (cancelled) {
+          // A newer compile (or unmount) superseded this load: free the worker-side document.
+          void doc.destroy();
+          return;
+        }
         setPdf(doc);
         setNumPages(doc.numPages);
         setCurrentPage(1);
@@ -378,18 +419,34 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
     };
   }, [pdfData]);
 
+  // Each compile loads a new document; destroy the previous one once it has been replaced (its
+  // pages keep showing until the new render paints over them) and on unmount.
+  useEffect(() => {
+    if (!pdf) return;
+    return () => {
+      void pdf.destroy();
+    };
+  }, [pdf]);
+
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
 
     const updateFit = () => {
-      setFitScale(computeFitScale(el.clientWidth, basePageWidth));
+      setFitScale(roundFitScale(computeFitScale(el.clientWidth, basePageWidth)));
     };
 
     updateFit();
-    const observer = new ResizeObserver(updateFit);
+    let timer: number | undefined;
+    const observer = new ResizeObserver(() => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(updateFit, FIT_SCALE_DEBOUNCE_MS);
+    });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
   }, [basePageWidth, pdf]);
 
   const scrollToPage = useCallback(
@@ -678,6 +735,16 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
     flashSynctexHint("PDF page still loading — wait a moment and try again.");
   }, [flashSynctexHint]);
 
+  // handleSynctexClick changes with every source edit (latexSource); pages get a stable proxy so
+  // the memoized page views are not re-rendered on each keystroke.
+  const handleSynctexClickRef = useLatestRef(handleSynctexClick);
+  const handlePageClick = useCallback(
+    (page: number, x: number, y: number, word?: string, context?: string) => {
+      void handleSynctexClickRef.current(page, x, y, word, context);
+    },
+    [handleSynctexClickRef],
+  );
+
   const compilerOptions: { value: LatexCompiler; label: string }[] = [
     { value: "auto", label: t.pdf.compilerAuto },
     { value: "pdflatex", label: "pdfLaTeX" },
@@ -931,13 +998,13 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
           <div className="pdf-preview-pages mx-auto flex w-max flex-col items-center py-5">
             {pageNumbers.map((pageNumber) => (
               <PdfPageView
-                key={`${pageNumber}-${effectiveScale}`}
+                key={pageNumber}
                 pdf={pdf}
                 pageNumber={pageNumber}
                 scale={effectiveScale}
                 linkService={linkService}
                 onVisible={handlePageVisible}
-                onPageClick={synctexEnabled ? handleSynctexClick : undefined}
+                onPageClick={synctexEnabled ? handlePageClick : undefined}
                 onPageNotReady={synctexEnabled ? handlePageNotReady : undefined}
               />
             ))}

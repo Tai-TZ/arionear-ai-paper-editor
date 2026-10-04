@@ -31,6 +31,7 @@ export async function renderPageToCanvas(
   page: PDFPageProxy,
   canvas: HTMLCanvasElement,
   scale: number,
+  signal?: AbortSignal,
 ): Promise<PdfPageRenderResult> {
   const viewport = page.getViewport({ scale });
   const outputScale = window.devicePixelRatio || 1;
@@ -47,7 +48,17 @@ export async function renderPageToCanvas(
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
   // pdf.js v5: `canvas` defaults to canvasContext.canvas; pass it explicitly (same element).
-  await page.render({ canvas, canvasContext: context, viewport }).promise;
+  const task = page.render({ canvas, canvasContext: context, viewport });
+  // Aborting cancels the task (it rejects with RenderingCancelledException) and frees the canvas
+  // for the next render; pdf.js refuses two concurrent renders on one canvas.
+  const cancel = () => task.cancel();
+  signal?.addEventListener("abort", cancel, { once: true });
+  if (signal?.aborted) cancel();
+  try {
+    await task.promise;
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+  }
 
   return {
     pageNumber: page.pageNumber,
@@ -286,6 +297,7 @@ export async function renderPageTextLayer(
   page: PDFPageProxy,
   container: HTMLElement,
   viewport: PageViewport,
+  signal?: AbortSignal,
 ): Promise<TextLayer> {
   container.replaceChildren();
   // PDF.js 4 TextLayer positions/fontSize use calc(var(--scale-factor) * …).
@@ -297,7 +309,15 @@ export async function renderPageTextLayer(
     container,
     viewport,
   });
-  await textLayer.render();
+  // A superseded text layer must stop appending spans into the (reused) container.
+  const cancel = () => textLayer.cancel();
+  signal?.addEventListener("abort", cancel, { once: true });
+  if (signal?.aborted) cancel();
+  try {
+    await textLayer.render();
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+  }
   return textLayer;
 }
 
@@ -306,6 +326,7 @@ export async function renderPageAnnotationLayer(
   container: HTMLDivElement,
   viewport: PageViewport,
   linkService: PdfLinkService,
+  signal?: AbortSignal,
 ): Promise<AnnotationLayer> {
   container.replaceChildren();
   container.style.setProperty("--scale-factor", String(viewport.scale));
@@ -331,6 +352,7 @@ export async function renderPageAnnotationLayer(
   });
 
   const annotations = await page.getAnnotations({ intent: "display" });
+  if (signal?.aborted) return layer;
   await layer.render({
     viewport,
     div: container,
@@ -345,7 +367,12 @@ export async function renderPageAnnotationLayer(
   return layer;
 }
 
+const linkClickBoundContainers = new WeakSet<HTMLElement>();
+
 function bindInternalPdfLinkClicks(container: HTMLElement, linkService: PdfLinkService) {
+  // The container is reused across re-renders (zoom, recompile): bind the delegate only once.
+  if (linkClickBoundContainers.has(container)) return;
+  linkClickBoundContainers.add(container);
   container.addEventListener(
     "click",
     (event) => {
