@@ -466,7 +466,7 @@ def system_overview() -> Diagram:
         fig="1.1",
         kicker="OVERVIEW",
         source="Cloud Run · asia-east1",
-        ticker=("CLOUD RUN", "REST · SSE · WS", "BEARER JWT", "SECURITY HEADERS", "TEX LIVE SANDBOX"),
+        ticker=("CLOUD RUN", "BEARER JWT", "SECURITY HEADERS", "X-REQUEST-ID", "TEX LIVE SANDBOX"),
         aria="System overview: browser, TanStack Start web service, FastAPI API service with TeX Live, PostgreSQL, "
         "five LLM providers and four scholarly APIs",
     )
@@ -480,8 +480,8 @@ def system_overview() -> Diagram:
     row = 330
     researcher = d.block(125, row, code="USR", title="Researcher", sub="trình duyệt", **big)
     store = d.block(125, 640, code="JWT", title="localStorage", sub="JWT + session", **big)
-    web = d.block(317, row, code="SSR", title="TanStack Start", sub="React 19 · Nitro SSR", sub2="Cloud Run web", **big)
-    api = d.block(540, row, code="API", title="FastAPI", sub="/api/v1 · Cloud Run", sub2="headers · quota", **big)
+    web = d.block(317, 520, code="SSR", title="TanStack Start", sub="React 19 · Nitro SSR", sub2="Cloud Run web", **big)
+    api = d.block(540, row, code="API", title="FastAPI", sub="/api/v1 · /ready", sub2="request-id · JSON logs", **big)
     tex = d.block(490, 640, code="TEX", title="TeX Live", sub="sandboxed")
     ing = d.block(600, 640, code="ING", title="Inngest", sub="optional", muted=True)
     pg = d.block(712, 282, code="PG", title="PostgreSQL", sub="Prisma schema + SQLAlchemy", label="right", key=True)
@@ -499,12 +499,14 @@ def system_overview() -> Diagram:
         d.block(915, 756, code="OA", title="OpenAlex"),
     ]
 
+    # The SSR server only renders pages; the browser bundle calls the API directly (VITE_API_URL).
     y1 = researcher.right[1]
-    d.link(researcher, web, label="HTTPS")
-    d.link(web, api, label="REST · SSE · WS")
+    d.link(researcher, api, label="REST · SSE · WS")
+    d.edge(f"M {researcher.right[0] + 8} {y1 + 12} H 238 V {web.left[1]} H {web.left[0] - 10}")
+    d.text(246, 470, "HTML · JS", cls="m q")
     d.edge(
         f"M {researcher.x} {researcher.bottom[1] + 70} V {store.top[1] - 8}",
-        label="Bearer JWT",
+        label="lưu JWT",
         at=(researcher.x + 10, 520),
         anchor="start",
     )
@@ -517,9 +519,9 @@ def system_overview() -> Diagram:
     d.edge(f"M {trunk} {llms[0].left[1]} H {llms[0].left[0] - 10}")
     d.edge(f"M {trunk} {sch[0].left[1]} H {sch[0].left[0] - 10}")
 
-    d.packet(f"M {researcher.x} {y1} H {web.x}", 4)
+    d.packet(f"M {researcher.x} {y1 + 12} H 238 V {web.left[1]} H {web.x}", 5)
     for i, target in enumerate((pg, llms[0], sch[0])):
-        d.packet(f"M {web.x} {y1} H {trunk} V {target.left[1]} H {target.x}", 6, 1 + i * 2)
+        d.packet(f"M {researcher.x} {y1} H {trunk} V {target.left[1]} H {target.x}", 6, 1 + i * 2)
     return d
 
 
@@ -841,8 +843,9 @@ def api_surface() -> Diagram:
     d.glane(836, 1014, "03", "SHARED")
     c = cols(5)
     fe = d.block(c[0], 262, code="UI", title="Frontend", sub="Authorization: Bearer <JWT>", label="right")
-    d.text(c[2] + 10, 256, "middleware  CORS · SecurityHeaders", cls="m i", weight=700)
-    d.text(c[2] + 10, 276, "nosniff · DENY · CSP · HSTS (production)", cls="m q")
+    d.text(c[2] - 20, 248, "middleware  RequestContext · CORS · SecurityHeaders", cls="m i", weight=700)
+    d.text(c[2] - 20, 268, "X-Request-ID · nosniff · DENY · CSP · HSTS (prod)", cls="m q")
+    d.text(c[2] - 20, 288, "probes      GET /health · GET /ready (ngoài /api/v1)", cls="u q")
 
     rows = [
         [
@@ -998,7 +1001,7 @@ def sse_chat() -> Diagram:
         desk="BACKEND DESK",
         fig="2.3",
         kicker="STREAM",
-        source="src/services/chat_stream.py",
+        source="chat_stream.py · sse.py",
         ticker=("TEXT/EVENT-STREAM", "STATE · ACTIVITY · TOKEN · DONE", "QUOTA → EVENT: ERROR", "L2 RETRY"),
         aria="SSE editor chat: the stream service checks quota, then branches by task into logic audit, style and "
         "edit with integrity check, template, or other handlers",
@@ -1052,6 +1055,12 @@ def citation_verifier() -> Diagram:
     d.edge(f"M {xs[1]} {bus} H {out.left[0] - 10}")
     d.text((xs[1] + xs[3]) / 2, bus - 10, "tìm thấy → so tiêu đề (rapidfuzz)", anchor="middle", cls="u q", halo=True)
 
+    d.text(
+        M,
+        226,
+        "Batch: 6 key song song trên một HTTP client · cache 6h cho kết quả tìm thấy · quá 120s → unverified",
+        cls="u q",
+    )
     d.lane(662, 852, "L4", "RELEVANCE", "POST /citations/relevance · comment-only")
     l4 = cols(4, M, W - M)
     blocks = [
@@ -1074,7 +1083,7 @@ def citation_verifier() -> Diagram:
 def persistence() -> Diagram:
     d = Diagram(
         "persistence",
-        630,
+        650,
         title="Paper & Session Persistence",
         deck="Ba lớp lưu trữ có chủ đích — UI phản hồi tức thì, PostgreSQL là nguồn sự thật",
         desk="BACKEND DESK",
@@ -1095,7 +1104,9 @@ def persistence() -> Diagram:
         key=True,
         **big,
     )
-    ss = d.block(500, 470, code="MEM", title="Session store", sub="in-memory · citations · revisions", **big)
+    ss = d.block(
+        500, 470, code="MEM", title="Session store", sub="revisions · citations", sub2="in-memory khi chưa có DB", **big
+    )
     (x1, y1), (x2, _y2) = fe.right, db.left
     d.edge(f"M {x1 + 8} {y1} H {x2 - 10}", label="PATCH /papers — coalesced", at=((x1 + x2) / 2, y1 - 11))
     d.edge(
@@ -1107,7 +1118,7 @@ def persistence() -> Diagram:
     d.edge(
         f"M {ss.right[0] + 8} {ss.right[1]} H 978 V {db.right[1]} H {db.right[0] + 10}",
         dotted=True,
-        label="refresh khi DB sẵn sàng",
+        label="DatabaseSessionStore khi DB sẵn sàng",
         at=((ss.right[0] + 978) / 2, ss.right[1] - 11),
     )
     d.packet(f"M {fe.x} {y1} H {db.x}", 4.5)
@@ -1123,7 +1134,7 @@ def persistence() -> Diagram:
 def frontend_routes() -> Diagram:
     d = Diagram(
         "frontend-routes",
-        800,
+        818,
         title="Frontend Routes & Components",
         deck="File-based routing (TanStack Start) — editor shell ghép từ các panel độc lập",
         desk="FRONTEND DESK",
@@ -1135,7 +1146,7 @@ def frontend_routes() -> Diagram:
     c = cols(6)
     d.glane(212, 380, "01", "PUBLIC")
     d.glane(390, 560, "02", "WORKSPACE", tint=True)
-    d.glane(570, 740, "03", "SHELL")
+    d.glane(570, 758, "03", "SHELL")
     mt = {"mono_title": True}
 
     def node(i, cy, code, title, sub, **kw):
@@ -1159,12 +1170,12 @@ def frontend_routes() -> Diagram:
         node(1, 632, "PDF", "PdfPreviewPanel", "PDF.js · SyncTeX"),
         node(2, 632, "AI", "ChatOverlay", "Ario · SSE"),
         node(3, 632, "KIT", "ToolsPanel", "versions · logic …"),
-        node(4, 632, "%", "Export dialog", "score + AI disclosure"),
+        node(4, 632, "%", "PaperScore\nDownloadDialog", "score + AI disclosure"),
     ]
-    dchat = node(5, 632, "QA", "DefenseChat", "+ PdfPreviewPanel")
+    dchat = node(5, 632, "QA", "DefenseChatPanel", "+ PdfPreviewPanel")
 
-    d.edge(f"M {signin.x:.1f} 355 V {prj.top[1] - 8:.1f}", label="JWT", at=(signin.x + 10, 386), anchor="start")
-    d.edge(f"M {tpl.x:.1f} 355 V {ed.top[1] - 8:.1f}", label="open", at=(tpl.x + 10, 386), anchor="start")
+    d.edge(f"M {signin.x:.1f} 355 V {prj.top[1] - 8:.1f}", label="JWT", at=(signin.x + 10, 374), anchor="start")
+    d.edge(f"M {tpl.x:.1f} 355 V {ed.top[1] - 8:.1f}", label="open", at=(tpl.x + 10, 374), anchor="start")
     d.link(prj, ed)
     jx = (c[1] + c[2]) / 2
     d.edge(f"M {ed.right[0] + 8:.1f} {ed.right[1]:.1f} H {jx:.1f} V 408 H {dfs.x:.1f} V {dfs.top[1] - 8:.1f}")
@@ -1286,7 +1297,7 @@ def template_gallery() -> Diagram:
 def export_gate() -> Diagram:
     d = Diagram(
         "export-gate",
-        710,
+        730,
         title="Publication Score & Export Gate",
         deck="Trước khi tải PDF: nếu bản thảo đã đổi, chạy quick logic skim rồi chấm điểm + báo cáo AI disclosure",
         desk="FRONTEND DESK",
@@ -1374,7 +1385,7 @@ def defense_flow() -> Diagram:
 def guardrails() -> Diagram:
     d = Diagram(
         "guardrails",
-        1050,
+        1070,
         title="Guardrail Architecture",
         deck="4 lớp phòng vệ cho output của AI — vi phạm ở lớp 2 bị chặn trước khi tới tay tác giả",
         desk="INTEGRITY DESK",
@@ -1384,10 +1395,10 @@ def guardrails() -> Diagram:
         ticker=("BLOCKING FLAGS", "AUDIT TRAIL", "QUOTA ON EVERY LLM PATH", "SANDBOXED COMPILE"),
     )
     lanes = [
-        (212, 352, "L1", "PROMPT", "ràng buộc trước khi gọi LLM"),
-        (352, 492, "L2", "OUTPUT CHECK", "kiểm tra output của LLM"),
-        (492, 632, "L3", "DIFF DISPLAY", "không ghi đè âm thầm"),
-        (632, 772, "L4", "AUDIT", "lưu vết mọi quyết định"),
+        (212, 358, "L1", "PROMPT", "ràng buộc trước khi gọi LLM"),
+        (358, 504, "L2", "OUTPUT CHECK", "kiểm tra output của LLM"),
+        (504, 650, "L3", "DIFF DISPLAY", "không ghi đè âm thầm"),
+        (650, 796, "L4", "AUDIT", "lưu vết mọi quyết định"),
     ]
     items = [
         [
@@ -1417,14 +1428,14 @@ def guardrails() -> Diagram:
     xs = (230, 420, 610, 800)
     for i, ((top, bottom, num, name, cap), row) in enumerate(zip(lanes, items, strict=True)):
         d.lane(top, bottom, num, name, cap, tint=i % 2 == 1, x0=spine + 16)
-        cy = top + 62
+        cy = top + 58
         d.edge(f"M {spine} {cy + 7.5} H {xs[len(row) - 1]}", arrow=False, flow=False)
         for x, (code, title, sub) in zip(xs, row, strict=False):
             d.block(x, cy, code=code, title=title, sub=sub, key=(num == "L2" and code == "NUM"))
-    d.add("edges", f'<path d="M {spine} 228 V 760" class="tk"/>')
+    d.add("edges", f'<path d="M {spine} 228 V 784" class="tk"/>')
     d.text(spine, 219, "LLM", cls="m q", anchor="middle")
-    d.packet(f"M {spine} 228 V 760", 7)
-    blk = (spine, 422)
+    d.packet(f"M {spine} 228 V 784", 7)
+    blk = (spine, 424)
     d.add(
         "packets",
         f'<g class="pk" opacity="0"><path d="M0,-5 L5,0 L0,5 L-5,0z" class="r"/>'
@@ -1442,7 +1453,7 @@ def guardrails() -> Diagram:
     )
 
     # platform hardening sidebar
-    y0 = 792
+    y0 = 812
     d.panel(M, y0, W - 2 * M, 198, "PLATFORM HARDENING", "ngoài 4 lớp — bảo vệ hạ tầng & chi phí", red=True)
     notes = [
         ("LLM quota", "quota_policy.py trên mọi đường LLM"),
@@ -1471,34 +1482,24 @@ def guardrails() -> Diagram:
 def deployment() -> Diagram:
     d = Diagram(
         "deployment",
-        760,
+        810,
         title="Deployment",
         deck="Hai service trên Google Cloud Run (asia-east1) — custom domain, secrets qua Secret Manager",
         desk="OPERATIONS DESK",
         fig="5.1",
         kicker="DEPLOY",
         source="scripts/deploy-cloudrun-*.ps1",
-        ticker=("CLOUD RUN", "DOCKER", "HTTPS + HSTS", "SECRET MANAGER", "CI DOES NOT DEPLOY"),
+        ticker=("CLOUD RUN", "HTTPS + HSTS", "/ready PROBE", "JSON LOGS · TRACE", "CI DOES NOT DEPLOY"),
     )
-    d.panel(M, 214, 160, 470, "CLIENT")
-    d.panel(214, 214, 430, 470, "GOOGLE CLOUD", "Cloud Run · asia-east1")
+    d.panel(M, 214, 160, 534, "CLIENT")
+    d.panel(214, 214, 430, 534, "GOOGLE CLOUD", "Cloud Run · asia-east1")
     d.panel(658, 214, 342, 128, "DATA")
-    d.panel(658, 356, 342, 328, "EXTERNAL")
+    d.panel(658, 356, 342, 392, "EXTERNAL")
     big = {"hw": 40, "bh": 20, "title_size": 17}
-    browser = d.block(120, 370, code="WEB", title="Browser", sub="researcher", **big)
-    fe = d.block(
-        320,
-        370,
-        code="SSR",
-        title="arionear-web",
-        sub="TanStack · Nitro",
-        sub2="arionear.id.vn",
-        mono_title=True,
-        **big,
-    )
+    browser = d.block(120, 400, code="WEB", title="Browser", sub="researcher", **big)
     be = d.block(
         530,
-        370,
+        300,
         code="API",
         title="arionear-api",
         sub="FastAPI + TeX Live",
@@ -1507,42 +1508,58 @@ def deployment() -> Diagram:
         key=True,
         **big,
     )
-    build = d.block(320, 590, code="CB", title="Cloud Build", sub="gcloud builds submit")
-    secrets = d.block(530, 590, code="KEY", title="Secret Manager", sub="--set-secrets")
+    d.text(be.x, be.bottom[1] + 26 + 19 + 36, "/health · /ready", cls="m q", anchor="middle")
+    fe = d.block(
+        320,
+        470,
+        code="SSR",
+        title="arionear-web",
+        sub="TanStack · Nitro",
+        sub2="arionear.id.vn",
+        mono_title=True,
+        **big,
+    )
+    build = d.block(320, 650, code="CB", title="Cloud Build", sub="gcloud builds submit")
+    secrets = d.block(530, 650, code="KEY", title="Secret Manager", sub="--set-secrets")
     right = {"label": "right"}
     db = d.block(700, 282, code="PG", title="PostgreSQL", sub="DIRECT_DATABASE_URL", **right)
     targets = [
         db,
-        d.block(700, 420, code="LLM", title="LLM Providers", sub="Z.AI · Gemini · OpenRouter …", **right),
-        d.block(700, 510, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · S2 · OpenAlex", **right),
-        d.block(700, 600, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **right),
+        d.block(700, 430, code="LLM", title="LLM Providers", sub="Z.AI · Gemini · OpenRouter …", **right),
+        d.block(700, 530, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · S2 · OpenAlex", **right),
+        d.block(700, 630, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **right),
     ]
-    d.link(browser, fe, label="HTTPS")
-    d.link(fe, be, label="REST · SSE")
+    # Pages come from arionear-web; the browser bundle calls arionear-api directly (VITE_API_URL, CORS).
+    bx0, by0 = browser.right[0] + 8, browser.right[1]
+    d.edge(
+        f"M {bx0} {by0} H 238 V {be.left[1]} H {be.left[0] - 10}", label="REST · SSE · WS", at=(359, be.left[1] - 11)
+    )
+    d.edge(f"M {bx0} {by0} H 238 V {fe.left[1]} H {fe.left[0] - 10}")
+    d.text(246, 452, "HTTPS", cls="m q")
     trunk = 651
-    bx, by = be.right
-    d.edge(f"M {bx + 8} {by} H {trunk}", arrow=False)
+    d.edge(f"M {be.right[0] + 8} {be.right[1]} H {trunk}", arrow=False)
     d.edge(f"M {trunk} {db.left[1]} V {targets[-1].left[1]}", arrow=False)
     for t in targets:
         d.edge(f"M {trunk} {t.left[1]} H {t.left[0] - 10}")
     d.edge(
-        f"M {build.x} {build.top[1] - 8} V {fe.bottom[1] + 88}",
+        f"M {build.x} {build.top[1] - 8} V {fe.bottom[1] + 72}",
         dotted=True,
         label="image",
-        at=(build.x + 10, 520),
+        at=(build.x + 10, 612),
         anchor="start",
     )
-    d.edge(f"M {build.right[0] + 8} {build.right[1]} H 470 V {be.bottom[1] + 88}", dotted=True)
+    d.edge(f"M {build.right[0] + 8} {build.right[1]} H 450 V {be.bottom[1] + 92}", dotted=True)
     d.edge(
-        f"M {secrets.x} {secrets.top[1] - 8} V {be.bottom[1] + 88}",
+        f"M {secrets.x} {secrets.top[1] - 8} V {be.bottom[1] + 92}",
         dotted=True,
         label="secrets",
-        at=(secrets.x + 10, 520),
+        at=(secrets.x + 10, 560),
         anchor="start",
     )
-    d.packet(f"M {browser.x} {browser.right[1]} H {be.x}", 4.5)
+    d.packet(f"M {browser.x} {by0} H 238 V {be.left[1]} H {be.x}", 5)
+    d.packet(f"M {browser.x} {by0} H 238 V {fe.left[1]} H {fe.x}", 5, 2.5)
     for i, t in enumerate(targets):
-        d.packet(f"M {be.x} {by} H {trunk} V {t.left[1]} H {t.x}", 4, 1.2 + i * 0.9)
+        d.packet(f"M {be.x} {be.right[1]} H {trunk} V {t.left[1]} H {t.x}", 4, 1.2 + i * 0.9)
     return d
 
 

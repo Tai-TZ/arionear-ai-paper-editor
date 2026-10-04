@@ -2,7 +2,7 @@
 
 **Dự án:** AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *Closer to Publication*  
-**Phiên bản tài liệu:** 3.2 · **Cập nhật:** 04/10/2026
+**Phiên bản tài liệu:** 3.3 · **Cập nhật:** 04/10/2026
 
 > Kiến trúc tham khảo framework mã nguồn mở AutoResearchClaw (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
@@ -33,7 +33,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 | Persistence | PostgreSQL (Prisma schema + SQLAlchemy) · in-memory session cache · frontend localStorage cache |
 | Compile | TeX Live server-side (`latex_compile.py`), SyncTeX, delta asset compile, PDF cache |
 | Auth | JWT (email/password + Google SSO) · god admin provisioning |
-| Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout |
+| Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout demo (tắt mặc định ở production) |
 | Observability | Inngest (optional) |
 | DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `arionear.id.vn` |
 
@@ -47,7 +47,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
   <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
-**Không vẽ riêng trong sơ đồ:** Peer-Review Response Agent, DOCX/PDF import, OpenAlex/L4 relevance và AI disclosure — mô tả ở §4.2 và §7.
+Sơ đồ gồm cả DOCX/PDF import, Peer Review (→ Reply Letter), Citations L1–L4 (OpenAlex + L4 relevance) và AI Disclosure — endpoint chi tiết ở §4.2, luồng dữ liệu ở §7. Toàn bộ sơ đồ trong `docs/assets/` sinh từ [`scripts/build_diagrams.py`](./scripts/build_diagrams.py), theo phong cách editorial "newsprint" của app và tự đổi màu theo light/dark theme.
 
 ---
 
@@ -74,8 +74,8 @@ Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /c
 | `/defense?projectId=` | Mock viva — split PDF + chat council | ✅ |
 | `/profile` | Researcher profile & preferences | ✅ |
 | `/plan` | Billing / upgrade | ✅ |
-| `/templates` | Template gallery (IMRaD EN/VI) | ✅ |
-| `/share/$token` | Read-only shared paper + Yjs WS | ✅ |
+| `/templates` | Template gallery — IEEE, Springer LNCS, Elsevier (xem không cần đăng nhập) | ✅ |
+| `/share/$token` | Read-only snapshot (`GET /share/{token}`); live sync Yjs chỉ dành cho owner | ✅ |
 | `/admin` | God admin — users, LLM policy, cost report | ✅ |
 | `/guide` | User Guide v2 | ✅ |
 | `/pricing`, `/about`, `/features`, … | Marketing pages (EN/VI) | ✅ |
@@ -130,8 +130,12 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `admin_routes.py` | `/api/v1/admin` | Users, usage, cost report, LLM config, platform provider keys |
 | `billing_routes.py` | `/api/v1/billing` | Status, checkout, upgrade |
 | `defense_routes.py` | `/api/v1` | Defense quota + SSE stream |
-| `share_routes.py` | `/api/v1` | Share links + Yjs WebSocket |
+| `share_routes.py` | `/api/v1` | Share links + live sync WebSocket (owner-only) |
 | `template_routes.py` | `/api/v1/templates` | Gallery + admin template mgmt |
+| `review_routes.py` | `/api/v1/review` | Peer-review response |
+| `import_routes.py` | `/api/v1/import` | DOCX/PDF → LaTeX |
+| `ai_disclosure_routes.py` | `/api/v1/papers/{id}/ai-disclosure` | AI Contribution Report |
+| `health_routes.py` | `/ready` (root) | Readiness probe (DB ping; báo trạng thái TeX) |
 
 **Core agent endpoints** (`routes.py`):
 
@@ -167,7 +171,7 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `GET/POST /billing/*` | Quotas, checkout, upgrade |
 | `GET /defense/quota`, `POST /defense/stream` | Defense council |
 | `GET/POST/DELETE /papers/{id}/share`, `GET /share/{token}` | Share links |
-| `WS /ws/share/{token}` | Yjs collaborative read |
+| `WS /ws/share/{token}` | Live sync Yjs — owner-only (subprotocol `bearer.<jwt>`, giới hạn message/client/history) |
 | `GET/POST /templates/*` | Template gallery |
 
 ### 4.3 LangGraph Orchestrator + Stream Service
@@ -271,7 +275,7 @@ Prisma schema (`prisma/schema.prisma`) là source of truth cho migrations; SQLAl
 | OpenAlex | Verify fallback + abstract cho L4 relevance (`citations/openalex.py`) | ✅ |
 | LangSmith | Tracing | Optional (`.env`) |
 
-Citation verifier: arXiv → CrossRef → Semantic Scholar (`src/services/citations/verifier.py`).
+Citation verifier: arXiv → CrossRef → Semantic Scholar → OpenAlex (fallback) (`src/services/citations/verifier.py`); so tiêu đề bằng rapidfuzz sau khi chuẩn hoá LaTeX (`title_match.py`); 6 entry chạy song song trên một HTTP client, cache 6h cho kết quả tìm thấy, quá 120s trả `unverified`.
 
 ---
 
@@ -353,13 +357,15 @@ Comments + draft → tách item (R1/R2…, major/minor/editorial/question) → s
 ## 8. Deployment Architecture
 
 <p align="center">
-  <img src="./docs/assets/deployment.svg" alt="Deployment: Browser → arionear-web → arionear-api trên Cloud Run, PostgreSQL và các dịch vụ ngoài" width="100%">
+  <img src="./docs/assets/deployment.svg" alt="Deployment: trình duyệt tải trang từ arionear-web và gọi thẳng arionear-api trên Cloud Run; Cloud Build, Secret Manager, PostgreSQL và các dịch vụ ngoài" width="100%">
 </p>
 
 | Service | Custom domain | Cloud Run |
 |---------|---------------|-----------|
 | Frontend | https://arionear.id.vn | `arionear-web` |
 | Backend API | https://api.arionear.id.vn | `arionear-api` |
+
+`arionear-web` chỉ render trang (SSR); bundle chạy trong trình duyệt gọi thẳng `arionear-api` qua `VITE_API_URL` (thiếu biến này thì dùng same-origin `/api/v1`). Probe: `GET /health` (liveness) và `GET /ready` (ping DB, báo trạng thái TeX). Log dạng JSON kèm `X-Request-ID` và trace id của Cloud Trace.
 
 **Dev:**
 
@@ -371,8 +377,26 @@ uvicorn src.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
-**Deploy:** `scripts/deploy-cloudrun-backend.ps1`, `scripts/deploy-cloudrun-frontend.ps1`  
-**CI:** `.github/workflows/ci.yml` — pytest, Ruff, frontend vitest + build (self-hosted Linux runner).
+**Deploy:** `scripts/deploy-cloudrun-backend.ps1`, `scripts/deploy-cloudrun-frontend.ps1` (chạy tay; CI không deploy)  
+**CI/CD:** GitHub Actions — xem §8.1.
+
+### 8.1 CI/CD Pipeline
+
+<p align="center">
+  <img src="./docs/assets/ci-cd.svg" alt="CI/CD: pre-commit cục bộ → push/PR → CI, Security, Docker, LaTeX; tag vX.Y.Z → GitHub Release; Dependabot mở PR cập nhật; không deploy" width="100%">
+</p>
+
+Pipeline chỉ **kiểm tra và đóng gói kiểm thử** — không có bước deploy nào; image Docker được build và smoke-test nhưng không push.
+
+| Workflow | Trigger | Nội dung |
+|----------|---------|----------|
+| Local gate (`.pre-commit-config.yaml`) | mỗi `git commit` | Ruff check + format, Prettier + ESLint cho file frontend đã stage, hygiene hooks (YAML/TOML/JSON, EOF, whitespace, file lớn, private key); `make ci` chạy lại các bước CI ở máy local |
+| `ci.yml` | push `main`, pull request | Ruff; pytest trên Python 3.11 + 3.12 kèm coverage; frontend lint · Prettier · typecheck · vitest · build; Prisma `validate` + `migrate deploy` + drift check trên Postgres 16 |
+| `security.yml` | push, PR, hàng tuần | CodeQL (Python, JS/TS), pip-audit, npm audit (mức high), gitleaks, dependency review (chỉ PR) |
+| `docker.yml` | thay đổi Dockerfile/deps (path filter), hàng tuần | Build `arionear-api` (FastAPI + TeX Live) và `arionear-web`, smoke test `/health`, `/api/v1/compile/status`, trang HTML — `push: false` |
+| `latex.yml` | thay đổi compile/template/import, hàng tuần | Cài TeX Live rồi chạy toàn bộ pytest, không còn test bị skip vì thiếu TeX |
+| `release.yml` | push tag `vX.Y.Z` | `gh release create --generate-notes` → GitHub Release |
+| Dependabot | pip + npm `/frontend` hàng tuần; npm `/` và GitHub Actions hàng tháng | Mở PR cập nhật dependency (đi qua đúng các workflow trên) |
 
 ---
 
@@ -386,7 +410,13 @@ cd frontend && npm run dev
 - Bearer token on agent APIs (`agent_deps.py`) — paper session access check
 - God admin provisioned from env on startup (`ensure_god_admin`)
 - Prompt injection mitigation: user LaTeX trong HumanMessage, system prompt tách biệt (C9)
-- Compile rate limiting (`compile_policy.py`)
+- Production refuse khởi động nếu `AUTH_SECRET_KEY` là giá trị mặc định hoặc < 32 ký tự (`validate_production_settings`)
+- Security headers cho mọi response (`security_headers.py`): `nosniff`, `X-Frame-Options: DENY`, CSP cho response không phải HTML, HSTS ở production
+- LLM quota + rate limit trên mọi đường gọi LLM (`quota_policy.py`): chat, chat stream, style edit, citation relevance, peer review
+- Compile sandbox (`latex_compile.py`): env allowlist cho subprocess TeX (không lộ secret), `shell_escape=f`, `openin_any/openout_any=p`; `main_file` phải là đường dẫn tương đối an toàn; body ≤ 64 MB cả trước và sau gzip; rate limit theo user đã xác thực (không theo chuỗi token)
+- Live share WebSocket chỉ cho owner (subprotocol `bearer.<jwt>`), giới hạn message 1 MB, 8 client/phòng, history 8 MB
+- Billing: QR checkout không thanh toán tắt mặc định ở production; `/billing/upgrade` chỉ god admin
+- PDF preview chỉ cho link `http(s)`/`mailto` click được; pdf.js chạy với `isEvalSupported: false`
 - Defense quota atomic billing — prevent double-charge on disconnect
 - *Planned:* encryption at rest, zero-retention LLM mode
 
@@ -430,9 +460,9 @@ cd frontend && npm run dev
 | Integrity Monitor | `check_integrity()` + UI flags | + semantic model scoring |
 | Guardrail L1–L4 | ✅ L1–L3 full; L4 + AI Contribution report | Semantic integrity scoring |
 | Auth | JWT + Google SSO + email verify | ✅ |
-| Billing | Tier quotas + QR checkout | Payment gateway integration |
+| Billing | Tier quotas + QR checkout demo (tắt ở production) | Payment gateway integration |
 | Admin | Users, LLM policy, cost report, platform provider keys + failover | ✅ |
-| Share | Read-only link + Yjs WS | Collaborative edit |
+| Share | Read-only link + live sync Yjs owner-only | Collaborative edit |
 | Chat streaming | SSE activity/reasoning/token | ✅ |
 | Compile | Delta assets, gzip, PDF cache, SyncTeX | ✅ |
 | Tests | 531 pytest + 104 vitest | More FE integration tests |

@@ -1,7 +1,7 @@
 # Architecture Diagram — Arionear
 
 **Tagline:** *Closer to Publication*  
-**Cập nhật:** 04/10/2026 · Đồng bộ production v1.0 · sơ đồ sinh bởi [`scripts/build_diagrams.py`](../scripts/build_diagrams.py)  
+**Cập nhật:** 04/10/2026 · Đồng bộ production v1.0 · sơ đồ sinh bởi [`scripts/build_diagrams.py`](../scripts/build_diagrams.py) (phong cách editorial của app, tự đổi theo light/dark theme)  
 **Live:** [https://arionear.id.vn/](https://arionear.id.vn/) · API: [https://api.arionear.id.vn](https://api.arionear.id.vn)
 
 Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.
@@ -18,11 +18,13 @@ Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triể
 |---------|------------|---------|
 | Frontend (prod) | `https://arionear.id.vn` | Custom domain → Cloud Run `arionear-web` |
 | Backend API | `https://api.arionear.id.vn` | Custom domain → Cloud Run `arionear-api` + TeX compile |
-| Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, templates, platform provider keys |
+| Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, platform provider keys (template registry nằm ở `data/templates/registry.json`) |
+
+Trình duyệt tải trang từ `arionear-web` và gọi thẳng `arionear-api` (`VITE_API_URL`). API có `GET /health` (liveness), `GET /ready` (readiness), log JSON kèm `X-Request-ID`.
 
 ---
 
-## 2. Four-Layer Product Architecture
+## 2. Five-Layer Product Architecture
 
 <p align="center">
   <img src="./assets/architecture.svg" alt="Kiến trúc sản phẩm theo tầng: User, Processing, Human Gate, Output, Infrastructure" width="100%">
@@ -83,7 +85,7 @@ Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triể
   <img src="./assets/export-gate.svg" alt="Publication score và export gate" width="100%">
 </p>
 
-Dimensions: structure, completeness, citations, compile health, peer-review signals from logic audit.
+Dimensions: structure, completeness, citations, logic (peer-review signals từ gate audit — abstract / intro / conclusion). Hộp thoại xuất kèm báo cáo AI disclosure (`GET /papers/{id}/ai-disclosure`); nút tải PDF chỉ bật khi PDF đã compile.
 
 ---
 
@@ -107,15 +109,25 @@ Dimensions: structure, completeness, citations, compile health, peer-review sign
 
 ---
 
-## 11. Citation Verifier (layers 1–3 ✅)
+## 11. Citation Verifier (arXiv · CrossRef · S2 · OpenAlex + L4 relevance ✅)
 
 <p align="center">
-  <img src="./assets/citation-verifier.svg" alt="Citation verifier: arXiv → CrossRef → Semantic Scholar" width="100%">
+  <img src="./assets/citation-verifier.svg" alt="Citation verifier: arXiv → CrossRef → Semantic Scholar → OpenAlex, not_found nếu không khớp; lớp 4 LLM relevance" width="100%">
 </p>
 
 ---
 
-## 12. Component Reference
+## 12. CI/CD Pipeline (no deployment)
+
+<p align="center">
+  <img src="./assets/ci-cd.svg" alt="CI/CD: pre-commit cục bộ → push/PR → CI, Security, Docker, LaTeX; tag vX.Y.Z → GitHub Release; Dependabot" width="100%">
+</p>
+
+Chi tiết từng workflow: [ARCHITECTURE.md §8.1](../ARCHITECTURE.md#81-cicd-pipeline).
+
+---
+
+## 13. Component Reference
 
 | Component | Technology | Purpose | Status |
 |-----------|-----------|---------|--------|
@@ -134,8 +146,11 @@ Dimensions: structure, completeness, citations, compile health, peer-review sign
 | Admin | `admin_routes.py` + `provider_key_store.py` | Users, LLM policy, platform API keys, priority failover, quotas | ✅ |
 | Editor onboarding | `editor-onboarding-dialog.tsx` | First-run guide in editor (localPreference) | ✅ |
 | Inngest | `inngest/` + hooks | Chat telemetry (optional) | ⚠️ |
-| Citation L4 LLM | — | Relevance layer | *(planned)* |
-| DOCX/PDF import | — | Non-LaTeX ingest | *(planned)* |
+| Citation L4 LLM | `citations/relevance.py` | Relevance layer (≤ 15 key/lần, comment-only) | ✅ |
+| DOCX/PDF import | `document_import/` | Non-LaTeX ingest (≤ 15 MB) | ✅ |
+| Peer review | `peer_review/` | Phản hồi reviewer theo từng điểm | ✅ |
+| AI disclosure | `ai_disclosure.py` | AI Contribution Report | ✅ |
+| CI/CD | `.github/workflows/` | CI, Security, Docker, LaTeX, Release — không deploy | ✅ |
 
 ---
 
