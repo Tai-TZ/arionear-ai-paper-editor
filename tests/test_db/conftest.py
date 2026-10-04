@@ -12,7 +12,11 @@ def sqlite_test_db(monkeypatch):
     db_path = os.path.join(os.path.dirname(__file__), "_test_app.db")
     if os.path.exists(db_path):
         os.remove(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    url = f"sqlite:///{db_path}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    # sqlalchemy_database_url() prefers DIRECT_DATABASE_URL; without this a developer's .env would
+    # point these tests at the real database.
+    monkeypatch.setenv("DIRECT_DATABASE_URL", url)
     from src.config import get_settings
 
     get_settings.cache_clear()
