@@ -1,4 +1,4 @@
-import type { DefenseMessage } from "@/components/defense/defense-chat-panel";
+import type { DefenseMessage } from "@/lib/defense-conversation";
 import { updatePaper } from "@/lib/api/papers-api";
 
 export type StoredDefenseSession = {

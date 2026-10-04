@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useMemo } from "react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { GuideStepDemo } from "@/components/workspace/guide-step-demos";
 import { guideCopy, type GuideSection, type GuideStep } from "@/lib/guide-i18n";
 

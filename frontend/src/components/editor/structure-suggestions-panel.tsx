@@ -2,7 +2,7 @@ import { ArrowRight, MapPin, Sparkles, Wrench } from "lucide-react";
 
 import type { StructureSuggestion } from "@/lib/structure-suggestions";
 import { buildStructureAskPrompt } from "@/lib/structure-suggestions";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 
 type StructureSuggestionsPanelProps = {

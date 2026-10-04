@@ -1,7 +1,7 @@
 import { BookOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { GuideStepDemo } from "@/components/workspace/guide-step-demos";
 import {
   Dialog,

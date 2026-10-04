@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LanguageToggle } from "@/components/language-toggle";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { ArionearWordmark } from "@/components/arionear-wordmark";

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { UserGuideContent } from "@/components/workspace/user-guide-content";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { guideCopy } from "@/lib/guide-i18n";
 
 export const Route = createFileRoute("/_workspace/guide")({

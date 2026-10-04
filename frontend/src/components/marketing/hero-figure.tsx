@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, FileText, MessageSquare, Pause, PenLine, Play, X } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { marketingCopy, type HeroSuggestionCopy } from "@/lib/marketing-i18n";
 
 type SuggestionId = "style" | "citation" | "logic";

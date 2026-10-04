@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Mail, ArrowLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AuthAlert, AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { requestPasswordReset } from "@/lib/auth-store";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { authToast } from "@/lib/auth-toast";

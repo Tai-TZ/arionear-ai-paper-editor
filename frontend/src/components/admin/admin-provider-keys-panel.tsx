@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, KeyRound, Loader2, PlugZap, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { adminCopy } from "@/lib/admin-i18n";
 import {
   clearAdminProviderKeys,

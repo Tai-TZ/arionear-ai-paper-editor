@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import { projectsCopy } from "@/lib/projects-i18n";
 import { cn } from "@/lib/utils";

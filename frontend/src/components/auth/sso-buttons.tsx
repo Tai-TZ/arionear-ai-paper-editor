@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { startGoogleOAuth } from "@/lib/auth-store";
 

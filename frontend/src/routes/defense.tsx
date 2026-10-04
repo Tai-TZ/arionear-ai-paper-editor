@@ -20,7 +20,7 @@ import {
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { EditorDesktopPanels } from "@/components/editor-desktop-panels";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { DefenseMastheadPrefs } from "@/components/defense/defense-masthead-prefs";
 import {
   DefenseMobileTabBar,
@@ -30,13 +30,12 @@ import {
   DefensePdfStatusBar,
   type DefensePdfStatus,
 } from "@/components/defense/defense-pdf-status-bar";
+import { DefenseChatPanel, DefenseQuotaBadge } from "@/components/defense/defense-chat-panel";
 import {
-  DefenseChatPanel,
-  DefenseQuotaBadge,
   buildDefenseConversationHistory,
   countCompletedCouncilTurns,
   type DefenseMessage,
-} from "@/components/defense/defense-chat-panel";
+} from "@/lib/defense-conversation";
 import { defenseCopy, formatDefenseQuotaError, isDefenseQuotaError } from "@/lib/defense-i18n";
 import {
   fetchDefenseQuota,

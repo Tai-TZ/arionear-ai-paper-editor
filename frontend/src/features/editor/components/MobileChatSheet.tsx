@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 import type React from "react";
 import { PencilLine, X } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
-import { ChatInput, ChatMessages, arioAvatar, type ChatMessage } from "@/components/chat-overlay";
+import { useLocale } from "@/components/locale-context";
+import { ChatInput, ChatMessages, type ChatMessage } from "@/components/chat-overlay";
+import { arioAvatar } from "@/lib/ario-avatar";
 import { LlmSelector } from "@/components/llm-selector";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";

@@ -10,7 +10,7 @@ import {
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { loginUser } from "@/lib/auth-store";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { defaultAppPath, redirectIfAuthenticated } from "@/lib/require-auth";

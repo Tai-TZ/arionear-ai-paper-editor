@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, User } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { LanguageToggle } from "@/components/language-toggle";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { commonCopy } from "@/lib/common-i18n";
 import { getSession, type AuthUser } from "@/lib/auth-store";

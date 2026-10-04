@@ -4,8 +4,8 @@ import { PricingCards } from "@/components/billing/pricing-cards";
 import {
   syncWorkspaceBillingCache,
   useWorkspaceBilling,
-} from "@/components/workspace/workspace-context";
-import { useLocale } from "@/components/locale-provider";
+} from "@/components/workspace/workspace-billing";
+import { useLocale } from "@/components/locale-context";
 import { marketingCopy } from "@/lib/marketing-i18n";
 
 export const Route = createFileRoute("/_workspace/plan")({

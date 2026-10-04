@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { ArionearWordmark } from "@/components/arionear-wordmark";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import type { UiLanguage } from "@/lib/researcher-profile";
 import { cn } from "@/lib/utils";

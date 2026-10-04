@@ -1,19 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AppLoadingScreenInner } from "@/components/app-loading-screen";
+import { LocaleContext, type LocaleContextValue } from "@/components/locale-context";
 import { applyLocale, getStoredLocale, type UiLanguage } from "@/lib/locale-store";
 import { applyTheme, getStoredTheme } from "@/lib/theme-store";
 import { commonCopy } from "@/lib/common-i18n";
 
 type BootstrapPhase = "booting" | "exiting" | "ready";
-
-type LocaleContextValue = {
-  locale: UiLanguage;
-  setLocale: (locale: UiLanguage) => void;
-  ready: boolean;
-};
-
-const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 const BOOTSTRAP_EXIT_MS = 280;
 
@@ -69,12 +62,4 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       ) : null}
     </LocaleContext.Provider>
   );
-}
-
-export function useLocale() {
-  const ctx = useContext(LocaleContext);
-  if (!ctx) {
-    throw new Error("useLocale must be used within LocaleProvider");
-  }
-  return ctx;
 }

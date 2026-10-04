@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useMemo } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import {
   marketingPageContent,
   marketingPageUi,

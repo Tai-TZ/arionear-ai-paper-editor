@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppLoadingScreen } from "@/components/app-loading-screen";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import { LatexCodeEditor } from "@/components/latex-code-editor";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";

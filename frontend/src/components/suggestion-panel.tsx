@@ -1,6 +1,6 @@
 import { Check, ShieldAlert, X } from "lucide-react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import type { IntegrityFlag } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
 import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";

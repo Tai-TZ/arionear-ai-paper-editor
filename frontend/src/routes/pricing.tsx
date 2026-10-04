@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { PricingCards } from "@/components/billing/pricing-cards";
-import { syncWorkspaceBillingCache } from "@/components/workspace/workspace-context";
+import { syncWorkspaceBillingCache } from "@/components/workspace/workspace-billing";
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { type BillingStatus, fetchBillingStatus } from "@/lib/api/billing-api";
 import { getAccessToken } from "@/lib/auth-store";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { marketingCopy } from "@/lib/marketing-i18n";
 
 export const Route = createFileRoute("/pricing")({

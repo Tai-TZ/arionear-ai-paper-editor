@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { aboutPageCopy, marketingPageContent, marketingPageUi } from "@/lib/marketing-pages-i18n";
 import { EditorialBoardFigure } from "./editorial-board-figure";
 import { MarketingLayout } from "./marketing-layout";

@@ -1,8 +1,7 @@
-import { createContext, useContext } from "react";
-
-export type TemplatesLayoutVariant = "marketing" | "workspace";
-
-const TemplatesLayoutContext = createContext<TemplatesLayoutVariant>("marketing");
+import {
+  TemplatesLayoutContext,
+  type TemplatesLayoutVariant,
+} from "@/components/templates/template-gallery-layout";
 
 export function TemplatesLayoutProvider({
   variant,
@@ -14,8 +13,4 @@ export function TemplatesLayoutProvider({
   return (
     <TemplatesLayoutContext.Provider value={variant}>{children}</TemplatesLayoutContext.Provider>
   );
-}
-
-export function useTemplatesLayoutVariant(): TemplatesLayoutVariant {
-  return useContext(TemplatesLayoutContext);
 }

@@ -27,7 +27,7 @@ import {
 } from "@/lib/pdf-renderer";
 import { PdfLinkService } from "@/lib/pdf-link-service";
 import { capturePdfClickWord } from "@/lib/synctex-highlight";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
 import {
@@ -664,7 +664,6 @@ export function PdfPreviewPanel({
       synctexBase64,
       pdfBase64,
       mainFile,
-      latexSource,
       onSynctexHit,
       lookupSynctex,
       flashSynctexHint,

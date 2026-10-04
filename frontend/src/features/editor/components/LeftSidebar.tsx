@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { ChevronLeft, ChevronRight, Folder, MessageSquare, ShieldCheck } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { EditableProjectName } from "@/components/editable-project-name";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
 import { editorCopy } from "@/lib/editor-i18n";

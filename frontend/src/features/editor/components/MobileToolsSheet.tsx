@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { LogicAuditReport, RevisionRecord } from "@/lib/api/academic";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";

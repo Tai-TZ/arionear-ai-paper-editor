@@ -4,7 +4,7 @@ import { BookOpen, Check, Zap, Loader2, X, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { marketingCopy } from "@/lib/marketing-i18n";
 import type { UiLanguage } from "@/lib/researcher-profile";
 import { type BillingStatus, type UserTier, createCheckout } from "@/lib/api/billing-api";

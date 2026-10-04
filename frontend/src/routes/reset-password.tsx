@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-ro
 import { ArrowRight, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AuthAlert, AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { isAuthenticated, resetPassword } from "@/lib/auth-store";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { authToast } from "@/lib/auth-toast";

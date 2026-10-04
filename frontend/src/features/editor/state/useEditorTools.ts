@@ -396,6 +396,7 @@ export function useEditorTools({
       },
     }),
     [
+      chatBridgeRef,
       revisionHistory,
       citationResults,
       citationSummary,

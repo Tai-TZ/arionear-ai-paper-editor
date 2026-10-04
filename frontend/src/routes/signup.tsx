@@ -9,7 +9,7 @@ import {
   AuthSubmitButton,
 } from "@/components/auth/auth-shell";
 import { AuthSsoButtons } from "@/components/auth/sso-buttons";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import {
   InputOTP,
   InputOTPGroup,

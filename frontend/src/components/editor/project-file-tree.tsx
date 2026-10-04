@@ -18,7 +18,7 @@ import {
   type ProjectTreeNode,
 } from "@/lib/project-file-tree";
 import { SHOW_EDITOR_IMPORT } from "@/components/workspace/workspace-layout";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import {
   DropdownMenu,

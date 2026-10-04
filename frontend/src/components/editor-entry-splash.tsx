@@ -1,5 +1,5 @@
 import { AppLoadingScreen } from "@/components/app-loading-screen";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import { useMemo } from "react";
 
@@ -15,12 +15,4 @@ export function EditorEntrySplash({ exiting = false, label }: EditorEntrySplashP
   return (
     <AppLoadingScreen label={label ?? t.loadingProject} variant="fullscreen" exiting={exiting} />
   );
-}
-
-const EDITOR_ENTRY_FLAG = "arionear:editor-entry";
-
-export function markEditorEntryTransition() {
-  if (typeof sessionStorage !== "undefined") {
-    sessionStorage.setItem(EDITOR_ENTRY_FLAG, "1");
-  }
 }

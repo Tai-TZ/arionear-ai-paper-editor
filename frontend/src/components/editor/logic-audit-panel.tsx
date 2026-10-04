@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Files, Loader2, Play, Square, Zap } from "lucide-react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy, logicAuditModeHint } from "@/lib/editor-i18n";
 import {
   buildLogicConflictAskPrompt,

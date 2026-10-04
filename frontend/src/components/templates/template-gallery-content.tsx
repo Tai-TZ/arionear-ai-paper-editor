@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import {
   TemplateOfficialBadge,
   TemplateTagList,
@@ -14,7 +14,7 @@ import {
   type PaperTemplateSummary,
 } from "@/lib/api/templates-api";
 import { templatesCopy } from "@/lib/templates-i18n";
-import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-context";
+import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-layout";
 
 const QUICK_FILTERS = ["IEEE", "Journal", "Conference", "Thesis", "Bibliographies"] as const;
 

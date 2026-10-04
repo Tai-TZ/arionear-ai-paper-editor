@@ -44,7 +44,9 @@ Core invariant: AI output never applies itself — every edit goes through the I
 ## Conventions
 
 - Python: ruff (line length 120, rules in `ruff.toml`), formatted with `ruff format`; CI fails on lint or format drift.
-- Frontend: Prettier (`frontend/.prettierrc`, width 100) + ESLint; keep `npm run lint` at 0 errors.
+- Frontend: Prettier (`frontend/.prettierrc`, width 100) + ESLint; CI runs `npm run lint -- --max-warnings 0`.
+- Effects that must call a fresh callback without re-running use `useLatestRef` (`frontend/src/lib/use-latest-ref.ts`); don't silence `exhaustive-deps`.
+- `.tsx` component files export only components (Fast Refresh); contexts/hooks live in sibling `.ts` files (e.g. `locale-context.ts`).
 - `frontend/vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, which already registers TanStack Start, React, Tailwind and path aliases — do not add those plugins again.
 - UI copy is bilingual (EN/VI) via `frontend/src/lib/*-i18n.ts`; update both locales.
 - Docs are Vietnamese with English technical terms. Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).

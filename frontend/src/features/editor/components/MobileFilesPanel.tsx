@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Folder, MessageSquare, ShieldCheck } from "lucide-react";
 import { EditableProjectName } from "@/components/editable-project-name";
 import { SidebarFileOutlineSplit } from "@/components/editor/sidebar-file-outline-split";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { ChatThread, ProjectAsset, ProjectFile } from "@/lib/project-store";
 import { ChatThreadList } from "./ChatThreadList";

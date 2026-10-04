@@ -2,7 +2,7 @@ import { AlertTriangle, Download } from "lucide-react";
 import { useMemo } from "react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { PaperScoreAuditAnimation } from "@/components/editor/paper-score-audit-animation";
 import { useAnimatedNumber } from "@/hooks/use-animated-score";
 import type { LogicAuditReport } from "@/lib/api/academic";

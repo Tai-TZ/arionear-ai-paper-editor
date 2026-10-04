@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Image as ImageIcon, LayoutTemplate, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import {
   Dialog,
   DialogContent,

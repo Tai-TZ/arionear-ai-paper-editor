@@ -315,17 +315,20 @@ export function useEditorChat(options: UseEditorChatOptions) {
     return stripMessagesForStorage(msgs);
   }
 
-  function restoreMessages(thread: ChatThread): ChatMessage[] {
-    if (!thread.messages.length) return makeInitialMessages(locale);
-    return [
-      makeInitialMessages(locale)[0],
-      ...thread.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-        ...(m.isError ? { isError: true } : {}),
-      })),
-    ];
-  }
+  const restoreMessages = useCallback(
+    (thread: ChatThread): ChatMessage[] => {
+      if (!thread.messages.length) return makeInitialMessages(locale);
+      return [
+        makeInitialMessages(locale)[0],
+        ...thread.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          ...(m.isError ? { isError: true } : {}),
+        })),
+      ];
+    },
+    [locale],
+  );
 
   const persistActiveThreadNow = useCallback(
     (msgs?: ChatMessage[]) => {
@@ -416,6 +419,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       handleStopChat,
       flushPendingEditsToThread,
       restorePendingFromThread,
+      restoreMessages,
       onChatPersistError,
     ],
   );
@@ -460,7 +464,14 @@ export function useEditorChat(options: UseEditorChatOptions) {
       }
       if (projectId) persistChatThreads(projectId, persisted, onChatPersistError);
     },
-    [projectId, locale, handleStopChat, restorePendingFromThread, onChatPersistError],
+    [
+      projectId,
+      locale,
+      handleStopChat,
+      restorePendingFromThread,
+      restoreMessages,
+      onChatPersistError,
+    ],
   );
 
   // Debounced backup save while typing / streaming
@@ -1026,8 +1037,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     t.chatStream.timeout,
     t.chatStream.stopped,
     t.chatStream.resyncFailed,
-    t.logicAudit.partialChatStopped,
-    t.logicAudit.partialChatTimeout,
+    t.chatStream.processing,
+    t.logicAudit,
+    setSelection,
     openChatPanel,
     persistActiveThreadNow,
     onChatPersistError,
@@ -1059,7 +1071,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       if (nextActiveLatex) recordNow(nextActiveLatex);
       return nextActiveLatex;
     },
-    [activeFile, mainFile, latex, mainLatexSource, projectFiles, recordNow],
+    [activeFile, mainFile, latex, mainLatexSource, projectFiles, setProjectFiles, recordNow],
   );
 
   const runLogicAuditFromPanel = (
@@ -1168,6 +1180,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
     latex,
     mainLatexSource,
     projectFiles,
+    setProjectFiles,
     recordNow,
     reportRevisionAction,
     autoCompile,
@@ -1299,9 +1312,9 @@ export function useEditorChat(options: UseEditorChatOptions) {
     pendingEdits,
     latex,
     projectFiles,
+    setProjectFiles,
     mainFile,
     activeFile,
-    applySingleEdit,
     recordNow,
     persistActiveFile,
     runCompileAfterEdit,
@@ -1345,7 +1358,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       setMessages(makeInitialMessages(locale));
       return [];
     },
-    [locale, restorePendingFromThread],
+    [locale, restorePendingFromThread, restoreMessages],
   );
 
   useEffect(() => {

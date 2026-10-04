@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Download, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { fetchTemplate, fetchTemplatePdfBytes, templatePdfUrl } from "@/lib/api/templates-api";
 import { templatesCopy } from "@/lib/templates-i18n";
 

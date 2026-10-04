@@ -1,6 +1,6 @@
 import { Moon, Sun } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
-import { useTheme } from "@/components/theme-provider";
+import { useLocale } from "@/components/locale-context";
+import { useTheme } from "@/components/theme-context";
 
 const LANG_OPTIONS = [
   { id: "en" as const, label: "ENG" },

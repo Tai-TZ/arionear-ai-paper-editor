@@ -1,7 +1,7 @@
 import { Check, Copy, Eye, Link2, Loader2, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { editorCopy } from "@/lib/editor-i18n";
 import {

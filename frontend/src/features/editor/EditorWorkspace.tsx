@@ -10,7 +10,7 @@ import { PaperScoreDownloadDialog } from "@/components/editor/paper-score-downlo
 import { ShareLinkDialog } from "@/components/editor/share-link-dialog";
 import { PdfPreviewPanel } from "@/components/pdf-preview-panel";
 import { SuggestionPanel } from "@/components/suggestion-panel";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { updatePaper } from "@/lib/api/papers-api";
 import { commonCopy } from "@/lib/common-i18n";
 import { editorCopy } from "@/lib/editor-i18n";
@@ -223,20 +223,25 @@ export function EditorWorkspace() {
     openChatPanel,
   };
 
+  const {
+    persistProjectFiles,
+    autoCompile: projectAutoCompile,
+    latex: projectLatex,
+    undo: projectUndo,
+    redo: projectRedo,
+    openProjectFile: openFileInProject,
+  } = project;
+  const { scheduleCompile: scheduleWorkspaceCompile } = latexWs;
+  const { tryStartScoreGateAudit } = tools;
+
   const handleSave = useCallback(() => {
     if (!projectId) return;
     persistActiveThreadNowRef.current();
-    project.persistProjectFiles({ immediate: true });
-    if (project.autoCompile) {
-      latexWs.scheduleCompile(project.latex);
+    persistProjectFiles({ immediate: true });
+    if (projectAutoCompile) {
+      scheduleWorkspaceCompile(projectLatex);
     }
-  }, [
-    projectId,
-    project.persistProjectFiles,
-    project.autoCompile,
-    project.latex,
-    latexWs.scheduleCompile,
-  ]);
+  }, [projectId, persistProjectFiles, projectAutoCompile, projectLatex, scheduleWorkspaceCompile]);
 
   useEffect(() => {
     if (project.bootState !== "ready" || project.showSplash || onboardingScheduledRef.current) {
@@ -249,8 +254,8 @@ export function EditorWorkspace() {
   }, [project.bootState, project.showSplash]);
 
   useEffect(() => {
-    tools.tryStartScoreGateAudit();
-  }, [exportOpen, project.mainLatexSource, tools.tryStartScoreGateAudit]);
+    tryStartScoreGateAudit();
+  }, [exportOpen, project.mainLatexSource, tryStartScoreGateAudit]);
 
   useEffect(() => {
     if (project.bootState !== "ready" || !projectId || !project.autoSave || !project.isDirty) {
@@ -285,27 +290,27 @@ export function EditorWorkspace() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
-        if (e.shiftKey) project.redo();
-        else project.undo();
+        if (e.shiftKey) projectRedo();
+        else projectUndo();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
         e.preventDefault();
-        project.redo();
+        projectRedo();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleSave, project.undo, project.redo]);
+  }, [handleSave, projectUndo, projectRedo]);
 
   const openProjectFile = useCallback(
     (path: string) => {
-      project.openProjectFile(path);
+      openFileInProject(path);
       if (isImageAssetFile(path)) {
         setMobileTab("editor");
       }
     },
-    [project.openProjectFile],
+    [openFileInProject],
   );
 
   const handleSelectionContextChange = useCallback(

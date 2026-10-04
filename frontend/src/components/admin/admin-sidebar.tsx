@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Brain, Coins, FileStack, Gauge, KeyRound, LogOut, Shield, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { adminCopy } from "@/lib/admin-i18n";
 import { initialsFromName } from "@/lib/researcher-profile";
 import type { AuthUser } from "@/lib/auth-store";

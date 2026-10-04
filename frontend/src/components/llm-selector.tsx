@@ -8,7 +8,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import type { LLMProvider, ProviderInfo } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
 import { modelIconUrl, providerIconUrl, resolveModelVendor } from "@/lib/llm-model-icons";

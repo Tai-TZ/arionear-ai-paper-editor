@@ -1,4 +1,4 @@
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import { hasBlockingIntegrityFlags } from "@/lib/integrity-flags";
 import { isPendingEditStale } from "@/lib/pending-edit-utils";

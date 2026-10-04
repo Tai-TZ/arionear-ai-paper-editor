@@ -51,7 +51,7 @@ import {
   type LlmLimits,
 } from "@/lib/api/admin-api";
 import { toast } from "sonner";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { adminCopy, adminLocaleTag } from "@/lib/admin-i18n";
 
 export const Route = createFileRoute("/admin")({

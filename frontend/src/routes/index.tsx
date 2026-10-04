@@ -17,7 +17,7 @@ import {
 import { useMemo } from "react";
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { HeroPeerReviewFigure } from "@/components/marketing/hero-figure";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorEntryPath } from "@/lib/require-auth";
 import { marketingCopy } from "@/lib/marketing-i18n";
 

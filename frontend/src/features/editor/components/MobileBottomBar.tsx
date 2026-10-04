@@ -1,5 +1,5 @@
 import { ChevronUp, FileText, MoreHorizontal } from "lucide-react";
-import { arioAvatar } from "@/components/chat-overlay";
+import { arioAvatar } from "@/lib/ario-avatar";
 
 export function MobileBottomBar({
   activeFile,

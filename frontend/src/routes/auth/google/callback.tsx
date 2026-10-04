@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-ro
 import { useEffect, useMemo, useState } from "react";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { AuthDisabledAccount, AuthShell } from "@/components/auth/auth-shell";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
 import { toast } from "sonner";
 import { completeOAuthSession, isAuthenticated } from "@/lib/auth-store";

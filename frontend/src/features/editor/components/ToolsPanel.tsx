@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { HelpCircle, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
 import { StructureSuggestionsPanel } from "@/components/editor/structure-suggestions-panel";
 import { Switch } from "@/components/ui/switch";

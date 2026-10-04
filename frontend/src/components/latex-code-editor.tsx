@@ -6,6 +6,7 @@ import {
   useRef,
   forwardRef,
 } from "react";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 import { HighlightedLatexLine } from "@/lib/latex-syntax";
 import { buildInlineSuggestionView, type InlineSuggestionInput } from "@/lib/inline-suggestion";
@@ -184,23 +185,33 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       window.setTimeout(runHorizontal, 320);
     };
 
+    const scrollToLineRef = useLatestRef(scrollToLineInternal);
+
     useImperativeHandle(ref, () => ({
       scrollToLine(line: number, start?: number, end?: number) {
         scrollToLineInternal(line, start, end);
       },
     }));
 
+    const suggestionStartLine = suggestionView ? suggestionView.changeStartLine : null;
+    const suggestionDisplayLatex = suggestionView?.displayLatex;
     useLayoutEffect(() => {
-      if (!suggestionView) return;
-      scrollToLineInternal(suggestionView.changeStartLine);
-    }, [suggestionView?.displayLatex]);
+      if (suggestionStartLine === null) return;
+      scrollToLineRef.current(suggestionStartLine);
+    }, [suggestionDisplayLatex, suggestionStartLine, scrollToLineRef]);
 
     useLayoutEffect(() => {
       if (!highlightLine || highlightLine < 1) return;
       const start = synctexHighlight?.line === highlightLine ? synctexHighlight.start : undefined;
       const end = synctexHighlight?.line === highlightLine ? synctexHighlight.end : undefined;
-      scrollToLineInternal(highlightLine, start, end);
-    }, [highlightLine, synctexHighlight?.line, synctexHighlight?.start, synctexHighlight?.end]);
+      scrollToLineRef.current(highlightLine, start, end);
+    }, [
+      highlightLine,
+      synctexHighlight?.line,
+      synctexHighlight?.start,
+      synctexHighlight?.end,
+      scrollToLineRef,
+    ]);
 
     return (
       <div

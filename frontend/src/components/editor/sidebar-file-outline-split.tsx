@@ -1,5 +1,5 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 import { ProjectFileTree } from "@/components/editor/project-file-tree";
 import { LatexOutlineNav } from "@/components/latex-outline-nav";

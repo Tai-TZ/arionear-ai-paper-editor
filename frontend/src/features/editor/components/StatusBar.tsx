@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
 
 export const StatusBar = memo(function StatusBar({

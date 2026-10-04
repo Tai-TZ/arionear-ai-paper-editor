@@ -3,8 +3,8 @@ import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useLocale } from "@/components/locale-provider";
-import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-context";
+import { useLocale } from "@/components/locale-context";
+import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-layout";
 import {
   TemplateBackLink,
   TemplateOfficialBadge,
@@ -19,11 +19,8 @@ import {
 import { getSession } from "@/lib/auth-store";
 import { editorEntryPath } from "@/lib/require-auth";
 import { templatesCopy } from "@/lib/templates-i18n";
-import { markEditorEntryTransition } from "@/components/editor-entry-splash";
-import {
-  ProjectFormatNoticeDialog,
-  useProjectFormatNotice,
-} from "@/components/projects/project-format-notice-dialog";
+import { ProjectFormatNoticeDialog } from "@/components/projects/project-format-notice-dialog";
+import { useProjectFormatNotice } from "@/components/projects/project-format-notice";
 
 export const Route = createFileRoute("/templates/$templateId/")({
   ssr: false,
@@ -72,7 +69,6 @@ function TemplateDetailPage() {
     setOpening(true);
     try {
       const { paper_id } = await openTemplateAsProject(templateId);
-      markEditorEntryTransition();
       navigate({ to: "/editor", search: { projectId: paper_id } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not open template.");

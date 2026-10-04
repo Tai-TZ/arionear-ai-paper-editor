@@ -1,4 +1,4 @@
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import type { UiLanguage } from "@/lib/locale-store";
 
 const OPTIONS: { id: UiLanguage; label: string }[] = [

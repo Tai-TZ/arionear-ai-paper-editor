@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { LanguageToggle } from "@/components/language-toggle";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { commonCopy } from "@/lib/common-i18n";
 

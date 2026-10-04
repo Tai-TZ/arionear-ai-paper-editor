@@ -34,10 +34,9 @@ import {
 } from "@/lib/project-store";
 import { importLatexFileList, type LatexImportResult } from "@/lib/latex-import";
 import { importOverleafZip } from "@/lib/overleaf-import";
-import { markEditorEntryTransition } from "@/components/editor-entry-splash";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { ProjectsListSkeleton } from "@/components/workspace/workspace-content-skeleton";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import { projectsCopy } from "@/lib/projects-i18n";
 import {
@@ -45,11 +44,11 @@ import {
   type EditableProjectNameHandle,
 } from "@/components/editable-project-name";
 import { toast } from "sonner";
+import { ProjectFormatNoticeDialog } from "@/components/projects/project-format-notice-dialog";
 import {
-  ProjectFormatNoticeDialog,
   hasAcknowledgedProjectFormatNotice,
   useProjectFormatNotice,
-} from "@/components/projects/project-format-notice-dialog";
+} from "@/components/projects/project-format-notice";
 
 export const Route = createFileRoute("/_workspace/projects")({
   ssr: false,
@@ -128,7 +127,6 @@ function ProjectsPage() {
 
   const openEditor = (projectId: string) => {
     if (!projectId.trim()) return;
-    markEditorEntryTransition();
     void navigate({
       to: "/editor",
       search: { projectId: projectId.trim() },

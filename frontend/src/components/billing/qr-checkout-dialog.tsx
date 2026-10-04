@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { fetchBillingStatus, type BillingStatus } from "@/lib/api/billing-api";
 
 const POLL_INTERVAL_MS = 3_000;

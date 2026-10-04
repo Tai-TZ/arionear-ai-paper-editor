@@ -1,6 +1,6 @@
 import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { Link } from "@tanstack/react-router";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { editorCopy, formatMastheadDate } from "@/lib/editor-i18n";
 import { getSession } from "@/lib/auth-store";
 import { DefenseMastheadPrefs } from "@/components/defense/defense-masthead-prefs";

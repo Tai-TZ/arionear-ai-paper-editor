@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Check, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import {
   Dialog,
   DialogContent,

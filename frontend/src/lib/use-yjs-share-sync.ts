@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as Y from "yjs";
 
 import { resolveWsBase } from "@/lib/api/ws-base";
+import { useLatestRef } from "@/lib/use-latest-ref";
 
 const LATEX_KEY = "latex";
 
@@ -18,6 +19,7 @@ export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjs
   const wsRef = useRef<WebSocket | null>(null);
   const remoteLock = useRef(false);
   const localLock = useRef(false);
+  const latexRef = useLatestRef(latex);
 
   useEffect(() => {
     if (!enabled || !token) {
@@ -57,10 +59,11 @@ export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjs
 
     ws.onopen = () => {
       window.setTimeout(() => {
-        if (ytext.length > 0 || !latex.trim()) return;
+        const seed = latexRef.current;
+        if (ytext.length > 0 || !seed.trim()) return;
         localLock.current = true;
         ydoc.transact(() => {
-          ytext.insert(0, latex);
+          ytext.insert(0, seed);
         });
         localLock.current = false;
         if (ws.readyState === WebSocket.OPEN) {
@@ -76,7 +79,7 @@ export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjs
       ydocRef.current = null;
       ytextRef.current = null;
     };
-  }, [enabled, token, onRemoteLatex]);
+  }, [enabled, token, onRemoteLatex, latexRef]);
 
   useEffect(() => {
     const ytext = ytextRef.current;

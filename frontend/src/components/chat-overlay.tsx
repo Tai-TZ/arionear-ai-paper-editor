@@ -12,9 +12,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp, ChevronDown, ChevronUp, Maximize2, PencilLine, Square, X } from "lucide-react";
 
-import arioAvatar from "../../assets/avatar/avatar-chat.png";
+import { arioAvatar } from "@/lib/ario-avatar";
 import { LlmSelector } from "@/components/llm-selector";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
 import {
   filterSlashCommands,
@@ -757,5 +757,3 @@ export const ChatInput = forwardRef<
     </div>
   );
 });
-
-export { arioAvatar };

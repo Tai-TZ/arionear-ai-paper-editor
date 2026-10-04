@@ -23,7 +23,7 @@ import {
 } from "@/lib/researcher-profile";
 import { profileCopy } from "@/lib/profile-i18n";
 import { formatDateTime } from "@/lib/date-i18n";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { getStoredLocale } from "@/lib/locale-store";
 import { buildProfilePatch, validateProfileBeforeSave } from "@/lib/profile-patch";
 import { Switch } from "@/components/ui/switch";

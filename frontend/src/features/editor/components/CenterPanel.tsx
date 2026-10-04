@@ -1,6 +1,6 @@
 import type React from "react";
 import { FileOutput, FileText, GraduationCap, Redo2, Share2, Undo2, Wrench } from "lucide-react";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale } from "@/components/locale-context";
 import { ChatOverlay, type ChatMessage } from "@/components/chat-overlay";
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
 import { ProjectAssetPreview } from "@/components/editor/project-asset-preview";
