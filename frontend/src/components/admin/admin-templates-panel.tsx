@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { WorkspacePanelSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { adminCopy } from "@/lib/admin-i18n";
+import { TEMPLATE_FORMATS } from "@/lib/template-formats-i18n";
 import {
   adminCreateTemplate,
   adminDeleteTemplate,
@@ -490,7 +491,11 @@ export function AdminTemplatesPanel() {
                   value={form.format}
                   onChange={(e) => patchForm("format", e.target.value)}
                 >
-                  <option value="ieee">IEEE</option>
+                  {TEMPLATE_FORMATS.map((format) => (
+                    <option key={format.value} value={format.value}>
+                      {format.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 

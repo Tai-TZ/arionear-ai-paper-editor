@@ -14,9 +14,16 @@ import {
   type PaperTemplateSummary,
 } from "@/lib/api/templates-api";
 import { templatesCopy } from "@/lib/templates-i18n";
+import { TEMPLATE_FORMATS, templateEyebrow } from "@/lib/template-formats-i18n";
 import { useTemplatesLayoutVariant } from "@/components/templates/template-gallery-layout";
 
-const QUICK_FILTERS = ["IEEE", "Journal", "Conference", "Thesis", "Bibliographies"] as const;
+const QUICK_FILTERS: readonly string[] = [
+  ...TEMPLATE_FORMATS.map((format) => format.label),
+  "Journal",
+  "Conference",
+  "Thesis",
+  "Bibliographies",
+];
 
 export function TemplateGalleryContent() {
   const { locale } = useLocale();
@@ -228,7 +235,7 @@ function TemplateFeaturedCard({
         <span className="template-catalog-featured-label">{label}</span>
       </div>
       <div className="template-catalog-featured-body">
-        <p className="template-catalog-featured-eyebrow">{item.venue || item.author}</p>
+        <p className="template-catalog-featured-eyebrow">{templateEyebrow(item, locale)}</p>
         <h2 className="template-catalog-featured-title">
           {title}
           {item.is_official ? <TemplateOfficialBadge label={officialLabel} /> : null}
@@ -275,7 +282,7 @@ function TemplateCatalogCard({
           ) : null}
         </div>
         <div className="template-catalog-card-body">
-          <p className="template-catalog-card-venue">{item.venue || item.author}</p>
+          <p className="template-catalog-card-venue">{templateEyebrow(item, locale)}</p>
           <h2 className="template-catalog-card-title">{title}</h2>
           <p className="template-catalog-card-desc">{description}</p>
           <div className="template-catalog-card-tags">
