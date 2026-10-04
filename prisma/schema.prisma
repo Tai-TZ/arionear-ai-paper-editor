@@ -120,19 +120,19 @@ enum AuditActionType {
 // ─── Core tables (ERD) ───────────────────────────────────────────────────────
 
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  email          String    @unique
-  fullName       String    @map("full_name")
-  institution    String?
-  nativeLanguage String?   @map("native_language")
-  researchField  String?   @map("research_field")
-  profileSettings Json     @default("{}") @map("profile_settings")
-  role           UserRole  @default(RESEARCHER)
-  passwordHash   String?   @map("password_hash")
-  googleSub      String?   @unique @map("google_sub")
-  isActive       Boolean   @default(true) @map("is_active")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  lastActiveAt   DateTime? @map("last_active_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  fullName        String    @map("full_name")
+  institution     String?
+  nativeLanguage  String?   @map("native_language")
+  researchField   String?   @map("research_field")
+  profileSettings Json      @default("{}") @map("profile_settings")
+  role            UserRole  @default(RESEARCHER)
+  passwordHash    String?   @map("password_hash")
+  googleSub       String?   @unique @map("google_sub")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastActiveAt    DateTime? @map("last_active_at")
 
   papers              Paper[]
   aiSessions          AiSession[]
@@ -145,18 +145,18 @@ model User {
 }
 
 model UserSubscription {
-  id                String    @id @default(uuid()) @db.Uuid
-  userId            String    @unique @map("user_id") @db.Uuid
-  tier              UserTier  @default(FREE)
-  defenseTurnsUsed  Int       @default(0) @map("defense_turns_used")
-  turnsResetAt      DateTime  @default(now()) @map("turns_reset_at")
-  upgradedAt        DateTime? @map("upgraded_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @map("user_id") @db.Uuid
+  tier             UserTier  @default(FREE)
+  defenseTurnsUsed Int       @default(0) @map("defense_turns_used")
+  turnsResetAt     DateTime  @default(now()) @map("turns_reset_at")
+  upgradedAt       DateTime? @map("upgraded_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([userId], map: "ix_user_subscriptions_user_id")
   @@map("user_subscriptions")
 }
 
@@ -205,12 +205,12 @@ model Paper {
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
-  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  sections          PaperSection[]
-  aiSessions        AiSession[]
-  citations         Citation[]
-  reviewerComments  ReviewerComment[]
-  auditLogs         AuditLog[]
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sections         PaperSection[]
+  aiSessions       AiSession[]
+  citations        Citation[]
+  reviewerComments ReviewerComment[]
+  auditLogs        AuditLog[]
 
   @@index([userId])
   @@map("papers")
@@ -236,17 +236,17 @@ model PaperSection {
 }
 
 model AiSession {
-  id              String    @id @default(uuid()) @db.Uuid
-  paperId         String    @map("paper_id") @db.Uuid
-  sectionId       String?   @map("section_id") @db.Uuid
-  userId          String?   @map("user_id") @db.Uuid
-  taskType        TaskType  @map("task_type")
-  userInput       String    @default("") @map("user_input") @db.Text
-  aiOutput        String    @default("") @map("ai_output") @db.Text
-  metadata        Json      @default("{}")
-  tokensUsed      Int       @default(0) @map("tokens_used")
-  confidenceScore Float?    @map("confidence_score")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  id              String   @id @default(uuid()) @db.Uuid
+  paperId         String   @map("paper_id") @db.Uuid
+  sectionId       String?  @map("section_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  taskType        TaskType @map("task_type")
+  userInput       String   @default("") @map("user_input") @db.Text
+  aiOutput        String   @default("") @map("ai_output") @db.Text
+  metadata        Json     @default("{}")
+  tokensUsed      Int      @default(0) @map("tokens_used")
+  confidenceScore Float?   @map("confidence_score")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   paper               Paper                @relation(fields: [paperId], references: [id], onDelete: Cascade)
   section             PaperSection?        @relation(fields: [sectionId], references: [id], onDelete: SetNull)
@@ -260,18 +260,18 @@ model AiSession {
 }
 
 model Suggestion {
-  id              String           @id @default(uuid()) @db.Uuid
-  sessionId       String           @map("session_id") @db.Uuid
-  sectionId       String?          @map("section_id") @db.Uuid
-  suggestionType  SuggestionType   @default(STYLE) @map("suggestion_type")
-  originalText    String           @map("original_text") @db.Text
-  suggestedText   String           @map("suggested_text") @db.Text
-  sectionLabel    String?          @map("section_label")
-  explanation     String?          @db.Text
-  diff            String?          @db.Text
-  status          SuggestionStatus @default(PENDING)
-  createdAt       DateTime         @default(now()) @map("created_at")
-  resolvedAt      DateTime?        @map("resolved_at")
+  id             String           @id @default(uuid()) @db.Uuid
+  sessionId      String           @map("session_id") @db.Uuid
+  sectionId      String?          @map("section_id") @db.Uuid
+  suggestionType SuggestionType   @default(STYLE) @map("suggestion_type")
+  originalText   String           @map("original_text") @db.Text
+  suggestedText  String           @map("suggested_text") @db.Text
+  sectionLabel   String?          @map("section_label")
+  explanation    String?          @db.Text
+  diff           String?          @db.Text
+  status         SuggestionStatus @default(PENDING)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  resolvedAt     DateTime?        @map("resolved_at")
 
   aiSession AiSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   section   PaperSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
@@ -281,22 +281,22 @@ model Suggestion {
 }
 
 model Citation {
-  id                 String                     @id @default(uuid()) @db.Uuid
-  paperId            String                     @map("paper_id") @db.Uuid
-  citationKey        String                     @map("citation_key")
-  citationType       CitationType               @default(OTHER) @map("citation_type")
-  authors            String?
-  title              String?
-  journal            String?
-  year               Int?
-  doi                String?
-  eprint             String?
-  rawText            String?                    @map("raw_text") @db.Text
-  formattedStyles    Json                       @default("{}") @map("formatted_styles")
-  verificationStatus CitationVerificationStatus @default(UNVERIFIED) @map("verification_status")
-  verificationMessage String?                   @map("verification_message") @db.Text
-  verificationLayers Json                       @default("[]") @map("verification_layers")
-  createdAt          DateTime                   @default(now()) @map("created_at")
+  id                  String                     @id @default(uuid()) @db.Uuid
+  paperId             String                     @map("paper_id") @db.Uuid
+  citationKey         String                     @map("citation_key")
+  citationType        CitationType               @default(OTHER) @map("citation_type")
+  authors             String?
+  title               String?
+  journal             String?
+  year                Int?
+  doi                 String?
+  eprint              String?
+  rawText             String?                    @map("raw_text") @db.Text
+  formattedStyles     Json                       @default("{}") @map("formatted_styles")
+  verificationStatus  CitationVerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verificationMessage String?                    @map("verification_message") @db.Text
+  verificationLayers  Json                       @default("[]") @map("verification_layers")
+  createdAt           DateTime                   @default(now()) @map("created_at")
 
   paper  Paper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
   usages CitationUsage[]
@@ -307,12 +307,12 @@ model Citation {
 }
 
 model CitationUsage {
-  id              String @id @default(uuid()) @db.Uuid
-  citationId      String @map("citation_id") @db.Uuid
-  sectionId       String @map("section_id") @db.Uuid
-  positionStart   Int    @map("position_start")
-  positionEnd     Int    @map("position_end")
-  contextSnippet  String @map("context_snippet") @db.Text
+  id             String @id @default(uuid()) @db.Uuid
+  citationId     String @map("citation_id") @db.Uuid
+  sectionId      String @map("section_id") @db.Uuid
+  positionStart  Int    @map("position_start")
+  positionEnd    Int    @map("position_end")
+  contextSnippet String @map("context_snippet") @db.Text
 
   citation Citation     @relation(fields: [citationId], references: [id], onDelete: Cascade)
   section  PaperSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
@@ -339,13 +339,13 @@ model ReviewerComment {
 }
 
 model ResponseSuggestion {
-  id                 String         @id @default(uuid()) @db.Uuid
-  commentId          String         @map("comment_id") @db.Uuid
-  sessionId          String         @map("session_id") @db.Uuid
-  suggestedResponse  String         @map("suggested_response") @db.Text
-  revisionNote       String?        @map("revision_note") @db.Text
-  status             ResponseStatus @default(DRAFT)
-  createdAt          DateTime       @default(now()) @map("created_at")
+  id                String         @id @default(uuid()) @db.Uuid
+  commentId         String         @map("comment_id") @db.Uuid
+  sessionId         String         @map("session_id") @db.Uuid
+  suggestedResponse String         @map("suggested_response") @db.Text
+  revisionNote      String?        @map("revision_note") @db.Text
+  status            ResponseStatus @default(DRAFT)
+  createdAt         DateTime       @default(now()) @map("created_at")
 
   comment   ReviewerComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   aiSession AiSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -355,14 +355,14 @@ model ResponseSuggestion {
 }
 
 model AuditLog {
-  id         String          @id @default(uuid()) @db.Uuid
-  userId     String?         @map("user_id") @db.Uuid
-  paperId    String?         @map("paper_id") @db.Uuid
-  actionType AuditActionType @map("action_type")
-  beforeState Json?          @map("before_state")
-  afterState  Json?          @map("after_state")
-  ipAddress  String?         @map("ip_address")
-  createdAt  DateTime        @default(now()) @map("created_at")
+  id          String          @id @default(uuid()) @db.Uuid
+  userId      String?         @map("user_id") @db.Uuid
+  paperId     String?         @map("paper_id") @db.Uuid
+  actionType  AuditActionType @map("action_type")
+  beforeState Json?           @map("before_state")
+  afterState  Json?           @map("after_state")
+  ipAddress   String?         @map("ip_address")
+  createdAt   DateTime        @default(now()) @map("created_at")
 
   user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
   paper Paper? @relation(fields: [paperId], references: [id], onDelete: SetNull)
@@ -374,11 +374,11 @@ model AuditLog {
 
 model PlatformProviderKey {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider       String    @db.VarChar(32)
+  provider       String
   priority       Int       @default(0)
-  label          String?   @db.VarChar(64)
+  label          String?
   keyCiphertext  String    @map("key_ciphertext")
-  keyHint        String    @map("key_hint") @db.VarChar(32)
+  keyHint        String    @map("key_hint")
   isActive       Boolean   @default(true) @map("is_active")
   lastVerifiedAt DateTime? @map("last_verified_at") @db.Timestamptz
   lastError      String?   @map("last_error")
@@ -386,9 +386,9 @@ model PlatformProviderKey {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  updater User? @relation("ProviderKeyUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+  updater User? @relation("ProviderKeyUpdater", fields: [updatedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
-  @@unique([provider, priority], name: "uq_platform_provider_keys_provider_priority")
-  @@index([provider], name: "ix_platform_provider_keys_provider")
+  @@unique([provider, priority], name: "uq_platform_provider_keys_provider_priority", map: "uq_platform_provider_keys_provider_priority")
+  @@index([provider], map: "ix_platform_provider_keys_provider")
   @@map("platform_provider_keys")
 }
