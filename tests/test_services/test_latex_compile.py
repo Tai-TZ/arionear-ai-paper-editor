@@ -451,3 +451,50 @@ def test_compile_impl_guards_unvalidated_main_file(monkeypatch, tmp_path):
     )
     with pytest.raises(lc.UnsafeMainFileError):
         lc.compile_latex(request)
+
+
+def _fake_batchmode_passes(monkeypatch, tmp_path, tex_logs: list[str]) -> list[int]:
+    """Fake TeX passes: stdout stays empty (batchmode); warnings only land in main.log."""
+    calls: list[int] = []
+
+    def fake_pass(_compiler, _engine, work_dir, main_file, **_kwargs):
+        index = len(calls)
+        calls.append(index)
+        log = tex_logs[min(index, len(tex_logs) - 1)]
+        (work_dir / f"{lc._jobname(main_file)}.log").write_text(log, encoding="utf-8")
+        (work_dir / f"{lc._jobname(main_file)}.pdf").write_bytes(b"%PDF-1.5")
+        return 0, ""
+
+    monkeypatch.setattr(lc, "find_tex_engine", lambda _compiler: "pdflatex")
+    monkeypatch.setattr(lc, "_run_tex_pass", fake_pass)
+    return calls
+
+
+_UNDEFINED_REFS_LOG = "LaTeX Warning: There were undefined references.\n"
+_CLEAN_LOG = "Output written on main.pdf (1 page).\n"
+
+
+def test_direct_compile_reruns_when_tex_log_reports_undefined_references(monkeypatch, tmp_path):
+    calls = _fake_batchmode_passes(monkeypatch, tmp_path, [_UNDEFINED_REFS_LOG, _CLEAN_LOG])
+    lc._direct_compile("pdflatex", tmp_path, "main.tex", passes=3)
+    assert len(calls) == 2
+
+
+def test_direct_compile_stops_after_clean_tex_log(monkeypatch, tmp_path):
+    calls = _fake_batchmode_passes(monkeypatch, tmp_path, [_CLEAN_LOG])
+    lc._direct_compile("pdflatex", tmp_path, "main.tex", passes=3)
+    assert len(calls) == 1
+
+
+def test_manual_compile_reruns_when_tex_log_reports_undefined_references(monkeypatch, tmp_path):
+    calls = _fake_batchmode_passes(monkeypatch, tmp_path, [_UNDEFINED_REFS_LOG, _CLEAN_LOG])
+    latex = "See [1] via cite{a}; thebibliography only, no bibtex run."
+    lc._manual_compile("pdflatex", tmp_path, "main.tex", latex)
+    assert len(calls) == 2
+
+
+def test_pass_needs_rerun_reads_tex_log(tmp_path):
+    assert lc._pass_needs_rerun("", tmp_path, "main") is False  # no .log yet
+    (tmp_path / "main.log").write_text("Label(s) may have changed. Rerun to get cross-references right.")
+    assert lc._pass_needs_rerun("", tmp_path, "main") is True
+    assert lc._pass_needs_rerun("LaTeX Warning: There were undefined references.", tmp_path, "other") is True

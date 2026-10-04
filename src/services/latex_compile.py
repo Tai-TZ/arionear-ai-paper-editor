@@ -940,6 +940,19 @@ def _needs_rerun(log_text: str) -> bool:
     return any(m in log_text for m in markers)
 
 
+def _pass_needs_rerun(stdout_log: str, work_dir: Path, jobname: str) -> bool:
+    """Rerun check for the pass that just ran.
+
+    In batchmode TeX prints its warnings ("There were undefined references", "Rerun to get ...")
+    only to <jobname>.log, not stdout. The .log is rewritten by every pass, so it reflects this one.
+    """
+    try:
+        tex_log = (work_dir / f"{jobname}.log").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        tex_log = ""
+    return _needs_rerun(stdout_log) or _needs_rerun(tex_log)
+
+
 def _direct_compile(
     compiler: str,
     work_dir: Path,
@@ -969,7 +982,7 @@ def _direct_compile(
         logs.append(log)
         if code != 0 and not pdf_path.is_file():
             break
-        if not _needs_rerun(log):
+        if not _pass_needs_rerun(log, work_dir, jobname):
             break
 
     return logs
@@ -1008,7 +1021,7 @@ def _manual_compile(
         logs.append(log)
         if code != 0 and not (work_dir / f"{jobname}.pdf").exists():
             return
-        if _needs_rerun(log) and not fast:
+        if not fast and _pass_needs_rerun(log, work_dir, jobname):
             code, log = _run_tex_pass(
                 compiler,
                 engine,
