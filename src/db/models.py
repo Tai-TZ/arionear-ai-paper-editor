@@ -101,6 +101,7 @@ class CitationVerificationStatus(enum.StrEnum):
     UNVERIFIED = "UNVERIFIED"
     NOT_FOUND = "NOT_FOUND"
     ERROR = "ERROR"
+    POSSIBLE_MISMATCH = "POSSIBLE_MISMATCH"
 
 
 class ReviewSeverity(enum.StrEnum):

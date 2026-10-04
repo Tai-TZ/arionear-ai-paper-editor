@@ -83,6 +83,7 @@ enum CitationVerificationStatus {
   UNVERIFIED
   NOT_FOUND
   ERROR
+  POSSIBLE_MISMATCH
 }
 
 enum ReviewSeverity {

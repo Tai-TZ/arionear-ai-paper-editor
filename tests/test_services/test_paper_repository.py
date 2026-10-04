@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import event
@@ -17,6 +18,8 @@ from src.db.models import AiSession, Paper, Suggestion, TaskType, User
 from src.db.paper_repository import DatabaseSessionStore, _citation_to_registry_row, _status_to_action
 from src.services.sessions import PaperSession, RevisionRecord
 from src.services.usage_tracking import record_ai_usage
+
+_REPO = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
@@ -225,6 +228,37 @@ def test_set_citation_registry_can_be_rerun_with_same_keys(store):
 
     rows = store.get(sid).citation_registry
     assert [(r["key"], r["status"]) for r in rows] == [("smith2024", "not_found")]
+
+
+def test_every_verifier_status_round_trips(store):
+    sid = str(uuid.uuid4())
+    store.create(sid)
+    statuses = ["verified", "possible_mismatch", "not_found", "unverified", "partial", "error"]
+    store.set_citation_registry(sid, [{"key": f"k{i}", "status": s} for i, s in enumerate(statuses)])
+
+    rows = store.get(sid).citation_registry
+
+    assert sorted((r["key"], r["status"]) for r in rows) == [(f"k{i}", s) for i, s in enumerate(statuses)]
+
+
+def test_unknown_status_still_falls_back_to_unverified(store):
+    sid = str(uuid.uuid4())
+    store.create(sid)
+    store.set_citation_registry(sid, [{"key": "a", "status": "weird"}, {"key": "b"}])
+
+    assert {r["status"] for r in store.get(sid).citation_registry} == {"unverified"}
+
+
+def test_possible_mismatch_enum_is_in_schema_and_migrations():
+    schema = (_REPO / "prisma" / "schema.prisma").read_text(encoding="utf-8")
+    enum_block = schema.split("enum CitationVerificationStatus {", 1)[1].split("}", 1)[0]
+    assert "POSSIBLE_MISMATCH" in enum_block.split()
+    migrations = (_REPO / "prisma" / "migrations").glob("*/migration.sql")
+    assert any(
+        "ALTER TYPE \"CitationVerificationStatus\" ADD VALUE IF NOT EXISTS 'POSSIBLE_MISMATCH'"
+        in m.read_text(encoding="utf-8")
+        for m in migrations
+    )
 
 
 def test_usage_rows_carry_owner_user_id(store):
