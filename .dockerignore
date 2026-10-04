@@ -14,6 +14,14 @@ tests/
 scripts/
 frontend/node_modules
 frontend/dist
+# The API image only reads frontend/public/latex-stubs and frontend/public/assets (latex_compile.py,
+# template_store.py); the frontend image builds from its own context (frontend/.dockerignore).
+frontend/.output
+frontend/public/core
+frontend/.codegraph
+**/*.log
+.claude
+.agents
 docs/
 eval/
 *.md

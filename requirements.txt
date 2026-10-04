@@ -30,6 +30,9 @@ psycopg2-binary>=2.9.0
 # Auth
 bcrypt>=4.0.0
 PyJWT>=2.10.0
+# Fernet encryption of admin-managed provider API keys (src/services/secret_crypto.py imports it directly;
+# it was only installed transitively before).
+cryptography>=44.0.1
 
 # Parsing (MIT): BibTeX, LaTeX → text, JSON in LLM replies, fuzzy citation-title matching
 bibtexparser>=2.1,<3
