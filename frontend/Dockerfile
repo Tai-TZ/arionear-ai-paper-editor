@@ -33,11 +33,12 @@ FROM node:22-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Nitro listens on $PORT (default 3000); Cloud Run overrides it, plain `docker run` gets 8080.
+ENV PORT=8080
 
 # Nitro node-server output (TanStack Start): dist/server/index.mjs + static assets
 COPY --from=builder /app/dist ./dist
 
-# Cloud Run injects PORT; Nitro reads process.env.PORT
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
