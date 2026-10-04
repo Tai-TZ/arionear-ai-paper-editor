@@ -1,0 +1,63 @@
+name: LaTeX
+
+# Runs the whole backend suite on a real TeX Live install, so the compile tests that skip in the
+# main CI job (no TeX there) actually run: PDF compile, journal templates, DOCX import output.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/services/latex_compile.py
+      - src/services/template_*.py
+      - src/services/document_import/**
+      - frontend/public/latex-stubs/**
+      - tests/**
+      - requirements*.txt
+      - .github/workflows/latex.yml
+  pull_request:
+    paths:
+      - src/services/latex_compile.py
+      - src/services/template_*.py
+      - src/services/document_import/**
+      - frontend/public/latex-stubs/**
+      - .github/workflows/latex.yml
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: latex-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Tests with TeX Live
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TeX Live (same package set as the backend image)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-bibtex-extra texlive-science \
+            texlive-publishers texlive-xetex latexmk biber
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests (no TeX-gated skips expected)
+        run: pytest tests -q -p no:cacheprovider -rs

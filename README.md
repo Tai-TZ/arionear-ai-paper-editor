@@ -6,6 +6,9 @@
 
 **Trợ lý AI biên tập bài báo khoa học trên LaTeX — gợi ý như một biên tập viên, quyết định vẫn thuộc về tác giả.**
 
+[![CI](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml)
+[![Security](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml)
+
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)

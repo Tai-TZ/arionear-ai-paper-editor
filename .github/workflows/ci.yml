@@ -2,102 +2,159 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
     branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   APP_ENV: test
-  LLM_PROVIDER: openai
-  OPENAI_API_KEY: test-key
-  OPENROUTER_API_KEY: test-key
-  ANTHROPIC_API_KEY: test-key
   PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
 
 jobs:
-  lint:
-    name: Lint
+  backend-lint:
+    name: Backend · lint & format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
-      - name: Install Ruff
-        run: python -m pip install --upgrade pip ruff
+      - name: Install Ruff (version pinned in requirements-dev.txt)
+        run: python -m pip install "$(grep -E '^ruff==' requirements-dev.txt)"
 
       - name: Ruff check
-        run: ruff check src/ tests/
+        run: ruff check src tests scripts eval
 
       - name: Ruff format check
-        run: ruff format --check src/ tests/
+        run: ruff format --check src tests scripts eval
 
-  test:
-    name: Test
+  backend-test:
+    name: Backend · test (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
-    needs: lint
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
           cache: pip
+          cache-dependency-path: requirements*.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Run tests with coverage
+        run: >
+          pytest tests -q -p no:cacheprovider
+          --cov=src --cov-report=term-missing:skip-covered --cov-report=xml
+
+      - name: Coverage summary
+        if: matrix.python == '3.11'
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          rate = float(ET.parse("coverage.xml").getroot().get("line-rate", 0)) * 100
+          print(f"### Backend coverage: {rate:.1f}% of lines")
+          PY
+
+      - name: Upload coverage report
+        if: matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+          retention-days: 14
 
   frontend:
-    name: Frontend
+    name: Frontend · lint, typecheck, test, build
     runs-on: ubuntu-latest
-    needs: lint
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: frontend
-        run: |
-          npm ci --include=optional
-          # Linux runners: optional native bindings are sometimes skipped by npm ci
-          npm install --no-save \
-            @rollup/rollup-linux-x64-gnu \
-            lightningcss-linux-x64-gnu \
-            @tailwindcss/oxide-linux-x64-gnu
+        run: npm ci
 
       - name: Lint
-        working-directory: frontend
         run: npm run lint -- --max-warnings 0
 
+      - name: Format check
+        run: npx prettier --check .
+
       - name: Type check
-        working-directory: frontend
         run: npm run typecheck
 
-      - name: Run unit tests
-        working-directory: frontend
+      - name: Unit tests
         run: npm test
 
       - name: Build
-        working-directory: frontend
         run: npm run build
+
+  database:
+    name: Database · Prisma migrations on PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arionear
+          POSTGRES_PASSWORD: arionear
+          POSTGRES_DB: arionear
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U arionear" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://arionear:arionear@localhost:5432/arionear
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Prisma CLI
+        run: npm ci
+
+      - name: Validate schema
+        run: npx prisma validate
+
+      - name: Apply all migrations to a fresh database
+        run: npx prisma migrate deploy
+
+      - name: Schema and migrations are in sync
+        env:
+          SHADOW_DATABASE_URL: postgresql://arionear:arionear@localhost:5432/arionear_shadow
+        run: |
+          PGPASSWORD=arionear psql -h localhost -U arionear -d arionear -c "CREATE DATABASE arionear_shadow"
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" --exit-code

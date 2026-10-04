@@ -16,9 +16,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# Keep lockfile versions; add Linux native bindings missing from Windows-generated lockfile.
-RUN npm install --include=dev --legacy-peer-deps \
-    && npm install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --legacy-peer-deps --no-save
+# Exact lockfile install (the lockfile includes the Linux native bindings for rollup/lightningcss/oxide).
+RUN npm ci
 
 COPY . .
 

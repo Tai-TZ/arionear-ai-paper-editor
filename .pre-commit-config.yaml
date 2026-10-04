@@ -1,0 +1,38 @@
+# Local checks before each commit (same tools and versions as CI).
+# Setup once:  pip install -r requirements-dev.txt && pre-commit install
+# Run on everything:  pre-commit run --all-files
+exclude: ^(\.claude/|frontend/\.claude/|docs/assets/.*\.svg$|frontend/public/latex-stubs/|frontend/src/routeTree\.gen\.ts$)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: (tsconfig.*\.json|\.vscode/.*)$
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^(src|tests|scripts|eval)/
+      - id: ruff-format
+        files: ^(src|tests|scripts|eval)/
+
+  - repo: local
+    hooks:
+      - id: frontend-prettier-eslint
+        name: frontend · prettier + eslint
+        entry: python scripts/precommit_frontend.py
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|mjs|json|css|md)$
+        exclude: ^frontend/package-lock\.json$
