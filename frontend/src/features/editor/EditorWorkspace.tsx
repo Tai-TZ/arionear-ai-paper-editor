@@ -14,9 +14,10 @@ import { useLocale } from "@/components/locale-context";
 import { updatePaper } from "@/lib/api/papers-api";
 import { commonCopy } from "@/lib/common-i18n";
 import { editorCopy } from "@/lib/editor-i18n";
+import { editorShellCopy } from "@/lib/editor-shell-i18n";
 import { formatLogicAuditProgress } from "@/lib/logic-audit";
 import type { EditorSelectionContext, SelectionAnchor } from "@/lib/editor-selection-anchor";
-import { isImageAssetFile } from "@/lib/project-store";
+import { isImageAssetFile, type LatexCompiler } from "@/lib/project-store";
 import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import { Route } from "@/routes/editor";
 import { persistChatThreads } from "./lib/editor-thread-storage";
@@ -43,11 +44,22 @@ import { useEditorProviders } from "./state/useEditorProviders";
 import { useEditorTools, type EditorToolsChatBridge } from "./state/useEditorTools";
 import { useLatexWorkspace } from "./state/useLatexWorkspace";
 
+/**
+ * Ctrl+Z / Ctrl+Y typed into another field (chat, rename, search…) belong to that field;
+ * only the LaTeX editor's own textarea maps them to project undo/redo.
+ */
+function isOtherEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.closest(".latex-input")) return false;
+  return target.isContentEditable || target.matches("input, textarea, select");
+}
+
 export function EditorWorkspace() {
   const navigate = useNavigate();
   const { locale } = useLocale();
   const shell = useMemo(() => commonCopy(locale).shell, [locale]);
   const t = useMemo(() => editorCopy(locale), [locale]);
+  const shellCopy = useMemo(() => editorShellCopy(locale), [locale]);
   const { projectId } = Route.useSearch();
 
   const [sidebarTab, setSidebarTab] = useState<"files" | "chats">("files");
@@ -230,9 +242,21 @@ export function EditorWorkspace() {
     undo: projectUndo,
     redo: projectRedo,
     openProjectFile: openFileInProject,
+    setCompiler: setProjectCompiler,
   } = project;
   const { scheduleCompile: scheduleWorkspaceCompile } = latexWs;
   const { tryStartScoreGateAudit } = tools;
+
+  // Desktop and mobile PDF panels share one handler so the choice is always persisted.
+  const handleCompilerChange = useCallback(
+    (value: LatexCompiler) => {
+      setProjectCompiler(value);
+      if (projectId) {
+        updatePaper(projectId, { compiler: value }).catch(() => {});
+      }
+    },
+    [projectId, setProjectCompiler],
+  );
 
   const handleSave = useCallback(() => {
     if (!projectId) return;
@@ -288,6 +312,7 @@ export function EditorWorkspace() {
         handleSave();
         return;
       }
+      if (isOtherEditableTarget(e.target)) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) projectRedo();
@@ -350,12 +375,19 @@ export function EditorWorkspace() {
     setChatComposerMode("quick-edit");
     setChatSelectionContext(null);
     setSelection("");
-    setChatInput(`Fix this LaTeX compile error:\n\n${latexWs.compileError.slice(0, 1500)}`);
+    setChatInput(shellCopy.fixCompilePrompt(latexWs.compileError.slice(0, 1500)));
     if (latexWs.compileErrorLine) {
       latexWs.setHighlightLine(latexWs.compileErrorLine);
     }
     openChatPanel();
-  }, [latexWs, openChatPanel, setChatInput, setChatSelectionContext, setChatComposerMode]);
+  }, [
+    latexWs,
+    openChatPanel,
+    setChatInput,
+    setChatSelectionContext,
+    setChatComposerMode,
+    shellCopy,
+  ]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -428,7 +460,7 @@ export function EditorWorkspace() {
       )}
       {project.bootState === "error" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-          <p className="font-serif-body text-lg font-semibold">Could not open project</p>
+          <p className="font-serif-body text-lg font-semibold">{shellCopy.bootError.title}</p>
           <p className="max-w-md text-sm text-muted-foreground">{project.bootError}</p>
           <div className="flex flex-wrap justify-center gap-2">
             <button
@@ -436,13 +468,13 @@ export function EditorWorkspace() {
               onClick={project.retryBootLoad}
               className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              Retry
+              {shellCopy.bootError.retry}
             </button>
             <Link
               to="/projects"
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Back to projects
+              {shellCopy.bootError.backToProjects}
             </Link>
           </div>
         </div>
@@ -594,15 +626,7 @@ export function EditorWorkspace() {
                     {...toolsPanelBindings}
                   />
                 ) : (
-                  <PdfPreviewPanel
-                    {...pdfPreviewProps}
-                    onCompilerChange={(value) => {
-                      project.setCompiler(value);
-                      if (projectId) {
-                        updatePaper(projectId, { compiler: value }).catch(() => {});
-                      }
-                    }}
-                  />
+                  <PdfPreviewPanel {...pdfPreviewProps} onCompilerChange={handleCompilerChange} />
                 )
               }
             />
@@ -702,7 +726,11 @@ export function EditorWorkspace() {
               </div>
             )}
             {mobileTab === "preview" && (
-              <PdfPreviewPanel {...pdfPreviewProps} onCompilerChange={project.setCompiler} mobile />
+              <PdfPreviewPanel
+                {...pdfPreviewProps}
+                onCompilerChange={handleCompilerChange}
+                mobile
+              />
             )}
           </div>
 
