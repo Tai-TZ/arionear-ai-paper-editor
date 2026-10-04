@@ -23,6 +23,16 @@ export type AuthResult =
   | { ok: true; user: AuthUser; accessToken: string }
   | { ok: false; error: string; code?: AuthErrorCode };
 
+/** Non-2xx response from the auth API, with its HTTP status. */
+class AuthHttpError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000): Promise<T> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -52,7 +62,7 @@ async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000
     } catch {
       /* ignore */
     }
-    throw new Error(mapAuthHttpError(res.status, detail));
+    throw new AuthHttpError(mapAuthHttpError(res.status, detail), res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -177,12 +187,21 @@ export async function apiResetPassword(
   }
 }
 
-export async function apiFetchMe(token: string): Promise<AuthUser | null> {
+/**
+ * `unauthorized`: the server rejected the token (401) — the session is gone.
+ * `error`: network failure, timeout or server error — the session may still be valid.
+ */
+export type FetchMeResult =
+  { status: "ok"; user: AuthUser } | { status: "unauthorized" } | { status: "error" };
+
+export async function apiFetchMe(token: string): Promise<FetchMeResult> {
   try {
-    return await authFetch<AuthUser>("/auth/me", {
+    const user = await authFetch<AuthUser>("/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch {
-    return null;
+    return { status: "ok", user };
+  } catch (e) {
+    if (e instanceof AuthHttpError && e.status === 401) return { status: "unauthorized" };
+    return { status: "error" };
   }
 }

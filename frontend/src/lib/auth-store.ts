@@ -108,10 +108,13 @@ function clearSession() {
   }
 }
 
-/** Clear all browser storage on sign-out (local + session). */
-function clearAllBrowserStorage() {
+/**
+ * Sign-out: drop the auth session and the tab-scoped caches of the user's work (sessionStorage),
+ * but keep device preferences in localStorage (locale, theme, editor layout).
+ */
+function clearUserBrowserStorage() {
   if (typeof window === "undefined") return;
-  localStorage.clear();
+  clearSession();
   sessionStorage.clear();
 }
 
@@ -124,7 +127,7 @@ export function signOut() {
   invalidateFetchPrefix("session:");
   invalidateFetchPrefix("admin:");
   clearProfileCache();
-  clearAllBrowserStorage();
+  clearUserBrowserStorage();
 }
 
 export function logoutUser() {
@@ -146,12 +149,12 @@ export async function completeOAuthSession(
   remember = false,
 ): Promise<{ ok: true; user: AuthUser } | { ok: false; error: string }> {
   invalidateFetchKey("auth:me");
-  const user = await apiFetchMe(accessToken);
-  if (!user) {
+  const result = await apiFetchMe(accessToken);
+  if (result.status !== "ok") {
     return { ok: false, error: "Could not verify your Google sign-in. Please try again." };
   }
-  persistSession(user, accessToken, remember);
-  return { ok: true, user };
+  persistSession(result.user, accessToken, remember);
+  return { ok: true, user: result.user };
 }
 
 export function getAccessToken() {
@@ -240,18 +243,25 @@ export async function resetPassword(
   return apiResetPassword(token.trim(), password);
 }
 
-/** Validate cached session against API (optional on app load). */
+/**
+ * Validate the cached session against the API (optional on app load).
+ * Returns null when the user could not be verified; the session is cleared only when the server
+ * rejects the token (401) — a network blip or server error leaves the user signed in.
+ */
 export async function refreshSession(): Promise<AuthUser | null> {
   const token = readToken();
   if (!token) {
     return null;
   }
-  const user = await fetchDedupe("auth:me", () => apiFetchMe(token));
-  if (!user) {
+  const result = await fetchDedupe("auth:me", () => apiFetchMe(token));
+  if (result.status === "unauthorized") {
     clearSession();
     invalidateFetchKey("auth:me");
     return null;
   }
-  writeCachedUser(user);
-  return user;
+  if (result.status === "error") {
+    return null;
+  }
+  writeCachedUser(result.user);
+  return result.user;
 }
