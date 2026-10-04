@@ -7,6 +7,8 @@ result — an OpenAlex outage must never break citation verification.
 from __future__ import annotations
 
 import re
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import quote
 
@@ -87,15 +89,30 @@ def _search_query(title: str) -> str:
     return re.sub(r"\s+", " ", text).strip()[:200]
 
 
-async def fetch_openalex_by_doi(doi: str, mailto: str = "") -> dict[str, Any]:
+@asynccontextmanager
+async def http_client(client: httpx.AsyncClient | None, timeout: float) -> AsyncIterator[httpx.AsyncClient]:
+    """Yield ``client`` when the caller shares one (connection reuse), else a short-lived client."""
+    if client is not None:
+        yield client
+        return
+    async with httpx.AsyncClient(timeout=timeout) as owned:
+        yield owned
+
+
+async def fetch_openalex_by_doi(
+    doi: str,
+    mailto: str = "",
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     """Look up one work by DOI. Returns ``{"found": False}`` on miss or any failure."""
     normalized = normalize_doi(doi)
     if not normalized:
         return {"found": False}
     url = f"{OPENALEX_API_BASE}/works/doi:{quote(normalized, safe='/')}"
     try:
-        async with httpx.AsyncClient(timeout=OPENALEX_TIMEOUT_SEC) as client:
-            resp = await client.get(url, params=_params(mailto), headers=_headers(mailto))
+        async with http_client(client, OPENALEX_TIMEOUT_SEC) as http:
+            resp = await http.get(url, params=_params(mailto), headers=_headers(mailto), timeout=OPENALEX_TIMEOUT_SEC)
             if resp.status_code == 404:
                 return {"found": False}
             if resp.status_code == 429:
@@ -114,6 +131,7 @@ async def search_openalex_by_title(
     mailto: str = "",
     *,
     limit: int = OPENALEX_SEARCH_LIMIT,
+    client: httpx.AsyncClient | None = None,
 ) -> list[dict[str, Any]]:
     """Full-text title search; returns normalized candidates (best first) or ``[]`` on failure."""
     query = _search_query(title)
@@ -121,8 +139,10 @@ async def search_openalex_by_title(
         return []
     params = _params(mailto, search=query, **{"per-page": str(max(1, min(limit, 25)))})
     try:
-        async with httpx.AsyncClient(timeout=OPENALEX_TIMEOUT_SEC) as client:
-            resp = await client.get(f"{OPENALEX_API_BASE}/works", params=params, headers=_headers(mailto))
+        async with http_client(client, OPENALEX_TIMEOUT_SEC) as http:
+            resp = await http.get(
+                f"{OPENALEX_API_BASE}/works", params=params, headers=_headers(mailto), timeout=OPENALEX_TIMEOUT_SEC
+            )
             if resp.status_code != 200:
                 return []
             results = resp.json().get("results") or []
