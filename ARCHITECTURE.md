@@ -18,7 +18,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 
 | Khía cạnh | Mô tả |
 |-----------|--------|
-| **Input** | Bản thảo LaTeX (upload, Overleaf ZIP, template gallery) *(DOCX/PDF parser — planned)* |
+| **Input** | Bản thảo LaTeX (upload, Overleaf ZIP, template gallery), Word (.docx) và PDF (text) |
 | **Output** | Bản thảo cải thiện + báo cáo integrity/citation + logic audit + publication score |
 | **Vai trò AI** | Editor (Ario) + Defense Council — human luôn approve cuối |
 | **Khác ARC** | ARC sinh bài từ ý tưởng; Arionear **không** chạy thí nghiệm, **không** PIVOT hướng nghiên cứu |
@@ -47,7 +47,7 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
   <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
-**Chưa vẽ vào sơ đồ (planned P2):** Peer-Review Response Agent, Reviewer Response drafts, OpenAlex, DOCX/PDF parser.
+**Không vẽ riêng trong sơ đồ:** Peer-Review Response Agent, DOCX/PDF import, OpenAlex/L4 relevance và AI disclosure — mô tả ở §4.2 và §7.
 
 ---
 
@@ -113,7 +113,7 @@ Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /c
 | Compile-after-accept | `useLatexWorkspace` |
 | First-run editor onboarding | `EditorOnboardingDialog`, `editor-onboarding-prefs.ts` |
 
-**Planned (P2):** DOCX/PDF upload & parse, peer-review reply UI, tách hoàn toàn `academic.ts`.
+**Đã thêm:** import DOCX/PDF (projects), tab *Peer review*, panel *Citation relevance (L4)*, mục *AI disclosure* trong hộp thoại Export. **Planned:** tách hoàn toàn `academic.ts`.
 
 ### 4.2 Backend (FastAPI)
 
@@ -143,7 +143,11 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `POST /chat` | Chat sync (LangGraph) | ✅ |
 | `POST /chat/stream` | Chat SSE — intent + edit + template + logic audit | ✅ |
 | `POST /edit/style` | Style edit trực tiếp | ✅ |
-| `POST /citations/verify` | Xác minh trích dẫn | ✅ |
+| `POST /citations/verify` | Xác minh trích dẫn (arXiv → CrossRef → S2 → OpenAlex) | ✅ |
+| `POST /citations/relevance` | L4 — LLM chấm nguồn có ủng hộ câu khẳng định (≤15 key/lần) | ✅ |
+| `POST /review/respond` | Peer review: tách & phân loại góp ý, soạn phản hồi từng điểm | ✅ |
+| `POST /import/document` | DOCX/PDF → LaTeX project (≤15 MB) | ✅ |
+| `GET /papers/{id}/ai-disclosure` | AI Contribution Report (JSON + tuyên bố EN/VI + LaTeX) | ✅ |
 | `POST /compile` | LaTeX → PDF (delta assets, gzip, rate limit) | ✅ |
 | `GET /compile/status` | TeX Live availability probe | ✅ |
 | `POST /compile/synctex` | SyncTeX inverse lookup | ✅ |
@@ -264,7 +268,7 @@ Prisma schema (`prisma/schema.prisma`) là source of truth cho migrations; SQLAl
 | SMTP | Email verification, password reset | ✅ (production) |
 | Google OAuth | SSO | ✅ |
 | Inngest | Chat pipeline observability | Optional |
-| OpenAlex | Literature suggest / validate | Planned P2 |
+| OpenAlex | Verify fallback + abstract cho L4 relevance (`citations/openalex.py`) | ✅ |
 | LangSmith | Tracing | Optional (`.env`) |
 
 Citation verifier: arXiv → CrossRef → Semantic Scholar (`src/services/citations/verifier.py`).
@@ -340,9 +344,9 @@ Pre-export → `paper_gate_skim` + template-aware checks → score dialog → ex
 
 Paper PDF + LaTeX passages → Defense Council (Gemini) → streamed Q&A → citation links to PDF.
 
-### Peer-Review Response *(P2)*
+### Peer-Review Response ✅
 
-Comments + draft → classify Major/Minor/Reject → response draft → Human gate.
+Comments + draft → tách item (R1/R2…, major/minor/editorial/question) → soạn phản hồi + đề xuất chỉnh sửa (không tự áp dụng) → `[AUTHOR: …]` cho dữ kiện AI không biết; số liệu lạ bị gắn cờ `unverified_numbers` (`src/services/peer_review/`).
 
 ---
 
@@ -412,26 +416,26 @@ cd frontend && npm run dev
 
 | Thành phần | Hiện tại (v1.0) | Target / gap |
 |------------|-------------------|--------------|
-| Document Parser | LaTeX + Overleaf ZIP | + DOCX/PDF adapters |
+| Document Parser | LaTeX + Overleaf ZIP + DOCX + PDF (text) | PDF: bảng/hình/công thức |
 | Paper Store | PostgreSQL + session cache + localStorage | Full offline sync |
 | Routing Engine | Rules + LLM classifier | Fine-tune classifier |
 | Style / Edit Agent | LLM + L2 retry + scope planner | ✅ stable |
-| Template Generator | IMRAD EN/VI + gallery admin | Journal-specific packs |
+| Template Generator | IMRAD EN/VI + gallery: IEEE, Springer LNCS, Elsevier, ACM | Thêm venue theo nhu cầu |
 | Structure Analyzer | Rules + LLM suggestions | Auto-apply optional diff |
 | Logic Audit | Persona debate + gate skim | Peer-review linkage |
-| Citation Verifier | arXiv → CrossRef → S2 | + OpenAlex, L4 LLM relevance |
+| Citation Verifier | arXiv → CrossRef → S2 → OpenAlex + L4 LLM relevance | Reformat IEEE/APA/Vancouver, DataCite |
 | Defense Council | Mock viva SSE + quota | Live committee (out of scope) |
 | Human Gate diff | Multi-file diff + Accept/Reject | + Modify inline |
-| Peer-Review Response | — | P2 |
+| Peer-Review Response | Split/classify + draft per item, `.md`/`.tex` letter | Liên kết với Logic Audit |
 | Integrity Monitor | `check_integrity()` + UI flags | + semantic model scoring |
-| Guardrail L1–L4 | ✅ L1–L3 full; L4 partial | Export AI Contribution report |
+| Guardrail L1–L4 | ✅ L1–L3 full; L4 + AI Contribution report | Semantic integrity scoring |
 | Auth | JWT + Google SSO + email verify | ✅ |
 | Billing | Tier quotas + QR checkout | Payment gateway integration |
 | Admin | Users, LLM policy, cost report, platform provider keys + failover | ✅ |
-| Share | Read-only link + Yjs WS | ✅ |
+| Share | Read-only link + Yjs WS | Collaborative edit |
 | Chat streaming | SSE activity/reasoning/token | ✅ |
 | Compile | Delta assets, gzip, PDF cache, SyncTeX | ✅ |
-| Tests | 296 pytest + frontend vitest | More FE integration tests |
+| Tests | 531 pytest + 104 vitest | More FE integration tests |
 | Eval | Benchmark — 8/9 metrics vs baseline | `health_latency_p95` cold-start |
 
 ---
@@ -443,8 +447,9 @@ cd frontend && npm run dev
 | **P1 MVP** | Style, structure, citation, template, diff gate, streaming | ✅ Done |
 | **P1.5** | Auth, PostgreSQL, profile, revisions, L4 audit | ✅ Done |
 | **P2** | Logic audit, defense, billing, admin, production deploy, eval | ✅ Done |
-| **P2+** | Peer-review response, OpenAlex, DOCX/PDF import | Planned |
-| **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export | Deferred |
+| **P2+** | Peer-review response, OpenAlex + L4, DOCX/PDF import, journal templates, AI Contribution report | ✅ Done |
+| **Next** | Collaborative edit, citation reformat, PDF tables/figures | Planned |
+| **P3** | MetaClaw patterns, LangSmith production tracing | Deferred |
 | **Maintenance** | Bảo trì production, bug fix | In progress |
 
 Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Benchmark evidence: **[eval/results/gate3_summary.md](./eval/results/gate3_summary.md)**

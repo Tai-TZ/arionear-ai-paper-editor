@@ -33,7 +33,7 @@ Database (repo root): `npm install && npm run db:generate && npm run db:migrate`
 
 - `src/main.py` — FastAPI app, routers mounted under `/api/v1`; CORS in `src/cors_config.py`; settings in `src/config.py` (pydantic-settings, reads `.env`).
 - `src/api/` — routes (chat/compile/citations in `routes.py`, plus auth, papers, admin, billing, defense, share, templates).
-- `src/services/` — business logic: `chat_stream.py` (SSE editor path), `intent_router.py`, `guardrails/` (L1 prompt, L2 output checks), `logic_audit/`, `defense_*`, `latex_compile.py` (TeX Live + SyncTeX), `citations/`.
+- `src/services/` — business logic: `chat_stream.py` (SSE editor path), `intent_router.py`, `guardrails/` (L1 prompt, L2 output checks), `logic_audit/`, `defense_*`, `latex_compile.py` (TeX Live + SyncTeX), `citations/` (arXiv/CrossRef/S2/OpenAlex + L4 relevance), `peer_review/`, `document_import/` (DOCX/PDF → LaTeX), `ai_disclosure.py`, `template_builtins.py` (Springer/Elsevier/ACM seeds).
 - `src/agents/graph.py` — LangGraph graph for the sync `POST /chat` path. Prompts live in `src/prompts/prompts.default.yaml`.
 - `src/db/` — SQLAlchemy models mirroring `prisma/schema.prisma` (Prisma owns migrations).
 - `frontend/src/routes/` — file-based routes; `frontend/src/routeTree.gen.ts` is generated, never edit it. Editor lives in `frontend/src/features/editor/` (`EditorWorkspace.tsx` + `state/` hooks). API clients in `frontend/src/lib/api/`.

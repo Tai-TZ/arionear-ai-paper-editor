@@ -52,7 +52,8 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 - **Style** — nâng văn phong học thuật, giữ nguyên nội dung
 - **Structure** — phân tích IMRaD, chỉ ra phần thiếu/thừa
 - **Template** — sinh khung section còn thiếu
-- **Citation** — xác minh trích dẫn qua arXiv · CrossRef · Semantic Scholar
+- **Citation** — xác minh trích dẫn qua arXiv · CrossRef · Semantic Scholar · OpenAlex
+- **Citation relevance (L4)** — LLM kiểm tra nguồn có thực sự ủng hộ câu khẳng định
 - **Quick Edit** (`Ctrl+K`) — bôi đen một đoạn và ra lệnh trực tiếp
 - **Slash commands** và chat streaming (SSE)
 
@@ -64,6 +65,8 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 - **Publication Score Gate** — chấm điểm bản thảo trước khi export
 - **Defense Mode** — hội đồng AI phản biện thử (mock viva)
 - **Academic Integrity Monitor** — chặn chỉnh sửa làm lệch số liệu
+- **Peer-review response** — tách góp ý reviewer, soạn thư phản hồi từng điểm (`[AUTHOR: …]` thay cho số liệu AI không biết)
+- **AI disclosure** — báo cáo đóng góp của AI + đoạn tuyên bố cho tạp chí (EN/VI, LaTeX)
 
 </td>
 </tr>
@@ -73,7 +76,8 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 ### 📄 Môi trường LaTeX đầy đủ
 - Editor đa file với outline, upload hình ảnh và tài nguyên
 - Compile PDF phía server (TeX Live) + **SyncTeX** nhảy qua lại code ↔ PDF
-- Import **Overleaf ZIP** và **template gallery** (IEEE, …)
+- Import **Overleaf ZIP**, **Word (.docx)** và **PDF** (text) thành LaTeX
+- **Template gallery**: IEEE, Springer LNCS, Elsevier (elsarticle), ACM (acmart)
 - Chia sẻ bản thảo bằng **link read-only** (Yjs + WebSocket)
 
 </td>
@@ -260,10 +264,13 @@ Tất cả endpoint nằm dưới prefix `/api/v1`. Tài liệu tương tác (Sw
 |---|---|---|
 | **Ario** | `POST /chat/stream` · `POST /chat` | Chat với agent (SSE / sync qua LangGraph) |
 | | `POST /edit/style` | Chỉnh văn phong một đoạn |
-| | `POST /citations/verify` | Xác minh trích dẫn |
+| | `POST /citations/verify` · `POST /citations/relevance` | Xác minh trích dẫn · chấm độ liên quan (L4) |
+| | `POST /review/respond` | Soạn phản hồi peer review |
 | | `POST /defense/stream` | Defense Mode — mock viva |
 | **LaTeX** | `POST /compile` · `POST /compile/synctex` | Compile PDF · tra vị trí SyncTeX |
 | **Dữ liệu** | `/papers` · `/sessions` · `/templates` | CRUD bản thảo, phiên làm việc, template |
+| | `POST /import/document` | Import DOCX / PDF → LaTeX |
+| | `GET /papers/{id}/ai-disclosure` | Báo cáo đóng góp của AI |
 | | `POST /revisions/{session}/{id}` | Ghi nhận Accept / Reject |
 | **Chia sẻ** | `/papers/{id}/share` · `WS /ws/share/{token}` | Link read-only realtime |
 | **Tài khoản** | `/auth/*` · `/users/me/profile` · `/billing/*` | Đăng nhập, SSO, hồ sơ, gói dịch vụ |

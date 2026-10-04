@@ -52,9 +52,9 @@ Arionear là nền tảng **Assisted Editing** — AI đóng vai biên tập vi�
 | Thành phần | Gap |
 |------------|-----|
 | Tài liệu | `ARCHITECTURE.md` §4.1 vẫn ghi mock auth / localStorage projects ở vài chỗ |
-| Logic / Review agents | Chưa có (P2) |
-| DOCX/PDF parser | Chỉ LaTeX + ZIP (P2) |
-| Citation L4 (LLM layer) | Chưa có (P2) |
+| Collaborative edit | Link chia sẻ Yjs mới ở chế độ chỉ đọc |
+| Citation reformat / DataCite | Chưa có (P2) |
+| PDF import | Chỉ lấy text — không dựng lại hình, bảng, công thức |
 
 ---
 
@@ -111,10 +111,10 @@ flowchart TB
 | **Ario (chat)** | Message + latex context + selection | Text / gợi ý chung | ✅ | ✅ |
 | **Style** | Selection hoặc section | Polished text + diff | ✅ | ✅ |
 | **Structure** | Parsed sections | JSON suggestions | ✅ (rules + LLM) | ✅ |
-| **Citation** | Cite keys + BibTeX | Status report 4 lớp | ❌ (L1–3) / ✅ (L4 P2) | ✅ L1–3 |
+| **Citation** | Cite keys + BibTeX | Status report 4 lớp | ❌ (L1–3) / ✅ (L4) | ✅ L1–4 + OpenAlex |
 | **Template** | Chat “sườn IMRAD” | Full document skeleton + diff | ✅ (template_latex) | ✅ |
-| **Logic Audit** | Full draft | Conflict report (comment only) | ✅ multi-agent | 🔜 P2 |
-| **Peer-Review** | Reviewer comments + draft | Response draft Major/Minor | ✅ | 🔜 P2 |
+| **Logic Audit** | Full draft | Conflict report (comment only) | ✅ multi-agent | ✅ |
+| **Peer-Review** | Reviewer comments + draft | Response draft Major/Minor | ✅ | ✅ |
 
 ---
 
@@ -183,7 +183,7 @@ flowchart TB
 **Thời gian gợi ý:** 3–5 tuần  
 **Phụ thuộc:** P1.5 L4 + persistence
 
-#### 2.1 Logic Audit Panel (ARC C2 adapt)
+#### 2.1 Logic Audit Panel (ARC C2 adapt) ✅
 
 | Task | Mô tả |
 |------|--------|
@@ -194,7 +194,9 @@ flowchart TB
 
 **Done khi:** User gửi “kiểm tra logic” → nhận báo cáo conflict, không auto-apply.
 
-#### 2.2 Peer-Review Response Agent
+#### 2.2 Peer-Review Response Agent ✅
+
+`POST /api/v1/review/respond` + tab *Peer review* trong editor (`src/services/peer_review/`).
 
 | Task | Mô tả |
 |------|--------|
@@ -203,7 +205,9 @@ flowchart TB
 | Draft phản hồi từng điểm | Human gate diff trước khi copy |
 | `peer_review_log` trong session store | Persist theo paper |
 
-#### 2.3 Unified Document Parser
+#### 2.3 Unified Document Parser ✅ *(DOCX đầy đủ · PDF text-only)*
+
+`POST /api/v1/import/document` (`src/services/document_import/`, python-docx + pdfplumber).
 
 | Task | Mô tả |
 |------|--------|
@@ -213,7 +217,9 @@ flowchart TB
 | Upload UI | `/projects` + editor import DOCX/PDF |
 | Normalize → LaTeX hoặc internal AST | Đưa vào cùng pipeline AI |
 
-#### 2.4 Citation nâng cao
+#### 2.4 Citation nâng cao ⚠️ *(OpenAlex + L4 ✅ · reformat & DataCite còn lại)*
+
+`POST /api/v1/citations/relevance` + OpenAlex fallback (`src/services/citations/`).
 
 | Task | Mô tả |
 |------|--------|
@@ -222,7 +228,9 @@ flowchart TB
 | Citation.js / format reformat | IEEE, APA, Vancouver — deterministic rules |
 | DataCite | DOI metadata fallback |
 
-#### 2.5 Structure & Template nâng cao
+#### 2.5 Structure & Template nâng cao ⚠️ *(journal templates ✅)*
+
+Springer LNCS, Elsevier (elsarticle), ACM (acmart) seed trong `src/services/template_builtins.py`.
 
 | Task | Mô tả |
 |------|--------|
@@ -244,7 +252,7 @@ flowchart TB
 | # | Hạng mục | Mô tả |
 |---|----------|--------|
 | 3.1 | **MetaClaw** (ARC C8) | Học pattern “loại edit hay bị reject” — chỉ metadata ẩn danh |
-| 3.2 | **AI Contribution Report** | Export PDF/JSON cho journal disclosure |
+| 3.2 | **AI Contribution Report** ✅ | `GET /papers/{id}/ai-disclosure` — JSON + tuyên bố EN/VI + LaTeX trong hộp thoại Export |
 | 3.3 | **LangSmith production** | Trace end-to-end, eval datasets, regression |
 | 3.4 | **Cost guardrail** | Token budget per session, model routing theo task |
 | 3.5 | **Performance** | Cache citation verify, async compile queue, CDN PDF |
@@ -265,11 +273,11 @@ flowchart TB
 | **P1** | R3 | Persist citation_registry | 1.5 | M |
 | **P1** | R4 | Researcher profile schema + API | 1.5 | M |
 | **P1** | R5 | Cập nhật ARCHITECTURE + diagram | 1.5 | S |
-| **P2** | R6 | Logic Audit Panel | 2 | L |
-| **P2** | R7 | Peer-Review Response Agent | 2 | L |
-| **P2** | R8 | DOCX import adapter | 2 | M |
-| **P2** | R9 | OpenAlex + Citation L4 | 2 | M |
-| **P3** | R10 | AI Contribution Report export | 3 | M |
+| ✅ | R6 | Logic Audit Panel | 2 | L |
+| ✅ | R7 | Peer-Review Response Agent | 2 | L |
+| ✅ | R8 | DOCX import adapter (+ PDF text) | 2 | M |
+| ✅ | R9 | OpenAlex + Citation L4 | 2 | M |
+| ✅ | R10 | AI Contribution Report export | 3 | M |
 | **P3** | R11 | MetaClaw opt-in | 3 | L |
 
 *Effort: S = vài ngày, M = 1–2 tuần, L = 2+ tuần*
@@ -323,11 +331,12 @@ gantt
 
 ## 9. Việc tiếp theo (Phase 2)
 
-1. **Logic Audit Panel** — multi-agent comment-only, không auto-apply  
-2. **Peer-Review Response Agent** — draft phản hồi reviewer  
-3. **DOCX/PDF import** — unified document parser  
-4. **OpenAlex + Citation L4** — LLM relevance scoring  
-5. Cập nhật `ARCHITECTURE.md` §4.1 (auth DB, papers API)  
+Đã xong trong đợt này: Peer-Review Response Agent, DOCX/PDF import, OpenAlex + Citation L4, journal templates (Springer/Elsevier/ACM), AI Contribution Report.
+
+1. **Collaborative edit** — mở link chia sẻ Yjs sang chế độ cùng sửa (phân quyền, presence, đồng bộ với coalesced saves)  
+2. **Citation reformat** — IEEE / APA / Vancouver theo luật cố định + DataCite fallback  
+3. **PDF import** — dựng lại bảng/hình (hiện chỉ text)  
+4. **Structure auto-apply** — diff cho từng gợi ý, bật/tắt theo người dùng  
 
 ---
 
