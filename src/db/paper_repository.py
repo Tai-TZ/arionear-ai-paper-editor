@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, defer
 
 from src.db.engine import get_db, retry_on_lock_timeout
 from src.db.models import (
@@ -68,55 +68,90 @@ def _citation_to_registry_row(citation: Citation) -> dict:
     }
 
 
-def _paper_to_session(paper: Paper) -> PaperSession:
-    revisions: list[RevisionRecord] = []
-    for ai_session in paper.ai_sessions:
-        for suggestion in ai_session.suggestions:
-            revisions.append(
-                RevisionRecord(
-                    id=str(suggestion.id),
-                    section=suggestion.section_label or "",
-                    original=suggestion.original_text,
-                    suggestion=suggestion.suggested_text,
-                    action=_status_to_action(suggestion.status),
-                    created_at=suggestion.created_at,
-                )
-            )
+def _load_revisions(db: Session, paper_id: uuid.UUID) -> list[RevisionRecord]:
+    """All suggestions of a paper, oldest first — one indexed query, no ``ai_sessions`` rows hydrated.
 
-    revisions.sort(key=lambda r: r.created_at)
+    ``ai_sessions`` also holds one usage row per LLM call (see ``usage_tracking.record_ai_usage``), so the
+    paper → sessions → suggestions graph must never be loaded wholesale.
+    """
+    rows = (
+        db.query(
+            Suggestion.id,
+            Suggestion.section_label,
+            Suggestion.original_text,
+            Suggestion.suggested_text,
+            Suggestion.status,
+            Suggestion.created_at,
+        )
+        .join(AiSession, Suggestion.session_id == AiSession.id)
+        .filter(AiSession.paper_id == paper_id)
+        .order_by(Suggestion.created_at, Suggestion.id)
+        .all()
+    )
+    return [
+        RevisionRecord(
+            id=str(suggestion_id),
+            section=section_label or "",
+            original=original_text,
+            suggestion=suggested_text,
+            action=_status_to_action(status),
+            created_at=created_at,
+        )
+        for suggestion_id, section_label, original_text, suggested_text, status, created_at in rows
+    ]
 
+
+def _load_citation_rows(db: Session, paper_id: uuid.UUID) -> list[dict]:
+    citations = db.query(Citation).filter(Citation.paper_id == paper_id).all()
+    return [_citation_to_registry_row(c) for c in citations]
+
+
+def _paper_to_session(db: Session, paper: Paper, *, is_new: bool = False) -> PaperSession:
+    """Build the API view of a paper with targeted queries (a brand-new paper has no children)."""
     return PaperSession(
         id=str(paper.id),
         name=paper.title,
         latex_content=paper.raw_latex,
         metadata=paper.metadata_ or {},
-        citation_registry=[_citation_to_registry_row(c) for c in paper.citations],
-        revision_history=revisions,
+        citation_registry=[] if is_new else _load_citation_rows(db, paper.id),
+        revision_history=[] if is_new else _load_revisions(db, paper.id),
         created_at=paper.created_at,
         updated_at=paper.updated_at,
     )
 
 
-def _load_paper(db: Session, paper_id: uuid.UUID) -> Paper | None:
-    return (
-        db.query(Paper)
-        .options(
-            joinedload(Paper.citations),
-            joinedload(Paper.ai_sessions).joinedload(AiSession.suggestions),
+def _load_paper(db: Session, paper_id: uuid.UUID, *, light: bool = False) -> Paper | None:
+    """Load only the ``papers`` row; ``light`` skips the LaTeX blob and metadata JSON."""
+    query = db.query(Paper)
+    if light:
+        query = query.options(defer(Paper.raw_latex), defer(Paper.metadata_))
+    return query.filter(Paper.id == paper_id).one_or_none()
+
+
+def _ensure_ai_session(db: Session, paper_id: uuid.UUID, task: TaskType = TaskType.CHAT) -> uuid.UUID:
+    """Return the id of the paper's editor session that owns suggestions, creating it if missing.
+
+    Editor sessions are the empty placeholder rows created with the paper; usage rows written per LLM call
+    carry input/output text and are never picked. The newest placeholder wins (deterministic order).
+    """
+    existing = (
+        db.query(AiSession.id)
+        .filter(
+            AiSession.paper_id == paper_id,
+            AiSession.user_input == "",
+            AiSession.ai_output == "",
+            AiSession.tokens_used == 0,
         )
-        .filter(Paper.id == paper_id)
-        .one_or_none()
+        .order_by(AiSession.created_at.desc(), AiSession.id.desc())
+        .limit(1)
+        .scalar()
     )
-
-
-def _ensure_ai_session(db: Session, paper: Paper, task: TaskType = TaskType.CHAT) -> AiSession:
-    if paper.ai_sessions:
-        return paper.ai_sessions[-1]
-    ai_session = AiSession(paper_id=paper.id, task_type=task)
+    if existing is not None:
+        return existing
+    ai_session = AiSession(paper_id=paper_id, task_type=task)
     db.add(ai_session)
     db.flush()
-    paper.ai_sessions.append(ai_session)
-    return ai_session
+    return ai_session.id
 
 
 class DatabaseSessionStore:
@@ -143,9 +178,9 @@ class DatabaseSessionStore:
                     merged.update(metadata)
                     existing.metadata_ = merged
                 existing.updated_at = _utcnow()
-                _ensure_ai_session(db, existing)
+                _ensure_ai_session(db, existing.id)
                 db.flush()
-                return _paper_to_session(_load_paper(db, paper_id) or existing)
+                return _paper_to_session(db, existing)
 
             paper = Paper(
                 id=paper_id,
@@ -156,13 +191,13 @@ class DatabaseSessionStore:
             )
             db.add(paper)
             db.flush()
-            _ensure_ai_session(db, paper)
-            return _paper_to_session(_load_paper(db, paper.id) or paper)
+            _ensure_ai_session(db, paper.id)
+            return _paper_to_session(db, paper, is_new=True)
 
     def get(self, session_id: str) -> PaperSession | None:
         with get_db() as db:
             paper = _load_paper(db, _parse_uuid(session_id))
-            return _paper_to_session(paper) if paper else None
+            return _paper_to_session(db, paper) if paper else None
 
     def get_or_create(
         self,
@@ -201,7 +236,8 @@ class DatabaseSessionStore:
                 paper.metadata_ = merged
             paper.updated_at = _utcnow()
             db.flush()
-            return _paper_to_session(_load_paper(db, paper.id) or paper)
+            # The row is already in memory — only the child collections need a (targeted) read.
+            return _paper_to_session(db, paper)
 
     @retry_on_lock_timeout()
     def add_revision(
@@ -212,12 +248,12 @@ class DatabaseSessionStore:
         suggestion: str,
     ) -> RevisionRecord | None:
         with get_db() as db:
-            paper = _load_paper(db, _parse_uuid(session_id))
+            paper = _load_paper(db, _parse_uuid(session_id), light=True)
             if not paper:
                 return None
-            ai_session = _ensure_ai_session(db, paper, TaskType.STYLE)
+            ai_session_id = _ensure_ai_session(db, paper.id, TaskType.STYLE)
             record = Suggestion(
-                session_id=ai_session.id,
+                session_id=ai_session_id,
                 suggestion_type=SuggestionType.STYLE,
                 original_text=original,
                 suggested_text=suggestion,
@@ -239,34 +275,41 @@ class DatabaseSessionStore:
     @retry_on_lock_timeout()
     def set_revision_action(self, session_id: str, revision_id: str, action: str) -> RevisionRecord | None:
         with get_db() as db:
-            paper = _load_paper(db, _parse_uuid(session_id))
+            paper = _load_paper(db, _parse_uuid(session_id), light=True)
             if not paper:
                 return None
             rev_uuid = _parse_uuid(revision_id)
-            for ai_session in paper.ai_sessions:
-                for suggestion in ai_session.suggestions:
-                    if suggestion.id == rev_uuid:
-                        suggestion.status = _action_to_status(action)
-                        suggestion.resolved_at = _utcnow()
-                        paper.updated_at = _utcnow()
-                        db.flush()
-                        return RevisionRecord(
-                            id=str(suggestion.id),
-                            section=suggestion.section_label or "",
-                            original=suggestion.original_text,
-                            suggestion=suggestion.suggested_text,
-                            action=action,
-                            created_at=suggestion.created_at,
-                        )
-            return None
+            suggestion = (
+                db.query(Suggestion)
+                .join(AiSession, Suggestion.session_id == AiSession.id)
+                .filter(Suggestion.id == rev_uuid, AiSession.paper_id == paper.id)
+                .one_or_none()
+            )
+            if suggestion is None:
+                return None
+            suggestion.status = _action_to_status(action)
+            suggestion.resolved_at = _utcnow()
+            paper.updated_at = _utcnow()
+            db.flush()
+            return RevisionRecord(
+                id=str(suggestion.id),
+                section=suggestion.section_label or "",
+                original=suggestion.original_text,
+                suggestion=suggestion.suggested_text,
+                action=action,
+                created_at=suggestion.created_at,
+            )
 
     @retry_on_lock_timeout()
     def set_citation_registry(self, session_id: str, registry: list[dict]) -> None:
         with get_db() as db:
-            paper = _load_paper(db, _parse_uuid(session_id))
+            paper = _load_paper(db, _parse_uuid(session_id), light=True)
             if not paper:
                 return
             paper.citations.clear()
+            # The unit of work runs INSERTs before DELETEs, so flush the removals first or re-verifying
+            # the same keys trips the (paper_id, citation_key) unique constraint.
+            db.flush()
             for row in registry:
                 key = row.get("key") or row.get("citation_key") or ""
                 if not key:

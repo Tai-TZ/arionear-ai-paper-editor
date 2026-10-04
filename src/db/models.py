@@ -250,7 +250,12 @@ class Paper(Base):
 
     user: Mapped[User | None] = relationship(back_populates="papers")
     sections: Mapped[list[PaperSection]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    ai_sessions: Mapped[list[AiSession]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    # Deterministic order: ``ai_sessions[-1]`` is the newest row, never an arbitrary one.
+    ai_sessions: Mapped[list[AiSession]] = relationship(
+        back_populates="paper",
+        cascade="all, delete-orphan",
+        order_by=lambda: (AiSession.created_at, AiSession.id),
+    )
     citations: Mapped[list[Citation]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     reviewer_comments: Mapped[list[ReviewerComment]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
