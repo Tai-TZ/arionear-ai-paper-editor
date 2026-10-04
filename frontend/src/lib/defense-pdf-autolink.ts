@@ -111,6 +111,23 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const MARKDOWN_LINK_RE = /\[[^\]]*\]\([^)]*\)/g;
+
+/**
+ * Apply `fn` only to the text outside existing markdown links, so an auto-link is never
+ * nested inside a link the model already wrote (e.g. `[phần phương pháp](#pdf?passage=…)`).
+ */
+function replaceOutsideLinks(content: string, fn: (plain: string) => string): string {
+  let out = "";
+  let last = 0;
+  for (const match of content.matchAll(MARKDOWN_LINK_RE)) {
+    const start = match.index ?? 0;
+    out += fn(content.slice(last, start)) + match[0];
+    last = start + match[0].length;
+  }
+  return out + fn(content.slice(last));
+}
+
 /** Wrap the first appearance of known paper terms with `#pdf?search=` links. */
 function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
   if (!content.trim() || latexTerms.length === 0) return content;
@@ -119,25 +136,27 @@ function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
 
   for (const term of latexTerms) {
     if (!isValidPdfCitationSearch(term) || alreadyLinked(out, term)) continue;
-    const re = new RegExp(`(?<!\\[)\\b(${escapeRegExp(term)})\\b(?![^[]*\\]\\()`, "i");
-    if (re.test(out)) {
-      out = out.replace(
+    const re = new RegExp(`\\b(${escapeRegExp(term)})\\b`, "i");
+    let linked = false;
+    out = replaceOutsideLinks(out, (plain) => {
+      if (linked || !re.test(plain)) return plain;
+      linked = true;
+      return plain.replace(
         re,
         (_, hit: string) => `[${hit}](#pdf?search=${encodeURIComponent(term)})`,
       );
-    }
+    });
   }
 
   for (const rule of VI_PHRASE_RULES) {
     const candidate = rule.candidates.find(isValidPdfCitationSearch);
     if (!candidate || alreadyLinked(out, candidate)) continue;
-    if (!rule.pattern.test(out)) continue;
-    rule.pattern.lastIndex = 0;
-    out = out.replace(
-      rule.pattern,
-      (hit) => `[${hit}](#pdf?search=${encodeURIComponent(candidate)})`,
+    out = replaceOutsideLinks(out, (plain) =>
+      plain.replace(
+        rule.pattern,
+        (hit) => `[${hit}](#pdf?search=${encodeURIComponent(candidate)})`,
+      ),
     );
-    rule.pattern.lastIndex = 0;
   }
 
   return out;
