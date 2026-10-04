@@ -105,39 +105,9 @@ def _get_engine() -> Engine:
     return _engine
 
 
-def _ensure_platform_provider_keys_table(conn) -> None:
-    dialect = conn.dialect.name
-    if dialect == "postgresql":
-        conn.execute(
-            text(
-                """
-                CREATE TABLE IF NOT EXISTS platform_provider_keys (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    provider TEXT NOT NULL,
-                    priority INTEGER NOT NULL DEFAULT 0,
-                    label TEXT,
-                    key_ciphertext TEXT NOT NULL,
-                    key_hint TEXT NOT NULL,
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                    last_verified_at TIMESTAMPTZ,
-                    last_error TEXT,
-                    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    CONSTRAINT uq_platform_provider_keys_provider_priority UNIQUE (provider, priority)
-                )
-                """
-            )
-        )
-        conn.execute(
-            text("CREATE INDEX IF NOT EXISTS ix_platform_provider_keys_provider ON platform_provider_keys (provider)")
-        )
-        conn.commit()
-    # SQLite: created via Base.metadata.create_all in init_db
-
-
 def init_db() -> bool:
-    """Verify DB connection; PostgreSQL migrations or SQLite schema for tests."""
+    """Verify the DB connection. PostgreSQL schema comes from Prisma migrations
+    (``prisma migrate deploy``); only the SQLite test database is created here."""
     global _db_ready, _db_error
     _db_error = None
     if not is_db_enabled():
@@ -150,36 +120,9 @@ def init_db() -> bool:
 
         if dialect == "sqlite":
             Base.metadata.create_all(bind=engine)
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-                conn.commit()
-        else:
-            with engine.connect() as conn:
-                conn.execute(text("SET statement_timeout = 15000"))
-                conn.execute(text("SELECT 1"))
-                has_profile_col = conn.execute(
-                    text(
-                        "SELECT 1 FROM information_schema.columns "
-                        "WHERE table_schema = 'public' AND table_name = 'users' "
-                        "AND column_name = 'profile_settings' LIMIT 1"
-                    )
-                ).scalar()
-                if not has_profile_col:
-                    try:
-                        conn.execute(text("SET lock_timeout = '8s'"))
-                        conn.execute(
-                            text(
-                                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                                "profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb"
-                            )
-                        )
-                        conn.commit()
-                    except Exception as exc:
-                        conn.rollback()
-                        print(f"Warning: profile_settings migration skipped: {exc}")
-                else:
-                    conn.commit()
-                _ensure_platform_provider_keys_table(conn)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            conn.commit()
     except Exception as exc:
         _db_ready = False
         _db_error = str(exc)
