@@ -83,7 +83,13 @@ describe("editor-chat-payload", () => {
   it("sends auxiliary file content when active file differs from main", () => {
     const main = "main content";
     const chapter = "chapter content";
-    const payload = buildChatLatexPayload(main, chapter, "chapter.tex", "main.tex", resetChatLatexSync());
+    const payload = buildChatLatexPayload(
+      main,
+      chapter,
+      "chapter.tex",
+      "main.tex",
+      resetChatLatexSync(),
+    );
     expect(payload.latexContent).toBe(main);
     expect(payload.activeFileContent).toBe(chapter);
   });

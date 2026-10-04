@@ -110,8 +110,12 @@ describe("computePaperScore", () => {
     const draftResult = computePaperScore({ latex: SAMPLE_LATEX });
 
     expect(templateResult.overall).toBeLessThan(55);
-    expect(templateResult.dimensions.find((d) => d.id === "structure")?.score).toBeLessThanOrEqual(58);
-    expect(templateResult.dimensions.find((d) => d.id === "completeness")?.score).toBeLessThanOrEqual(38);
+    expect(templateResult.dimensions.find((d) => d.id === "structure")?.score).toBeLessThanOrEqual(
+      58,
+    );
+    expect(
+      templateResult.dimensions.find((d) => d.id === "completeness")?.score,
+    ).toBeLessThanOrEqual(38);
     expect(templateResult.dimensions.find((d) => d.id === "logic")?.score).toBeLessThanOrEqual(38);
     expect(draftResult.overall).toBeGreaterThan(templateResult.overall);
   });
@@ -134,7 +138,9 @@ describe("extractPeerReviewItems", () => {
           ],
         },
       ],
-      cross_section_conflicts: [{ type: "mismatch", description: "Abstract vs Conclusion differ." }],
+      cross_section_conflicts: [
+        { type: "mismatch", description: "Abstract vs Conclusion differ." },
+      ],
     });
     expect(items).toHaveLength(2);
     expect(items[0].persona).toContain("novice_reader");
@@ -170,9 +176,9 @@ describe("paper-score-audit helpers", () => {
     expect(needsScoreGateAudit(SAMPLE_LATEX, gateReport, fp)).toBe(false);
     expect(needsScoreGateAudit(SAMPLE_LATEX + " ", gateReport, fp)).toBe(true);
     expect(needsScoreGateAudit(SAMPLE_LATEX, null, null)).toBe(true);
-    expect(
-      needsScoreGateAudit(SAMPLE_LATEX, { sections: [{ section: "Abstract" }] }, fp),
-    ).toBe(true);
+    expect(needsScoreGateAudit(SAMPLE_LATEX, { sections: [{ section: "Abstract" }] }, fp)).toBe(
+      true,
+    );
   });
 
   it("needs re-audit when stored fingerprint is null despite gate report", () => {

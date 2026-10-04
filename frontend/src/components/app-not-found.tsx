@@ -26,7 +26,9 @@ export function AppNotFound() {
       <div className="app-not-found-body grid min-h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <aside className="app-not-found-aside hidden lg:flex flex-col justify-between border-r-4 border-foreground bg-foreground p-10 text-background">
           <p className="font-serif-display text-3xl font-bold leading-tight">{t.asideQuote}</p>
-          <p className="font-mono-data text-[11px] uppercase tracking-widest opacity-60">{t.asideFooter}</p>
+          <p className="font-mono-data text-[11px] uppercase tracking-widest opacity-60">
+            {t.asideFooter}
+          </p>
         </aside>
 
         <main className="flex flex-col items-center justify-center px-6 py-12 text-center lg:px-12">
@@ -36,8 +38,12 @@ export function AppNotFound() {
           <p className="mt-4 font-serif-display text-[clamp(4.5rem,16vw,8rem)] font-black leading-none tracking-tighter">
             {t.code}
           </p>
-          <h1 className="mt-4 font-serif-display text-3xl font-bold tracking-tight md:text-4xl">{t.title}</h1>
-          <p className="mt-4 max-w-md font-serif-body text-base leading-relaxed text-foreground/70">{t.body}</p>
+          <h1 className="mt-4 font-serif-display text-3xl font-bold tracking-tight md:text-4xl">
+            {t.title}
+          </h1>
+          <p className="mt-4 max-w-md font-serif-body text-base leading-relaxed text-foreground/70">
+            {t.body}
+          </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/"

@@ -27,10 +27,7 @@ function computeProgress(steps: ChatAiStep[]): number {
   return Math.min(100, Math.max(12, Math.round(ratio * 100)));
 }
 
-function resolveStatus(
-  steps: ChatAiStep[],
-  activity: string | null | undefined,
-): string {
+function resolveStatus(steps: ChatAiStep[], activity: string | null | undefined): string {
   const display = filterDisplaySteps(steps);
   const active = display.find((s) => s.status === "active");
   if (active) return active.label;
@@ -87,9 +84,7 @@ export function AiLoadingState({
     if (activities.length > 0) return activities;
     return displaySteps
       .filter((step) => step.status === "done")
-      .map((step) =>
-        step.detail ? `✓ ${step.label} — ${step.detail}` : `✓ ${step.label}`,
-      );
+      .map((step) => (step.detail ? `✓ ${step.label} — ${step.detail}` : `✓ ${step.label}`));
   }, [activities, displaySteps]);
   const progress = useMemo(() => computeProgress(steps), [steps]);
   const status = resolveStatus(displaySteps, activity);

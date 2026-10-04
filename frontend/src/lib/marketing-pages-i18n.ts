@@ -80,15 +80,21 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     sections: [
       {
         heading: "Giọng văn học thuật",
-        paragraphs: ["Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa và lập luận gốc của tác giả."],
+        paragraphs: [
+          "Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa và lập luận gốc của tác giả.",
+        ],
       },
       {
         heading: "Hướng dẫn cấu trúc",
-        paragraphs: ["Gợi ý các phần IMRAD — abstract, introduction, methods, results và discussion."],
+        paragraphs: [
+          "Gợi ý các phần IMRAD — abstract, introduction, methods, results và discussion.",
+        ],
       },
       {
         heading: "Định dạng trích dẫn",
-        paragraphs: ["Đối chiếu trích dẫn với nguồn bên ngoài và giữ khóa BibTeX nhất quán với bản thảo."],
+        paragraphs: [
+          "Đối chiếu trích dẫn với nguồn bên ngoài và giữ khóa BibTeX nhất quán với bản thảo.",
+        ],
       },
       {
         heading: "Integrity Guard",
@@ -124,7 +130,9 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     sections: [
       {
         heading: "Đầu vào hỗ trợ",
-        paragraphs: ["Tải file chính `.tex`. Bạn có thể đính kèm hình và file hỗ trợ trong cùng hộp thoại nhập."],
+        paragraphs: [
+          "Tải file chính `.tex`. Bạn có thể đính kèm hình và file hỗ trợ trong cùng hộp thoại nhập.",
+        ],
         bullets: [
           "Bản thảo chính: `.tex` hoặc `.latex`",
           "Hình: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.pdf`, `.eps`",
@@ -302,17 +310,48 @@ const VI_UI: MarketingPageUiCopy = {
 const EN_FEATURES: FeaturesPageCopy = {
   figCaption: "Fig. 1.1 · Editorial Hub",
   figNote: "Five capabilities · One manuscript",
-  hubAria: "Feature hub diagram showing five editorial capabilities around a central LaTeX manuscript",
+  hubAria:
+    "Feature hub diagram showing five editorial capabilities around a central LaTeX manuscript",
   hubCenterManuscript: "MANUSCRIPT",
   hubCenterLatex: "LaTeX",
   hubCenterSource: ".tex source",
   noLabel: "No.",
   features: [
-    { n: "01", title: "Academic Voice", hubLabel: "Voice", body: "Improve academic English while preserving meaning.", angle: 0 },
-    { n: "02", title: "Structure Guide", hubLabel: "Structure", body: "IMRAD sections — abstract through discussion.", angle: 72 },
-    { n: "03", title: "Logic & Consistency", hubLabel: "Logic", body: "Cross-section argument coherence checks.", angle: 144 },
-    { n: "04", title: "Citation Format", hubLabel: "Citations", body: "APA, IEEE, Vancouver, BibTeX support.", angle: 216 },
-    { n: "05", title: "Integrity Guard", hubLabel: "Integrity", body: "No fabricated data, results, or citations.", angle: 288 },
+    {
+      n: "01",
+      title: "Academic Voice",
+      hubLabel: "Voice",
+      body: "Improve academic English while preserving meaning.",
+      angle: 0,
+    },
+    {
+      n: "02",
+      title: "Structure Guide",
+      hubLabel: "Structure",
+      body: "IMRAD sections — abstract through discussion.",
+      angle: 72,
+    },
+    {
+      n: "03",
+      title: "Logic & Consistency",
+      hubLabel: "Logic",
+      body: "Cross-section argument coherence checks.",
+      angle: 144,
+    },
+    {
+      n: "04",
+      title: "Citation Format",
+      hubLabel: "Citations",
+      body: "APA, IEEE, Vancouver, BibTeX support.",
+      angle: 216,
+    },
+    {
+      n: "05",
+      title: "Integrity Guard",
+      hubLabel: "Integrity",
+      body: "No fabricated data, results, or citations.",
+      angle: 288,
+    },
   ],
 };
 
@@ -325,11 +364,41 @@ const VI_FEATURES: FeaturesPageCopy = {
   hubCenterSource: "nguồn .tex",
   noLabel: "Số",
   features: [
-    { n: "01", title: "Giọng văn học thuật", hubLabel: "Giọng", body: "Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa.", angle: 0 },
-    { n: "02", title: "Hướng dẫn cấu trúc", hubLabel: "Cấu trúc", body: "Các phần IMRAD — từ abstract đến discussion.", angle: 72 },
-    { n: "03", title: "Logic & Nhất quán", hubLabel: "Logic", body: "Kiểm tra mạch lập luận xuyên suốt các phần.", angle: 144 },
-    { n: "04", title: "Định dạng trích dẫn", hubLabel: "Trích dẫn", body: "Hỗ trợ APA, IEEE, Vancouver, BibTeX.", angle: 216 },
-    { n: "05", title: "Integrity Guard", hubLabel: "Toàn vẹn", body: "Không bịa dữ liệu, kết quả hay trích dẫn.", angle: 288 },
+    {
+      n: "01",
+      title: "Giọng văn học thuật",
+      hubLabel: "Giọng",
+      body: "Cải thiện tiếng Anh học thuật, giữ nguyên ý nghĩa.",
+      angle: 0,
+    },
+    {
+      n: "02",
+      title: "Hướng dẫn cấu trúc",
+      hubLabel: "Cấu trúc",
+      body: "Các phần IMRAD — từ abstract đến discussion.",
+      angle: 72,
+    },
+    {
+      n: "03",
+      title: "Logic & Nhất quán",
+      hubLabel: "Logic",
+      body: "Kiểm tra mạch lập luận xuyên suốt các phần.",
+      angle: 144,
+    },
+    {
+      n: "04",
+      title: "Định dạng trích dẫn",
+      hubLabel: "Trích dẫn",
+      body: "Hỗ trợ APA, IEEE, Vancouver, BibTeX.",
+      angle: 216,
+    },
+    {
+      n: "05",
+      title: "Integrity Guard",
+      hubLabel: "Toàn vẹn",
+      body: "Không bịa dữ liệu, kết quả hay trích dẫn.",
+      angle: 288,
+    },
   ],
 };
 
@@ -370,7 +439,8 @@ const EN_ABOUT: AboutPageCopy = {
   mastheadTitle: "The Masthead",
   membersLabel: (count) => `${count} ${count === 1 ? "member" : "members"}`,
   figCaption: "Fig. 3.1 — The Arionear editorial desk.",
-  illustrationAria: "Interactive illustration of the Arionear editorial desk — three editors at a shared desk",
+  illustrationAria:
+    "Interactive illustration of the Arionear editorial desk — three editors at a shared desk",
   manuscriptLabel: "LaTeX Manuscript",
   liveDemo: "Live",
   paused: "Paused · interactive",
@@ -387,7 +457,8 @@ const VI_ABOUT: AboutPageCopy = {
   mastheadTitle: "Ban biên tập",
   membersLabel: (count) => `${count} thành viên`,
   figCaption: "Hình 3.1 — Bàn biên tập Arionear.",
-  illustrationAria: "Minh họa tương tác bàn biên tập Arionear — ba biên tập viên tại bàn biên tập chung",
+  illustrationAria:
+    "Minh họa tương tác bàn biên tập Arionear — ba biên tập viên tại bàn biên tập chung",
   manuscriptLabel: "Bản thảo LaTeX",
   liveDemo: "Trực tiếp",
   paused: "Tạm dừng · tương tác",
@@ -397,7 +468,10 @@ const VI_ABOUT: AboutPageCopy = {
   editorRoles: ["Biên tập trưởng", "Bàn LaTeX", "Biên tập bản thảo"],
 };
 
-export function marketingPageContent(locale: UiLanguage, slug: MarketingPageSlug): MarketingPageContent {
+export function marketingPageContent(
+  locale: UiLanguage,
+  slug: MarketingPageSlug,
+): MarketingPageContent {
   return locale === "vi" ? VI_PAGES[slug] : EN_PAGES[slug];
 }
 

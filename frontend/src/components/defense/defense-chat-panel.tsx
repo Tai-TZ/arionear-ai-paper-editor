@@ -10,12 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DefenseCopy } from "@/lib/defense-i18n";
 import type { DefenseQuota } from "@/lib/api/defense-api";
 import { DEFENSE_QUOTA_ENABLED } from "@/lib/api/defense-api";
@@ -120,10 +115,14 @@ function MessageRow({
   }
 
   return (
-    <article className={`defense-msg defense-msg--council${message.isCancelled ? " defense-msg--cancelled" : ""}`}>
+    <article
+      className={`defense-msg defense-msg--council${message.isCancelled ? " defense-msg--cancelled" : ""}`}
+    >
       <header className="defense-msg-council-head">
         <GraduationCap className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-        {turnIndex >= 0 && <span className="defense-msg-council-tag">{turnLabel(turnIndex + 1)}</span>}
+        {turnIndex >= 0 && (
+          <span className="defense-msg-council-tag">{turnLabel(turnIndex + 1)}</span>
+        )}
       </header>
       {message.isStreaming && !message.content ? (
         <p className="defense-msg-council-body defense-msg-council-body--typing">
@@ -132,9 +131,7 @@ function MessageRow({
             <span />
             <span />
           </span>
-          <span className="defense-msg-council-status">
-            {activityText || thinkingDefault}
-          </span>
+          <span className="defense-msg-council-status">{activityText || thinkingDefault}</span>
         </p>
       ) : (
         <>
@@ -287,9 +284,7 @@ function WelcomeScreen({
                 {councilTurns.slice(0, SHOW_MAX).map((msg, i) => (
                   <li key={i} className="defense-history-item">
                     <span className="defense-history-turn">{copy.turnLabel(i + 1)}</span>
-                    <span className="defense-history-preview">
-                      {truncatePreview(msg.content)}
-                    </span>
+                    <span className="defense-history-preview">{truncatePreview(msg.content)}</span>
                   </li>
                 ))}
                 {councilTurns.length > SHOW_MAX && (
@@ -344,7 +339,9 @@ function WelcomeScreen({
         )}
 
         <p className="defense-setup-footnote">
-          {copy.footnoteLine1}<br />{copy.footnoteLine2}
+          {copy.footnoteLine1}
+          <br />
+          {copy.footnoteLine2}
         </p>
       </div>
     </div>
@@ -385,10 +382,7 @@ export function DefenseChatPanel({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
-    const next = Math.min(
-      Math.max(el.scrollHeight, COMPOSER_LINE_HEIGHT),
-      COMPOSER_MAX_HEIGHT,
-    );
+    const next = Math.min(Math.max(el.scrollHeight, COMPOSER_LINE_HEIGHT), COMPOSER_MAX_HEIGHT);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
   }, []);
@@ -480,11 +474,7 @@ export function DefenseChatPanel({
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>{copy.quotaLoadError}</span>
             {onQuotaRetry && (
-              <button
-                type="button"
-                onClick={onQuotaRetry}
-                className="defense-quota-error-retry"
-              >
+              <button type="button" onClick={onQuotaRetry} className="defense-quota-error-retry">
                 <RefreshCw className="h-3 w-3" />
                 {copy.quotaLoadRetry}
               </button>
@@ -519,7 +509,10 @@ export function DefenseChatPanel({
             {messages.map((msg, i) => {
               const idx = msg.role === "assistant" ? councilTurnIdx++ : -1;
               const isActiveStream =
-                isStreaming && i === messages.length - 1 && msg.role === "assistant" && msg.isStreaming;
+                isStreaming &&
+                i === messages.length - 1 &&
+                msg.role === "assistant" &&
+                msg.isStreaming;
               return (
                 <MessageRow
                   key={i}
@@ -541,9 +534,7 @@ export function DefenseChatPanel({
 
         {quotaExhausted && showMessages && quota && (
           <div className="defense-thread-limit">
-            <p>
-              {quota.plan === "free" ? copy.quotaExceededDaily : copy.quotaExceededPro}
-            </p>
+            <p>{quota.plan === "free" ? copy.quotaExceededDaily : copy.quotaExceededPro}</p>
             <DefenseQuotaResetTimer
               locale={locale}
               resetTimeLabel={copy.quotaResetAt("23:59:59")}
@@ -585,9 +576,7 @@ export function DefenseChatPanel({
           </footer>
         )}
 
-        {showWelcomeContent && (
-          <div className="defense-compose-reserve" aria-hidden />
-        )}
+        {showWelcomeContent && <div className="defense-compose-reserve" aria-hidden />}
       </div>
     </TooltipProvider>
   );

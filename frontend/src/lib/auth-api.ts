@@ -63,8 +63,7 @@ export async function apiSendSignupCode(input: {
   password: string;
   affiliation?: string;
 }): Promise<
-  | { ok: true; message: string; devVerificationCode?: string }
-  | { ok: false; error: string }
+  { ok: true; message: string; devVerificationCode?: string } | { ok: false; error: string }
 > {
   try {
     const data = await authFetch<{ message: string; dev_verification_code?: string }>(
@@ -80,14 +79,14 @@ export async function apiSendSignupCode(input: {
       devVerificationCode: data.dev_verification_code,
     };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Could not send verification code." };
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Could not send verification code.",
+    };
   }
 }
 
-export async function apiVerifySignup(
-  email: string,
-  code: string,
-): Promise<AuthResult> {
+export async function apiVerifySignup(email: string, code: string): Promise<AuthResult> {
   try {
     const data = await authFetch<{
       access_token: string;
@@ -134,7 +133,10 @@ export async function apiLogin(
     return { ok: true, user: data.user, accessToken: data.access_token };
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
-      return { ok: false, error: "Request timed out. The server may be busy — try again in a moment." };
+      return {
+        ok: false,
+        error: "Request timed out. The server may be busy — try again in a moment.",
+      };
     }
     return { ok: false, error: "Cannot reach the server. Check that the backend is running." };
   } finally {

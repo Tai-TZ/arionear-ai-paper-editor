@@ -181,4 +181,3 @@ const VI: ProjectsCopy = {
 export function projectsCopy(lang: UiLanguage): ProjectsCopy {
   return lang === "vi" ? VI : EN;
 }
-

@@ -1,5 +1,10 @@
 import { resolveApiBase } from "./base-url";
-import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
+import {
+  mapApiHttpError,
+  streamErrorMessage,
+  streamInterruptedMessage,
+  toUserFacingMessage,
+} from "./api-errors";
 import { getAccessToken } from "@/lib/auth-store";
 import type { LLMProvider } from "./academic";
 

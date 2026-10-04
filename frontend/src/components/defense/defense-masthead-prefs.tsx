@@ -38,7 +38,11 @@ export function DefenseMastheadPrefs() {
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         title={isDark ? "Light mode" : "Dark mode"}
       >
-        {isDark ? <Sun className="h-3.5 w-3.5" strokeWidth={1.5} /> : <Moon className="h-3.5 w-3.5" strokeWidth={1.5} />}
+        {isDark ? (
+          <Sun className="h-3.5 w-3.5" strokeWidth={1.5} />
+        ) : (
+          <Moon className="h-3.5 w-3.5" strokeWidth={1.5} />
+        )}
       </button>
     </div>
   );

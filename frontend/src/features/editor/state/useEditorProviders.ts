@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { fetchProviders, normalizeLlmProvider, type LLMProvider, type ProviderInfo } from "@/lib/api/academic";
+import {
+  fetchProviders,
+  normalizeLlmProvider,
+  type LLMProvider,
+  type ProviderInfo,
+} from "@/lib/api/academic";
 import { pickFirstFreeModel } from "@/lib/llm-model-tier";
 
 export function useEditorProviders() {
@@ -19,10 +24,7 @@ export function useEditorProviders() {
         const providerInfo = data.providers.find((p) => p.id === preferred);
         if (providerInfo) {
           const googleDefault = "gemini-3.1-flash-lite";
-          if (
-            preferred === "google" &&
-            providerInfo.models.some((m) => m.id === googleDefault)
-          ) {
+          if (preferred === "google" && providerInfo.models.some((m) => m.id === googleDefault)) {
             setLlmModel(googleDefault);
           } else {
             setLlmModel(pickFirstFreeModel(providerInfo));

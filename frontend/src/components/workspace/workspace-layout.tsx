@@ -2,10 +2,7 @@ import { ArionearWordmark } from "@/components/arionear-wordmark";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  WorkspaceSidebar,
-  type WorkspaceNav,
-} from "@/components/workspace/workspace-sidebar";
+import { WorkspaceSidebar, type WorkspaceNav } from "@/components/workspace/workspace-sidebar";
 import type { AuthUser } from "@/lib/auth-store";
 import type { ResearcherProfile } from "@/lib/researcher-profile";
 
@@ -81,7 +78,11 @@ export function WorkspaceLayout({
             aria-expanded={navOpen}
             onClick={() => setNavOpen((v) => !v)}
           >
-            {navOpen ? <X className="h-4 w-4" strokeWidth={1.5} /> : <Menu className="h-4 w-4" strokeWidth={1.5} />}
+            {navOpen ? (
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            ) : (
+              <Menu className="h-4 w-4" strokeWidth={1.5} />
+            )}
           </button>
           <Link to="/" className="workspace-mobile-brand">
             <ArionearWordmark />

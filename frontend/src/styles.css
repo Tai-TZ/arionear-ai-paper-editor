@@ -49,56 +49,56 @@
   --color-newsprint: var(--newsprint);
   --color-editorial-red: var(--editorial-red);
   --color-divider: var(--divider);
-  --font-serif-display: 'Playfair Display', 'Times New Roman', serif;
-  --font-serif-body: 'Lora', Georgia, serif;
-  --font-serif-prose: 'Source Serif 4', 'Lora', Georgia, serif;
-  --font-sans-ui: 'Inter', 'Helvetica Neue', sans-serif;
-  --font-mono-data: 'JetBrains Mono', 'Courier New', monospace;
-  --font-latex: 'Latin Modern Roman', 'Computer Modern', 'CMU Serif', serif;
-  --font-latex-mono: 'Latin Modern Mono', 'Computer Modern Typewriter', monospace;
-  --font-latex-times: 'Times New Roman', 'Nimbus Roman No9 L', 'TeX Gyre Termes', Times, serif;
-  --font-latex-times-mono: 'Courier New', Courier, monospace;
+  --font-serif-display: "Playfair Display", "Times New Roman", serif;
+  --font-serif-body: "Lora", Georgia, serif;
+  --font-serif-prose: "Source Serif 4", "Lora", Georgia, serif;
+  --font-sans-ui: "Inter", "Helvetica Neue", sans-serif;
+  --font-mono-data: "JetBrains Mono", "Courier New", monospace;
+  --font-latex: "Latin Modern Roman", "Computer Modern", "CMU Serif", serif;
+  --font-latex-mono: "Latin Modern Mono", "Computer Modern Typewriter", monospace;
+  --font-latex-times: "Times New Roman", "Nimbus Roman No9 L", "TeX Gyre Termes", Times, serif;
+  --font-latex-times-mono: "Courier New", Courier, monospace;
 }
 
 /* LaTeX preview â€” Latin Modern (official CM web derivative used by LaTeX) */
 @font-face {
-  font-family: 'Latin Modern Roman';
-  src: url('/fonts/lm/lmroman-regular-webfont.woff') format('woff');
+  font-family: "Latin Modern Roman";
+  src: url("/fonts/lm/lmroman-regular-webfont.woff") format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Latin Modern Roman';
-  src: url('/fonts/lm/lmroman-bold-webfont.woff') format('woff');
+  font-family: "Latin Modern Roman";
+  src: url("/fonts/lm/lmroman-bold-webfont.woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Latin Modern Roman';
-  src: url('/fonts/lm/lmroman-italic-webfont.woff') format('woff');
+  font-family: "Latin Modern Roman";
+  src: url("/fonts/lm/lmroman-italic-webfont.woff") format("woff");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Latin Modern Roman';
-  src: url('/fonts/lm/lmroman-bolditalic-webfont.woff') format('woff');
+  font-family: "Latin Modern Roman";
+  src: url("/fonts/lm/lmroman-bolditalic-webfont.woff") format("woff");
   font-weight: 700;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Latin Modern Mono';
-  src: url('/fonts/lm/lmmono-regular-webfont.woff') format('woff');
+  font-family: "Latin Modern Mono";
+  src: url("/fonts/lm/lmmono-regular-webfont.woff") format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Latin Modern Mono';
-  src: url('/fonts/lm/lmmono-italic-webfont.woff') format('woff');
+  font-family: "Latin Modern Mono";
+  src: url("/fonts/lm/lmmono-italic-webfont.woff") format("woff");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -106,22 +106,22 @@
 
 /* KaTeX Main fallback (same CM lineage) */
 @font-face {
-  font-family: 'Computer Modern';
-  src: url('/fonts/cm/KaTeX_Main-Regular.woff2') format('woff2');
+  font-family: "Computer Modern";
+  src: url("/fonts/cm/KaTeX_Main-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Computer Modern';
-  src: url('/fonts/cm/KaTeX_Main-Bold.woff2') format('woff2');
+  font-family: "Computer Modern";
+  src: url("/fonts/cm/KaTeX_Main-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Computer Modern Typewriter';
-  src: url('/fonts/cm/KaTeX_Typewriter-Regular.woff2') format('woff2');
+  font-family: "Computer Modern Typewriter";
+  src: url("/fonts/cm/KaTeX_Typewriter-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -270,42 +270,67 @@
     color: var(--color-foreground);
     font-family: var(--font-serif-body);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111111' fill-opacity='0.05' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
 
   .dark body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23ffffff' fill-opacity='0.04' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-serif-display);
   }
 }
 
 @layer utilities {
-  .font-serif-display { font-family: var(--font-serif-display); }
-  .font-body { font-family: var(--font-serif-body); }
-  .font-serif-prose { font-family: var(--font-serif-prose); }
-  .font-sans-ui { font-family: var(--font-sans-ui); }
-  .font-mono-data { font-family: var(--font-mono-data); }
-  .font-latex { font-family: var(--font-latex); }
-  .font-latex-mono { font-family: var(--font-latex-mono); }
+  .font-serif-display {
+    font-family: var(--font-serif-display);
+  }
+  .font-body {
+    font-family: var(--font-serif-body);
+  }
+  .font-serif-prose {
+    font-family: var(--font-serif-prose);
+  }
+  .font-sans-ui {
+    font-family: var(--font-sans-ui);
+  }
+  .font-mono-data {
+    font-family: var(--font-mono-data);
+  }
+  .font-latex {
+    font-family: var(--font-latex);
+  }
+  .font-latex-mono {
+    font-family: var(--font-latex-mono);
+  }
 
-  .newsprint-texture { position: relative; }
+  .newsprint-texture {
+    position: relative;
+  }
   .newsprint-texture::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(0deg, transparent 98%, rgba(0,0,0,0.025) 100%),
-      linear-gradient(90deg, transparent 98%, rgba(0,0,0,0.025) 100%);
+      linear-gradient(0deg, transparent 98%, rgba(0, 0, 0, 0.025) 100%),
+      linear-gradient(90deg, transparent 98%, rgba(0, 0, 0, 0.025) 100%);
     background-size: 3px 3px;
     pointer-events: none;
     opacity: 0.5;
   }
 
   .hard-shadow-hover {
-    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+    transition:
+      transform 200ms ease-out,
+      box-shadow 200ms ease-out;
   }
   .hard-shadow-hover:hover {
     box-shadow: 6px 6px 0 0 var(--ink);
@@ -538,8 +563,12 @@
   border-bottom-color: oklch(0.9 0.005 90 / 15%);
 }
 
-.editor-shell .font-serif { font-family: var(--font-serif-prose); }
-.editor-shell .font-mono { font-family: var(--font-mono-data); }
+.editor-shell .font-serif {
+  font-family: var(--font-serif-prose);
+}
+.editor-shell .font-mono {
+  font-family: var(--font-mono-data);
+}
 
 .editor-shell .editor-prose {
   font-family: var(--font-serif-prose);
@@ -559,7 +588,9 @@
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
 }
-.editor-shell .editor-prose p { margin-bottom: 1rem; }
+.editor-shell .editor-prose p {
+  margin-bottom: 1rem;
+}
 .editor-shell .editor-prose .citation {
   background-color: color-mix(in oklch, var(--editorial-red) 10%, transparent);
   color: var(--editorial-red);
@@ -1164,7 +1195,9 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: color-mix(in oklch, var(--foreground) 55%, transparent);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .defense-masthead-lang-btn:hover:not(.is-active) {
@@ -1186,7 +1219,9 @@
   border-left: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
   background: transparent;
   color: color-mix(in oklch, var(--foreground) 70%, transparent);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .defense-masthead-theme-btn:hover {
@@ -1323,7 +1358,9 @@
   border: none;
   background: transparent;
   color: color-mix(in oklch, var(--defense-muted) 90%, transparent);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .editor-shell .defense-panel-head-btn:hover:not(:disabled) {
@@ -1527,7 +1564,9 @@
   font-weight: 600;
   color: var(--foreground);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .defense-empty-cta:hover {
@@ -1615,7 +1654,10 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--background);
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .defense-setup-start:hover:not(:disabled) {
@@ -1728,7 +1770,9 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--defense-muted);
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
   cursor: pointer;
 }
 
@@ -1965,8 +2009,16 @@
 }
 
 @keyframes defense-dot-bounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-  40% { transform: translateY(-2px); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
 }
 
 .editor-shell .defense-thinking {
@@ -2022,7 +2074,9 @@
   border-radius: 0.75rem;
   background: var(--background);
   padding: 0.375rem 0.375rem 0.375rem 0.75rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .editor-shell .defense-compose-row:focus-within {
@@ -2061,7 +2115,11 @@
   border-radius: 999px;
   background: var(--foreground);
   color: var(--background);
-  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
 .editor-shell .defense-compose-send:hover:not(:disabled) {
@@ -2251,7 +2309,9 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .workspace-nav-label {
@@ -2290,7 +2350,10 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .workspace-signout-row span {
@@ -2343,7 +2406,10 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: color-mix(in oklch, var(--foreground) 55%, transparent);
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .workspace-lang-btn:hover:not(.is-active) {
@@ -2366,7 +2432,10 @@
   border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
   background: color-mix(in oklch, var(--foreground) 3%, var(--background));
   color: color-mix(in oklch, var(--foreground) 70%, transparent);
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .workspace-theme-btn:hover {
@@ -2722,7 +2791,9 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 @media (min-width: 768px) {
@@ -2761,7 +2832,9 @@
   width: 1.75rem;
   height: 1.75rem;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .projects-view-btn:hover {
@@ -2800,7 +2873,10 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .projects-header-btn:hover:not(:disabled) {
@@ -3181,7 +3257,9 @@
   align-items: center;
   justify-content: center;
   color: var(--muted-foreground);
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .projects-row-menu:hover,
@@ -3348,7 +3426,10 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+  transition:
+    border-color 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
 }
 
 .projects-empty-blank:hover:not(:disabled) {
@@ -3574,7 +3655,9 @@
   background: var(--background);
   font-size: 0.8125rem;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .profile-input:focus {
@@ -3648,7 +3731,10 @@
     font-size: 0.5625rem;
   }
 
-  .marketing-mobile-prefs-dock .marketing-mobile-prefs-lang .language-toggle-option + .language-toggle-option {
+  .marketing-mobile-prefs-dock
+    .marketing-mobile-prefs-lang
+    .language-toggle-option
+    + .language-toggle-option {
     border-left: none;
     border-top: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
   }
@@ -3690,60 +3776,124 @@
 }
 
 @keyframes hero-demo-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @keyframes hero-demo-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes hero-demo-accept {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 @keyframes hero-demo-cursor-blink {
-  0%, 45% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes hero-demo-status-in {
-  from { opacity: 0; transform: translateX(-6px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes hero-demo-line-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes hero-demo-ins-pulse {
-  0%, 100% { background-color: color-mix(in oklch, var(--editorial-red) 12%, transparent); }
-  50% { background-color: color-mix(in oklch, var(--editorial-red) 22%, transparent); }
+  0%,
+  100% {
+    background-color: color-mix(in oklch, var(--editorial-red) 12%, transparent);
+  }
+  50% {
+    background-color: color-mix(in oklch, var(--editorial-red) 22%, transparent);
+  }
 }
 
 @keyframes hero-demo-cite-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
 }
 
 @keyframes hero-demo-thinking-dots {
-  0%, 20% { opacity: 0.3; }
-  50% { opacity: 1; }
-  80%, 100% { opacity: 0.3; }
+  0%,
+  20% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0.3;
+  }
 }
 
 @keyframes hero-demo-flash-green {
-  0% { box-shadow: inset 0 0 0 0 transparent; }
-  30% { box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--editorial-red) 40%, transparent); }
-  100% { box-shadow: inset 0 0 0 0 transparent; }
+  0% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+  30% {
+    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--editorial-red) 40%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
 }
 
 @keyframes hero-demo-chip-enter {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .hero-split-demo {
@@ -3786,7 +3936,9 @@
   background: var(--hero-demo-inset);
 }
 
-.hero-demo-chip:not(.hero-demo-chip-active):not(.hero-demo-chip-accepted):not(.hero-demo-chip-refused) {
+.hero-demo-chip:not(.hero-demo-chip-active):not(.hero-demo-chip-accepted):not(
+    .hero-demo-chip-refused
+  ) {
   background: var(--hero-demo-inset);
 }
 
@@ -3830,7 +3982,9 @@ html[lang="vi"] .hero-headline {
 .hero-demo-loop-fade {
   opacity: 0.55;
   transform: scale(0.992);
-  transition: opacity 0.32s ease, transform 0.32s ease;
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s ease;
 }
 
 .hero-demo-autoplay .hero-demo-progress-animate {
@@ -3864,8 +4018,12 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes hero-demo-shimmer {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .hero-demo-line {
@@ -3883,7 +4041,9 @@ html[lang="vi"] .hero-headline {
   top: 0;
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 0.55s ease, transform 0.55s ease;
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s ease;
   pointer-events: none;
 }
 
@@ -3896,7 +4056,10 @@ html[lang="vi"] .hero-headline {
 
 .hero-demo-del,
 .hero-demo-ins {
-  transition: opacity 0.5s ease, transform 0.5s ease, filter 0.5s ease;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease,
+    filter 0.5s ease;
 }
 
 .hero-demo-del.hero-demo-layer-out,
@@ -3916,7 +4079,11 @@ html[lang="vi"] .hero-headline {
   transform: translateY(6px);
   max-height: 0;
   overflow: hidden;
-  transition: opacity 0.45s ease, transform 0.45s ease, max-height 0.45s ease, margin 0.45s ease;
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease,
+    max-height 0.45s ease,
+    margin 0.45s ease;
 }
 
 .hero-demo-logic-flag.hero-demo-layer-in {
@@ -3954,11 +4121,18 @@ html[lang="vi"] .hero-headline {
 }
 
 .hero-demo-status {
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
 }
 
 .hero-demo-chip {
-  transition: border-color 0.45s ease, background-color 0.45s ease, opacity 0.45s ease, transform 0.45s ease, box-shadow 0.45s ease;
+  transition:
+    border-color 0.45s ease,
+    background-color 0.45s ease,
+    opacity 0.45s ease,
+    transform 0.45s ease,
+    box-shadow 0.45s ease;
 }
 
 .hero-demo-chip-active {
@@ -4000,8 +4174,12 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes hero-demo-progress-bar {
-  from { width: 0%; }
-  to { width: 100%; }
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 .hero-demo-play-btn {
@@ -4019,7 +4197,9 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes auth-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .auth-strength-bar {
@@ -4429,9 +4609,7 @@ html[lang="vi"] .hero-headline {
   cursor: pointer;
 }
 
-.editor-shell .pdf-preview-annotation-layer
-  .linkAnnotation:not(.hasBorder)
-  > a:hover {
+.editor-shell .pdf-preview-annotation-layer .linkAnnotation:not(.hasBorder) > a:hover {
   opacity: 0.2;
   background-color: rgb(255 255 0);
   box-shadow: 0 2px 10px rgb(255 255 0);
@@ -4518,7 +4696,9 @@ html[lang="vi"] .hero-headline {
   justify-content: center;
   border-radius: 0.375rem;
   color: var(--muted-foreground);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .editor-shell .editor-history-btn:hover:not(:disabled) {
@@ -4790,7 +4970,9 @@ html[lang="vi"] .hero-headline {
   border-radius: 0.5rem;
   background: transparent;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .chat-dock-icon-btn:hover {
@@ -4833,7 +5015,9 @@ html[lang="vi"] .hero-headline {
   width: 2.25rem;
   border-radius: 999px;
   background: oklch(0.72 0.02 90 / 55%);
-  transition: width 0.15s ease, background 0.15s ease;
+  transition:
+    width 0.15s ease,
+    background 0.15s ease;
 }
 
 .editor-shell .chat-dock-composer {
@@ -5263,7 +5447,6 @@ html[lang="vi"] .hero-headline {
   text-align: center;
 }
 
-
 .editor-shell .chat-input-actions {
   display: flex;
   align-items: center;
@@ -5360,7 +5543,10 @@ html[lang="vi"] .hero-headline {
   color: var(--foreground);
   cursor: pointer;
   outline: none;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .editor-shell .llm-selector-segment:hover {
@@ -5572,7 +5758,9 @@ html[lang="vi"] .hero-headline {
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .llm-selector-new-chat:hover {
@@ -5632,9 +5820,15 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes upload-progress {
-  0%   { transform: translateX(-100%) scaleX(0.4); }
-  50%  { transform: translateX(60%)  scaleX(0.7); }
-  100% { transform: translateX(200%) scaleX(0.4); }
+  0% {
+    transform: translateX(-100%) scaleX(0.4);
+  }
+  50% {
+    transform: translateX(60%) scaleX(0.7);
+  }
+  100% {
+    transform: translateX(200%) scaleX(0.4);
+  }
 }
 
 /* Chat messages */
@@ -5741,7 +5935,8 @@ html[lang="vi"] .hero-headline {
 }
 
 .editor-shell .chat-assistant-text code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
   font-size: 0.78em;
   padding: 0.08rem 0.35rem;
@@ -5964,7 +6159,8 @@ html[lang="vi"] .hero-headline {
   justify-content: flex-end;
   margin-top: 0.25rem;
   padding-top: 0.125rem;
-  border-top: 1px solid color-mix(in oklch, var(--chat-assistant-border, var(--border)) 55%, transparent);
+  border-top: 1px solid
+    color-mix(in oklch, var(--chat-assistant-border, var(--border)) 55%, transparent);
 }
 
 .editor-shell .chat-assistant-actions .chat-copy-btn {
@@ -6060,7 +6256,9 @@ html[lang="vi"] .hero-headline {
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .project-file-tree-tool:hover {
@@ -6097,7 +6295,9 @@ html[lang="vi"] .hero-headline {
   line-height: 1.2;
   color: var(--foreground);
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .editor-shell .project-file-tree-row:hover {
@@ -6262,7 +6462,9 @@ html[lang="vi"] .hero-headline {
   justify-content: center;
   border-radius: 0.375rem;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .editor-sidebar-rail-btn:hover {
@@ -6305,7 +6507,9 @@ html[lang="vi"] .hero-headline {
   background: var(--background);
   color: var(--muted-foreground);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .editor-sidebar-toggle:hover {
@@ -6413,7 +6617,6 @@ html[lang="vi"] .hero-headline {
   background: var(--editor-diff-inline-ins-bg);
   color: var(--editor-diff-inline-ins-text);
 }
-
 
 .editor-shell .editor-file-tab {
   min-width: 0;
@@ -6592,7 +6795,9 @@ html[lang="vi"] .hero-headline {
   border: none;
   background: transparent;
   color: var(--muted-foreground);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .editor-shell .chat-input-icon-btn:hover {
@@ -6611,7 +6816,10 @@ html[lang="vi"] .hero-headline {
   background: var(--primary);
   color: var(--primary-foreground);
   box-shadow: 0 1px 2px oklch(0.2 0.05 255 / 15%);
-  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
 .editor-shell .chat-send-btn:hover:not(:disabled) {
@@ -6631,13 +6839,21 @@ html[lang="vi"] .hero-headline {
 
 /* Mobile chat sheet animation */
 @keyframes mobile-chat-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes mobile-chat-sheet-in {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .editor-shell .mobile-chat-backdrop {
@@ -7209,7 +7425,10 @@ html[lang="vi"] .hero-headline {
 .about-board-editor .about-board-head,
 .about-board-editor .about-board-chair,
 .about-board-editor .about-board-body {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.25s ease, fill 0.25s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    stroke 0.25s ease,
+    fill 0.25s ease;
 }
 
 .about-board-editor.is-active .about-board-head {
@@ -7462,7 +7681,9 @@ html[lang="vi"] .hero-headline {
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--admin-sidebar-muted);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .admin-nav-item:hover {
@@ -7493,7 +7714,10 @@ html[lang="vi"] .hero-headline {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--admin-sidebar-muted);
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .admin-signout:hover {
@@ -8204,7 +8428,9 @@ html[lang="vi"] .hero-headline {
   color: var(--admin-text);
   padding: 0.25rem 0.5rem;
   border-radius: var(--admin-radius-sm);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .admin-link-btn:hover:not(:disabled) {
@@ -8236,7 +8462,10 @@ html[lang="vi"] .hero-headline {
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .admin-primary-btn {
@@ -8631,7 +8860,9 @@ html[lang="vi"] .hero-headline {
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--admin-text);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .admin-action-chip:hover:not(:disabled) {
@@ -8689,7 +8920,9 @@ html[lang="vi"] .hero-headline {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .admin-month-picker-trigger:hover {
@@ -8715,7 +8948,7 @@ html[lang="vi"] .hero-headline {
   z-index: 200;
   width: 15rem;
   padding: 0 !important;
-  font-family: var(--font-sans-ui, 'Inter', sans-serif);
+  font-family: var(--font-sans-ui, "Inter", sans-serif);
   background-color: var(--popover, #fff) !important;
   color: var(--popover-foreground, oklch(0.22 0.02 265));
   border: 1px solid var(--border, oklch(0.88 0.012 265));
@@ -8793,7 +9026,10 @@ html[lang="vi"] .hero-headline {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .admin-month-picker-cell:hover:not(:disabled):not(.is-selected) {
@@ -9002,8 +9238,12 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .guide-demo-pulse-btn {
@@ -9032,8 +9272,13 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-pulse {
-  0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 0 2px color-mix(in oklch, var(--editorial-red) 35%, transparent); }
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--editorial-red) 35%, transparent);
+  }
 }
 
 .guide-demo-projects-toolbar {
@@ -9058,12 +9303,25 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-row-highlight {
-  0%, 100% { background: transparent; }
-  40%, 60% { background: color-mix(in oklch, var(--editorial-red) 7%, var(--hero-demo-surface)); }
+  0%,
+  100% {
+    background: transparent;
+  }
+  40%,
+  60% {
+    background: color-mix(in oklch, var(--editorial-red) 7%, var(--hero-demo-surface));
+  }
 }
 
-.guide-demo-skel-title { width: 55%; height: 0.625rem; }
-.guide-demo-skel-meta { width: 30%; height: 0.4375rem; opacity: 0.7; }
+.guide-demo-skel-title {
+  width: 55%;
+  height: 0.625rem;
+}
+.guide-demo-skel-meta {
+  width: 30%;
+  height: 0.4375rem;
+  opacity: 0.7;
+}
 
 .guide-demo-editor {
   display: grid;
@@ -9098,19 +9356,32 @@ html[lang="vi"] .hero-headline {
   margin-bottom: 0.125rem;
 }
 
-.guide-demo-skel-file { width: 100%; }
-.guide-demo-skel-file-short { width: 70%; }
+.guide-demo-skel-file {
+  width: 100%;
+}
+.guide-demo-skel-file-short {
+  width: 70%;
+}
 
-.guide-demo-skel-line { width: 100%; }
-.guide-demo-skel-line-short { width: 60%; }
+.guide-demo-skel-line {
+  width: 100%;
+}
+.guide-demo-skel-line-short {
+  width: 60%;
+}
 .guide-demo-skel-line-active {
   background: color-mix(in oklch, var(--editorial-red) 12%, var(--hero-demo-inset));
   animation: guide-demo-line-glow 2s ease-in-out infinite;
 }
 
 @keyframes guide-demo-line-glow {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .guide-demo-editor-source {
@@ -9137,9 +9408,18 @@ html[lang="vi"] .hero-headline {
   background: var(--background);
 }
 
-.guide-demo-skel-pdf-block { width: 40%; height: 0.375rem; margin-bottom: 0.25rem; }
-.guide-demo-skel-pdf-line { width: 100%; height: 0.3125rem; }
-.guide-demo-skel-pdf-line-short { width: 75%; }
+.guide-demo-skel-pdf-block {
+  width: 40%;
+  height: 0.375rem;
+  margin-bottom: 0.25rem;
+}
+.guide-demo-skel-pdf-line {
+  width: 100%;
+  height: 0.3125rem;
+}
+.guide-demo-skel-pdf-line-short {
+  width: 75%;
+}
 .guide-demo-skel-highlight {
   background: color-mix(in oklch, var(--editorial-red) 18%, var(--hero-demo-inset));
 }
@@ -9166,8 +9446,13 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-status-fade {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .guide-demo-compile-progress {
@@ -9185,9 +9470,15 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-progress {
-  0% { width: 0%; }
-  45% { width: 100%; }
-  100% { width: 100%; }
+  0% {
+    width: 0%;
+  }
+  45% {
+    width: 100%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
 .guide-demo-pdf-reveal {
@@ -9195,8 +9486,16 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-pdf-in {
-  0%, 25% { opacity: 0.25; transform: scale(0.98); }
-  55%, 100% { opacity: 1; transform: scale(1); }
+  0%,
+  25% {
+    opacity: 0.25;
+    transform: scale(0.98);
+  }
+  55%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .guide-demo-defense {
@@ -9223,18 +9522,39 @@ html[lang="vi"] .hero-headline {
   margin-left: 1rem;
 }
 
-.guide-demo-bubble-in-1 { animation: guide-demo-bubble-in 4s ease-out infinite; }
-.guide-demo-bubble-in-2 { animation: guide-demo-bubble-in 4s ease-out 1.2s infinite; }
-.guide-demo-bubble-in-3 { animation: guide-demo-bubble-in 4s ease-out 2.4s infinite; }
-
-@keyframes guide-demo-bubble-in {
-  0%, 8% { opacity: 0; transform: translateY(4px); }
-  18%, 80% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0.3; }
+.guide-demo-bubble-in-1 {
+  animation: guide-demo-bubble-in 4s ease-out infinite;
+}
+.guide-demo-bubble-in-2 {
+  animation: guide-demo-bubble-in 4s ease-out 1.2s infinite;
+}
+.guide-demo-bubble-in-3 {
+  animation: guide-demo-bubble-in 4s ease-out 2.4s infinite;
 }
 
-.guide-demo-skel-bubble { width: 90%; height: 0.4375rem; }
-.guide-demo-skel-bubble-short { width: 65%; }
+@keyframes guide-demo-bubble-in {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  18%,
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.guide-demo-skel-bubble {
+  width: 90%;
+  height: 0.4375rem;
+}
+.guide-demo-skel-bubble-short {
+  width: 65%;
+}
 
 .guide-demo-account-card {
   border: 1px solid var(--foreground);
@@ -9258,8 +9578,15 @@ html[lang="vi"] .hero-headline {
   margin-bottom: 0.5rem;
 }
 
-.guide-demo-skel-name { width: 45%; height: 0.5rem; }
-.guide-demo-skel-email { width: 65%; height: 0.375rem; opacity: 0.7; }
+.guide-demo-skel-name {
+  width: 45%;
+  height: 0.5rem;
+}
+.guide-demo-skel-email {
+  width: 65%;
+  height: 0.375rem;
+  opacity: 0.7;
+}
 
 .guide-demo-account-plan {
   display: flex;
@@ -9362,7 +9689,10 @@ html[lang="vi"] .hero-headline {
   padding: 0.375rem 0.5rem;
   border: 1px solid transparent;
   opacity: 0.55;
-  transition: border-color 0.3s ease, background 0.3s ease, opacity 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .guide-demo-slash-item-active {
@@ -9381,18 +9711,43 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-slash-highlight {
-  0%, 28%, 100% { opacity: 1; }
-  33%, 94% { opacity: 0.55; }
+  0%,
+  28%,
+  100% {
+    opacity: 1;
+  }
+  33%,
+  94% {
+    opacity: 0.55;
+  }
 }
 
 @keyframes guide-demo-slash-fade-2 {
-  0%, 28%, 100% { opacity: 0.55; }
-  33%, 61% { opacity: 1; border-color: color-mix(in oklch, var(--editorial-red) 45%, var(--foreground)); background: color-mix(in oklch, var(--editorial-red) 6%, var(--hero-demo-surface)); }
+  0%,
+  28%,
+  100% {
+    opacity: 0.55;
+  }
+  33%,
+  61% {
+    opacity: 1;
+    border-color: color-mix(in oklch, var(--editorial-red) 45%, var(--foreground));
+    background: color-mix(in oklch, var(--editorial-red) 6%, var(--hero-demo-surface));
+  }
 }
 
 @keyframes guide-demo-slash-fade-3 {
-  0%, 61%, 100% { opacity: 0.55; }
-  66%, 94% { opacity: 1; border-color: color-mix(in oklch, var(--editorial-red) 45%, var(--foreground)); background: color-mix(in oklch, var(--editorial-red) 6%, var(--hero-demo-surface)); }
+  0%,
+  61%,
+  100% {
+    opacity: 0.55;
+  }
+  66%,
+  94% {
+    opacity: 1;
+    border-color: color-mix(in oklch, var(--editorial-red) 45%, var(--foreground));
+    background: color-mix(in oklch, var(--editorial-red) 6%, var(--hero-demo-surface));
+  }
 }
 
 .guide-demo-slash-cmd {
@@ -9426,7 +9781,10 @@ html[lang="vi"] .hero-headline {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease;
 }
 
 .guide-demo-tools-tab-active {
@@ -9437,8 +9795,13 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-tools-tab-pulse {
-  0%, 100% { box-shadow: none; }
-  50% { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--editorial-red) 25%, transparent); }
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--editorial-red) 25%, transparent);
+  }
 }
 
 .guide-demo-tools-row {
@@ -9528,13 +9891,22 @@ html[lang="vi"] .hero-headline {
   height: 4.5rem;
   border-radius: 50%;
   border: 3px solid color-mix(in oklch, var(--editorial-amber, #b45309) 70%, var(--foreground));
-  background: radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--editorial-amber, #b45309) 12%, transparent), transparent 65%);
+  background: radial-gradient(
+    circle at 30% 30%,
+    color-mix(in oklch, var(--editorial-amber, #b45309) 12%, transparent),
+    transparent 65%
+  );
   animation: guide-demo-score-ring-pulse 2.8s ease-in-out infinite;
 }
 
 @keyframes guide-demo-score-ring-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--editorial-amber, #b45309) 0%, transparent); }
-  50% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--editorial-amber, #b45309) 18%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--editorial-amber, #b45309) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--editorial-amber, #b45309) 18%, transparent);
+  }
 }
 
 .guide-demo-score-value {
@@ -9581,8 +9953,15 @@ html[lang="vi"] .hero-headline {
 }
 
 @keyframes guide-demo-score-bar-grow {
-  0%, 100% { transform: scaleX(0.92); opacity: 0.85; }
-  50% { transform: scaleX(1); opacity: 1; }
+  0%,
+  100% {
+    transform: scaleX(0.92);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 
 .guide-step-bullets {
@@ -9813,7 +10192,9 @@ html[lang="vi"] .hero-headline {
   font-size: 0.75rem;
   letter-spacing: 0.02em;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .template-catalog-search input:focus {
@@ -10239,7 +10620,9 @@ html[lang="vi"] .hero-headline {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--background);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .template-detail-primary-btn:hover:not(:disabled) {
@@ -10307,4 +10690,3 @@ html[lang="vi"] .hero-headline {
   width: 100%;
   aspect-ratio: 3 / 4;
 }
-

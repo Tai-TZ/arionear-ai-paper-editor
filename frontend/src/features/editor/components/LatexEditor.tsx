@@ -23,9 +23,10 @@ export const LatexEditor = memo(function LatexEditor({
   onSelectionContextChange?: (
     payload: { context: EditorSelectionContext; anchor: SelectionAnchor } | null,
   ) => void;
-  onQuickEditRequest?: (
-    payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
-  ) => void;
+  onQuickEditRequest?: (payload: {
+    context: EditorSelectionContext;
+    anchor: SelectionAnchor;
+  }) => void;
   fullHeight?: boolean;
   highlightLine?: number | null;
   synctexHighlight?: SynctexWordHighlight | null;

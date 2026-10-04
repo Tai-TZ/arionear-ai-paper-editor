@@ -35,9 +35,7 @@ export function AuthShell({
           <p className="font-serif-display text-4xl xl:text-5xl leading-[1.05] font-bold">
             {shell.bannerQuote}
           </p>
-          <p className="mt-6 font-serif-body text-base opacity-80 max-w-md">
-            {shell.bannerLede}
-          </p>
+          <p className="mt-6 font-serif-body text-base opacity-80 max-w-md">{shell.bannerLede}</p>
         </div>
         <div className="font-mono-data text-[11px] uppercase tracking-widest opacity-60">
           {shell.bannerFooter}
@@ -52,7 +50,10 @@ export function AuthShell({
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageToggle compact className="masthead-language-toggle shrink-0" />
             <ThemeToggle compact className="masthead-theme-toggle" />
-            <Link to="/" className="font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4">
+            <Link
+              to="/"
+              className="font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4"
+            >
               {shell.mobileBack}
             </Link>
           </div>

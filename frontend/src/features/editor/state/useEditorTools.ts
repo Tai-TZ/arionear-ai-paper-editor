@@ -160,8 +160,8 @@ export function useEditorTools({
     () =>
       Boolean(
         logicAuditReport?.sections?.length &&
-          lastPanelAuditFingerprintRef.current &&
-          logicAuditFingerprint(mainLatexSource) !== lastPanelAuditFingerprintRef.current,
+        lastPanelAuditFingerprintRef.current &&
+        logicAuditFingerprint(mainLatexSource) !== lastPanelAuditFingerprintRef.current,
       ),
     [logicAuditReport, mainLatexSource],
   );
@@ -236,8 +236,7 @@ export function useEditorTools({
       }
     } catch (error) {
       if (abort.signal.aborted) return;
-      const message =
-        error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
+      const message = error instanceof Error ? error.message : "Không thể chạy phản biện AI.";
       setGateAuditReport(null);
       setScoreAuditError(formatPaperScoreGateError(message, locale));
     } finally {
@@ -278,11 +277,7 @@ export function useEditorTools({
     const fingerprint = logicAuditFingerprint(mainLatexSource);
     if (scoreAuditAttemptedForRef.current === fingerprint) return;
     if (
-      !needsScoreGateAudit(
-        mainLatexSource,
-        gateAuditReport,
-        lastGateAuditFingerprintRef.current,
-      )
+      !needsScoreGateAudit(mainLatexSource, gateAuditReport, lastGateAuditFingerprintRef.current)
     ) {
       return;
     }

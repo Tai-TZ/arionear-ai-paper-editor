@@ -251,7 +251,9 @@ export async function patchAdminUser(
   return user;
 }
 
-export async function patchAdminLlmDefaults(defaults: LlmGlobalDefaults): Promise<LlmGlobalDefaults> {
+export async function patchAdminLlmDefaults(
+  defaults: LlmGlobalDefaults,
+): Promise<LlmGlobalDefaults> {
   const data = await adminFetch<LlmGlobalDefaults>("/admin/llm/defaults", {
     method: "PATCH",
     body: JSON.stringify({ defaults }),
@@ -292,7 +294,13 @@ export async function clearAdminProviderKeys(provider: string): Promise<void> {
 export async function testAdminProviderKey(
   provider: string,
   body: { api_key?: string; key_id?: string; model?: string },
-): Promise<{ ok: boolean; message: string; latency_ms?: number | null; provider: string; key_hint?: string | null }> {
+): Promise<{
+  ok: boolean;
+  message: string;
+  latency_ms?: number | null;
+  provider: string;
+  key_hint?: string | null;
+}> {
   return adminFetch(`/admin/llm/keys/${provider}/test`, {
     method: "POST",
     body: JSON.stringify(body),

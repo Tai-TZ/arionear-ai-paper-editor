@@ -48,11 +48,7 @@ function ForgotPasswordPage() {
   };
 
   return (
-    <AuthShell
-      eyebrow={t.eyebrow}
-      title={t.title}
-      lede={t.lede}
-    >
+    <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
       {error && <AuthAlert message={error} />}
 
       {submitted ? (
@@ -65,7 +61,10 @@ function ForgotPasswordPage() {
           {devResetUrl && (
             <p className="mt-4 font-serif-body text-xs text-foreground/60 border-t border-foreground/20 pt-4">
               {t.devMode}{" "}
-              <a href={devResetUrl} className="underline break-all hover:text-[color:var(--editorial-red)]">
+              <a
+                href={devResetUrl}
+                className="underline break-all hover:text-[color:var(--editorial-red)]"
+              >
                 {t.openResetLink}
               </a>
             </p>
@@ -109,7 +108,10 @@ function ForgotPasswordPage() {
         >
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> {t.backToSignIn}
         </Link>
-        <Link to="/signup" className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]">
+        <Link
+          to="/signup"
+          className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+        >
           {t.createAccount}
         </Link>
       </div>

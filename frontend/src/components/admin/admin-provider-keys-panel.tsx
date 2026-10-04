@@ -27,13 +27,7 @@ function ProviderIcon({ providerId }: { providerId: string }) {
     return <KeyRound className="h-5 w-5 text-[color:var(--editorial-red)]" strokeWidth={1.5} />;
   }
   return (
-    <img
-      src={icon}
-      alt=""
-      className="h-5 w-5 shrink-0 object-contain"
-      width={20}
-      height={20}
-    />
+    <img src={icon} alt="" className="h-5 w-5 shrink-0 object-contain" width={20} height={20} />
   );
 }
 
@@ -42,7 +36,13 @@ function ModelChip({ modelId, providerId }: { modelId: string; providerId: strin
   return (
     <span className="admin-model-chip" title={modelId}>
       {icon ? (
-        <img src={icon} alt="" className="h-3.5 w-3.5 shrink-0 object-contain" width={14} height={14} />
+        <img
+          src={icon}
+          alt=""
+          className="h-3.5 w-3.5 shrink-0 object-contain"
+          width={14}
+          height={14}
+        />
       ) : null}
       <span className="truncate">{modelId.split("/").pop()}</span>
     </span>
@@ -61,29 +61,32 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
   const [working, setWorking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const refreshKeys = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? false;
-    if (!silent) setLoading(true);
-    try {
-      const data = await fetchAdminProviderKeys();
-      setKeys(data.keys);
-      setEnvFallback(data.env_fallback_configured);
-      setProviders(data.providers);
-      if (!silent) {
-        setExpanded((prev) => {
-          const next = { ...prev };
-          for (const p of data.providers) {
-            if (!(p.id in next)) next[p.id] = !p.configured;
-          }
-          return next;
-        });
+  const refreshKeys = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? false;
+      if (!silent) setLoading(true);
+      try {
+        const data = await fetchAdminProviderKeys();
+        setKeys(data.keys);
+        setEnvFallback(data.env_fallback_configured);
+        setProviders(data.providers);
+        if (!silent) {
+          setExpanded((prev) => {
+            const next = { ...prev };
+            for (const p of data.providers) {
+              if (!(p.id in next)) next[p.id] = !p.configured;
+            }
+            return next;
+          });
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t.loadError);
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.loadError);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [t.loadError]);
+    },
+    [t.loadError],
+  );
 
   useEffect(() => {
     void refreshKeys();
@@ -102,10 +105,7 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
     return map;
   }, [keys]);
 
-  const configuredCount = useMemo(
-    () => providers.filter((p) => p.configured).length,
-    [providers],
-  );
+  const configuredCount = useMemo(() => providers.filter((p) => p.configured).length, [providers]);
 
   const setDraft = (provider: string, patch: Partial<DraftState[string]>) => {
     setDrafts((prev) => ({
@@ -122,7 +122,9 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
 
   const mergeSavedKey = (row: ProviderKeyRow) => {
     setKeys((prev) => {
-      const without = prev.filter((k) => k.id !== row.id && !(k.provider === row.provider && k.priority === row.priority));
+      const without = prev.filter(
+        (k) => k.id !== row.id && !(k.provider === row.provider && k.priority === row.priority),
+      );
       return [...without, row];
     });
     setProviders((prev) =>
@@ -252,9 +254,7 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
       <div className="admin-panel">
         <div className="admin-panel-body space-y-2">
           <p className="admin-data-note">{t.intro}</p>
-          <p className="text-sm font-medium">
-            {t.summary(configuredCount, providers.length)}
-          </p>
+          <p className="text-sm font-medium">{t.summary(configuredCount, providers.length)}</p>
         </div>
       </div>
 
@@ -298,16 +298,16 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
 
             {isOpen ? (
               <div className="admin-panel-body space-y-4">
-              {envOk && rows.length ? (
-                <p className="text-xs text-muted-foreground">{t.envFallbackHint}</p>
-              ) : null}
-              {envOk && !rows.length ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">{t.saveBeforeChat}</p>
-              ) : null}
+                {envOk && rows.length ? (
+                  <p className="text-xs text-muted-foreground">{t.envFallbackHint}</p>
+                ) : null}
+                {envOk && !rows.length ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{t.saveBeforeChat}</p>
+                ) : null}
 
-              {providerId === "google" ? (
-                <p className="text-xs text-muted-foreground">{t.googleTestHint}</p>
-              ) : null}
+                {providerId === "google" ? (
+                  <p className="text-xs text-muted-foreground">{t.googleTestHint}</p>
+                ) : null}
 
                 <div>
                   <p className="admin-field-label mb-2">{t.supportedModels}</p>
@@ -335,7 +335,9 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
                           <span className="admin-badge admin-badge-inactive">{t.inactive}</span>
                         ) : null}
                         {row.last_verified_at ? (
-                          <span className="text-[10px] text-muted-foreground">{t.lastVerified}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {t.lastVerified}
+                          </span>
                         ) : null}
                         {row.last_error ? (
                           <span className="text-xs text-destructive truncate max-w-[240px]">

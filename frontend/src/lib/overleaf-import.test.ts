@@ -14,7 +14,8 @@ function makeZip(entries: Record<string, string | Uint8Array>): File {
 describe("importOverleafZip", () => {
   it("imports flat Overleaf zip with main tex and bib", async () => {
     const file = makeZip({
-      "main.tex": "\\documentclass{article}\\title{EfficientNetV2}\\begin{document}Hi\\end{document}",
+      "main.tex":
+        "\\documentclass{article}\\title{EfficientNetV2}\\begin{document}Hi\\end{document}",
       "refs.bib": "@article{demo, title={Demo}}",
     });
     const result = await importOverleafZip(file);

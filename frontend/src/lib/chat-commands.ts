@@ -1,8 +1,5 @@
 import type { UiLanguage } from "@/lib/researcher-profile";
-import {
-  getChatSlashCommands,
-  getSlashDefaultMessage,
-} from "@/lib/chat-commands-i18n";
+import { getChatSlashCommands, getSlashDefaultMessage } from "@/lib/chat-commands-i18n";
 
 export type ChatSlashTask =
   | "style"
@@ -47,10 +44,7 @@ export function getSlashCommandQuery(input: string): string | null {
   return input.slice(1);
 }
 
-export function filterSlashCommands(
-  query: string,
-  locale: UiLanguage = "vi",
-): SlashCommandDef[] {
+export function filterSlashCommands(query: string, locale: UiLanguage = "vi"): SlashCommandDef[] {
   const commands = getChatSlashCommands(locale);
   const q = query.toLowerCase().trim();
   if (!q) return commands;
@@ -88,8 +82,7 @@ const MANUSCRIPT_SECTION_RE =
 const SHORTEN_RE =
   /rút\s*gọn|shorten|condense|trim\s+down|cut\s+down|cắt\s*bớt|làm\s*ngắn|giảm\s*độ\s*dài|make\s+(?:it\s+)?shorter/i;
 
-const EXPAND_RE =
-  /mở\s*rộng|expand|lengthen|làm\s*dài|extend|make\s+(?:it\s+)?longer/i;
+const EXPAND_RE = /mở\s*rộng|expand|lengthen|làm\s*dài|extend|make\s+(?:it\s+)?longer/i;
 
 const EDIT_VERB_RE =
   /\bsửa\b|\bchỉnh\b|\bedit\b|\bfix\b|\bupdate\b|\bchange\b|viết\s+lại|rewrite|rephrase|đổi|thay/i;

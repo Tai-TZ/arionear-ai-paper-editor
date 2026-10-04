@@ -1,7 +1,12 @@
 import { resolveApiBase } from "./base-url";
 import { getAccessToken, logoutUser } from "@/lib/auth-store";
 import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
-import { mapApiHttpError, streamErrorMessage, streamInterruptedMessage, toUserFacingMessage } from "./api-errors";
+import {
+  mapApiHttpError,
+  streamErrorMessage,
+  streamInterruptedMessage,
+  toUserFacingMessage,
+} from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 import { contentFingerprint } from "@/lib/pending-edit-utils";
 
@@ -92,20 +97,14 @@ function formatFeedLine(state: ChatAiStatePayload): string {
   return state.detail ? `${prefix}${state.label} — ${state.detail}` : `${prefix}${state.label}`;
 }
 
-export function appendImportantFeedLine(
-  activities: string[],
-  state: ChatAiStatePayload,
-): string[] {
+export function appendImportantFeedLine(activities: string[], state: ChatAiStatePayload): string[] {
   if (!isImportantFeedEvent(state)) return activities;
   const line = formatFeedLine(state);
   if (activities[activities.length - 1] === line) return activities;
   return [...activities, line];
 }
 
-export function applyAiState(
-  steps: ChatAiStep[],
-  payload: ChatAiStatePayload,
-): ChatAiStep[] {
+export function applyAiState(steps: ChatAiStep[], payload: ChatAiStatePayload): ChatAiStep[] {
   if (isProgressNoiseStep(payload.step_id)) {
     return steps;
   }
@@ -340,11 +339,7 @@ export function invalidateSessionSync(sessionId?: string) {
 }
 
 /** Mark session cache as synced without a network call (e.g. after GET /papers). */
-export function markSessionSynced(
-  sessionId: string,
-  name: string,
-  latexContent: string,
-): void {
+export function markSessionSynced(sessionId: string, name: string, latexContent: string): void {
   const record = sessionSyncRecord(sessionId);
   record.syncedHash = contentFingerprint(latexContent);
   record.syncedName = name;
@@ -440,11 +435,7 @@ export async function syncSession(
 
   if (record.inflight) {
     await record.inflight.catch(() => {});
-    if (
-      !options?.force &&
-      record.syncedHash === hash &&
-      record.syncedName === name
-    ) {
+    if (!options?.force && record.syncedHash === hash && record.syncedName === name) {
       return;
     }
   }
@@ -516,10 +507,7 @@ function createSseDispatcher(callbacks: StreamChatCallbacks): {
       const eventType = inferSseEventType(parsed.event, payload);
       switch (eventType) {
         case "activity":
-          if (
-            typeof payload.text === "string" &&
-            !isProgressNoiseActivity(payload.text)
-          ) {
+          if (typeof payload.text === "string" && !isProgressNoiseActivity(payload.text)) {
             callbacks.onActivity(payload.text);
           }
           break;
@@ -740,7 +728,7 @@ async function streamChatWithFetch(
 
   if (!isFinished()) {
     if (signal?.aborted) return;
-        callbacks.onError(streamInterruptedMessage());
+    callbacks.onError(streamInterruptedMessage());
   }
   signal?.removeEventListener("abort", onAbort);
 }

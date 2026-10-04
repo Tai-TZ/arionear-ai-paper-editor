@@ -59,7 +59,7 @@ export function buildProfilePatch(
     if (typeof next === "string") {
       const normalized = normalizeOptionalString(next);
       const prevNormalized =
-        typeof prev === "string" ? normalizeOptionalString(prev) ?? null : prev ?? null;
+        typeof prev === "string" ? (normalizeOptionalString(prev) ?? null) : (prev ?? null);
       if (normalized === prevNormalized) continue;
       (patch as Record<string, unknown>)[key] = normalized;
       continue;

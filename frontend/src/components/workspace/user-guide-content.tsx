@@ -5,14 +5,26 @@ import { useLocale } from "@/components/locale-provider";
 import { GuideStepDemo } from "@/components/workspace/guide-step-demos";
 import { guideCopy, type GuideSection, type GuideStep } from "@/lib/guide-i18n";
 
-function GuideStepItem({ step, labels }: { step: GuideStep; labels: ReturnType<typeof guideCopy>["demo"] }) {
+function GuideStepItem({
+  step,
+  labels,
+}: {
+  step: GuideStep;
+  labels: ReturnType<typeof guideCopy>["demo"];
+}) {
   return (
     <li className="guide-step">
       <div className="flex items-baseline gap-3">
-        <span className="font-mono-data text-xs tracking-widest text-[color:var(--editorial-red)]">{step.step}</span>
-        <h3 className="font-serif-display text-lg font-bold tracking-tight md:text-xl">{step.title}</h3>
+        <span className="font-mono-data text-xs tracking-widest text-[color:var(--editorial-red)]">
+          {step.step}
+        </span>
+        <h3 className="font-serif-display text-lg font-bold tracking-tight md:text-xl">
+          {step.title}
+        </h3>
       </div>
-      <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+      <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
+        {step.description}
+      </p>
       {step.bullets?.length ? (
         <ul className="guide-step-bullets mt-3 space-y-1.5 font-body text-sm leading-relaxed text-muted-foreground">
           {step.bullets.map((bullet) => (
@@ -36,8 +48,12 @@ function GuideSectionBlock({
 }) {
   return (
     <section className="mt-14 border-t border-foreground/15 pt-10 first:mt-8 first:border-t-0 first:pt-0">
-      <h2 className="font-serif-display text-xl font-bold tracking-tight md:text-2xl">{section.title}</h2>
-      <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground md:text-base">{section.lede}</p>
+      <h2 className="font-serif-display text-xl font-bold tracking-tight md:text-2xl">
+        {section.title}
+      </h2>
+      <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground md:text-base">
+        {section.lede}
+      </p>
       <ol className="mt-8 space-y-10">
         {section.steps.map((step) => (
           <GuideStepItem key={`${section.title}-${step.id}`} step={step} labels={labels} />
@@ -54,7 +70,9 @@ export function UserGuideContent() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
-        <p className="font-body text-sm leading-relaxed text-muted-foreground md:text-base">{g.lede}</p>
+        <p className="font-body text-sm leading-relaxed text-muted-foreground md:text-base">
+          {g.lede}
+        </p>
 
         <GuideSectionBlock section={g.intro} labels={g.demo} />
         <GuideSectionBlock section={g.editor} labels={g.demo} />

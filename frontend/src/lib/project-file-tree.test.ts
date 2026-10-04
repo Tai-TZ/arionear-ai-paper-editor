@@ -5,11 +5,7 @@ describe("buildProjectFileTree", () => {
   it("nests folders like Overleaf export", () => {
     const tree = buildProjectFileTree(
       [{ path: "main.tex" }, { path: "sections/intro.tex" }],
-      [
-        { name: "figures/arch.png" },
-        { name: "references.bib" },
-        { name: "Accuracy.png" },
-      ],
+      [{ name: "figures/arch.png" }, { name: "references.bib" }, { name: "Accuracy.png" }],
     );
 
     expect(tree.map((n) => n.name)).toContain("main.tex");

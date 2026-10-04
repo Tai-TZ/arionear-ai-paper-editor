@@ -71,8 +71,7 @@ export const Route = createFileRoute("/defense")({
   },
   validateSearch: (search: Record<string, unknown>): DefenseSearch => {
     const raw = search.projectId;
-    const projectId =
-      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
+    const projectId = typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
     return { projectId };
   },
   component: DefensePage,
@@ -195,7 +194,10 @@ function DefensePage() {
   const refreshQuota = useCallback(() => {
     setQuotaLoadFailed(false);
     fetchDefenseQuota()
-      .then((q) => { setQuota(q); setQuotaLoadFailed(false); })
+      .then((q) => {
+        setQuota(q);
+        setQuotaLoadFailed(false);
+      })
       .catch(() => {
         fetchBillingStatus()
           .then((billing) => {
@@ -252,15 +254,12 @@ function DefensePage() {
     (paper: StoredProject) => {
       const normalizedMain = paper.mainFile ?? "main.tex";
       const prevUpdatedAt = lastPaperUpdatedAtRef.current;
-      const contentChanged =
-        prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
+      const contentChanged = prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
       lastPaperUpdatedAtRef.current = paper.updatedAt;
 
       setLatexContent(paper.latex);
       setProjectFiles(
-        paper.files?.length
-          ? paper.files
-          : [{ path: normalizedMain, content: paper.latex }],
+        paper.files?.length ? paper.files : [{ path: normalizedMain, content: paper.latex }],
       );
       setMainFile(normalizedMain);
       setCompiler(paper.compiler ?? "auto");
@@ -295,13 +294,10 @@ function DefensePage() {
       const prevUpdatedAt = lastPaperUpdatedAtRef.current;
       fetchPaper(projectId)
         .then((paper) => {
-          const wasUpdated =
-            prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
+          const wasUpdated = prevUpdatedAt !== null && paper.updatedAt > prevUpdatedAt;
           applyPaper(paper);
           if (opts?.manual) {
-            toast.info(
-              wasUpdated ? t.chat.paperUpdatedFromEditor : t.chat.paperRefreshDone,
-            );
+            toast.info(wasUpdated ? t.chat.paperUpdatedFromEditor : t.chat.paperRefreshDone);
           } else if (opts?.silent && wasUpdated) {
             toast.info(t.chat.paperUpdatedFromEditor);
           }
@@ -310,9 +306,7 @@ function DefensePage() {
           if (!isBackground) {
             setLoadError(err instanceof Error ? err.message : t.chat.paperLoadFallbackError);
           } else {
-            toast.error(
-              err instanceof Error ? err.message : t.chat.paperLoadFallbackError,
-            );
+            toast.error(err instanceof Error ? err.message : t.chat.paperLoadFallbackError);
           }
         })
         .finally(() => {
@@ -540,7 +534,10 @@ function DefensePage() {
         },
         onDone: (response) => {
           if (streamGenRef.current !== myGen) return;
-          if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
+          if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
+          }
           const latexCtx = defenseLatexContextRef.current;
           const finalText = prepareDefenseCouncilMarkdown(response || assembled, latexCtx);
           setMessages((prev) => {
@@ -550,11 +547,7 @@ function DefensePage() {
               next[next.length - 1] = { ...last, content: finalText, isStreaming: false };
             }
             if (projectId) {
-              persistDefenseSession(
-                projectId,
-                { messages: next, hasStarted: true },
-                persistOpts,
-              );
+              persistDefenseSession(projectId, { messages: next, hasStarted: true }, persistOpts);
             }
             return next;
           });
@@ -563,14 +556,23 @@ function DefensePage() {
           // Only optimistically decrement when response is non-empty (matches backend logic)
           if ((response || assembled).trim()) {
             setQuota((q) =>
-              q ? { ...q, used: Math.min(q.limit, q.used + 1), remaining: Math.max(0, q.remaining - 1) } : q,
+              q
+                ? {
+                    ...q,
+                    used: Math.min(q.limit, q.used + 1),
+                    remaining: Math.max(0, q.remaining - 1),
+                  }
+                : q,
             );
           }
           refreshQuota();
         },
         onError: (message) => {
           if (streamGenRef.current !== myGen) return;
-          if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
+          if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
+          }
           const text = isDefenseQuotaError(message)
             ? formatDefenseQuotaError(message, t.chat)
             : message;
@@ -587,7 +589,20 @@ function DefensePage() {
       },
       abort.signal,
     );
-  }, [isStreaming, quotaLoadFailed, hasStarted, input, messages, defenseLatexContext, projectId, quota, locale, t.chat, refreshQuota, persistOpts]);
+  }, [
+    isStreaming,
+    quotaLoadFailed,
+    hasStarted,
+    input,
+    messages,
+    defenseLatexContext,
+    projectId,
+    quota,
+    locale,
+    t.chat,
+    refreshQuota,
+    persistOpts,
+  ]);
 
   const completedCouncilTurns = countCompletedCouncilTurns(messages);
   const displayUsed = quota ? Math.max(quota.used, completedCouncilTurns) : completedCouncilTurns;
@@ -613,11 +628,7 @@ function DefensePage() {
         }
       }
       if (projectId) {
-        persistDefenseSession(
-          projectId,
-          { messages: next, hasStarted: true },
-          persistOpts,
-        );
+        persistDefenseSession(projectId, { messages: next, hasStarted: true }, persistOpts);
       }
       return next;
     });
@@ -648,7 +659,10 @@ function DefensePage() {
   }, [restoredSession]);
 
   const handleReset = useCallback(() => {
-    if (messages.length === 0) { doReset(); return; }
+    if (messages.length === 0) {
+      doReset();
+      return;
+    }
     toast(t.chat.resetConfirmTitle, {
       description: t.chat.resetConfirmDesc,
       action: { label: t.chat.resetConfirmYes, onClick: doReset },

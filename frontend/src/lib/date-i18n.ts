@@ -59,10 +59,7 @@ export function formatProjectDateTime(timestamp: number, locale: UiLanguage = "e
 }
 
 /** Profile timestamps and similar ISO/date values. */
-export function formatDateTime(
-  value: string | number | Date,
-  locale: UiLanguage = "en",
-): string {
+export function formatDateTime(value: string | number | Date, locale: UiLanguage = "en"): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString(localeBcp47(locale), {

@@ -1,12 +1,7 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-  AuthAlert,
-  AuthField,
-  AuthShell,
-  AuthSubmitButton,
-} from "@/components/auth/auth-shell";
+import { AuthAlert, AuthField, AuthShell, AuthSubmitButton } from "@/components/auth/auth-shell";
 import { useLocale } from "@/components/locale-provider";
 import { isAuthenticated, resetPassword } from "@/lib/auth-store";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
@@ -80,11 +75,7 @@ function ResetPasswordPage() {
   };
 
   return (
-    <AuthShell
-      eyebrow={t.eyebrow}
-      title={t.title}
-      lede={t.lede}
-    >
+    <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
       {error && <AuthAlert message={error} />}
       {success && (
         <div className="mb-5 border border-foreground/30 bg-background px-4 py-3">
@@ -113,7 +104,9 @@ function ResetPasswordPage() {
                   <div
                     key={i}
                     className={`auth-strength-bar h-1 flex-1 ${
-                      i <= strength.score ? `auth-strength-${strength.score}` : "auth-strength-empty"
+                      i <= strength.score
+                        ? `auth-strength-${strength.score}`
+                        : "auth-strength-empty"
                     }`}
                   />
                 ))}

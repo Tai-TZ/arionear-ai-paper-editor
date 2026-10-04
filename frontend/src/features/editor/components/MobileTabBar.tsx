@@ -2,7 +2,13 @@ import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { MobileTab } from "../types";
 
-export function MobileTabBar({ tab, onChange }: { tab: MobileTab; onChange: (t: MobileTab) => void }) {
+export function MobileTabBar({
+  tab,
+  onChange,
+}: {
+  tab: MobileTab;
+  onChange: (t: MobileTab) => void;
+}) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
   const tabs: { id: MobileTab; label: string }[] = [

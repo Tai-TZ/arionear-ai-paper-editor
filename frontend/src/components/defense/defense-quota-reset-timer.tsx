@@ -53,10 +53,12 @@ export function DefenseQuotaResetTimer({
   const countdown = formatCountdownMs(remainingMs);
 
   return (
-    <div className={`defense-quota-reset-timer${className ? ` ${className}` : ""}`} role="timer" aria-live="polite">
-      <p className="defense-quota-reset-at font-mono-data">
-        {resetTimeLabel}
-      </p>
+    <div
+      className={`defense-quota-reset-timer${className ? ` ${className}` : ""}`}
+      role="timer"
+      aria-live="polite"
+    >
+      <p className="defense-quota-reset-at font-mono-data">{resetTimeLabel}</p>
       <p className="defense-quota-reset-countdown font-mono-data">{countdownLabel(countdown)}</p>
     </div>
   );

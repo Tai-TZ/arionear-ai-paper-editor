@@ -13,8 +13,7 @@ export const Route = createFileRoute("/editor")({
   },
   validateSearch: (search: Record<string, unknown>): EditorSearch => {
     const raw = search.projectId;
-    const projectId =
-      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
+    const projectId = typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
     return { projectId };
   },
   head: () => ({

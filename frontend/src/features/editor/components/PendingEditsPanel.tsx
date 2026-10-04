@@ -41,7 +41,9 @@ export function PendingEditsPanel({
         <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-2 text-xs font-medium text-primary">
             <span>{t.pendingEdits.title(pendingEdits.length)}</span>
-            <span className="text-[10px] font-normal text-muted-foreground">{t.pendingEdits.hint}</span>
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {t.pendingEdits.hint}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -63,10 +65,14 @@ export function PendingEditsPanel({
         </div>
       ) : null}
       {pendingEditsBlocked ? (
-        <p className="px-3 pb-1 pt-2 text-[11px] text-destructive">{t.pendingEdits.integrityBlocked}</p>
+        <p className="px-3 pb-1 pt-2 text-[11px] text-destructive">
+          {t.pendingEdits.integrityBlocked}
+        </p>
       ) : null}
       {pendingEditsStale && !pendingEditsBlocked ? (
-        <p className={`px-3 pb-1 text-[11px] text-amber-700 dark:text-amber-400 ${isSingle ? "pt-2" : ""}`}>
+        <p
+          className={`px-3 pb-1 text-[11px] text-amber-700 dark:text-amber-400 ${isSingle ? "pt-2" : ""}`}
+        >
           {t.pendingEdits.staleWarning}
         </p>
       ) : null}

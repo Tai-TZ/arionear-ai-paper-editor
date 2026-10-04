@@ -55,7 +55,9 @@ function WorkflowDiagram({
               </div>
 
               <h3 className="font-serif-display font-bold text-xl leading-tight">{step.title}</h3>
-              <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed flex-1">{step.detail}</p>
+              <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed flex-1">
+                {step.detail}
+              </p>
 
               {step.n === "03" ? (
                 <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)] border border-dashed border-foreground/40 px-2 py-1.5 text-center">
@@ -102,16 +104,22 @@ export function WorkflowPage() {
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
           <div>
-            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
+              {content.eyebrow}
+            </p>
             <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
               {content.title}
             </h1>
-            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">{content.lede}</p>
+            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">
+              {content.lede}
+            </p>
           </div>
 
           <div className="mt-12">
             <div className="flex items-center justify-between border-b border-foreground pb-3 mb-6">
-              <span className="font-mono-data uppercase text-xs tracking-widest">{copy.figCaption}</span>
+              <span className="font-mono-data uppercase text-xs tracking-widest">
+                {copy.figCaption}
+              </span>
               <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {copy.figNote}
               </span>

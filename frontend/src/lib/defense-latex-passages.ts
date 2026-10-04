@@ -51,8 +51,7 @@ function extractFirstExcerpt(body: string): string {
   return chunk;
 }
 
-const SECTION_HEADING_RE =
-  /\\(chapter|section|subsection|subsubsection)\*?\{([^}]+)\}/gi;
+const SECTION_HEADING_RE = /\\(chapter|section|subsection|subsubsection)\*?\{([^}]+)\}/gi;
 
 export function extractLatexPassages(latex: string): LatexPassage[] {
   if (!latex.trim()) return [];
@@ -62,8 +61,7 @@ export function extractLatexPassages(latex: string): LatexPassage[] {
 
   while ((match = SECTION_HEADING_RE.exec(latex)) !== null) {
     const kind = match[1].toLowerCase();
-    const level =
-      kind === "chapter" ? 0 : kind === "section" ? 1 : kind === "subsection" ? 2 : 3;
+    const level = kind === "chapter" ? 0 : kind === "section" ? 1 : kind === "subsection" ? 2 : 3;
     headings.push({
       level,
       title: cleanLatexFragment(match[2]),
@@ -110,9 +108,7 @@ function titlesMatch(a: string, b: string): boolean {
   const right = normalizeTitleHint(b);
   if (!left || !right) return false;
   if (left === right || left.includes(right) || right.includes(left)) return true;
-  return TITLE_SYNONYM_GROUPS.some(
-    (group) => group.includes(left) && group.includes(right),
-  );
+  return TITLE_SYNONYM_GROUPS.some((group) => group.includes(left) && group.includes(right));
 }
 
 export function findPassageByTitleHint(
@@ -129,10 +125,7 @@ export function findPassageByTitleHint(
   return passages.find((p) => p.id === slug || p.id.includes(slug)) ?? null;
 }
 
-export function findPassageById(
-  passages: LatexPassage[],
-  passageId: string,
-): LatexPassage | null {
+export function findPassageById(passages: LatexPassage[], passageId: string): LatexPassage | null {
   const id = passageId.trim().toLowerCase();
   return (
     passages.find((p) => p.id === id) ??

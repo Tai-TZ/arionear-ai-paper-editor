@@ -106,7 +106,9 @@ function GoogleCallbackPage() {
   if (showDisabled) {
     return (
       <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
-        <AuthDisabledAccount onUseAnotherAccount={() => navigate({ to: "/signin", replace: true })} />
+        <AuthDisabledAccount
+          onUseAnotherAccount={() => navigate({ to: "/signin", replace: true })}
+        />
       </AuthShell>
     );
   }

@@ -12,12 +12,7 @@ type UseYjsShareSyncOptions = {
   onRemoteLatex?: (latex: string) => void;
 };
 
-export function useYjsShareSync({
-  token,
-  enabled,
-  latex,
-  onRemoteLatex,
-}: UseYjsShareSyncOptions) {
+export function useYjsShareSync({ token, enabled, latex, onRemoteLatex }: UseYjsShareSyncOptions) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const ytextRef = useRef<Y.Text | null>(null);
   const wsRef = useRef<WebSocket | null>(null);

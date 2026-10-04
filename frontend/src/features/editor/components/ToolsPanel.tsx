@@ -301,7 +301,9 @@ export function ToolsPanel({
                       </button>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-muted-foreground">{String(r.title || t.tools.noTitleInBib)}</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {String(r.title || t.tools.noTitleInBib)}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -326,9 +328,14 @@ export function ToolsPanel({
                 {sortedRevisions.map((rev, index) => {
                   const { additions, deletions } = countDiffStats(rev.original, rev.suggestion);
                   return (
-                    <div key={rev.id} className="tools-version-entry flex-col items-stretch gap-2 !py-3">
+                    <div
+                      key={rev.id}
+                      className="tools-version-entry flex-col items-stretch gap-2 !py-3"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="tools-version-pill">#{sortedRevisions.length - index}</span>
+                        <span className="tools-version-pill">
+                          #{sortedRevisions.length - index}
+                        </span>
                         <span
                           className={`tools-version-pill ${
                             rev.action === "accepted"

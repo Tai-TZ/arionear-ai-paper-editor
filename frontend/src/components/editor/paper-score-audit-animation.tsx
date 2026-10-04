@@ -81,7 +81,7 @@ export function PaperScoreAuditAnimation({
     return () => {
       if (typingRef.current) clearTimeout(typingRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 
   return (

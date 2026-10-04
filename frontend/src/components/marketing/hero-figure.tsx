@@ -239,7 +239,10 @@ export function HeroPeerReviewFigure() {
         <span>{demo.deskSession}</span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5">
-            <span className="hero-demo-live inline-block h-1.5 w-1.5 bg-[color:var(--editorial-red)]" aria-hidden />
+            <span
+              className="hero-demo-live inline-block h-1.5 w-1.5 bg-[color:var(--editorial-red)]"
+              aria-hidden
+            />
             {autoPlay ? demo.liveDemo : demo.pausedInteractive}
           </span>
           <button
@@ -261,7 +264,9 @@ export function HeroPeerReviewFigure() {
               <MessageSquare className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
-              <p className="font-mono-data text-[11px] uppercase tracking-widest">{demo.arioRole}</p>
+              <p className="font-mono-data text-[11px] uppercase tracking-widest">
+                {demo.arioRole}
+              </p>
               <p className="font-body text-xs text-neutral-600 italic">{demo.aiEditor}</p>
             </div>
             {thinking && (
@@ -309,7 +314,8 @@ export function HeroPeerReviewFigure() {
               <span
                 className={`hero-demo-ins bg-[color:var(--editorial-red)]/12 text-[color:var(--editorial-red)] px-0.5${styleAccepted ? " hero-demo-layer-out" : ""}`}
               >
-                {" "}This paper discusses
+                {" "}
+                This paper discusses
               </span>
               <span className={`hero-demo-settled${styleAccepted ? " hero-demo-layer-in" : ""}`}>
                 This paper discusses
@@ -343,7 +349,9 @@ export function HeroPeerReviewFigure() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <PenLine className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-            <p className="font-serif-display italic text-sm lg:text-base truncate hero-demo-status">{status}</p>
+            <p className="font-serif-display italic text-sm lg:text-base truncate hero-demo-status">
+              {status}
+            </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -367,11 +375,22 @@ export function HeroPeerReviewFigure() {
       </div>
 
       <div className="hero-demo-footer border-t border-foreground/20 px-4 py-2.5 space-y-2">
-        <div className="hero-demo-progress-track h-0.5 bg-foreground/10 overflow-hidden rounded-full" role="presentation">
+        <div
+          className="hero-demo-progress-track h-0.5 bg-foreground/10 overflow-hidden rounded-full"
+          role="presentation"
+        >
           <div
             key={`${stepKey}-${loopKey}`}
             className={`hero-demo-progress-fill h-full bg-[color:var(--editorial-red)] rounded-full${autoPlay ? " hero-demo-progress-animate" : ""}`}
-            style={autoPlay ? undefined : { width: allDone ? "100%" : `${((suggestions.findIndex((s) => s.id === activeId) + 1) / suggestions.length) * 100}%` }}
+            style={
+              autoPlay
+                ? undefined
+                : {
+                    width: allDone
+                      ? "100%"
+                      : `${((suggestions.findIndex((s) => s.id === activeId) + 1) / suggestions.length) * 100}%`,
+                  }
+            }
           />
         </div>
         <div className="flex items-center justify-between gap-2">

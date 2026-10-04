@@ -21,13 +21,20 @@ export function AboutPage() {
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-0">
             <div className="lg:col-span-5 lg:border-r border-foreground lg:pr-12">
-              <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+              <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
+                {content.eyebrow}
+              </p>
               <h1 className="marketing-page-title mt-3 font-serif-display font-black text-4xl lg:text-5xl tracking-tighter leading-[0.95]">
                 {content.title}
               </h1>
-              <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground text-justify">{content.lede}</p>
+              <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground text-justify">
+                {content.lede}
+              </p>
               {content.sections[0]?.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="mt-4 font-body text-base leading-relaxed text-muted-foreground text-justify">
+                <p
+                  key={paragraph}
+                  className="mt-4 font-body text-base leading-relaxed text-muted-foreground text-justify"
+                >
                   {paragraph}
                 </p>
               ))}
@@ -36,13 +43,17 @@ export function AboutPage() {
                   {copy.publishedBy}
                 </p>
                 <p className="font-serif-display font-bold text-xl">{copy.teamName}</p>
-                <p className="font-body italic text-sm text-muted-foreground mt-1">{copy.teamSubtitle}</p>
+                <p className="font-body italic text-sm text-muted-foreground mt-1">
+                  {copy.teamSubtitle}
+                </p>
               </div>
             </div>
 
             <div className="lg:col-span-7 lg:pl-12">
               <div className="flex items-end justify-between border-b border-foreground pb-3 mb-8">
-                <h2 className="font-serif-display font-black text-3xl tracking-tighter">{copy.mastheadTitle}</h2>
+                <h2 className="font-serif-display font-black text-3xl tracking-tighter">
+                  {copy.mastheadTitle}
+                </h2>
                 <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground">
                   {copy.membersLabel(teamMembers.length)}
                 </span>
@@ -62,7 +73,9 @@ export function AboutPage() {
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <div>
-                        <p className="font-serif-display font-bold text-2xl tracking-tight">{member.name}</p>
+                        <p className="font-serif-display font-bold text-2xl tracking-tight">
+                          {member.name}
+                        </p>
                         <p className="mt-1 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
                           {copy.editorRoles[index]}
                         </p>

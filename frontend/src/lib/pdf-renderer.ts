@@ -156,10 +156,7 @@ function bboxDistance(b: TextBBox, pdfX: number, pdfY: number): number {
 
 function bboxContains(b: TextBBox, pdfX: number, pdfY: number, pad = 3): boolean {
   return (
-    pdfX >= b.xMin - pad &&
-    pdfX <= b.xMax + pad &&
-    pdfY >= b.yMin - pad &&
-    pdfY <= b.yMax + pad
+    pdfX >= b.xMin - pad && pdfX <= b.xMax + pad && pdfY >= b.yMin - pad && pdfY <= b.yMax + pad
   );
 }
 
@@ -350,9 +347,10 @@ function bindInternalPdfLinkClicks(container: HTMLElement, linkService: PdfLinkS
       const anchor = (event.target as HTMLElement | null)?.closest("a");
       if (!anchor) return;
       const href = anchor.getAttribute("href") ?? "";
-      const dest = href.startsWith("#") && href.length > 1
-        ? decodeURIComponent(href.slice(1))
-        : parseInternalPdfLink(href);
+      const dest =
+        href.startsWith("#") && href.length > 1
+          ? decodeURIComponent(href.slice(1))
+          : parseInternalPdfLink(href);
       if (!dest) return;
       event.preventDefault();
       event.stopPropagation();
@@ -412,9 +410,7 @@ export async function collectPdfSearchMatches(
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const text = textContent.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ");
+    const text = textContent.items.map((item) => ("str" in item ? item.str : "")).join(" ");
     const lower = text.toLowerCase();
     let start = 0;
     let occurrenceOnPage = 0;

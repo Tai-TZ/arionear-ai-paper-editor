@@ -52,7 +52,12 @@ export function MobileChatSheet({
   const t = editorCopy(locale);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const canUseLlm = Boolean(
-    providers && providers.length > 0 && llmProvider && llmModel && onProviderChange && onModelChange,
+    providers &&
+    providers.length > 0 &&
+    llmProvider &&
+    llmModel &&
+    onProviderChange &&
+    onModelChange,
   );
   const chatDisabled = !canUseLlm;
 

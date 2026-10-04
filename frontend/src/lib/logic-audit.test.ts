@@ -79,20 +79,16 @@ describe("logicAuditTargetSectionCount", () => {
   });
 
   it("skips cross-section step without abstract and conclusion", () => {
-    expect(
-      logicAuditTargetSectionCount("deep", "selected", 1, 5, ["Introduction"]),
-    ).toBe(1);
+    expect(logicAuditTargetSectionCount("deep", "selected", 1, 5, ["Introduction"])).toBe(1);
   });
 });
 
 describe("logicAuditIncludesCrossSection", () => {
   it("requires abstract and conclusion headings", () => {
-    expect(logicAuditIncludesCrossSection("deep", "selected", ["Introduction"])).toBe(
-      false,
+    expect(logicAuditIncludesCrossSection("deep", "selected", ["Introduction"])).toBe(false);
+    expect(logicAuditIncludesCrossSection("deep", "selected", ["Abstract", "Conclusion"])).toBe(
+      true,
     );
-    expect(
-      logicAuditIncludesCrossSection("deep", "selected", ["Abstract", "Conclusion"]),
-    ).toBe(true);
   });
 });
 

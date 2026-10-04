@@ -27,10 +27,7 @@ function sessionStorageKey(projectId: string) {
 function isDefenseMessage(value: unknown): value is DefenseMessage {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
-  return (
-    (row.role === "user" || row.role === "assistant") &&
-    typeof row.content === "string"
-  );
+  return (row.role === "user" || row.role === "assistant") && typeof row.content === "string";
 }
 
 export function parseDefenseSession(raw: unknown): StoredDefenseSession | undefined {
@@ -58,9 +55,7 @@ export function stripDefenseMessagesForStorage(messages: DefenseMessage[]): Defe
 }
 
 /** Trim long conversations before server persist (local session keeps full history). */
-export function trimDefenseSessionForStorage(
-  session: StoredDefenseSession,
-): StoredDefenseSession {
+export function trimDefenseSessionForStorage(session: StoredDefenseSession): StoredDefenseSession {
   const messages = stripDefenseMessagesForStorage(session.messages);
   if (messages.length <= MAX_STORED_MESSAGES) {
     return { ...session, messages };
@@ -71,10 +66,7 @@ export function trimDefenseSessionForStorage(
 export function isPersistableDefenseSession(session: StoredDefenseSession): boolean {
   return session.messages.some(
     (m) =>
-      m.role === "assistant" &&
-      !m.isCancelled &&
-      !m.isStreaming &&
-      m.content.trim().length > 0,
+      m.role === "assistant" && !m.isCancelled && !m.isStreaming && m.content.trim().length > 0,
   );
 }
 
@@ -158,13 +150,11 @@ export function persistDefenseSession(
 
   if (!isPersistableDefenseSession(session)) {
     pendingByProject.delete(projectId);
-    void updatePaper(
-      projectId,
-      { metadata: { defense_session: null } },
-      { immediate: true },
-    ).catch(() => {
-      options?.onError?.();
-    });
+    void updatePaper(projectId, { metadata: { defense_session: null } }, { immediate: true }).catch(
+      () => {
+        options?.onError?.();
+      },
+    );
     return;
   }
 
@@ -186,11 +176,9 @@ export function flushDefenseSessionPersistNow() {
 export function clearDefenseSession(projectId: string, options?: PersistDefenseSessionOptions) {
   pendingByProject.delete(projectId);
   clearLocalDefenseSession(projectId);
-  void updatePaper(
-    projectId,
-    { metadata: { defense_session: null } },
-    { immediate: true },
-  ).catch(() => {
-    options?.onError?.();
-  });
+  void updatePaper(projectId, { metadata: { defense_session: null } }, { immediate: true }).catch(
+    () => {
+      options?.onError?.();
+    },
+  );
 }

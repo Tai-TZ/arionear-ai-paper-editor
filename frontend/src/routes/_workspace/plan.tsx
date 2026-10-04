@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { PricingCards } from "@/components/billing/pricing-cards";
-import { syncWorkspaceBillingCache, useWorkspaceBilling } from "@/components/workspace/workspace-context";
+import {
+  syncWorkspaceBillingCache,
+  useWorkspaceBilling,
+} from "@/components/workspace/workspace-context";
 import { useLocale } from "@/components/locale-provider";
 import { marketingCopy } from "@/lib/marketing-i18n";
 
@@ -19,8 +22,8 @@ const pageCopy = {
   vi: {
     lede: (
       <>
-        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm
-        &nbsp;<strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
+        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm &nbsp;
+        <strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
       </>
     ),
   },

@@ -63,7 +63,11 @@ export function AdminLayout({
             aria-expanded={navOpen}
             onClick={() => setNavOpen((v) => !v)}
           >
-            {navOpen ? <X className="h-4 w-4" strokeWidth={1.5} /> : <Menu className="h-4 w-4" strokeWidth={1.5} />}
+            {navOpen ? (
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            ) : (
+              <Menu className="h-4 w-4" strokeWidth={1.5} />
+            )}
           </button>
           <Link to="/admin" className="admin-mobile-brand">
             Admin Console

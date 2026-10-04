@@ -16,7 +16,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Arionear — Closer to Publication" },
-      { name: "description", content: "AI editorial assistant for scientific manuscripts. Improve language, structure, citations, and reviewer responses — without inventing data." },
+      {
+        name: "description",
+        content:
+          "AI editorial assistant for scientific manuscripts. Improve language, structure, citations, and reviewer responses — without inventing data.",
+      },
       { name: "author", content: "Arionear" },
       { property: "og:title", content: "Arionear — Closer to Publication" },
       { property: "og:description", content: "AI editorial assistant for scientific manuscripts." },

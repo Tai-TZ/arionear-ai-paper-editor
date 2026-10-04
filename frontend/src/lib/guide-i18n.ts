@@ -37,7 +37,7 @@ export type GuideDemoLabels = {
   slashChrome: string;
   slashInput: string;
   slashMenuLogic: string;
-    slashMenuLogicFull: string;
+  slashMenuLogicFull: string;
   slashMenuEdit: string;
   toolsChrome: string;
   toolsTabInfo: string;

@@ -34,9 +34,7 @@ export function StructureSuggestionsPanel({
   const t = editorCopy(locale);
 
   if (!suggestions.length) {
-    return (
-      <p className="text-sm text-muted-foreground">{t.tools.structureEmpty}</p>
-    );
+    return <p className="text-sm text-muted-foreground">{t.tools.structureEmpty}</p>;
   }
 
   return (

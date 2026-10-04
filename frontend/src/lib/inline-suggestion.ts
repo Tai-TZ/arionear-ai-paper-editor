@@ -75,7 +75,10 @@ function wordOverlap(a: string, b: string): number {
 function bestMatchingLine(original: string, suggestion: string): string | null {
   const orig = original.trim();
   if (!orig) return null;
-  const lines = suggestion.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = suggestion
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (!lines.length) return null;
 
   const cmd = orig.match(/^(\\[a-zA-Z@*]+)/)?.[1];
@@ -103,8 +106,7 @@ export function clampSelectionReplacement(original: string, suggestion: string):
   const sugg = suggestion.trim();
   if (!orig || !sugg) return sugg;
 
-  const leaked =
-    /\\documentclass\b/i.test(sugg) || /\\begin\{document\}/i.test(sugg);
+  const leaked = /\\documentclass\b/i.test(sugg) || /\\begin\{document\}/i.test(sugg);
   const origLines = Math.max(1, orig.split("\n").length);
   const suggLines = Math.max(1, sugg.split("\n").length);
   const oversized =

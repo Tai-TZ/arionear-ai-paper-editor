@@ -57,9 +57,7 @@ export function EditorSelectionToolbar({
     const fitsBelow = anchor.bottom + gap + toolbarH <= parentH - 4;
     const nextPlacement = fitsBelow ? "below" : "above";
     const top =
-      nextPlacement === "below"
-        ? anchor.bottom + gap
-        : Math.max(4, anchor.top - gap - toolbarH);
+      nextPlacement === "below" ? anchor.bottom + gap : Math.max(4, anchor.top - gap - toolbarH);
 
     const minLeft = toolbarW / 2 + 8;
     const maxLeft = Math.max(minLeft, parentW - toolbarW / 2 - 8);

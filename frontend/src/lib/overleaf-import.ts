@@ -93,7 +93,10 @@ function looksLikeLatexSource(content: string): boolean {
   const sample = content.slice(0, 12_000);
   if (/\\documentclass[\s*{[]/i.test(sample)) return true;
   if (/\\begin\{document\}/i.test(sample)) return true;
-  if (/\\(input|include|usepackage|section|chapter|subsection)\b/i.test(sample) && sample.trim().length > 30) {
+  if (
+    /\\(input|include|usepackage|section|chapter|subsection)\b/i.test(sample) &&
+    sample.trim().length > 30
+  ) {
     return true;
   }
   return false;
@@ -124,9 +127,7 @@ async function loadZipEntries(file: File): Promise<Map<string, Uint8Array>> {
     unzip(raw, (error, data) => {
       if (error) {
         reject(
-          new Error(
-            "Không đọc được ZIP. Hãy export từ Overleaf: Menu → Download → Source (ZIP).",
-          ),
+          new Error("Không đọc được ZIP. Hãy export từ Overleaf: Menu → Download → Source (ZIP)."),
         );
         return;
       }
@@ -144,7 +145,9 @@ async function loadZipEntries(file: File): Promise<Map<string, Uint8Array>> {
   return expandNestedZipEntries(entries);
 }
 
-async function expandNestedZipEntries(entries: Map<string, Uint8Array>): Promise<Map<string, Uint8Array>> {
+async function expandNestedZipEntries(
+  entries: Map<string, Uint8Array>,
+): Promise<Map<string, Uint8Array>> {
   const expanded = new Map(entries);
   const nested = [...entries.entries()].filter(([path]) => /\.zip$/i.test(path));
 
@@ -271,8 +274,7 @@ export async function importOverleafZip(file: File): Promise<OverleafImportResul
     const preview = discovered.length
       ? ` File tìm thấy: ${discovered.join(", ")}${rawEntries.size > discovered.length ? ", …" : ""}.`
       : "";
-    const onlyPdf =
-      discovered.length > 0 && discovered.every((name) => /\.pdf$/i.test(name));
+    const onlyPdf = discovered.length > 0 && discovered.every((name) => /\.pdf$/i.test(name));
 
     if (onlyPdf) {
       throw new Error(

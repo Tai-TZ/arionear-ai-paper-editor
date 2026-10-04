@@ -12,10 +12,7 @@ export function clearPdfHighlights(root: ParentNode) {
  * Uses case-insensitive substring matching across all spans joined together.
  * Returns the first highlighted span (for scrollIntoView), or null if not found.
  */
-export function highlightPdfTextLayer(
-  textLayer: HTMLElement,
-  query: string,
-): HTMLElement | null {
+export function highlightPdfTextLayer(textLayer: HTMLElement, query: string): HTMLElement | null {
   const needle = query.trim();
   if (!needle) return null;
 

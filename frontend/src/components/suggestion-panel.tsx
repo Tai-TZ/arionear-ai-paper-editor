@@ -65,9 +65,7 @@ export function SuggestionPanel({
             <li
               key={`${f.code}-${i}`}
               className={
-                f.severity === "error"
-                  ? "text-destructive"
-                  : "text-amber-700 dark:text-amber-400"
+                f.severity === "error" ? "text-destructive" : "text-amber-700 dark:text-amber-400"
               }
             >
               {f.message}

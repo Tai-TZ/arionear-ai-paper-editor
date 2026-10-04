@@ -29,7 +29,10 @@ export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
       { title: "Sign Up — Arionear" },
-      { name: "description", content: "Create an Arionear account to start editing your scientific manuscripts." },
+      {
+        name: "description",
+        content: "Create an Arionear account to start editing your scientific manuscripts.",
+      },
     ],
   }),
   component: SignUpPage,
@@ -297,7 +300,9 @@ function SignUpPage() {
                       <div
                         key={i}
                         className={`auth-strength-bar h-1 flex-1 ${
-                          i <= strength.score ? `auth-strength-${strength.score}` : "auth-strength-empty"
+                          i <= strength.score
+                            ? `auth-strength-${strength.score}`
+                            : "auth-strength-empty"
                         }`}
                       />
                     ))}

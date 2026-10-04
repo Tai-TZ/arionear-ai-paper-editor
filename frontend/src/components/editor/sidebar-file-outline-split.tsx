@@ -1,8 +1,4 @@
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 import { ProjectFileTree } from "@/components/editor/project-file-tree";

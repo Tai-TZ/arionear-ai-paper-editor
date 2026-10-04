@@ -57,9 +57,7 @@ export function TemplateGalleryContent() {
   const gridItems = featured ? items.filter((item) => item.id !== featured.id) : items;
 
   const resultLabel =
-    items.length === 1
-      ? `1 ${t.resultCountOne}`
-      : `${items.length} ${t.resultCountMany}`;
+    items.length === 1 ? `1 ${t.resultCountOne}` : `${items.length} ${t.resultCountMany}`;
 
   const toolbar = (
     <div className="template-catalog-toolbar">
@@ -139,7 +137,12 @@ export function TemplateGalleryContent() {
           {gridItems.length ? (
             <ul className="template-catalog-grid">
               {gridItems.map((item) => (
-                <TemplateCatalogCard key={item.id} item={item} locale={locale} officialLabel={t.official} />
+                <TemplateCatalogCard
+                  key={item.id}
+                  item={item}
+                  locale={locale}
+                  officialLabel={t.official}
+                />
               ))}
             </ul>
           ) : null}
@@ -207,10 +210,15 @@ function TemplateFeaturedCard({
   ctaLabel: string;
 }) {
   const title = locale === "vi" && item.title_vi ? item.title_vi : item.title;
-  const description = locale === "vi" && item.description_vi ? item.description_vi : item.description;
+  const description =
+    locale === "vi" && item.description_vi ? item.description_vi : item.description;
 
   return (
-    <Link to="/templates/$templateId" params={{ templateId: item.id }} className="template-catalog-featured">
+    <Link
+      to="/templates/$templateId"
+      params={{ templateId: item.id }}
+      className="template-catalog-featured"
+    >
       <div className="template-catalog-featured-cover">
         {item.has_preview ? (
           <img src={templatePreviewUrl(item.id)} alt="" loading="lazy" />
@@ -244,11 +252,16 @@ function TemplateCatalogCard({
   officialLabel: string;
 }) {
   const title = locale === "vi" && item.title_vi ? item.title_vi : item.title;
-  const description = locale === "vi" && item.description_vi ? item.description_vi : item.description;
+  const description =
+    locale === "vi" && item.description_vi ? item.description_vi : item.description;
 
   return (
     <li>
-      <Link to="/templates/$templateId" params={{ templateId: item.id }} className="template-catalog-card">
+      <Link
+        to="/templates/$templateId"
+        params={{ templateId: item.id }}
+        className="template-catalog-card"
+      >
         <div className="template-catalog-card-cover">
           {item.has_preview ? (
             <img src={templatePreviewUrl(item.id)} alt="" loading="lazy" />

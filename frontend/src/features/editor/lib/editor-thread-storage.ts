@@ -44,11 +44,7 @@ export function snapshotActiveThread(
   );
 }
 
-export function persistChatThreads(
-  projectId: string,
-  threads: ChatThread[],
-  onError?: () => void,
-) {
+export function persistChatThreads(projectId: string, threads: ChatThread[], onError?: () => void) {
   void updatePaper(projectId, { chatThreads: getPersistedThreads(threads) }).catch(() => {
     onError?.();
   });

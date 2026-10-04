@@ -54,12 +54,7 @@ const EN: SlashCopy = {
       detail: "LaTeX help, ideas, peer review — no overwrite",
     },
   ],
-  hints: [
-    "/logic",
-    "/logic full",
-    "/structure",
-    "/citation",
-  ],
+  hints: ["/logic", "/logic full", "/structure", "/citation"],
 };
 
 const VI: SlashCopy = {
@@ -109,12 +104,7 @@ const VI: SlashCopy = {
       detail: "Giải thích LaTeX, ý tưởng, phản biện — không ghi đè bản thảo",
     },
   ],
-  hints: [
-    "/logic",
-    "/logic full",
-    "/structure",
-    "/citation",
-  ],
+  hints: ["/logic", "/logic full", "/structure", "/citation"],
 };
 
 function slashCopy(locale: UiLanguage): SlashCopy {

@@ -266,12 +266,12 @@ export function blankLatexForLocale(lang: "vi" | "en"): string {
 
 export function normalizeProject(project: StoredProject): StoredProject {
   const mainFile = project.mainFile ?? DEFAULT_MAIN_FILE;
-  const files =
-    project.files?.length
-      ? project.files.map((f) => ({ path: normalizeAssetName(f.path), content: f.content }))
-      : [{ path: mainFile, content: project.latex }];
+  const files = project.files?.length
+    ? project.files.map((f) => ({ path: normalizeAssetName(f.path), content: f.content }))
+    : [{ path: mainFile, content: project.latex }];
 
-  const mainContent = files.find((f) => f.path === mainFile)?.content ?? files[0]?.content ?? project.latex;
+  const mainContent =
+    files.find((f) => f.path === mainFile)?.content ?? files[0]?.content ?? project.latex;
 
   return {
     ...project,

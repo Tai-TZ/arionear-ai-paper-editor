@@ -17,13 +17,7 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 const BOOTSTRAP_EXIT_MS = 280;
 
-function ShellBootstrapScreen({
-  exiting,
-  locale,
-}: {
-  exiting: boolean;
-  locale: UiLanguage;
-}) {
+function ShellBootstrapScreen({ exiting, locale }: { exiting: boolean; locale: UiLanguage }) {
   const t = commonCopy(locale).shell;
   return (
     <AppLoadingScreenInner

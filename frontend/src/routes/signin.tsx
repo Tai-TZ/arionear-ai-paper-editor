@@ -71,22 +71,14 @@ function SignInPage() {
 
   if (disabledEmail !== null) {
     return (
-      <AuthShell
-        eyebrow={t.eyebrow}
-        title={t.title}
-        lede={t.lede}
-      >
+      <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
         <AuthDisabledAccount email={disabledEmail} onUseAnotherAccount={resetDisabledState} />
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell
-      eyebrow={t.eyebrow}
-      title={t.title}
-      lede={t.lede}
-    >
+    <AuthShell eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
       {error && <AuthAlert message={error} />}
 
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>

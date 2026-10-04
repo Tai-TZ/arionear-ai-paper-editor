@@ -77,11 +77,12 @@ function ProfileCard({
     </div>
   );
 
-  const affiliation = (profile?.affiliation ?? user.affiliation) ? (
-    <p className="mt-2 truncate font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
-      {profile?.affiliation ?? user.affiliation}
-    </p>
-  ) : null;
+  const affiliation =
+    (profile?.affiliation ?? user.affiliation) ? (
+      <p className="mt-2 truncate font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
+        {profile?.affiliation ?? user.affiliation}
+      </p>
+    ) : null;
 
   const planRow = (
     <Link
@@ -151,7 +152,9 @@ function NavItem({
     <Link to={to!} className={itemClass} onClick={onNavigate} title={label}>
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
       <span className="workspace-nav-label">{label}</span>
-      {badge ? <span className={`workspace-nav-tier${badge === "Pro" ? " is-pro" : ""}`}>{badge}</span> : null}
+      {badge ? (
+        <span className={`workspace-nav-tier${badge === "Pro" ? " is-pro" : ""}`}>{badge}</span>
+      ) : null}
     </Link>
   );
 }
@@ -195,7 +198,9 @@ export function WorkspaceSidebar({
             onNavigate={onNavigate}
           />
         ) : (
-          <div className="workspace-profile-card text-xs text-muted-foreground">{mergedLabels.loadingAccount}</div>
+          <div className="workspace-profile-card text-xs text-muted-foreground">
+            {mergedLabels.loadingAccount}
+          </div>
         )}
       </div>
 

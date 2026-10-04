@@ -184,7 +184,10 @@ function MarketingColophon() {
     <footer className="bg-background border-t border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-6 gap-8">
         <div className="col-span-2">
-          <Link to="/" className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80">
+          <Link
+            to="/"
+            className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80"
+          >
             <ArionearWordmark />
           </Link>
           <p className="mt-2 font-body italic text-sm">{f.tagline}</p>

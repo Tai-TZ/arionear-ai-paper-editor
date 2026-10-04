@@ -96,11 +96,17 @@ export function ProjectFormatNoticeDialog({
             {t.formatNoticeImradLabel}
           </p>
           <p>{t.formatNoticeImradDetail}</p>
-          <p className="border-t border-foreground/10 pt-3 text-muted-foreground">{t.formatNoticeImportNote}</p>
+          <p className="border-t border-foreground/10 pt-3 text-muted-foreground">
+            {t.formatNoticeImportNote}
+          </p>
         </div>
 
         <DialogFooter className="border-t border-foreground/15 px-5 py-4 sm:justify-end">
-          <button type="button" onClick={onConfirm} className="projects-header-btn projects-header-btn-primary">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="projects-header-btn projects-header-btn-primary"
+          >
             {t.formatNoticeConfirm}
           </button>
         </DialogFooter>

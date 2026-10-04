@@ -7,7 +7,10 @@ export const Route = createFileRoute("/templates/")({
   head: () => ({
     meta: [
       { title: "LaTeX Templates — Arionear" },
-      { name: "description", content: "Browse IEEE and academic LaTeX templates for Arionear Paper IDE." },
+      {
+        name: "description",
+        content: "Browse IEEE and academic LaTeX templates for Arionear Paper IDE.",
+      },
     ],
   }),
   component: TemplatesGalleryPage,

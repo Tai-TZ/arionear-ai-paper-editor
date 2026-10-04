@@ -2,7 +2,13 @@ import { memo } from "react";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 
-export const StatusBar = memo(function StatusBar({ lineCount, className = "" }: { lineCount: number; className?: string }) {
+export const StatusBar = memo(function StatusBar({
+  lineCount,
+  className = "",
+}: {
+  lineCount: number;
+  className?: string;
+}) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
 

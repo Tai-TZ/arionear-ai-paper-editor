@@ -94,7 +94,11 @@ export function AdminMonthPicker({
         <button type="button" className="admin-month-picker-trigger" aria-label={ariaLabel}>
           <CalendarIcon className="admin-month-picker-trigger-icon" strokeWidth={1.5} aria-hidden />
           <span className="admin-month-picker-trigger-label">{displayLabel}</span>
-          <ChevronDown className="admin-month-picker-trigger-chevron" strokeWidth={1.5} aria-hidden />
+          <ChevronDown
+            className="admin-month-picker-trigger-chevron"
+            strokeWidth={1.5}
+            aria-hidden
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent

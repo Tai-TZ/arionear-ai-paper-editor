@@ -20,10 +20,7 @@ export function contentFingerprint(content: string): string {
 }
 
 /** True when the target file changed since the edit was proposed. */
-export function isPendingEditStale(
-  edit: PendingEditLike,
-  currentContent: string,
-): boolean {
+export function isPendingEditStale(edit: PendingEditLike, currentContent: string): boolean {
   if (!edit.sourceFingerprint) return false;
   const currentFp = contentFingerprint(currentContent);
   if (currentFp === edit.sourceFingerprint) return false;
@@ -46,9 +43,6 @@ export function isPendingEditStale(
   return !currentContent.includes(edit.originalText);
 }
 
-export function canApplyPendingEdit(
-  edit: PendingEditLike,
-  currentContent: string,
-): boolean {
+export function canApplyPendingEdit(edit: PendingEditLike, currentContent: string): boolean {
   return !isPendingEditStale(edit, currentContent);
 }

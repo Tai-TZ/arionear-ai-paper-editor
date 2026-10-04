@@ -1,10 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 function useClientMounted() {
   const [mounted, setMounted] = useState(false);

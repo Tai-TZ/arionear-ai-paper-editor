@@ -213,7 +213,9 @@ export function QrCheckoutDialog({
                     <span
                       className={cn(
                         "shrink-0 font-mono-data text-xs tabular-nums",
-                        secondsLeft <= 60 ? "text-[color:var(--editorial-red)]" : "text-muted-foreground",
+                        secondsLeft <= 60
+                          ? "text-[color:var(--editorial-red)]"
+                          : "text-muted-foreground",
                       )}
                     >
                       {t.timerLabel} {timer}

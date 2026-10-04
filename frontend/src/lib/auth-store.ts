@@ -134,7 +134,10 @@ export function logoutUser() {
 /** Start Google OAuth — browser navigates to backend, then returns via /auth/google/callback. */
 export function startGoogleOAuth(options?: { returnTo?: string; remember?: boolean }): void {
   if (typeof window === "undefined") return;
-  const path = getGoogleOAuthStartPath(options?.returnTo ?? "/projects", options?.remember ?? false);
+  const path = getGoogleOAuthStartPath(
+    options?.returnTo ?? "/projects",
+    options?.remember ?? false,
+  );
   window.location.assign(path);
 }
 
@@ -169,8 +172,7 @@ export async function sendSignupVerificationCode(input: {
   password: string;
   affiliation?: string;
 }): Promise<
-  | { ok: true; message: string; devVerificationCode?: string }
-  | { ok: false; error: string }
+  { ok: true; message: string; devVerificationCode?: string } | { ok: false; error: string }
 > {
   const nameError = validateName(input.name);
   if (nameError) return { ok: false, error: nameError };
@@ -222,10 +224,7 @@ export async function loginUser(
 
 export async function requestPasswordReset(
   email: string,
-): Promise<
-  | { ok: true; message: string; devResetUrl?: string }
-  | { ok: false; error: string }
-> {
+): Promise<{ ok: true; message: string; devResetUrl?: string } | { ok: false; error: string }> {
   const emailError = validateEmail(email);
   if (emailError) return { ok: false, error: emailError };
   return apiForgotPassword(normalizeEmail(email));

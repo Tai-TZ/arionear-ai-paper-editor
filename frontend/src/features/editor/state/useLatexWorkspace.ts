@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  compileLatex,
-  type CompileMode,
-} from "@/lib/api/academic";
+import { compileLatex, type CompileMode } from "@/lib/api/academic";
 import { buildCompileAssetHashes } from "@/lib/compile-asset-hash";
-import { getCompilePayload, normalizeAssetName, type LatexCompiler, type ProjectAsset, type ProjectFile } from "@/lib/project-store";
+import {
+  getCompilePayload,
+  normalizeAssetName,
+  type LatexCompiler,
+  type ProjectAsset,
+  type ProjectFile,
+} from "@/lib/project-store";
 import type { LatexCodeEditorHandle } from "@/components/latex-code-editor";
 import { findWordRangeOnLine, type SynctexWordHighlight } from "@/lib/synctex-highlight";
-import { COMPILE_DEBOUNCE_MS, computeCompileFingerprint, isAgentFixableCompileError } from "../lib/editor-compile";
+import {
+  COMPILE_DEBOUNCE_MS,
+  computeCompileFingerprint,
+  isAgentFixableCompileError,
+} from "../lib/editor-compile";
 import { parseCompileErrorLine } from "../lib/editor-project-stats";
 
 export type UseLatexWorkspaceOptions = {
@@ -21,7 +28,11 @@ export type UseLatexWorkspaceOptions = {
   mainFile: string;
   compiler: LatexCompiler;
   assets: ProjectAsset[];
-  persistActiveFile: (content: string, files: ProjectFile[], currentActive: string) => ProjectFile[];
+  persistActiveFile: (
+    content: string,
+    files: ProjectFile[],
+    currentActive: string,
+  ) => ProjectFile[];
   persistableFile: (files: ProjectFile[], currentActive: string) => string;
   switchActiveFile: (path: string) => void;
   latexEditorRef: React.RefObject<LatexCodeEditorHandle | null>;
@@ -264,9 +275,7 @@ export function useLatexWorkspace({
       const targetLine = line;
       const lineText = content.split(/\r?\n/)[targetLine - 1] ?? "";
       const range = word ? findWordRangeOnLine(lineText, word, column) : null;
-      const highlight = range
-        ? { line: targetLine, start: range.start, end: range.end }
-        : null;
+      const highlight = range ? { line: targetLine, start: range.start, end: range.end } : null;
       const flashToken = ++synctexFlashRef.current;
 
       setMobileTab("editor");
@@ -274,11 +283,7 @@ export function useLatexWorkspace({
       setSynctexHighlight(highlight);
 
       const scroll = () =>
-        latexEditorRef.current?.scrollToLine(
-          targetLine,
-          highlight?.start,
-          highlight?.end,
-        );
+        latexEditorRef.current?.scrollToLine(targetLine, highlight?.start, highlight?.end);
       requestAnimationFrame(scroll);
       window.setTimeout(scroll, 100);
 
@@ -337,9 +342,7 @@ export function useLatexWorkspace({
     [projectFiles, activeFile, switchActiveFile, jumpToSynctex],
   );
 
-  const canAskArioFixCompile = Boolean(
-    compileError && isAgentFixableCompileError(compileError),
-  );
+  const canAskArioFixCompile = Boolean(compileError && isAgentFixableCompileError(compileError));
 
   const compileErrorLine = compileError ? parseCompileErrorLine(compileError) : null;
 

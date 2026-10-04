@@ -120,7 +120,10 @@ function normalizeSectionName(name: string): string {
 }
 
 function plainTextLen(text: string): number {
-  return text.replace(/%.*$/gm, "").replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, "").trim().length;
+  return text
+    .replace(/%.*$/gm, "")
+    .replace(/\\[a-zA-Z@]+(\[[^\]]*\])?(\{[^}]*\})?/g, "")
+    .trim().length;
 }
 
 function sectionContentLength(latex: string, sectionName: string): number {
@@ -273,7 +276,10 @@ function scoreCitations(
   citationResults?: Record<string, unknown>[] | null,
 ): PaperScoreDimension {
   const citeKeys = [...latex.matchAll(/\\cite[a-zA-Z*]*\{([^}]+)\}/g)].flatMap((m) =>
-    m[1].split(",").map((k) => k.trim()).filter(Boolean),
+    m[1]
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean),
   );
   const uniqueCites = new Set(citeKeys);
 
@@ -338,7 +344,10 @@ function scoreLogicIntegrity(
       id: "logic",
       label,
       score: 0,
-      hint: locale === "en" ? "Ario is reading the full manuscript…" : "Ario đang đọc lướt toàn bộ bài…",
+      hint:
+        locale === "en"
+          ? "Ario is reading the full manuscript…"
+          : "Ario đang đọc lướt toàn bộ bài…",
     };
   }
 
@@ -400,11 +409,15 @@ function scoreLogicIntegrity(
   return { id: "logic", label, score, hint };
 }
 
-function gradeFromScore(overall: number, locale: "en" | "vi"): { grade: string; gradeLabel: string } {
+function gradeFromScore(
+  overall: number,
+  locale: "en" | "vi",
+): { grade: string; gradeLabel: string } {
   if (overall >= 90) return { grade: "A", gradeLabel: locale === "en" ? "Excellent" : "Xuất sắc" };
   if (overall >= 80) return { grade: "B", gradeLabel: locale === "en" ? "Good" : "Tốt" };
   if (overall >= 70) return { grade: "C", gradeLabel: locale === "en" ? "Fair" : "Khá" };
-  if (overall >= 60) return { grade: "D", gradeLabel: locale === "en" ? "Needs improvement" : "Cần cải thiện" };
+  if (overall >= 60)
+    return { grade: "D", gradeLabel: locale === "en" ? "Needs improvement" : "Cần cải thiện" };
   return { grade: "F", gradeLabel: locale === "en" ? "Failing" : "Chưa đạt" };
 }
 
@@ -437,10 +450,10 @@ export function computePaperScore(opts: {
 
   const weights = includeLogic ? [0.2, 0.2, 0.2, 0.4] : [0.35, 0.35, 0.3];
 
-  const scoredDimensions = auditPending
-    ? dimensions.filter((d) => d.id !== "logic")
-    : dimensions;
-  const scoredWeights = auditPending ? weights.filter((_, i) => dimensions[i]?.id !== "logic") : weights;
+  const scoredDimensions = auditPending ? dimensions.filter((d) => d.id !== "logic") : dimensions;
+  const scoredWeights = auditPending
+    ? weights.filter((_, i) => dimensions[i]?.id !== "logic")
+    : weights;
 
   const weightSum = scoredWeights.reduce((a, b) => a + b, 0);
   const weighted =

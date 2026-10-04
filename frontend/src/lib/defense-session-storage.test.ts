@@ -75,9 +75,8 @@ describe("defense-session-storage", () => {
 
 describe("defense conversation history", () => {
   it("excludes error turns from quota count and API history", async () => {
-    const { countCompletedCouncilTurns, buildDefenseConversationHistory } = await import(
-      "@/components/defense/defense-chat-panel"
-    );
+    const { countCompletedCouncilTurns, buildDefenseConversationHistory } =
+      await import("@/components/defense/defense-chat-panel");
     const messages = [
       { role: "assistant" as const, content: "Q1?" },
       { role: "user" as const, content: "A1" },

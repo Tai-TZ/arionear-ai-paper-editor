@@ -123,11 +123,7 @@ const EN: MarketingCopy = {
         "Unlimited LaTeX AI editing",
         "Academic template gallery",
       ],
-      locked: [
-        "50 Defense turns / day",
-        "Priority AI model",
-        "Export without watermark",
-      ],
+      locked: ["50 Defense turns / day", "Priority AI model", "Export without watermark"],
     },
     pro: {
       tier: "PRO",
@@ -231,11 +227,31 @@ const EN: MarketingCopy = {
     guaranteesLabel: "Five Guarantees",
     sectionRef: "§ 01–05",
     items: [
-      { n: "01", title: "No Fabrication", body: "AI never invents data, results, or measurements." },
-      { n: "02", title: "Verified Citations", body: "Every reference is verified against the manuscript and the source." },
-      { n: "03", title: "Meaning Preserved", body: "Edits preserve the author's argument and scientific meaning." },
-      { n: "04", title: "Full Control", body: "All suggestions are reviewable, dismissible, and auditable." },
-      { n: "05", title: "Your Data Stays Yours", body: "Manuscript content is never used to train external models." },
+      {
+        n: "01",
+        title: "No Fabrication",
+        body: "AI never invents data, results, or measurements.",
+      },
+      {
+        n: "02",
+        title: "Verified Citations",
+        body: "Every reference is verified against the manuscript and the source.",
+      },
+      {
+        n: "03",
+        title: "Meaning Preserved",
+        body: "Edits preserve the author's argument and scientific meaning.",
+      },
+      {
+        n: "04",
+        title: "Full Control",
+        body: "All suggestions are reviewable, dismissible, and auditable.",
+      },
+      {
+        n: "05",
+        title: "Your Data Stays Yours",
+        body: "Manuscript content is never used to train external models.",
+      },
     ],
   },
   heroDemo: {
@@ -343,7 +359,8 @@ const VI: MarketingCopy = {
     uploadLatex: "Tải LaTeX",
     seeWorkflow: "Xem quy trình",
     figCaption: "Hình 1.1",
-    figNote: "Phiên biên tập tương tác — bấm gợi ý, Chấp nhận hoặc Từ chối. Chỉ demo, không gọi API.",
+    figNote:
+      "Phiên biên tập tương tác — bấm gợi ý, Chấp nhận hoặc Từ chối. Chỉ demo, không gọi API.",
     stats: [
       { k: "LaTeX", v: "Tải & chỉnh sửa" },
       { k: "PDF", v: "Xem trước biên dịch" },
@@ -415,11 +432,27 @@ const VI: MarketingCopy = {
     guaranteesLabel: "Năm cam kết",
     sectionRef: "§ 01–05",
     items: [
-      { n: "01", title: "Không bịa đặt", body: "AI không bao giờ bịa dữ liệu, kết quả hay số liệu." },
-      { n: "02", title: "Trích dẫn xác minh", body: "Mọi tài liệu tham khảo được đối chiếu với bản thảo và nguồn gốc." },
-      { n: "03", title: "Giữ nguyên ý nghĩa", body: "Chỉnh sửa bảo toàn lập luận và ý nghĩa khoa học của tác giả." },
+      {
+        n: "01",
+        title: "Không bịa đặt",
+        body: "AI không bao giờ bịa dữ liệu, kết quả hay số liệu.",
+      },
+      {
+        n: "02",
+        title: "Trích dẫn xác minh",
+        body: "Mọi tài liệu tham khảo được đối chiếu với bản thảo và nguồn gốc.",
+      },
+      {
+        n: "03",
+        title: "Giữ nguyên ý nghĩa",
+        body: "Chỉnh sửa bảo toàn lập luận và ý nghĩa khoa học của tác giả.",
+      },
       { n: "04", title: "Kiểm soát đầy đủ", body: "Mọi gợi ý có thể xem lại, bỏ qua và kiểm tra." },
-      { n: "05", title: "Dữ liệu thuộc về bạn", body: "Nội dung bản thảo không dùng để huấn luyện mô hình bên ngoài." },
+      {
+        n: "05",
+        title: "Dữ liệu thuộc về bạn",
+        body: "Nội dung bản thảo không dùng để huấn luyện mô hình bên ngoài.",
+      },
     ],
   },
   heroDemo: {

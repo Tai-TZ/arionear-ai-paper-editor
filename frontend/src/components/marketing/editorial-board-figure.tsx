@@ -13,7 +13,11 @@ type EditorialBoardFigureProps = {
   onActiveIndexChange: (index: number) => void;
 };
 
-export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }: EditorialBoardFigureProps) {
+export function EditorialBoardFigure({
+  copy,
+  activeIndex,
+  onActiveIndexChange,
+}: EditorialBoardFigureProps) {
   const [autoPlay, setAutoPlay] = useState(true);
   const activeRef = useRef(activeIndex);
   const timerRef = useRef<number | null>(null);
@@ -55,10 +59,7 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
     <div className="about-board-figure mt-10 border border-foreground bg-background overflow-hidden">
       <div className="about-board-toolbar flex items-center justify-between gap-3 border-b border-foreground/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span
-            className={`about-board-live-dot ${autoPlay ? "is-live" : ""}`}
-            aria-hidden
-          />
+          <span className={`about-board-live-dot ${autoPlay ? "is-live" : ""}`} aria-hidden />
           <span className="font-mono-data text-[10px] uppercase tracking-widest text-neutral-600">
             {autoPlay ? copy.liveDemo : copy.paused}
           </span>
@@ -84,11 +85,54 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
         <line x1="0" y1="110" x2="640" y2="110" stroke="var(--foreground)" strokeWidth="2" />
 
         <g className="about-board-papers">
-          <rect x="32" y="72" width="48" height="36" fill="none" stroke="var(--foreground)" strokeWidth="1.5" />
-          <rect x="38" y="66" width="48" height="36" fill="var(--newsprint, #F9F7F2)" stroke="var(--foreground)" strokeWidth="1.5" />
-          <line className="about-board-paper-line" x1="44" y1="78" x2="78" y2="78" stroke="var(--foreground)" strokeWidth="1" opacity="0.4" />
-          <line className="about-board-paper-line about-board-paper-line--2" x1="44" y1="86" x2="72" y2="86" stroke="var(--foreground)" strokeWidth="1" opacity="0.4" />
-          <line className="about-board-paper-line about-board-paper-line--3" x1="44" y1="94" x2="76" y2="94" stroke="var(--foreground)" strokeWidth="1" opacity="0.4" />
+          <rect
+            x="32"
+            y="72"
+            width="48"
+            height="36"
+            fill="none"
+            stroke="var(--foreground)"
+            strokeWidth="1.5"
+          />
+          <rect
+            x="38"
+            y="66"
+            width="48"
+            height="36"
+            fill="var(--newsprint, #F9F7F2)"
+            stroke="var(--foreground)"
+            strokeWidth="1.5"
+          />
+          <line
+            className="about-board-paper-line"
+            x1="44"
+            y1="78"
+            x2="78"
+            y2="78"
+            stroke="var(--foreground)"
+            strokeWidth="1"
+            opacity="0.4"
+          />
+          <line
+            className="about-board-paper-line about-board-paper-line--2"
+            x1="44"
+            y1="86"
+            x2="72"
+            y2="86"
+            stroke="var(--foreground)"
+            strokeWidth="1"
+            opacity="0.4"
+          />
+          <line
+            className="about-board-paper-line about-board-paper-line--3"
+            x1="44"
+            y1="94"
+            x2="76"
+            y2="94"
+            stroke="var(--foreground)"
+            strokeWidth="1"
+            opacity="0.4"
+          />
         </g>
 
         {EDITOR_X.map((x, i) => {
@@ -148,8 +192,19 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
               />
               {i === 1 ? (
                 <g className={`about-board-lamp ${active ? "is-lit" : ""}`}>
-                  <line x1={x} y1="20" x2={x} y2="8" stroke="var(--editorial-red, #c0392b)" strokeWidth="2" />
-                  <path d={`M ${x - 14} 20 Q ${x} 32 ${x + 14} 20 Z`} fill="var(--editorial-red, #c0392b)" opacity="0.9" />
+                  <line
+                    x1={x}
+                    y1="20"
+                    x2={x}
+                    y2="8"
+                    stroke="var(--editorial-red, #c0392b)"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d={`M ${x - 14} 20 Q ${x} 32 ${x + 14} 20 Z`}
+                    fill="var(--editorial-red, #c0392b)"
+                    opacity="0.9"
+                  />
                 </g>
               ) : null}
               {active ? (
@@ -191,7 +246,15 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
           {copy.manuscriptLabel}
         </text>
 
-        <rect x="480" y="24" width="128" height="52" fill="none" stroke="var(--foreground)" strokeWidth="1.5" />
+        <rect
+          x="480"
+          y="24"
+          width="128"
+          height="52"
+          fill="none"
+          stroke="var(--foreground)"
+          strokeWidth="1.5"
+        />
         <text
           x="544"
           y="48"
@@ -205,7 +268,11 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
           x="544"
           y="66"
           textAnchor="middle"
-          style={{ fontFamily: "ui-monospace, monospace", fontSize: "7px", letterSpacing: "0.12em" }}
+          style={{
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "7px",
+            letterSpacing: "0.12em",
+          }}
           fill="var(--foreground)"
           opacity="0.6"
         >
@@ -215,7 +282,9 @@ export function EditorialBoardFigure({ copy, activeIndex, onActiveIndexChange }:
 
       <div className="flex flex-col gap-1 border-t border-foreground px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="font-body italic text-sm text-neutral-500">{copy.figCaption}</p>
-        <p className="font-mono-data text-[10px] uppercase tracking-widest text-neutral-500">{copy.loopHint}</p>
+        <p className="font-mono-data text-[10px] uppercase tracking-widest text-neutral-500">
+          {copy.loopHint}
+        </p>
       </div>
     </div>
   );

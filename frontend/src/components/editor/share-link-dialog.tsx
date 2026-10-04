@@ -2,12 +2,7 @@ import { Check, Copy, Eye, Link2, Loader2, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { useLocale } from "@/components/locale-provider";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { editorCopy } from "@/lib/editor-i18n";
 import {
   buildShareUrl,
@@ -138,7 +133,10 @@ export function ShareLinkDialog({
                       </p>
                     </div>
                     <div className="share-dialog-note border border-border/70 bg-muted/20 px-3 py-3">
-                      <ShieldCheck className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]" aria-hidden />
+                      <ShieldCheck
+                        className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]"
+                        aria-hidden
+                      />
                       <p className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
                         {t.stableLink}
                       </p>
@@ -154,7 +152,10 @@ export function ShareLinkDialog({
                     </label>
                     <div className="share-dialog-link-box border border-foreground/20 bg-[color:var(--muted)]/40">
                       <div className="flex items-start gap-3 border-b border-foreground/10 px-4 py-3">
-                        <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-red)]" aria-hidden />
+                        <Link2
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-red)]"
+                          aria-hidden
+                        />
                         <p className="min-w-0 flex-1 break-all font-mono text-[12px] leading-6 text-foreground/90">
                           {shareUrl}
                         </p>

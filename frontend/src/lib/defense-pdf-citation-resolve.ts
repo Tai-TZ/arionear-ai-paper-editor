@@ -27,12 +27,7 @@ const TITLE_SYNONYM_GROUPS = [
 ];
 
 function normalizeHeading(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/\s+/g, " ").trim();
 }
 
 function synonymVariants(title: string): string[] {
@@ -126,9 +121,7 @@ export function resolveDefensePdfCitation(
   }
 
   const headingCandidates =
-    legacySearch.split(/\s+/).length <= 4
-      ? buildSectionHeadingCandidates(legacySearch)
-      : [];
+    legacySearch.split(/\s+/).length <= 4 ? buildSectionHeadingCandidates(legacySearch) : [];
 
   return {
     locateText: legacySearch,

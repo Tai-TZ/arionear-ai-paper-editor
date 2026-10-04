@@ -29,22 +29,14 @@ export function ProjectAssetPreview({ path, asset }: ProjectAssetPreviewProps) {
   return (
     <div className="project-asset-preview">
       <div className="project-asset-preview-toolbar">
-        <button
-          type="button"
-          className="project-asset-preview-download"
-          onClick={handleDownload}
-        >
+        <button type="button" className="project-asset-preview-download" onClick={handleDownload}>
           <Download className="h-3.5 w-3.5" strokeWidth={2} />
           {t.assetPreview.download}
         </button>
       </div>
       <div className="project-asset-preview-body soft-scrollbar">
         {pdf ? (
-          <iframe
-            className="project-asset-preview-pdf"
-            src={asset.dataUrl}
-            title={path}
-          />
+          <iframe className="project-asset-preview-pdf" src={asset.dataUrl} title={path} />
         ) : (
           <img
             className="project-asset-preview-image"

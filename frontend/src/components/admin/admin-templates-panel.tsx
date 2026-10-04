@@ -113,7 +113,15 @@ function templateTitle(row: PaperTemplateSummary, locale: "en" | "vi") {
   return row.title;
 }
 
-function AssetBadge({ ready, label, missingLabel }: { ready: boolean; label: string; missingLabel: string }) {
+function AssetBadge({
+  ready,
+  label,
+  missingLabel,
+}: {
+  ready: boolean;
+  label: string;
+  missingLabel: string;
+}) {
   return (
     <span className={`admin-template-asset${ready ? " is-ready" : ""}`}>
       {ready ? label : missingLabel}
@@ -349,7 +357,10 @@ export function AdminTemplatesPanel() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="admin-template-thumb admin-template-thumb-placeholder" aria-hidden>
+                        <div
+                          className="admin-template-thumb admin-template-thumb-placeholder"
+                          aria-hidden
+                        >
                           <ImageIcon className="h-4 w-4 opacity-40" strokeWidth={1.5} />
                         </div>
                       )}
@@ -357,7 +368,9 @@ export function AdminTemplatesPanel() {
                     <TableCell>
                       <div className="admin-template-cell min-w-0">
                         <p className="truncate font-medium">{title}</p>
-                        <p className="truncate font-mono-data text-[10px] text-muted-foreground">{row.id}</p>
+                        <p className="truncate font-mono-data text-[10px] text-muted-foreground">
+                          {row.id}
+                        </p>
                         {row.description ? (
                           <p className="admin-template-desc">{row.description}</p>
                         ) : null}
@@ -374,15 +387,25 @@ export function AdminTemplatesPanel() {
                     </TableCell>
                     <TableCell>
                       <div className="admin-template-assets">
-                        <AssetBadge ready={row.has_preview} label={tt.hasAsset} missingLabel={tt.missingAsset} />
+                        <AssetBadge
+                          ready={row.has_preview}
+                          label={tt.hasAsset}
+                          missingLabel={tt.missingAsset}
+                        />
                         <span className="admin-template-asset-label">{tt.preview}</span>
-                        <AssetBadge ready={row.has_pdf} label={tt.hasAsset} missingLabel={tt.missingAsset} />
+                        <AssetBadge
+                          ready={row.has_pdf}
+                          label={tt.hasAsset}
+                          missingLabel={tt.missingAsset}
+                        />
                         <span className="admin-template-asset-label">{tt.pdf}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="admin-template-meta">
-                        <span className="admin-badge admin-badge-researcher">{row.format.toUpperCase()}</span>
+                        <span className="admin-badge admin-badge-researcher">
+                          {row.format.toUpperCase()}
+                        </span>
                         <span className="admin-badge admin-badge-researcher">{venueLabel}</span>
                         {row.is_official ? (
                           <span className="admin-badge admin-badge-god">{tt.official}</span>
@@ -437,7 +460,9 @@ export function AdminTemplatesPanel() {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editorMode === "create" ? tt.addDialogTitle : tt.editDialogTitle}</DialogTitle>
+            <DialogTitle>
+              {editorMode === "create" ? tt.addDialogTitle : tt.editDialogTitle}
+            </DialogTitle>
             <DialogDescription>{tt.dialogHint}</DialogDescription>
           </DialogHeader>
 
@@ -559,7 +584,11 @@ export function AdminTemplatesPanel() {
           )}
 
           <DialogFooter>
-            <button type="button" className="admin-secondary-btn" onClick={() => setEditorOpen(false)}>
+            <button
+              type="button"
+              className="admin-secondary-btn"
+              onClick={() => setEditorOpen(false)}
+            >
               {t.cancel}
             </button>
             <button

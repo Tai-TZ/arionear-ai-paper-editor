@@ -31,8 +31,8 @@ export function msUntilEndOfDay235959(timeZone: string, nowMs = Date.now()): num
   const h = get("hour");
   const m = get("minute");
   const s = get("second");
-  const msIntoDay = ((h * 3600 + m * 60 + s) * 1000 + (nowMs % 1000));
-  const targetMs = ((23 * 3600 + 59 * 60 + 59) * 1000 + 999);
+  const msIntoDay = (h * 3600 + m * 60 + s) * 1000 + (nowMs % 1000);
+  const targetMs = (23 * 3600 + 59 * 60 + 59) * 1000 + 999;
   const remaining = targetMs - msIntoDay;
   return remaining > 0 ? remaining : 0;
 }

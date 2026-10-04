@@ -1,13 +1,5 @@
 import type React from "react";
-import {
-  FileOutput,
-  FileText,
-  GraduationCap,
-  Redo2,
-  Share2,
-  Undo2,
-  Wrench,
-} from "lucide-react";
+import { FileOutput, FileText, GraduationCap, Redo2, Share2, Undo2, Wrench } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { ChatOverlay, type ChatMessage } from "@/components/chat-overlay";
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
@@ -102,9 +94,10 @@ export function CenterPanel({
   onAddSelectionToChat?: () => void;
   onQuickEditSelection?: () => void;
   onDismissSelectionToolbar?: () => void;
-  onQuickEditRequest?: (
-    payload: { context: EditorSelectionContext; anchor: SelectionAnchor },
-  ) => void;
+  onQuickEditRequest?: (payload: {
+    context: EditorSelectionContext;
+    anchor: SelectionAnchor;
+  }) => void;
   messages: ChatMessage[];
   chatInput: string;
   onChatInputChange: (v: string) => void;
@@ -250,28 +243,31 @@ export function CenterPanel({
             )
           ) : (
             <>
-          <LatexEditor
-            editorRef={editorRef}
-            latex={latex}
-            onLatexChange={onLatexChange}
-            onSelectionChange={onSelectionChange}
-            onSelectionContextChange={onSelectionContextChange}
-            onQuickEditRequest={onQuickEditRequest}
-            fullHeight
-            highlightLine={highlightLine}
-            synctexHighlight={synctexHighlight}
-            inlineSuggestion={toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion)}
-          />
-          {selectionPick && onAddSelectionToChat && onQuickEditSelection && onDismissSelectionToolbar && (
-            <EditorSelectionToolbar
-              context={selectionPick.context}
-              anchor={selectionPick.anchor}
-              copy={t.selectionToolbar}
-              onAskSelection={onAddSelectionToChat}
-              onEditSelection={onQuickEditSelection}
-              onDismiss={onDismissSelectionToolbar}
-            />
-          )}
+              <LatexEditor
+                editorRef={editorRef}
+                latex={latex}
+                onLatexChange={onLatexChange}
+                onSelectionChange={onSelectionChange}
+                onSelectionContextChange={onSelectionContextChange}
+                onQuickEditRequest={onQuickEditRequest}
+                fullHeight
+                highlightLine={highlightLine}
+                synctexHighlight={synctexHighlight}
+                inlineSuggestion={toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion)}
+              />
+              {selectionPick &&
+                onAddSelectionToChat &&
+                onQuickEditSelection &&
+                onDismissSelectionToolbar && (
+                  <EditorSelectionToolbar
+                    context={selectionPick.context}
+                    anchor={selectionPick.anchor}
+                    copy={t.selectionToolbar}
+                    onAskSelection={onAddSelectionToChat}
+                    onEditSelection={onQuickEditSelection}
+                    onDismiss={onDismissSelectionToolbar}
+                  />
+                )}
             </>
           )}
         </div>

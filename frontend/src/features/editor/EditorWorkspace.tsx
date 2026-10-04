@@ -1,12 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type InputHTMLAttributes,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type InputHTMLAttributes } from "react";
 
 import { EditorSelectionToolbar } from "@/components/editor-selection-toolbar";
 import { EditorOnboardingDialog } from "@/components/editor/editor-onboarding-dialog";
@@ -45,10 +38,7 @@ import { StatusBar } from "./components/StatusBar";
 import { ToolsPanel } from "./components/ToolsPanel";
 import type { MobileTab } from "./types";
 import { useEditorChat } from "./state/useEditorChat";
-import {
-  useEditorProject,
-  type EditorProjectBootPayload,
-} from "./state/useEditorProject";
+import { useEditorProject, type EditorProjectBootPayload } from "./state/useEditorProject";
 import { useEditorProviders } from "./state/useEditorProviders";
 import { useEditorTools, type EditorToolsChatBridge } from "./state/useEditorTools";
 import { useLatexWorkspace } from "./state/useLatexWorkspace";
@@ -260,11 +250,7 @@ export function EditorWorkspace() {
 
   useEffect(() => {
     tools.tryStartScoreGateAudit();
-  }, [
-    exportOpen,
-    project.mainLatexSource,
-    tools.tryStartScoreGateAudit,
-  ]);
+  }, [exportOpen, project.mainLatexSource, tools.tryStartScoreGateAudit]);
 
   useEffect(() => {
     if (project.bootState !== "ready" || !projectId || !project.autoSave || !project.isDirty) {
@@ -274,14 +260,7 @@ export function EditorWorkspace() {
       handleSave();
     }, 2500);
     return () => window.clearTimeout(timer);
-  }, [
-    project.bootState,
-    projectId,
-    project.autoSave,
-    project.isDirty,
-    project.latex,
-    handleSave,
-  ]);
+  }, [project.bootState, projectId, project.autoSave, project.isDirty, project.latex, handleSave]);
 
   useEffect(() => {
     chatHydratedForProjectRef.current = null;
@@ -404,7 +383,15 @@ export function EditorWorkspace() {
       projectName: project.projectName,
       latexSource: project.mainLatexSource,
     }),
-    [latexWs, projectId, project.mainFile, project.compiler, project.projectName, project.mainLatexSource, handleAskArioFixCompile],
+    [
+      latexWs,
+      projectId,
+      project.mainFile,
+      project.compiler,
+      project.projectName,
+      project.mainLatexSource,
+      handleAskArioFixCompile,
+    ],
   );
 
   const toolsPanelBindings = useMemo(
@@ -424,7 +411,11 @@ export function EditorWorkspace() {
         <div className="upload-blocking-overlay">
           <div className="upload-blocking-card">
             <p className="upload-blocking-msg">{project.uploadStatus}</p>
-            <div className="upload-progress-track" role="progressbar" aria-label={project.uploadStatus}>
+            <div
+              className="upload-progress-track"
+              role="progressbar"
+              aria-label={project.uploadStatus}
+            >
               <div className="upload-progress-bar" />
             </div>
           </div>

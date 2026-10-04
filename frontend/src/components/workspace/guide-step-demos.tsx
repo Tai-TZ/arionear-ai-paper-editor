@@ -7,7 +7,11 @@ function Skel({ className }: { className?: string }) {
 }
 
 function Chrome({ children }: { children: ReactNode }) {
-  return <div className="guide-demo-chrome font-mono-data text-[10px] uppercase tracking-widest">{children}</div>;
+  return (
+    <div className="guide-demo-chrome font-mono-data text-[10px] uppercase tracking-widest">
+      {children}
+    </div>
+  );
 }
 
 function ProjectsDemo({ d }: { d: GuideDemoLabels }) {

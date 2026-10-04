@@ -16,8 +16,7 @@ export const workflowContent: MarketingPageContent = {
   slug: "workflow",
   title: "How the Press Runs",
   eyebrow: "Section B · Workflow",
-  lede:
-    "Arionear Phase 1 focuses on LaTeX manuscripts. Upload your `.tex` source, collaborate with Ario in the editor, and keep every change under your control.",
+  lede: "Arionear Phase 1 focuses on LaTeX manuscripts. Upload your `.tex` source, collaborate with Ario in the editor, and keep every change under your control.",
   sections: [
     {
       heading: "Step 01 · Upload LaTeX",
@@ -55,15 +54,21 @@ export const featuresContent: MarketingPageContent = {
   sections: [
     {
       heading: "Academic Voice",
-      paragraphs: ["Improve academic English while preserving the author's original meaning and argument."],
+      paragraphs: [
+        "Improve academic English while preserving the author's original meaning and argument.",
+      ],
     },
     {
       heading: "Structure Guide",
-      paragraphs: ["Get guidance on IMRAD sections — abstract, introduction, methods, results, and discussion."],
+      paragraphs: [
+        "Get guidance on IMRAD sections — abstract, introduction, methods, results, and discussion.",
+      ],
     },
     {
       heading: "Citation Format",
-      paragraphs: ["Verify citations against external sources and keep BibTeX keys consistent with your manuscript."],
+      paragraphs: [
+        "Verify citations against external sources and keep BibTeX keys consistent with your manuscript.",
+      ],
     },
     {
       heading: "Integrity Guard",
@@ -101,7 +106,9 @@ export const latexGuideContent: MarketingPageContent = {
   sections: [
     {
       heading: "Supported inputs",
-      paragraphs: ["Upload a `.tex` main file. You may attach figures and supporting files in the same import dialog."],
+      paragraphs: [
+        "Upload a `.tex` main file. You may attach figures and supporting files in the same import dialog.",
+      ],
       bullets: [
         "Main manuscript: `.tex` or `.latex`",
         "Figures: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.pdf`, `.eps`",

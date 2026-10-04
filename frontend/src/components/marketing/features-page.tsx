@@ -50,8 +50,25 @@ function FeaturesHubDiagram({
             role="img"
             aria-label={copy.hubAria}
           >
-            <circle cx={cx} cy={cy} r={radius + 40} fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="text-foreground/25" />
-            <circle cx={cx} cy={cy} r={radius} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-foreground/40" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={radius + 40}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+              className="text-foreground/25"
+            />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="text-foreground/40"
+            />
 
             {copy.features.map((f) => {
               const rad = ((f.angle - 90) * Math.PI) / 180;
@@ -59,13 +76,33 @@ function FeaturesHubDiagram({
               const ny = cy + radius * Math.sin(rad);
               return (
                 <g key={f.n}>
-                  <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="currentColor" strokeWidth="1.5" className="text-foreground/30" />
-                  <circle cx={nx} cy={ny} r="28" fill="var(--newsprint, #F9F7F2)" stroke="currentColor" strokeWidth="2" className="text-foreground" />
+                  <line
+                    x1={cx}
+                    y1={cy}
+                    x2={nx}
+                    y2={ny}
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className="text-foreground/30"
+                  />
+                  <circle
+                    cx={nx}
+                    cy={ny}
+                    r="28"
+                    fill="var(--newsprint, #F9F7F2)"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-foreground"
+                  />
                   <text
                     x={nx}
                     y={ny - 4}
                     textAnchor="middle"
-                    style={{ fontFamily: "ui-monospace, monospace", fontSize: "8px", letterSpacing: "0.08em" }}
+                    style={{
+                      fontFamily: "ui-monospace, monospace",
+                      fontSize: "8px",
+                      letterSpacing: "0.08em",
+                    }}
                     className="fill-[color:var(--editorial-red)] uppercase"
                   >
                     {f.n}
@@ -74,7 +111,11 @@ function FeaturesHubDiagram({
                     x={nx}
                     y={ny + 10}
                     textAnchor="middle"
-                    style={{ fontFamily: "'Playfair Display', serif", fontSize: "8px", fontWeight: 700 }}
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                    }}
                     className="fill-current"
                   >
                     {f.hubLabel}
@@ -83,13 +124,24 @@ function FeaturesHubDiagram({
               );
             })}
 
-            <rect x={cx - 55} y={cy - 40} width={110} height={80} fill="var(--foreground)" className="text-foreground" />
+            <rect
+              x={cx - 55}
+              y={cy - 40}
+              width={110}
+              height={80}
+              fill="var(--foreground)"
+              className="text-foreground"
+            />
             <text
               x={cx}
               y={cy - 12}
               textAnchor="middle"
               fill="var(--newsprint, #F9F7F2)"
-              style={{ fontFamily: "ui-monospace, monospace", fontSize: "9px", letterSpacing: "0.12em" }}
+              style={{
+                fontFamily: "ui-monospace, monospace",
+                fontSize: "9px",
+                letterSpacing: "0.12em",
+              }}
             >
               {copy.hubCenterManuscript}
             </text>
@@ -131,7 +183,9 @@ function FeaturesHubDiagram({
                   </span>
                 </div>
                 <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-                <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
+                <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">
+                  {body}
+                </p>
                 <div className="mt-4">
                   <Link
                     to={featureLearnMore[n] ?? "/workflow"}
@@ -160,11 +214,15 @@ export function FeaturesPage() {
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
           <div>
-            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
+              {content.eyebrow}
+            </p>
             <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
               {content.title}
             </h1>
-            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">{content.lede}</p>
+            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">
+              {content.lede}
+            </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 to={editorEntryPath()}
@@ -183,7 +241,9 @@ export function FeaturesPage() {
 
           <div className="mt-12">
             <div className="flex items-center justify-between border-b border-foreground pb-3 mb-6">
-              <span className="font-mono-data uppercase text-xs tracking-widest">{copy.figCaption}</span>
+              <span className="font-mono-data uppercase text-xs tracking-widest">
+                {copy.figCaption}
+              </span>
               <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {copy.figNote}
               </span>

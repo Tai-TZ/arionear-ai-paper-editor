@@ -42,7 +42,9 @@ async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       const body = await res.json();
       detail = body.detail ?? detail;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(mapApiHttpError(res.status, detail));
   }
 

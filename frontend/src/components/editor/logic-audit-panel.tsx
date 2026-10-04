@@ -170,7 +170,9 @@ export function LogicAuditPanel({
               <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
               <span className="text-xs font-semibold">{label}</span>
             </div>
-            <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">{subtitle}</span>
+            <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">
+              {subtitle}
+            </span>
           </button>
         ))}
       </div>
@@ -240,7 +242,11 @@ export function LogicAuditPanel({
           onClick={() => onRun("quick", scope, auditFull ? [] : selected)}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Play className="h-3.5 w-3.5" />
+          )}
           {runButtonLabel}
         </button>
         {loading && onCancel ? (
@@ -298,7 +304,10 @@ export function LogicAuditPanel({
                     const excerpt = c.claim_text?.trim() || undefined;
                     const jumpable = canJumpToIssue?.(section.section, excerpt) ?? false;
                     return (
-                      <li key={c.id} className="rounded-md border border-border/40 px-2 py-2 text-xs">
+                      <li
+                        key={c.id}
+                        className="rounded-md border border-border/40 px-2 py-2 text-xs"
+                      >
                         <div>
                           <span className="font-medium text-[color:var(--editorial-red)]">
                             [{severityLabel(c.severity)}]
@@ -397,40 +406,40 @@ export function LogicAuditPanel({
             const jumpExcerpt = firstSpan?.text?.trim() || undefined;
             const jumpable = canJumpToIssue?.(jumpSection, jumpExcerpt) ?? false;
             return (
-            <div
-              key={`cross-${i}`}
-              className="rounded-md border border-dashed border-border/60 p-3 text-xs"
-            >
-              <span className="font-medium">{t.crossSection}</span> {cross.description}
-              {(jumpable || onAskArio) && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {jumpable && onJumpToIssue ? (
-                    <button
-                      type="button"
-                      className="text-[10px] font-medium text-primary hover:underline"
-                      onClick={() => onJumpToIssue(jumpSection, jumpExcerpt)}
-                    >
-                      {t.jumpToIssue}
-                    </button>
-                  ) : null}
-                  {onAskArio ? (
-                    <button
-                      type="button"
-                      className="text-[10px] font-medium text-primary hover:underline"
-                      onClick={() =>
-                        onAskArio(
-                          buildLogicCrossSectionAskPrompt(cross.description, jumpSection),
-                          jumpSection,
-                          jumpExcerpt,
-                        )
-                      }
-                    >
-                      {t.askArio}
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </div>
+              <div
+                key={`cross-${i}`}
+                className="rounded-md border border-dashed border-border/60 p-3 text-xs"
+              >
+                <span className="font-medium">{t.crossSection}</span> {cross.description}
+                {(jumpable || onAskArio) && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {jumpable && onJumpToIssue ? (
+                      <button
+                        type="button"
+                        className="text-[10px] font-medium text-primary hover:underline"
+                        onClick={() => onJumpToIssue(jumpSection, jumpExcerpt)}
+                      >
+                        {t.jumpToIssue}
+                      </button>
+                    ) : null}
+                    {onAskArio ? (
+                      <button
+                        type="button"
+                        className="text-[10px] font-medium text-primary hover:underline"
+                        onClick={() =>
+                          onAskArio(
+                            buildLogicCrossSectionAskPrompt(cross.description, jumpSection),
+                            jumpSection,
+                            jumpExcerpt,
+                          )
+                        }
+                      >
+                        {t.askArio}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

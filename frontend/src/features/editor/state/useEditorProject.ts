@@ -77,16 +77,8 @@ export function useEditorProject({
   const [integrityStrictness, setIntegrityStrictness] =
     useState<ResearcherProfile["integrity_strictness"]>("standard");
 
-  const {
-    latex,
-    setLatex,
-    resetHistory,
-    recordNow,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-  } = useLatexHistory("");
+  const { latex, setLatex, resetHistory, recordNow, undo, redo, canUndo, canRedo } =
+    useLatexHistory("");
 
   const isDirty = latex !== savedLatex;
   const mainLatexSource = useMemo(
@@ -133,9 +125,7 @@ export function useEditorProject({
       setMainFile(normalizedMain);
       setActiveFile(normalizedMain);
       setProjectFiles(
-        project.files?.length
-          ? project.files
-          : [{ path: normalizedMain, content: project.latex }],
+        project.files?.length ? project.files : [{ path: normalizedMain, content: project.latex }],
       );
       setCompiler(project.compiler ?? "auto");
       resetHistory(project.latex);
@@ -148,12 +138,9 @@ export function useEditorProject({
         : null;
       const storedGateFp = project.gateAuditFingerprint ?? null;
       const currentFp = logicAuditFingerprint(project.latex);
-      const gateFp =
-        storedGateFp && storedGateFp === currentFp ? storedGateFp : null;
+      const gateFp = storedGateFp && storedGateFp === currentFp ? storedGateFp : null;
       const gateReportUsable =
-        project.gateAuditReport?.sections?.length && gateFp
-          ? project.gateAuditReport
-          : null;
+        project.gateAuditReport?.sections?.length && gateFp ? project.gateAuditReport : null;
 
       onBootReady?.({
         chatThreads: bootChatThreadsRef.current,
@@ -192,8 +179,7 @@ export function useEditorProject({
       .catch((error: unknown) => {
         if (cancelled) return;
         invalidateFetchKey(`papers:${projectId}`);
-        const message =
-          error instanceof Error ? error.message : "Failed to load this project.";
+        const message = error instanceof Error ? error.message : "Failed to load this project.";
         setBootError(message);
         setBootState("error");
       });
@@ -337,9 +323,7 @@ export function useEditorProject({
     fetchPaper(projectId)
       .then(applyBootProject)
       .catch((error: unknown) => {
-        setBootError(
-          error instanceof Error ? error.message : "Failed to load this project.",
-        );
+        setBootError(error instanceof Error ? error.message : "Failed to load this project.");
         setBootState("error");
       });
   }, [projectId, applyBootProject]);
@@ -370,15 +354,13 @@ export function useEditorProject({
       const mergedAssets = replaceProject
         ? imported.assets
         : mergeProjectAssets(assets, imported.assets);
-      const nextMain =
-        replaceProject || isLikelyBlank ? imported.mainFile : mainFile;
+      const nextMain = replaceProject || isLikelyBlank ? imported.mainFile : mainFile;
       const openPath = imported.mainFile;
       const openContent =
         mergedFiles.find((f) => f.path === openPath)?.content ??
         mergedFiles.find((f) => f.path === nextMain)?.content ??
         "";
-      const mainContent =
-        mergedFiles.find((f) => f.path === nextMain)?.content ?? openContent;
+      const mainContent = mergedFiles.find((f) => f.path === nextMain)?.content ?? openContent;
       const nextName = replaceProject ? imported.name : projectName;
       const nextCompiler =
         replaceProject || imported.compiler !== "auto" ? imported.compiler : compiler;

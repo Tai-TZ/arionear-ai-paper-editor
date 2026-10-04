@@ -57,11 +57,19 @@ function FeatureRow({ text, included }: PlanFeature) {
   return (
     <li className={cn("flex items-start gap-2.5", !included && "opacity-45")}>
       {included ? (
-        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--editorial-red)]" strokeWidth={2.5} />
+        <Check
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--editorial-red)]"
+          strokeWidth={2.5}
+        />
       ) : (
         <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
       )}
-      <span className={cn("font-body text-sm leading-snug", !included && "line-through text-muted-foreground")}>
+      <span
+        className={cn(
+          "font-body text-sm leading-snug",
+          !included && "line-through text-muted-foreground",
+        )}
+      >
         {text}
       </span>
     </li>
@@ -98,7 +106,10 @@ function PlanCta({
         type="button"
         disabled
         aria-current="true"
-        className={cn(base, "border border-foreground bg-foreground/5 text-foreground cursor-default")}
+        className={cn(
+          base,
+          "border border-foreground bg-foreground/5 text-foreground cursor-default",
+        )}
       >
         <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
         {currentPlanCta}
@@ -200,7 +211,12 @@ type Props = {
   onUpgradeSuccess?: (updated: BillingStatus) => void;
 };
 
-export function PricingCards({ billingStatus, billingLoading = false, billingError = false, onUpgradeSuccess }: Props) {
+export function PricingCards({
+  billingStatus,
+  billingLoading = false,
+  billingError = false,
+  onUpgradeSuccess,
+}: Props) {
   const { locale } = useLocale();
   const plans = useMemo(() => buildPlans(locale), [locale]);
   const planCopy = useMemo(() => marketingCopy(locale).plans, [locale]);
@@ -278,7 +294,9 @@ export function PricingCards({ billingStatus, billingLoading = false, billingErr
                   <div
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center border",
-                      plan.highlight ? "border-foreground bg-foreground text-background" : "border-foreground/60",
+                      plan.highlight
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-foreground/60",
                     )}
                   >
                     <TierIcon className="h-4 w-4" strokeWidth={1.5} />
@@ -287,10 +305,14 @@ export function PricingCards({ billingStatus, billingLoading = false, billingErr
                     <span className="font-serif-display text-3xl font-black tracking-tighter leading-none">
                       {plan.price}
                     </span>
-                    <span className="font-mono-data text-xs text-muted-foreground">{plan.priceSub}</span>
+                    <span className="font-mono-data text-xs text-muted-foreground">
+                      {plan.priceSub}
+                    </span>
                   </div>
                 </div>
-                <p className="mt-2 font-body text-sm leading-snug text-muted-foreground">{plan.tagline}</p>
+                <p className="mt-2 font-body text-sm leading-snug text-muted-foreground">
+                  {plan.tagline}
+                </p>
               </div>
 
               <div className="mb-5 border-t border-foreground/15 pt-5">
@@ -336,9 +358,7 @@ export function PricingCards({ billingStatus, billingLoading = false, billingErr
           onSuccess={(billing) => {
             setQrOpen(false);
             toast.success(
-              locale === "vi"
-                ? "Tài khoản đã được nâng cấp lên Pro!"
-                : "Account upgraded to Pro!",
+              locale === "vi" ? "Tài khoản đã được nâng cấp lên Pro!" : "Account upgraded to Pro!",
             );
             onUpgradeSuccess?.(billing);
           }}
@@ -374,7 +394,8 @@ function QuotaUsageBar({
         <p className="mt-1 font-serif-display text-xl font-bold tracking-tight">
           {status.defense_turns_used}
           <span className="font-mono-data text-sm font-normal text-muted-foreground">
-            {" "}/ {status.defense_turns_limit}
+            {" "}
+            / {status.defense_turns_limit}
             <span className="ml-1.5 text-[11px] uppercase tracking-widest">
               {copy.quotaPeriodDaily}
             </span>
@@ -404,9 +425,7 @@ function QuotaUsageBar({
             style={{ width: `${pct}%` }}
           />
         </div>
-        {isFull && (
-          <p className="mt-2 font-body text-xs text-destructive">{copy.quotaFull}</p>
-        )}
+        {isFull && <p className="mt-2 font-body text-xs text-destructive">{copy.quotaFull}</p>}
       </div>
     </div>
   );

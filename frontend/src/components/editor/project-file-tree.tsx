@@ -186,7 +186,11 @@ export function ProjectFileTree({
           <span className="project-file-tree-count">{fileCount}</span>
         </button>
         {SHOW_EDITOR_IMPORT ? (
-          <div className="project-file-tree-toolbar" role="toolbar" aria-label={t.sidebar.fileActions}>
+          <div
+            className="project-file-tree-toolbar"
+            role="toolbar"
+            aria-label={t.sidebar.fileActions}
+          >
             {onUpload && onUploadFolder ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

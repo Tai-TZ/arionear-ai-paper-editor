@@ -145,9 +145,7 @@ export async function fetchPapers(): Promise<StoredProject[]> {
 }
 
 export async function fetchPaper(id: string): Promise<StoredProject> {
-  const data = await fetchDedupe(`papers:${id}`, () =>
-    papersFetch<PaperResponse>(`/papers/${id}`),
-  );
+  const data = await fetchDedupe(`papers:${id}`, () => papersFetch<PaperResponse>(`/papers/${id}`));
   return toStoredProject(data);
 }
 

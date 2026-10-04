@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, forwardRef, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useMemo,
+} from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  ArrowUp,
-  ChevronDown,
-  ChevronUp,
-  Maximize2,
-  PencilLine,
-  Square,
-  X,
-} from "lucide-react";
+import { ArrowUp, ChevronDown, ChevronUp, Maximize2, PencilLine, Square, X } from "lucide-react";
 
 import arioAvatar from "../../assets/avatar/avatar-chat.png";
 import { LlmSelector } from "@/components/llm-selector";
 import { useLocale } from "@/components/locale-provider";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
-import { filterSlashCommands, getSlashCommandQuery, slashCommandInsert, type SlashCommandDef } from "@/lib/chat-commands";
+import {
+  filterSlashCommands,
+  getSlashCommandQuery,
+  slashCommandInsert,
+  type SlashCommandDef,
+} from "@/lib/chat-commands";
 import { getChatSlashHints } from "@/lib/chat-commands-i18n";
 import { useChatStreamProgress, type ChatStreamProgressSnapshot } from "@/lib/chat-stream-progress";
 import type { ChatAiStep, LLMProvider, ProviderInfo } from "@/lib/api/academic";
@@ -103,8 +108,12 @@ function ChatDock({
   const t = editorCopy(locale);
   const subscribedProgress = useChatStreamProgress();
   const streamProgress = streamProgressProp ?? subscribedProgress;
-  const { activity: liveActivity, steps: streamAiSteps, activities: streamActivities, waitElapsedSec } =
-    streamProgress;
+  const {
+    activity: liveActivity,
+    steps: streamAiSteps,
+    activities: streamActivities,
+    waitElapsedSec,
+  } = streamProgress;
   const displaySteps = useMemo(() => filterDisplaySteps(streamAiSteps), [streamAiSteps]);
   const dockRef = useRef<HTMLElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -205,11 +214,11 @@ function ChatDock({
 
   const canUseLlm = Boolean(
     providers &&
-      providers.length > 0 &&
-      llmProvider &&
-      llmModel &&
-      onProviderChange &&
-      onModelChange,
+    providers.length > 0 &&
+    llmProvider &&
+    llmModel &&
+    onProviderChange &&
+    onModelChange,
   );
 
   const chatDisabled = !canUseLlm;
@@ -348,7 +357,7 @@ function ChatDock({
                 type="button"
                 className="chat-selection-chip-clear"
                 onClick={onClearSelectionContext}
-                  aria-label={t.chatDock.clearSelection}
+                aria-label={t.chatDock.clearSelection}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -392,9 +401,9 @@ function ChatDock({
 function assistantHasBody(message: ChatMessage): boolean {
   return Boolean(
     message.content?.trim() ||
-      message.streamLabel?.trim() ||
-      (message.activities?.length ?? 0) > 0 ||
-      filterDisplaySteps(message.aiSteps ?? []).length > 0,
+    message.streamLabel?.trim() ||
+    (message.activities?.length ?? 0) > 0 ||
+    filterDisplaySteps(message.aiSteps ?? []).length > 0,
   );
 }
 
@@ -461,7 +470,7 @@ export function ChatMessages({
         const hasActivities = liveActivities.length > 0;
         const hasLiveProgress = Boolean(
           isStreamingAssistant &&
-            (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
+          (m.streamLabel || liveActivity || hasAiSteps || hasActivities || chatLoading),
         );
         const showLoadingState = Boolean(
           isStreamingAssistant && hasLiveProgress && !m.content && !m.isError,
@@ -492,17 +501,12 @@ export function ChatMessages({
               )}
               {m.content && (
                 <div
-                  className={cn(
-                    "chat-assistant-text",
-                    m.isError && "chat-assistant-text-error",
-                  )}
+                  className={cn("chat-assistant-text", m.isError && "chat-assistant-text-error")}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                 </div>
               )}
-              {m.isStreaming && m.content && (
-                <span className="chat-stream-cursor" aria-hidden />
-              )}
+              {m.isStreaming && m.content && <span className="chat-stream-cursor" aria-hidden />}
             </div>
           </div>
         );
@@ -530,10 +534,7 @@ function useSlashMenuPosition(
       return;
     }
     const rect = el.getBoundingClientRect();
-    const estimatedHeight = Math.min(
-      SLASH_MENU_MAX_HEIGHT_PX,
-      Math.max(112, itemCount * 56),
-    );
+    const estimatedHeight = Math.min(SLASH_MENU_MAX_HEIGHT_PX, Math.max(112, itemCount * 56));
     const spaceAbove = rect.top;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpward = spaceAbove >= estimatedHeight || spaceAbove >= spaceBelow;
@@ -574,16 +575,19 @@ function useSlashMenuPosition(
   return style;
 }
 
-export const ChatInput = forwardRef<HTMLTextAreaElement, {
-  chatInput: string;
-  onChatInputChange: (v: string) => void;
-  onSend: () => void;
-  onStop?: () => void;
-  onActivate?: () => void;
-  placeholder: string;
-  disabled?: boolean;
-  loading?: boolean;
-}>(function ChatInput(
+export const ChatInput = forwardRef<
+  HTMLTextAreaElement,
+  {
+    chatInput: string;
+    onChatInputChange: (v: string) => void;
+    onSend: () => void;
+    onStop?: () => void;
+    onActivate?: () => void;
+    placeholder: string;
+    disabled?: boolean;
+    loading?: boolean;
+  }
+>(function ChatInput(
   {
     chatInput,
     onChatInputChange,
@@ -615,8 +619,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
     () => (slashQuery !== null ? filterSlashCommands(slashQuery, locale) : []),
     [slashQuery, locale],
   );
-  const showSlashMenu =
-    !disabled && slashQuery !== null && filteredCommands.length > 0;
+  const showSlashMenu = !disabled && slashQuery !== null && filteredCommands.length > 0;
 
   useEffect(() => {
     setHighlightIndex(0);
@@ -664,9 +667,7 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
             <span className="chat-slash-menu-body">
               <span className="chat-slash-menu-cmd">/{cmd.command}</span>
               <span className="chat-slash-menu-desc">{cmd.description}</span>
-              {cmd.detail ? (
-                <span className="chat-slash-menu-detail">{cmd.detail}</span>
-              ) : null}
+              {cmd.detail ? <span className="chat-slash-menu-detail">{cmd.detail}</span> : null}
             </span>
           </button>
         ))}
@@ -745,7 +746,11 @@ export const ChatInput = forwardRef<HTMLTextAreaElement, {
             className={`chat-send-btn ${loading ? "chat-send-btn-loading" : ""}`}
             aria-label={loading ? t.chatDock.stopProcessing : t.chatDock.sendMessage}
           >
-            {loading ? <Square className="h-3 w-3 fill-current" /> : <ArrowUp className="h-4 w-4" />}
+            {loading ? (
+              <Square className="h-3 w-3 fill-current" />
+            ) : (
+              <ArrowUp className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>

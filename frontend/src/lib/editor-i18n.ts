@@ -409,7 +409,8 @@ const EN: EditorCopy = {
     noTitleInBib: "No title in BibTeX",
     aiRevisionHistory: "AI revision history",
     versionsHelp: "Versions help",
-    revisionsHint: "Accept/Reject actions from Ario suggestions are recorded here (L4 audit trail).",
+    revisionsHint:
+      "Accept/Reject actions from Ario suggestions are recorded here (L4 audit trail).",
     noRevisions: "No AI revisions yet. Ask Ario to edit or polish your manuscript.",
     revisionAccepted: "Accepted",
     revisionRejected: "Rejected",
@@ -422,7 +423,8 @@ const EN: EditorCopy = {
     citationVerifyError: "Could not verify citations right now. Please try again later.",
     structure: "Structure",
     structureIntro: "IMRAD outline suggestions from Ario. Jump to a section or ask Ario to fix it.",
-    structureEmpty: "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
+    structureEmpty:
+      "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
     structureJump: "Jump in editor",
     structureAskArio: "Ask Ario",
     structureApplyFix: "Apply fix",
@@ -433,8 +435,7 @@ const EN: EditorCopy = {
   share: {
     circulationDesk: "Circulation desk",
     title: "Share manuscript",
-    description:
-      "Send a view-only link. Readers see live LaTeX and PDF — no editing, no tools.",
+    description: "Send a view-only link. Readers see live LaTeX and PDF — no editing, no tools.",
     viewOnly: "View only",
     viewOnlyHint: "Readers cannot edit or run Ario.",
     stableLink: "Stable link",
@@ -455,13 +456,11 @@ const EN: EditorCopy = {
   logicAudit: {
     intro:
       "Comment-only — does not auto-edit the manuscript. Audit modes use a dedicated engine, independent of the chat provider.",
-    staleReport:
-      "Manuscript changed since this audit — run again for up-to-date results.",
+    staleReport: "Manuscript changed since this audit — run again for up-to-date results.",
     partialReport:
       "Partial audit — stopped early (timeout or cancel). Re-run for remaining sections.",
     cancel: "Cancel audit",
-    auditingInProgress:
-      "New audit running — previous results stay visible until sections update.",
+    auditingInProgress: "New audit running — previous results stay visible until sections update.",
     jumpToIssue: "Go to line",
     askArio: "Ask Ario",
     claimLabel: "Claim:",
@@ -525,8 +524,7 @@ const EN: EditorCopy = {
     criteria: "Scoring criteria",
     footerLoading:
       "Ario is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
-    footerCompileError:
-      "PDF is ready to download — but we recommend fixing compile errors first.",
+    footerCompileError: "PDF is ready to download — but we recommend fixing compile errors first.",
     footerReady: "Export PDF after reviewing the score. See Logic Audit for details.",
     downloadBtn: "Download PDF",
     evaluating: "Evaluating…",
@@ -595,8 +593,7 @@ const EN: EditorCopy = {
     closeChat: "Close chat",
     collapseChat: "Collapse chat",
     resizeChat: "Drag to resize chat",
-    emptySlashHint: (hints) =>
-      `Pick a provider and model below. Quick commands: ${hints}.`,
+    emptySlashHint: (hints) => `Pick a provider and model below. Quick commands: ${hints}.`,
     reasoningTitle: "Reasoning",
     expandChat: "Expand chat",
     stopProcessing: "Stop processing",
@@ -604,10 +601,8 @@ const EN: EditorCopy = {
     sendMessage: "Send message",
   },
   suggestion: {
-    documentMode:
-      "Ario suggests a change — inline in the editor (red = remove, green = add)",
-    selectionMode:
-      "Ario suggests an edit — inline in the editor (red = remove, green = add)",
+    documentMode: "Ario suggests a change — inline in the editor (red = remove, green = add)",
+    selectionMode: "Ario suggests an edit — inline in the editor (red = remove, green = add)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Reject",
     accept: "Accept",
@@ -643,8 +638,7 @@ const EN: EditorCopy = {
     rejectScopeDocument: "entire manuscript",
     rejectScopeStyle: "style edit",
     rejectScopeAllEdits: "pending edits",
-    resyncFailed:
-      "Could not sync manuscript with the server — reload the project and try again.",
+    resyncFailed: "Could not sync manuscript with the server — reload the project and try again.",
   },
   errors: {
     saveFailed: "Could not save the project — check your connection and try again.",
@@ -765,8 +759,7 @@ const VI: EditorCopy = {
     verifiedCitations: (verified, total) => `Đã xác minh ${verified}/${total} trích dẫn.`,
     citationVerifyError: "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.",
     structure: "Cấu trúc",
-    structureIntro:
-      "Gợi ý cấu trúc IMRAD từ Ario. Nhảy tới section hoặc nhờ Ario chỉnh trực tiếp.",
+    structureIntro: "Gợi ý cấu trúc IMRAD từ Ario. Nhảy tới section hoặc nhờ Ario chỉnh trực tiếp.",
     structureEmpty: "Chưa có gợi ý cấu trúc. Chạy /structure trong chat để phân tích bản thảo.",
     structureJump: "Xem trong editor",
     structureAskArio: "Nhờ Ario sửa",
@@ -800,13 +793,11 @@ const VI: EditorCopy = {
   logicAudit: {
     intro:
       "Chỉ nhận xét — không tự sửa bản thảo. Chế độ audit dùng engine riêng, không phụ thuộc provider trong chat.",
-    staleReport:
-      "Bản thảo đã thay đổi sau lần audit này — chạy lại để có kết quả mới nhất.",
+    staleReport: "Bản thảo đã thay đổi sau lần audit này — chạy lại để có kết quả mới nhất.",
     partialReport:
       "Audit chưa hoàn tất — dừng sớm (timeout hoặc hủy). Chạy lại để quét phần còn lại.",
     cancel: "Hủy audit",
-    auditingInProgress:
-      "Đang audit mới — kết quả cũ vẫn hiển thị cho đến khi có section cập nhật.",
+    auditingInProgress: "Đang audit mới — kết quả cũ vẫn hiển thị cho đến khi có section cập nhật.",
     jumpToIssue: "Tới dòng",
     askArio: "Nhờ Ario",
     claimLabel: "Khẳng định:",
@@ -821,8 +812,7 @@ const VI: EditorCopy = {
       `/logic full · tối đa 20 section · Gemini 3.5 Flash · ${count} phần trong file`,
     hintQuickSelected:
       "Quét nhanh 2–3 phần bằng Gemini 2.5 Flash — ~1–2 phút. Không phụ thuộc provider chat.",
-    hintQuickFull:
-      "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 3.5 Flash — thường ~3–8 phút.",
+    hintQuickFull: "Quét toàn bộ bài (tối đa 20 phần) bằng Gemini 3.5 Flash — thường ~3–8 phút.",
     pickSections: "Chọn phần quét",
     selectAll: "Chọn tất cả",
     imradDefault: "IMRAD mặc định",
@@ -862,16 +852,14 @@ const VI: EditorCopy = {
     totalScore: "Điểm tổng",
     withAgent: "Kết hợp phản biện AI, cấu trúc và trích dẫn.",
     heuristicOnly: "Cấu trúc, trích dẫn và kỹ thuật.",
-    compileErrorBanner:
-      "LaTeX compile lỗi — sửa lỗi trước khi xuất bản để đảm bảo PDF chính xác.",
+    compileErrorBanner: "LaTeX compile lỗi — sửa lỗi trước khi xuất bản để đảm bảo PDF chính xác.",
     reviewSummary: "Tóm tắt phản biện",
     note: "Lưu ý",
     staleWarning: "Không cập nhật phản biện mới:",
     criteria: "Tiêu chí chấm điểm",
     footerLoading:
       "Ario đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
-    footerCompileError:
-      "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
+    footerCompileError: "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
     footerReady: "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit.",
     downloadBtn: "Tải PDF",
     evaluating: "Đang đánh giá…",
@@ -887,8 +875,7 @@ const VI: EditorCopy = {
     gradeFailing: "Chưa đạt",
     gradeEvaluating: "Đang đánh giá…",
     hintLoading: "Ario đang đọc lướt toàn bộ bài…",
-    gatePeerReviewNote:
-      "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
+    gatePeerReviewNote: "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
     retryAudit: "Chạy lại phản biện AI",
     topIssues: "Vấn đề nổi bật",
     templateBanner:
@@ -936,13 +923,11 @@ const VI: EditorCopy = {
     placeholderDefault: "Hỏi Ario… hoặc gõ / để chọn lệnh",
     hintEditScope: "Gợi ý: bôi đen đoạn hoặc nói rõ «sửa Abstract» để chỉnh đúng phần.",
     hintPendingEdits: "Còn diff chờ duyệt — Accept/Reject ở trên, hoặc nhắn chỉnh tiếp.",
-    llmHint:
-      "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
+    llmHint: "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
     closeChat: "Đóng chat",
     collapseChat: "Thu gọn chat",
     resizeChat: "Kéo để đổi chiều cao chat",
-    emptySlashHint: (hints) =>
-      `Chọn provider và model phía dưới. Gõ lệnh nhanh: ${hints}.`,
+    emptySlashHint: (hints) => `Chọn provider và model phía dưới. Gõ lệnh nhanh: ${hints}.`,
     reasoningTitle: "Suy luận",
     expandChat: "Mở rộng chat",
     stopProcessing: "Dừng xử lý",
@@ -950,10 +935,8 @@ const VI: EditorCopy = {
     sendMessage: "Gửi tin nhắn",
   },
   suggestion: {
-    documentMode:
-      "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
-    selectionMode:
-      "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
+    documentMode: "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
+    selectionMode: "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Từ chối",
     accept: "Chấp nhận",
@@ -989,8 +972,7 @@ const VI: EditorCopy = {
     rejectScopeDocument: "toàn bộ bản thảo",
     rejectScopeStyle: "biên tập văn phong",
     rejectScopeAllEdits: "các gợi ý chỉnh sửa",
-    resyncFailed:
-      "Không đồng bộ được bản thảo với server — tải lại dự án và thử lại.",
+    resyncFailed: "Không đồng bộ được bản thảo với server — tải lại dự án và thử lại.",
   },
   errors: {
     saveFailed: "Không lưu được dự án — kiểm tra kết nối và thử lại.",

@@ -160,11 +160,14 @@ const EN: AuthPagesCopy = {
   signup: {
     eyebrowForm: "New Submission",
     titleForm: "Create your account.",
-    ledeForm: "Register once. Carry your manuscripts, marks and reviewer correspondence across every revision.",
+    ledeForm:
+      "Register once. Carry your manuscripts, marks and reviewer correspondence across every revision.",
     eyebrowVerify: "Proof of address",
     titleVerify: "Verify your email.",
-    ledeVerifyDev: (email) => `Development mode — no email is sent to ${email}. Enter the code shown below.`,
-    ledeVerify: (email) => `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`,
+    ledeVerifyDev: (email) =>
+      `Development mode — no email is sent to ${email}. Enter the code shown below.`,
+    ledeVerify: (email) =>
+      `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`,
     verificationCode: "Verification code",
     devNoEmailSent: "Development — no email sent",
     yourCodeIs: "Your verification code is",
@@ -269,11 +272,14 @@ const VI: AuthPagesCopy = {
   signup: {
     eyebrowForm: "Bản thảo mới",
     titleForm: "Tạo tài khoản.",
-    ledeForm: "Đăng ký một lần. Mang theo bản thảo, ghi chú và trao đổi phản biện qua mọi vòng sửa.",
+    ledeForm:
+      "Đăng ký một lần. Mang theo bản thảo, ghi chú và trao đổi phản biện qua mọi vòng sửa.",
     eyebrowVerify: "Xác minh địa chỉ",
     titleVerify: "Xác minh email.",
-    ledeVerifyDev: (email) => `Chế độ dev — không gửi email tới ${email}. Nhập mã hiển thị bên dưới.`,
-    ledeVerify: (email) => `Chúng tôi đã gửi mã 6 chữ số tới ${email}. Nhập mã để hoàn tất tạo tài khoản.`,
+    ledeVerifyDev: (email) =>
+      `Chế độ dev — không gửi email tới ${email}. Nhập mã hiển thị bên dưới.`,
+    ledeVerify: (email) =>
+      `Chúng tôi đã gửi mã 6 chữ số tới ${email}. Nhập mã để hoàn tất tạo tài khoản.`,
     verificationCode: "Mã xác minh",
     devNoEmailSent: "Development — không gửi email",
     yourCodeIs: "Mã xác minh của bạn là",
@@ -328,4 +334,3 @@ const VI: AuthPagesCopy = {
 export function authPagesCopy(lang: UiLanguage): AuthPagesCopy {
   return lang === "vi" ? VI : EN;
 }
-

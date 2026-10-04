@@ -20,11 +20,15 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-screen-xl mx-auto px-4 py-16 lg:py-20">
           <div>
-            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">{content.eyebrow}</p>
+            <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
+              {content.eyebrow}
+            </p>
             <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
               {content.title}
             </h1>
-            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">{content.lede}</p>
+            <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">
+              {content.lede}
+            </p>
           </div>
 
           <div className="mt-12 max-w-3xl space-y-10 border-t border-foreground pt-10">
@@ -34,15 +38,24 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
                   <h2 className="font-serif-display font-bold text-2xl mb-3">{section.heading}</h2>
                 ) : null}
                 {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph} className="font-body text-base leading-relaxed text-muted-foreground mb-3 last:mb-0">
+                  <p
+                    key={paragraph}
+                    className="font-body text-base leading-relaxed text-muted-foreground mb-3 last:mb-0"
+                  >
                     {paragraph}
                   </p>
                 ))}
                 {section.bullets?.length ? (
                   <ul className="mt-4 space-y-3">
                     {section.bullets.map((item) => (
-                      <li key={item} className="flex items-start gap-3 font-body text-base leading-snug">
-                        <Check className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-red)]" strokeWidth={2} />
+                      <li
+                        key={item}
+                        className="flex items-start gap-3 font-body text-base leading-snug"
+                      >
+                        <Check
+                          className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-red)]"
+                          strokeWidth={2}
+                        />
                         {item}
                       </li>
                     ))}

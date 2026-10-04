@@ -121,7 +121,10 @@ function autolinkDefenseTerms(content: string, latexTerms: string[]): string {
     if (!isValidPdfCitationSearch(term) || alreadyLinked(out, term)) continue;
     const re = new RegExp(`(?<!\\[)\\b(${escapeRegExp(term)})\\b(?![^[]*\\]\\()`, "i");
     if (re.test(out)) {
-      out = out.replace(re, (_, hit: string) => `[${hit}](#pdf?search=${encodeURIComponent(term)})`);
+      out = out.replace(
+        re,
+        (_, hit: string) => `[${hit}](#pdf?search=${encodeURIComponent(term)})`,
+      );
     }
   }
 

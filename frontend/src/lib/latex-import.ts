@@ -49,7 +49,10 @@ export function mergeProjectFiles(existing: ProjectFile[], incoming: ProjectFile
   return merged;
 }
 
-export function mergeProjectAssets(existing: ProjectAsset[], incoming: ProjectAsset[]): ProjectAsset[] {
+export function mergeProjectAssets(
+  existing: ProjectAsset[],
+  incoming: ProjectAsset[],
+): ProjectAsset[] {
   const merged = existing.map((asset) => ({ ...asset }));
   for (const asset of incoming) {
     const normalized = normalizeAssetName(asset.name);

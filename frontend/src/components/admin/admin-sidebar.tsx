@@ -62,7 +62,9 @@ export function AdminSidebar({
   const t = adminCopy(locale);
 
   return (
-    <aside className={`admin-sidebar flex h-full w-56 shrink-0 flex-col lg:w-60${className ? ` ${className}` : ""}`}>
+    <aside
+      className={`admin-sidebar flex h-full w-56 shrink-0 flex-col lg:w-60${className ? ` ${className}` : ""}`}
+    >
       <div className="admin-sidebar-topbar flex shrink-0 flex-col justify-center px-4">
         <Link to="/" className="admin-brand">
           Arionear

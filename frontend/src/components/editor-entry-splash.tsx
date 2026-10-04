@@ -13,11 +13,7 @@ export function EditorEntrySplash({ exiting = false, label }: EditorEntrySplashP
   const t = useMemo(() => commonCopy(locale).shell, [locale]);
 
   return (
-    <AppLoadingScreen
-      label={label ?? t.loadingProject}
-      variant="fullscreen"
-      exiting={exiting}
-    />
+    <AppLoadingScreen label={label ?? t.loadingProject} variant="fullscreen" exiting={exiting} />
   );
 }
 

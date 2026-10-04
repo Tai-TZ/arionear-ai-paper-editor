@@ -408,8 +408,10 @@ const EN: AdminCopy = {
     testOk: (ms) => `Connection OK (${ms} ms)`,
     testFail: "Connection failed",
     testError: "Test request failed",
-    testSavedHint: "Test passed — click Save key so chat uses this key (draft-only tests do not apply to the editor).",
-    saveBeforeChat: "Save key before using chat — Test draft only checks the typed key, not the running server config.",
+    testSavedHint:
+      "Test passed — click Save key so chat uses this key (draft-only tests do not apply to the editor).",
+    saveBeforeChat:
+      "Save key before using chat — Test draft only checks the typed key, not the running server config.",
     deleted: "Key removed",
     deleteError: "Could not delete key",
     cleared: "All admin keys cleared for provider",
@@ -651,8 +653,10 @@ const VI: AdminCopy = {
     testOk: (ms) => `Kết nối OK (${ms} ms)`,
     testFail: "Kết nối thất bại",
     testError: "Không gửi được yêu cầu test",
-    testSavedHint: "Test OK — bấm Lưu key để chat dùng key này (test nháp không áp dụng cho editor).",
-    saveBeforeChat: "Cần Lưu key trước khi chat — Test draft chỉ thử key đang gõ, không đổi cấu hình server.",
+    testSavedHint:
+      "Test OK — bấm Lưu key để chat dùng key này (test nháp không áp dụng cho editor).",
+    saveBeforeChat:
+      "Cần Lưu key trước khi chat — Test draft chỉ thử key đang gõ, không đổi cấu hình server.",
     deleted: "Đã xóa key",
     deleteError: "Không xóa được key",
     cleared: "Đã xóa mọi key admin của provider",

@@ -106,7 +106,9 @@ function CapMeter({ pct }: { pct: number }) {
       <div className="admin-cap-meter-track" aria-hidden>
         <div className={`admin-cap-meter-fill is-${tone}`} style={{ width: `${clamped}%` }} />
       </div>
-      <span className={`admin-cap-meter-label${pct >= 100 ? " is-warn" : ""}`}>{pct.toFixed(1)}%</span>
+      <span className={`admin-cap-meter-label${pct >= 100 ? " is-warn" : ""}`}>
+        {pct.toFixed(1)}%
+      </span>
     </div>
   );
 }
@@ -362,12 +364,7 @@ function AdminPage() {
   }
 
   return (
-    <AdminLayout
-      activeTab={tab}
-      onTabChange={setTab}
-      user={sessionUser}
-      onSignOut={handleSignOut}
-    >
+    <AdminLayout activeTab={tab} onTabChange={setTab} user={sessionUser} onSignOut={handleSignOut}>
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="admin-page-header flex shrink-0 items-center justify-between gap-3 px-4 md:px-8">
           <div className="min-w-0">
@@ -376,7 +373,9 @@ function AdminPage() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {defaultsDirty && tab === "llm" ? (
-              <span className="text-xs text-amber-600 dark:text-amber-400">{t.unsavedDefaults}</span>
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                {t.unsavedDefaults}
+              </span>
             ) : null}
             {tab === "llm" ? (
               <button
@@ -385,7 +384,11 @@ function AdminPage() {
                 disabled={!defaultsDirty || savingDefaults}
                 className="admin-primary-btn"
               >
-                {savingDefaults ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {savingDefaults ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
                 {t.saveDefaults}
               </button>
             ) : null}
@@ -441,22 +444,35 @@ function AdminPage() {
 
                 <div className="admin-panel">
                   <div className="admin-panel-head">
-                    <UserPlus className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+                    <UserPlus
+                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      strokeWidth={1.5}
+                    />
                     <h2>{t.overview.newUsersTitle}</h2>
                   </div>
                   <div className="admin-panel-body space-y-4">
                     <div className="admin-overview-metrics">
                       <div className="admin-overview-metric">
-                        <span className="admin-overview-metric-label">{t.overview.newUsersRecent}</span>
-                        <span className="admin-overview-metric-value">{fmtNum(overview.new_users_1d)}</span>
+                        <span className="admin-overview-metric-label">
+                          {t.overview.newUsersRecent}
+                        </span>
+                        <span className="admin-overview-metric-value">
+                          {fmtNum(overview.new_users_1d)}
+                        </span>
                       </div>
                       <div className="admin-overview-metric">
                         <span className="admin-overview-metric-label">{t.overview.newUsers7d}</span>
-                        <span className="admin-overview-metric-value">{fmtNum(overview.new_users_7d)}</span>
+                        <span className="admin-overview-metric-value">
+                          {fmtNum(overview.new_users_7d)}
+                        </span>
                       </div>
                       <div className="admin-overview-metric">
-                        <span className="admin-overview-metric-label">{t.overview.newUsers30d}</span>
-                        <span className="admin-overview-metric-value">{fmtNum(overview.new_users_30d)}</span>
+                        <span className="admin-overview-metric-label">
+                          {t.overview.newUsers30d}
+                        </span>
+                        <span className="admin-overview-metric-value">
+                          {fmtNum(overview.new_users_30d)}
+                        </span>
                       </div>
                     </div>
 
@@ -482,7 +498,9 @@ function AdminPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <span className="admin-badge admin-badge-researcher">{formatRoleLabel(user.role, t)}</span>
+                                  <span className="admin-badge admin-badge-researcher">
+                                    {formatRoleLabel(user.role, t)}
+                                  </span>
                                 </TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
                                   {formatDate(user.created_at, localeTag)}
@@ -499,7 +517,10 @@ function AdminPage() {
                 {llmConfig ? (
                   <div className="admin-panel">
                     <div className="admin-panel-head">
-                      <Brain className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+                      <Brain
+                        className="h-4 w-4 text-[color:var(--editorial-red)]"
+                        strokeWidth={1.5}
+                      />
                       <h2>{t.overview.llmStackTitle}</h2>
                     </div>
                     <div className="admin-panel-body space-y-5">
@@ -510,7 +531,9 @@ function AdminPage() {
                         </div>
                         <div className="admin-kv-item">
                           <span className="admin-field-label">{t.overview.defaultModel}</span>
-                          <span className="admin-field-value font-mono-data text-sm">{llmConfig.default_model}</span>
+                          <span className="admin-field-value font-mono-data text-sm">
+                            {llmConfig.default_model}
+                          </span>
                         </div>
                         <div className="admin-kv-item">
                           <span className="admin-field-label">{t.overview.temperature}</span>
@@ -518,7 +541,9 @@ function AdminPage() {
                         </div>
                         <div className="admin-kv-item">
                           <span className="admin-field-label">{t.overview.integrity}</span>
-                          <span className="admin-field-value">{llmConfig.integrity_strictness}</span>
+                          <span className="admin-field-value">
+                            {llmConfig.integrity_strictness}
+                          </span>
                         </div>
                       </div>
 
@@ -535,7 +560,9 @@ function AdminPage() {
                                 <span
                                   className={`admin-badge${provider.configured ? " admin-badge-active" : " admin-badge-inactive"}`}
                                 >
-                                  {provider.configured ? t.overview.configured : t.overview.notConfigured}
+                                  {provider.configured
+                                    ? t.overview.configured
+                                    : t.overview.notConfigured}
                                 </span>
                               </div>
                               <p className="admin-llm-provider-default font-mono-data text-xs">
@@ -550,10 +577,14 @@ function AdminPage() {
                                       key={model.id}
                                       className={`admin-model-item${isDefault ? " is-default" : ""}`}
                                     >
-                                      <span className="admin-model-id font-mono-data">{model.id}</span>
+                                      <span className="admin-model-id font-mono-data">
+                                        {model.id}
+                                      </span>
                                       <span className="admin-model-label">{model.label}</span>
                                       {isDefault ? (
-                                        <span className="admin-model-default-tag">{t.overview.defaultBadge}</span>
+                                        <span className="admin-model-default-tag">
+                                          {t.overview.defaultBadge}
+                                        </span>
                                       ) : null}
                                     </li>
                                   );
@@ -585,7 +616,9 @@ function AdminPage() {
                       onChange={(e) => setUserSearch(e.target.value)}
                     />
                   </label>
-                  <span className="admin-users-count">{t.users.count(filteredUsers.length, users.length)}</span>
+                  <span className="admin-users-count">
+                    {t.users.count(filteredUsers.length, users.length)}
+                  </span>
                 </div>
 
                 {confirmAction ? (
@@ -646,8 +679,11 @@ function AdminPage() {
                       </TableHeader>
                       <TableBody>
                         {filteredUsers.map((user) => {
-                          const overTokens = (user.usage.today_tokens ?? 0) >= user.llm_limits.daily_token_max;
-                          const overCost = (user.usage.month_cost_usd ?? 0) >= user.llm_limits.monthly_cost_cap_usd;
+                          const overTokens =
+                            (user.usage.today_tokens ?? 0) >= user.llm_limits.daily_token_max;
+                          const overCost =
+                            (user.usage.month_cost_usd ?? 0) >=
+                            user.llm_limits.monthly_cost_cap_usd;
                           const isEditing = editingUserId === user.id;
                           const busy = savingUserId === user.id;
 
@@ -671,28 +707,41 @@ function AdminPage() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="admin-metric-cell">
-                                    <p className={`font-mono-data text-sm font-medium${overTokens ? " text-amber-600 dark:text-amber-400" : ""}`}>
+                                    <p
+                                      className={`font-mono-data text-sm font-medium${overTokens ? " text-amber-600 dark:text-amber-400" : ""}`}
+                                    >
                                       {fmtNum(user.usage.today_tokens ?? 0)}
-                                      <span className="text-[10px] font-normal text-muted-foreground"> tok</span>
+                                      <span className="text-[10px] font-normal text-muted-foreground">
+                                        {" "}
+                                        tok
+                                      </span>
                                     </p>
                                     <p className="admin-metric-cap">
                                       {t.users.dailyCap(fmtNum(user.llm_limits.daily_token_max))}
                                     </p>
                                     {overTokens ? (
-                                      <span className="admin-badge admin-badge-warn mt-1">{t.users.overDaily}</span>
+                                      <span className="admin-badge admin-badge-warn mt-1">
+                                        {t.users.overDaily}
+                                      </span>
                                     ) : null}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="admin-metric-cell">
-                                    <p className={`font-mono-data text-sm font-medium${overCost ? " text-amber-600 dark:text-amber-400" : ""}`}>
+                                    <p
+                                      className={`font-mono-data text-sm font-medium${overCost ? " text-amber-600 dark:text-amber-400" : ""}`}
+                                    >
                                       {fmtUsd(user.usage.month_cost_usd ?? 0)}
                                     </p>
                                     <p className="admin-metric-cap">
-                                      {t.users.monthlyCap(fmtUsd(user.llm_limits.monthly_cost_cap_usd))}
+                                      {t.users.monthlyCap(
+                                        fmtUsd(user.llm_limits.monthly_cost_cap_usd),
+                                      )}
                                     </p>
                                     {overCost ? (
-                                      <span className="admin-badge admin-badge-warn mt-1">{t.users.overMonthly}</span>
+                                      <span className="admin-badge admin-badge-warn mt-1">
+                                        {t.users.overMonthly}
+                                      </span>
                                     ) : null}
                                   </div>
                                 </TableCell>
@@ -743,7 +792,9 @@ function AdminPage() {
                                         </button>
                                       </>
                                     ) : (
-                                      <span className="admin-protected-label">{t.protectedAccount}</span>
+                                      <span className="admin-protected-label">
+                                        {t.protectedAccount}
+                                      </span>
                                     )}
                                   </div>
                                 </TableCell>
@@ -757,7 +808,9 @@ function AdminPage() {
                                       </p>
                                       <div className="admin-limits-grid">
                                         <label className="admin-field">
-                                          <span className="admin-field-label">{t.users.dailyTokenMax}</span>
+                                          <span className="admin-field-label">
+                                            {t.users.dailyTokenMax}
+                                          </span>
                                           <input
                                             type="number"
                                             className="profile-input"
@@ -765,13 +818,20 @@ function AdminPage() {
                                             value={limitsDraft.daily_token_max}
                                             onChange={(e) =>
                                               setLimitsDraft((d) =>
-                                                d ? { ...d, daily_token_max: Number(e.target.value) } : d,
+                                                d
+                                                  ? {
+                                                      ...d,
+                                                      daily_token_max: Number(e.target.value),
+                                                    }
+                                                  : d,
                                               )
                                             }
                                           />
                                         </label>
                                         <label className="admin-field">
-                                          <span className="admin-field-label">{t.users.monthlyCostCap}</span>
+                                          <span className="admin-field-label">
+                                            {t.users.monthlyCostCap}
+                                          </span>
                                           <input
                                             type="number"
                                             className="profile-input"
@@ -780,13 +840,20 @@ function AdminPage() {
                                             value={limitsDraft.monthly_cost_cap_usd}
                                             onChange={(e) =>
                                               setLimitsDraft((d) =>
-                                                d ? { ...d, monthly_cost_cap_usd: Number(e.target.value) } : d,
+                                                d
+                                                  ? {
+                                                      ...d,
+                                                      monthly_cost_cap_usd: Number(e.target.value),
+                                                    }
+                                                  : d,
                                               )
                                             }
                                           />
                                         </label>
                                         <label className="admin-field">
-                                          <span className="admin-field-label">{t.users.rateLimit}</span>
+                                          <span className="admin-field-label">
+                                            {t.users.rateLimit}
+                                          </span>
                                           <input
                                             type="number"
                                             className="profile-input"
@@ -794,17 +861,26 @@ function AdminPage() {
                                             value={limitsDraft.rate_limit_per_min}
                                             onChange={(e) =>
                                               setLimitsDraft((d) =>
-                                                d ? { ...d, rate_limit_per_min: Number(e.target.value) } : d,
+                                                d
+                                                  ? {
+                                                      ...d,
+                                                      rate_limit_per_min: Number(e.target.value),
+                                                    }
+                                                  : d,
                                               )
                                             }
                                           />
                                         </label>
                                         <label className="admin-field admin-field-switch">
-                                          <span className="admin-field-label">{t.users.llmEnabled}</span>
+                                          <span className="admin-field-label">
+                                            {t.users.llmEnabled}
+                                          </span>
                                           <Switch
                                             checked={limitsDraft.llm_enabled}
                                             onCheckedChange={(checked) =>
-                                              setLimitsDraft((d) => (d ? { ...d, llm_enabled: checked } : d))
+                                              setLimitsDraft((d) =>
+                                                d ? { ...d, llm_enabled: checked } : d,
+                                              )
                                             }
                                           />
                                         </label>
@@ -835,8 +911,9 @@ function AdminPage() {
                                         </button>
                                       </div>
                                       <p className="admin-field-hint">
-                                        {t.users.lastActive}: {formatDate(user.last_active_at, localeTag)} · {t.users.joined}:{" "}
-                                        {formatDate(user.created_at, localeTag)}
+                                        {t.users.lastActive}:{" "}
+                                        {formatDate(user.last_active_at, localeTag)} ·{" "}
+                                        {t.users.joined}: {formatDate(user.created_at, localeTag)}
                                       </p>
                                     </div>
                                   </TableCell>
@@ -864,16 +941,24 @@ function AdminPage() {
                     </article>
                     <article className="admin-cost-stat">
                       <p className="admin-cost-stat-label">{t.cost.totalTokens}</p>
-                      <p className="admin-cost-stat-value font-mono-data">{fmtNum(costReport.total_tokens)}</p>
+                      <p className="admin-cost-stat-value font-mono-data">
+                        {fmtNum(costReport.total_tokens)}
+                      </p>
                     </article>
                     <article className="admin-cost-stat">
                       <p className="admin-cost-stat-label">{t.cost.activeUsers}</p>
-                      <p className="admin-cost-stat-value">{fmtNum(costReport.active_users_with_usage)}</p>
-                      <p className="admin-cost-stat-hint">{t.cost.usersWithUsage(costReport.active_users_with_usage)}</p>
+                      <p className="admin-cost-stat-value">
+                        {fmtNum(costReport.active_users_with_usage)}
+                      </p>
+                      <p className="admin-cost-stat-hint">
+                        {t.cost.usersWithUsage(costReport.active_users_with_usage)}
+                      </p>
                     </article>
                     <article className="admin-cost-stat">
                       <p className="admin-cost-stat-label">{t.cost.rateLabel}</p>
-                      <p className="admin-cost-stat-value font-mono-data">${costReport.rate_per_1k_tokens_usd}/1k</p>
+                      <p className="admin-cost-stat-value font-mono-data">
+                        ${costReport.rate_per_1k_tokens_usd}/1k
+                      </p>
                     </article>
                   </div>
                 ) : null}
@@ -939,7 +1024,9 @@ function AdminPage() {
                               <TableCell className="text-right font-mono-data text-sm">
                                 {fmtNum(row.tokens)}
                               </TableCell>
-                              <TableCell className="text-right font-medium">{fmtUsd(row.estimated_cost_usd)}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {fmtUsd(row.estimated_cost_usd)}
+                              </TableCell>
                               <TableCell className="text-right text-muted-foreground">
                                 {fmtUsd(row.monthly_cost_cap_usd)}
                               </TableCell>
@@ -966,7 +1053,10 @@ function AdminPage() {
 
                 <div className="admin-panel">
                   <div className="admin-panel-head">
-                    <Brain className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+                    <Brain
+                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      strokeWidth={1.5}
+                    />
                     <h2>{t.llm.providerStatusTitle}</h2>
                   </div>
                   <div className="admin-provider-list">
@@ -980,7 +1070,9 @@ function AdminPage() {
                             {p.configured ? t.llm.configured : t.llm.missingKey}
                           </span>
                         </div>
-                        <p className="mt-1 font-mono-data text-[11px] text-muted-foreground">{p.default_model}</p>
+                        <p className="mt-1 font-mono-data text-[11px] text-muted-foreground">
+                          {p.default_model}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -988,7 +1080,10 @@ function AdminPage() {
 
                 <div className="admin-panel">
                   <div className="admin-panel-head">
-                    <Gauge className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+                    <Gauge
+                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      strokeWidth={1.5}
+                    />
                     <h2>{t.llm.globalDefaultsTitle}</h2>
                   </div>
                   <div className="admin-panel-body admin-limits-grid">

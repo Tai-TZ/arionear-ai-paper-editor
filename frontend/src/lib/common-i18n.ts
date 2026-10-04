@@ -258,7 +258,8 @@ const VI: CommonCopy = {
       eyebrow: "Không tìm thấy",
       title: "Trang này không có trong mục lục.",
       body: "Địa chỉ có thể sai, hết hạn, hoặc trang đã được chuyển đi. Quay lại bàn biên tập và tiếp tục từ đó.",
-      asideQuote: "“Không phải bản thảo nào cũng nằm đúng ngăn — nhưng bài tốt luôn tìm được lối ra.”",
+      asideQuote:
+        "“Không phải bản thảo nào cũng nằm đúng ngăn — nhưng bài tốt luôn tìm được lối ra.”",
       asideFooter: "Tập I · Số 01 · Đính chính",
       home: "Về trang chủ",
       projects: "Mở dự án",

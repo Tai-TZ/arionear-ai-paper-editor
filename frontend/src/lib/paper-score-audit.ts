@@ -71,7 +71,9 @@ export function formatPaperScoreGateError(raw: string, locale: "en" | "vi" = "vi
       ? "API rate limit — wait a few seconds and try again."
       : "Vượt giới hạn API — đợi vài giây rồi mở lại dialog.";
   }
-  return raw || (locale === "en" ? "Could not run AI peer review." : "Không thể chạy phản biện AI.");
+  return (
+    raw || (locale === "en" ? "Could not run AI peer review." : "Không thể chạy phản biện AI.")
+  );
 }
 
 // ---------------------------------------------------------------------------

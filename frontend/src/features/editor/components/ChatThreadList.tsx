@@ -147,7 +147,12 @@ export function ChatThreadList({
         </div>
       </div>
 
-      <Dialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+      <Dialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
+      >
         <DialogContent className="max-w-sm p-5">
           <DialogHeader>
             <DialogTitle className="text-[15px]">{t.sidebar.deleteChat}</DialogTitle>
@@ -155,7 +160,10 @@ export function ChatThreadList({
           <p className="text-[13px] text-muted-foreground leading-relaxed">
             {t.sidebar.deleteChatConfirm}
             {deleteTargetTitle ? (
-              <> — <span className="font-medium text-foreground">"{deleteTargetTitle}"</span></>
+              <>
+                {" "}
+                — <span className="font-medium text-foreground">"{deleteTargetTitle}"</span>
+              </>
             ) : null}
           </p>
           <DialogFooter className="mt-1 gap-2">

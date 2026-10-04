@@ -1,12 +1,7 @@
 import { AlertTriangle, Download } from "lucide-react";
 import { useMemo } from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/components/locale-provider";
 import { PaperScoreAuditAnimation } from "@/components/editor/paper-score-audit-animation";
 import { useAnimatedNumber } from "@/hooks/use-animated-score";
@@ -218,9 +213,7 @@ export function PaperScoreDownloadDialog({
   const gateStaleWarning =
     auditError && scoreResult.agentScored && !auditLoading ? auditError : null;
   const summaryText =
-    auditError && !scoreResult.agentScored && !auditLoading
-      ? null
-      : scoreResult.auditSummary;
+    auditError && !scoreResult.agentScored && !auditLoading ? null : scoreResult.auditSummary;
 
   const citationsUnverified = !citationResults?.length;
 
@@ -229,8 +222,7 @@ export function PaperScoreDownloadDialog({
     return extractPeerReviewItems(logicAuditReport)
       .filter((item) => item.severity === "critical" || item.severity === "warning")
       .sort(
-        (a, b) =>
-          (ISSUE_SEVERITY_ORDER[a.severity] ?? 9) - (ISSUE_SEVERITY_ORDER[b.severity] ?? 9),
+        (a, b) => (ISSUE_SEVERITY_ORDER[a.severity] ?? 9) - (ISSUE_SEVERITY_ORDER[b.severity] ?? 9),
       )
       .slice(0, 3);
   }, [logicAuditReport, auditLoading]);
@@ -273,10 +265,14 @@ export function PaperScoreDownloadDialog({
 
         {auditError ? (
           <div className="shrink-0 flex items-start gap-2.5 border-b border-[color:var(--editorial-amber,#b45309)]/30 bg-[color:var(--editorial-amber,#b45309)]/8 px-6 py-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]" aria-hidden />
+            <AlertTriangle
+              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
+              aria-hidden
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                <span className="font-semibold">{t.errorTitle}: </span>{auditError}
+                <span className="font-semibold">{t.errorTitle}: </span>
+                {auditError}
               </p>
               {!auditLoading && onRetryAudit ? (
                 <button
@@ -310,86 +306,89 @@ export function PaperScoreDownloadDialog({
           </aside>
 
           <main className="paper-score-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              {scoreResult.isPlaceholderTemplate && !auditLoading ? (
-                <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-amber,#b45309)]/35 bg-[color:var(--editorial-amber,#b45309)]/8 px-4 py-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]" aria-hidden />
-                  <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                    {t.templateBanner}
-                  </p>
-                </div>
-              ) : null}
-
-              {summaryText && !auditLoading ? (
-                <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
-                  <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {auditError && !scoreResult.agentScored ? t.note : t.reviewSummary}
-                  </p>
-                  <p
-                    className={`mt-1.5 text-sm leading-relaxed ${
-                      auditError && !scoreResult.agentScored
-                        ? "text-[color:var(--editorial-amber,#b45309)]"
-                        : "text-foreground/85"
-                    }`}
-                  >
-                    {summaryText}
-                  </p>
-                  {gateStaleWarning ? (
-                    <p className="mt-2 text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                      {t.staleWarning} {gateStaleWarning}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {topIssues.length > 0 ? (
-                <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
-                  <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {t.topIssues}
-                  </p>
-                  <ul className="mt-2 space-y-2">
-                    {topIssues.map((issue) => (
-                      <li key={issue.id} className="text-xs leading-relaxed text-foreground/85">
-                        <span
-                          className={`mr-1.5 font-semibold uppercase ${
-                            issue.severity === "critical"
-                              ? "text-[color:var(--editorial-red,#b91c1c)]"
-                              : "text-[color:var(--editorial-amber,#b45309)]"
-                          }`}
-                        >
-                          {issue.section}
-                        </span>
-                        {issue.comment}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {t.criteria}
-              </p>
-              <div className="grid grid-cols-1 gap-px overflow-hidden rounded border border-border/70 bg-border/70 sm:grid-cols-2">
-                {scoreResult.dimensions.map((dim, index) => (
-                  <DimensionCard
-                    key={dim.id}
-                    dim={dim}
-                    animate={open}
-                    index={index}
-                    pending={auditLoading && dim.id === "logic"}
-                    actionLabel={
-                      dim.id === "citations" && citationsUnverified && onOpenCitationsTab
-                        ? t.openCitations
-                        : undefined
-                    }
-                    onAction={
-                      dim.id === "citations" && citationsUnverified && onOpenCitationsTab
-                        ? handleOpenCitations
-                        : undefined
-                    }
-                  />
-                ))}
+            {scoreResult.isPlaceholderTemplate && !auditLoading ? (
+              <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-amber,#b45309)]/35 bg-[color:var(--editorial-amber,#b45309)]/8 px-4 py-3">
+                <AlertTriangle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
+                  aria-hidden
+                />
+                <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+                  {t.templateBanner}
+                </p>
               </div>
-            </main>
+            ) : null}
+
+            {summaryText && !auditLoading ? (
+              <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
+                <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {auditError && !scoreResult.agentScored ? t.note : t.reviewSummary}
+                </p>
+                <p
+                  className={`mt-1.5 text-sm leading-relaxed ${
+                    auditError && !scoreResult.agentScored
+                      ? "text-[color:var(--editorial-amber,#b45309)]"
+                      : "text-foreground/85"
+                  }`}
+                >
+                  {summaryText}
+                </p>
+                {gateStaleWarning ? (
+                  <p className="mt-2 text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+                    {t.staleWarning} {gateStaleWarning}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {topIssues.length > 0 ? (
+              <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
+                <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {t.topIssues}
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {topIssues.map((issue) => (
+                    <li key={issue.id} className="text-xs leading-relaxed text-foreground/85">
+                      <span
+                        className={`mr-1.5 font-semibold uppercase ${
+                          issue.severity === "critical"
+                            ? "text-[color:var(--editorial-red,#b91c1c)]"
+                            : "text-[color:var(--editorial-amber,#b45309)]"
+                        }`}
+                      >
+                        {issue.section}
+                      </span>
+                      {issue.comment}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {t.criteria}
+            </p>
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded border border-border/70 bg-border/70 sm:grid-cols-2">
+              {scoreResult.dimensions.map((dim, index) => (
+                <DimensionCard
+                  key={dim.id}
+                  dim={dim}
+                  animate={open}
+                  index={index}
+                  pending={auditLoading && dim.id === "logic"}
+                  actionLabel={
+                    dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                      ? t.openCitations
+                      : undefined
+                  }
+                  onAction={
+                    dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                      ? handleOpenCitations
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          </main>
         </div>
 
         <div className="shrink-0 border-t border-border/70 bg-muted/20 px-6 py-4">

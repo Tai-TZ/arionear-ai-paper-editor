@@ -92,7 +92,9 @@ export async function fetchTemplatePdfBytes(id: string): Promise<Uint8Array> {
   return new Uint8Array(buf);
 }
 
-export async function openTemplateAsProject(templateId: string): Promise<{ paper_id: string; name: string }> {
+export async function openTemplateAsProject(
+  templateId: string,
+): Promise<{ paper_id: string; name: string }> {
   const res = await fetch(`${API_BASE}/templates/${encodeURIComponent(templateId)}/open`, {
     method: "POST",
     headers: { ...authHeaders() },
@@ -103,7 +105,9 @@ export async function openTemplateAsProject(templateId: string): Promise<{ paper
   return { paper_id: body.paper_id, name: body.name };
 }
 
-export async function adminCreateTemplate(payload: TemplateFormPayload): Promise<PaperTemplateDetail> {
+export async function adminCreateTemplate(
+  payload: TemplateFormPayload,
+): Promise<PaperTemplateDetail> {
   const res = await fetch(`${API_BASE}/templates`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -137,7 +141,10 @@ export async function adminDeleteTemplate(id: string): Promise<void> {
   if (!res.ok) throw new Error(await mapApiHttpErrorFromResponse(res));
 }
 
-export async function adminUploadTemplatePreview(id: string, file: File): Promise<PaperTemplateDetail> {
+export async function adminUploadTemplatePreview(
+  id: string,
+  file: File,
+): Promise<PaperTemplateDetail> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch(`${API_BASE}/templates/${encodeURIComponent(id)}/preview`, {

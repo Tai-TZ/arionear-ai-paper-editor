@@ -10,11 +10,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from "pdfjs-dist";
-import {
-  fetchCompileStatus,
-  lookupSynctexInverse,
-  type LatexCompiler,
-} from "@/lib/api/academic";
+import { fetchCompileStatus, lookupSynctexInverse, type LatexCompiler } from "@/lib/api/academic";
 import { CompileLogPanel } from "@/components/compile-log-panel";
 import {
   computeFitScale,
@@ -34,7 +30,11 @@ import { capturePdfClickWord } from "@/lib/synctex-highlight";
 import { useLocale } from "@/components/locale-provider";
 import { editorCopy } from "@/lib/editor-i18n";
 import type { DefensePdfCitationFocus } from "@/lib/defense-pdf-links";
-import { clearPdfHighlights, highlightPdfTextLayer, highlightPdfTextLayerOccurrence } from "@/lib/pdf-text-highlight";
+import {
+  clearPdfHighlights,
+  highlightPdfTextLayer,
+  highlightPdfTextLayerOccurrence,
+} from "@/lib/pdf-text-highlight";
 
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
 type ZoomPreset = (typeof ZOOM_PRESETS)[number] | "fit";
@@ -111,13 +111,7 @@ function PdfPageView({
   scale: number;
   linkService: PdfLinkService;
   onVisible: (pageNumber: number) => void;
-  onPageClick?: (
-    pageNumber: number,
-    x: number,
-    y: number,
-    word?: string,
-    context?: string,
-  ) => void;
+  onPageClick?: (pageNumber: number, x: number, y: number, word?: string, context?: string) => void;
   onPageNotReady?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -249,11 +243,7 @@ function PdfPageView({
     >
       <div
         className="pdf-preview-page-inner"
-        style={
-          dimensions
-            ? { width: dimensions.width, height: dimensions.height }
-            : undefined
-        }
+        style={dimensions ? { width: dimensions.width, height: dimensions.height } : undefined}
       >
         <canvas ref={canvasRef} className="pdf-preview-canvas" />
         <div ref={textLayerRef} className="textLayer pdf-preview-text-layer" />
@@ -452,9 +442,7 @@ export function PdfPreviewPanel({
 
       for (let attempt = 0; attempt < 24; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 80));
-        const layer = viewport.querySelector(
-          `[data-page="${match.page}"] .pdf-preview-text-layer`,
-        );
+        const layer = viewport.querySelector(`[data-page="${match.page}"] .pdf-preview-text-layer`);
         if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
 
         clearPdfHighlights(viewport);
@@ -525,8 +513,7 @@ export function PdfPreviewPanel({
 
   const handleSearchPrev = () => {
     if (!searchMatches.length || !searchQuery.trim()) return;
-    const prev =
-      activeMatchIndex <= 0 ? searchMatches.length - 1 : activeMatchIndex - 1;
+    const prev = activeMatchIndex <= 0 ? searchMatches.length - 1 : activeMatchIndex - 1;
     void goToMatch(prev, searchMatches, searchQuery);
   };
 
@@ -556,10 +543,7 @@ export function PdfPreviewPanel({
     const viewport = viewportRef.current;
     if (!citationFocus || !pdf || !viewport) return;
 
-    const queries = [
-      citationFocus.search,
-      ...(citationFocus.searchCandidates ?? []),
-    ]
+    const queries = [citationFocus.search, ...(citationFocus.searchCandidates ?? [])]
       .map((q) => q.trim())
       .filter((q, i, arr) => q.length > 0 && arr.indexOf(q) === i);
     if (!queries.length) return;
@@ -596,12 +580,9 @@ export function PdfPreviewPanel({
       for (let attempt = 0; attempt < 20; attempt += 1) {
         if (cancelled) return;
         await new Promise((resolve) => setTimeout(resolve, 80));
-        const layer = viewport.querySelector(
-          `[data-page="${page}"] .pdf-preview-text-layer`,
-        );
+        const layer = viewport.querySelector(`[data-page="${page}"] .pdf-preview-text-layer`);
         if (!(layer instanceof HTMLElement) || !layer.querySelector("span")) continue;
-        const highlightQueries =
-          page === citationFocus.page ? queries : [matchedQuery, ...queries];
+        const highlightQueries = page === citationFocus.page ? queries : [matchedQuery, ...queries];
         for (const query of highlightQueries) {
           const mark = highlightPdfTextLayer(layer, query);
           if (mark) {
@@ -679,7 +660,16 @@ export function PdfPreviewPanel({
         synctexBusyRef.current = false;
       }
     },
-    [synctexBase64, pdfBase64, mainFile, latexSource, onSynctexHit, lookupSynctex, flashSynctexHint, compileCacheId],
+    [
+      synctexBase64,
+      pdfBase64,
+      mainFile,
+      latexSource,
+      onSynctexHit,
+      lookupSynctex,
+      flashSynctexHint,
+      compileCacheId,
+    ],
   );
 
   const handlePageNotReady = useCallback(() => {
@@ -709,156 +699,160 @@ export function PdfPreviewPanel({
       <header className="pdf-preview-toolbar-top editor-toolbar-scroll h-11 shrink-0 px-3 md:px-4">
         <div className="flex h-full w-max min-w-full items-center justify-between gap-3">
           <div className="flex shrink-0 items-center gap-2.5">
-          {readOnly ? (
-            <span className="pdf-preview-toolbar-muted inline-flex items-center gap-2 whitespace-nowrap font-mono text-[11px]">
-              {isCompiling ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                  {t.pdf.compiling}
-                </span>
-              ) : numPages > 0 ? (
-                t.pdf.pagesOf(currentPage, numPages)
-              ) : (
-                t.pdf.noPdfYet
-              )}
-              {compileError && (
+            {readOnly ? (
+              <span className="pdf-preview-toolbar-muted inline-flex items-center gap-2 whitespace-nowrap font-mono text-[11px]">
+                {isCompiling ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
+                    {t.pdf.compiling}
+                  </span>
+                ) : numPages > 0 ? (
+                  t.pdf.pagesOf(currentPage, numPages)
+                ) : (
+                  t.pdf.noPdfYet
+                )}
+                {compileError && (
+                  <button
+                    type="button"
+                    onClick={onCompile}
+                    disabled={isCompiling}
+                    className="pdf-preview-compile-btn inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-semibold text-white transition disabled:opacity-60"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
+                    {t.pdf.compile}
+                  </button>
+                )}
+              </span>
+            ) : (
+              <>
                 <button
                   type="button"
                   onClick={onCompile}
                   disabled={isCompiling}
-                  className="pdf-preview-compile-btn inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-semibold text-white transition disabled:opacity-60"
+                  className="pdf-preview-compile-btn inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
                 >
-                  <RefreshCw className={`h-3 w-3 ${isCompiling ? "animate-spin" : ""}`} />
-                  {t.pdf.compile}
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 shrink-0 ${isCompiling ? "animate-spin" : ""}`}
+                  />
+                  {isCompiling ? t.pdf.compiling : t.pdf.compile}
                 </button>
-              )}
-            </span>
-          ) : (
-            <>
+                <span className="pdf-preview-toolbar-muted whitespace-nowrap font-mono text-[11px]">
+                  {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
+                </span>
+                {onCompilerChange && (
+                  <select
+                    value={compiler}
+                    onChange={(e) => onCompilerChange(e.target.value as LatexCompiler)}
+                    className="pdf-preview-toolbar-select shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
+                    title="LaTeX compiler (Overleaf-style)"
+                  >
+                    {availableCompilerOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!readOnly && compileLog && !searchOpen && (
               <button
                 type="button"
-                onClick={onCompile}
-                disabled={isCompiling}
-                className="pdf-preview-compile-btn inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-60"
+                onClick={() => setLogOpen((v) => !v)}
+                className="pdf-preview-toolbar-btn rounded px-2 py-1 font-mono text-[10px]"
               >
-                <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${isCompiling ? "animate-spin" : ""}`} />
-                {isCompiling ? t.pdf.compiling : t.pdf.compile}
+                {t.pdf.log}
               </button>
-              <span className="pdf-preview-toolbar-muted whitespace-nowrap font-mono text-[11px]">
-                {numPages > 0 ? t.pdf.pagesOf(currentPage, numPages) : t.pdf.noPdfYet}
-              </span>
-              {onCompilerChange && (
-                <select
-                  value={compiler}
-                  onChange={(e) => onCompilerChange(e.target.value as LatexCompiler)}
-                  className="pdf-preview-toolbar-select shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none"
-                  title="LaTeX compiler (Overleaf-style)"
-                >
-                  {availableCompilerOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          {!readOnly && compileLog && !searchOpen && (
-            <button
-              type="button"
-              onClick={() => setLogOpen((v) => !v)}
-              className="pdf-preview-toolbar-btn rounded px-2 py-1 font-mono text-[10px]"
-            >
-              {t.pdf.log}
-            </button>
-          )}
-          {!readOnly && searchOpen ? (
-            <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-0.5 rounded px-1.5 py-0.5">
-              <input
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (searchMatches.length) {
-                      if (e.shiftKey) handleSearchPrev();
-                      else handleSearchNext();
-                    } else {
-                      void runSearch(searchQuery, 0);
+            )}
+            {!readOnly && searchOpen ? (
+              <div className="pdf-preview-toolbar-search mr-1 flex items-center gap-0.5 rounded px-1.5 py-0.5">
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (searchMatches.length) {
+                        if (e.shiftKey) handleSearchPrev();
+                        else handleSearchNext();
+                      } else {
+                        void runSearch(searchQuery, 0);
+                      }
                     }
-                  }
-                  if (e.key === "Escape") closeSearch();
-                }}
-                placeholder={t.pdf.findInPdf}
-                className="w-28 bg-transparent text-[11px] outline-none md:w-36"
-                aria-label={t.pdf.findInPdf}
-              />
-              {searchMatches.length > 0 ? (
-                <span className="pdf-preview-toolbar-muted shrink-0 font-mono text-[10px]">
-                  {t.pdf.searchMatchOf(activeMatchIndex + 1, searchMatches.length)}
-                </span>
-              ) : searchQuery.trim() && searchStatus ? (
-                <span className="pdf-preview-toolbar-muted shrink-0 text-[10px]">
-                  {searchStatus}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                title={t.pdf.searchPrev}
-                onClick={handleSearchPrev}
-                disabled={!searchMatches.length || isSearching}
-                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                title={t.pdf.searchNext}
-                onClick={handleSearchNext}
-                disabled={!searchMatches.length || isSearching}
-                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                onClick={closeSearch}
-                className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded"
-                aria-label={t.tools.close}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ) : !readOnly ? (
-            <IconBtn title={t.pdf.search} onClick={() => setSearchOpen(true)} disabled={!pdf}>
-              <Search className="pdf-preview-toolbar-muted h-3.5 w-3.5" />
-            </IconBtn>
-          ) : null}
+                    if (e.key === "Escape") closeSearch();
+                  }}
+                  placeholder={t.pdf.findInPdf}
+                  className="w-28 bg-transparent text-[11px] outline-none md:w-36"
+                  aria-label={t.pdf.findInPdf}
+                />
+                {searchMatches.length > 0 ? (
+                  <span className="pdf-preview-toolbar-muted shrink-0 font-mono text-[10px]">
+                    {t.pdf.searchMatchOf(activeMatchIndex + 1, searchMatches.length)}
+                  </span>
+                ) : searchQuery.trim() && searchStatus ? (
+                  <span className="pdf-preview-toolbar-muted shrink-0 text-[10px]">
+                    {searchStatus}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  title={t.pdf.searchPrev}
+                  onClick={handleSearchPrev}
+                  disabled={!searchMatches.length || isSearching}
+                  className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  title={t.pdf.searchNext}
+                  onClick={handleSearchNext}
+                  disabled={!searchMatches.length || isSearching}
+                  className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded disabled:opacity-40"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={closeSearch}
+                  className="pdf-preview-toolbar-muted inline-flex h-5 w-5 items-center justify-center rounded"
+                  aria-label={t.tools.close}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : !readOnly ? (
+              <IconBtn title={t.pdf.search} onClick={() => setSearchOpen(true)} disabled={!pdf}>
+                <Search className="pdf-preview-toolbar-muted h-3.5 w-3.5" />
+              </IconBtn>
+            ) : null}
 
-          {readOnly ? (
-            <span className="pdf-preview-toolbar-muted font-mono text-[11px]">{displayZoom}%</span>
-          ) : !searchOpen ? (
-            <select
-              value={zoomMode === "fit" ? 100 : zoomMode}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
-              }}
-              className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
-            >
-              <option value={100}>{t.pdf.fit}</option>
-              {ZOOM_PRESETS.map((preset) => (
-                <option key={preset} value={preset}>
-                  {preset}%
-                </option>
-              ))}
-            </select>
-          ) : null}
-        </div>
+            {readOnly ? (
+              <span className="pdf-preview-toolbar-muted font-mono text-[11px]">
+                {displayZoom}%
+              </span>
+            ) : !searchOpen ? (
+              <select
+                value={zoomMode === "fit" ? 100 : zoomMode}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setZoomMode(value === 100 ? "fit" : (value as ZoomPreset));
+                }}
+                className="pdf-preview-toolbar-btn pdf-preview-toolbar-select rounded px-1 py-1 font-mono text-[11px] outline-none"
+              >
+                <option value={100}>{t.pdf.fit}</option>
+                {ZOOM_PRESETS.map((preset) => (
+                  <option key={preset} value={preset}>
+                    {preset}%
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -873,9 +867,10 @@ export function PdfPreviewPanel({
             </p>
             {engineReady === false && !compileError && (
               <p className="mt-3 max-w-md text-xs text-amber-800">
-                Chưa phát hiện <code className="rounded bg-amber-100 px-1">pdflatex</code>. Cài MiKTeX:{" "}
-                <code className="rounded bg-amber-100 px-1">winget install MiKTeX.MiKTeX</code>
-                {" "}rồi restart backend.
+                Chưa phát hiện <code className="rounded bg-amber-100 px-1">pdflatex</code>. Cài
+                MiKTeX:{" "}
+                <code className="rounded bg-amber-100 px-1">winget install MiKTeX.MiKTeX</code> rồi
+                restart backend.
               </p>
             )}
             {engineReady === null && !compileError && (
@@ -944,20 +939,30 @@ export function PdfPreviewPanel({
 
       <footer className="pdf-preview-toolbar-bottom pointer-events-none absolute bottom-3 left-0 right-0 z-10 flex justify-center">
         <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-black/10 bg-[#1C1C1E]/80 px-1.5 py-1 backdrop-blur-md">
-          <IconBtn title="Previous page" onClick={handlePrevPage} disabled={!pdf || currentPage <= 1}>
+          <IconBtn
+            title="Previous page"
+            onClick={handlePrevPage}
+            disabled={!pdf || currentPage <= 1}
+          >
             <ChevronLeft className="h-4 w-4 text-white/90" />
           </IconBtn>
           <span className="min-w-[4rem] text-center font-mono text-[11px] text-white/80">
             {numPages > 0 ? `${currentPage} / ${numPages}` : "— / —"}
           </span>
-          <IconBtn title="Next page" onClick={handleNextPage} disabled={!pdf || currentPage >= numPages}>
+          <IconBtn
+            title="Next page"
+            onClick={handleNextPage}
+            disabled={!pdf || currentPage >= numPages}
+          >
             <ChevronRight className="h-4 w-4 text-white/90" />
           </IconBtn>
           <div className="mx-1 h-3.5 w-px bg-white/20" />
           <IconBtn title="Zoom out" onClick={handleZoomOut} disabled={!pdf}>
             <ZoomOut className="h-3.5 w-3.5 text-white/90" />
           </IconBtn>
-          <span className="min-w-[2.25rem] text-center font-mono text-[10px] text-white/70">{displayZoom}%</span>
+          <span className="min-w-[2.25rem] text-center font-mono text-[10px] text-white/70">
+            {displayZoom}%
+          </span>
           <IconBtn title="Zoom in" onClick={handleZoomIn} disabled={!pdf}>
             <ZoomIn className="h-3.5 w-3.5 text-white/90" />
           </IconBtn>

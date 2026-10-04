@@ -116,7 +116,9 @@ export function LlmSelector({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="llm-selector-menu w-52">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Provider</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Provider
+            </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={llmProvider}
               onValueChange={(v) => onProviderChange(v as LLMProvider)}
@@ -155,7 +157,10 @@ export function LlmSelector({
               <ChevronDown className="llm-selector-chevron" aria-hidden />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="llm-selector-menu w-72 max-h-80 overflow-y-auto">
+          <DropdownMenuContent
+            align="start"
+            className="llm-selector-menu w-72 max-h-80 overflow-y-auto"
+          >
             <DropdownMenuLabel className="text-xs text-muted-foreground">Model</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={llmModel} onValueChange={onModelChange}>
               {models.map((m) => {

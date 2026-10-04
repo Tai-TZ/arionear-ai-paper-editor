@@ -18,11 +18,7 @@ export function invalidateFetchPrefix(prefix: string) {
 }
 
 /** Deduplicate concurrent identical requests and optionally cache briefly. */
-export function fetchDedupe<T>(
-  key: string,
-  fn: () => Promise<T>,
-  ttlMs = 0,
-): Promise<T> {
+export function fetchDedupe<T>(key: string, fn: () => Promise<T>, ttlMs = 0): Promise<T> {
   if (ttlMs > 0) {
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < ttlMs) {

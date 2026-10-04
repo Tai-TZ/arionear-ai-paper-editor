@@ -14,8 +14,7 @@ export const Route = createFileRoute("/pricing")({
       { title: "Pricing — Arionear" },
       {
         name: "description",
-        content:
-          "Choose Free or Pro to unlock more Defense Rehearsal turns and advanced features.",
+        content: "Choose Free or Pro to unlock more Defense Rehearsal turns and advanced features.",
       },
     ],
   }),
@@ -26,14 +25,16 @@ const pageCopy = {
   vi: {
     lede: (
       <>
-        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm
-        &nbsp;<strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
+        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm &nbsp;
+        <strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
       </>
     ),
     signupLink: "Đăng ký miễn phí",
     loginLink: "đăng nhập",
     authNote: (signup: React.ReactNode, login: React.ReactNode) => (
-      <>{signup}&nbsp;hoặc&nbsp;{login}&nbsp;để quản lý gói dịch vụ.</>
+      <>
+        {signup}&nbsp;hoặc&nbsp;{login}&nbsp;để quản lý gói dịch vụ.
+      </>
     ),
   },
   en: {
@@ -46,7 +47,9 @@ const pageCopy = {
     signupLink: "Sign up for free",
     loginLink: "sign in",
     authNote: (signup: React.ReactNode, login: React.ReactNode) => (
-      <>{signup}&nbsp;or&nbsp;{login}&nbsp;to manage your plan.</>
+      <>
+        {signup}&nbsp;or&nbsp;{login}&nbsp;to manage your plan.
+      </>
     ),
   },
 };

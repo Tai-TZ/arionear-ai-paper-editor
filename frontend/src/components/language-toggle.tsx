@@ -30,9 +30,7 @@ export function LanguageToggle({
             aria-pressed={active}
             onClick={() => setLocale(id)}
             className={`language-toggle-option font-sans-ui uppercase tracking-widest transition-colors ${
-              active
-                ? "bg-foreground text-background"
-                : "hover:bg-foreground/10"
+              active ? "bg-foreground text-background" : "hover:bg-foreground/10"
             } ${compact ? "px-2 py-2 text-[10px] min-h-[40px]" : "px-3 py-2 text-[11px] min-h-[40px]"}`}
             title={id === "en" ? "English" : "Tiếng Việt"}
           >

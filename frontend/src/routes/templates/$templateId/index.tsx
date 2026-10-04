@@ -61,8 +61,12 @@ function TemplateDetailPage() {
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { open: formatNoticeOpen, runWithNotice, confirm: confirmFormatNotice, dismiss: dismissFormatNotice } =
-    useProjectFormatNotice();
+  const {
+    open: formatNoticeOpen,
+    runWithNotice,
+    confirm: confirmFormatNotice,
+    dismiss: dismissFormatNotice,
+  } = useProjectFormatNotice();
 
   const openProject = useCallback(async () => {
     setOpening(true);
@@ -119,7 +123,9 @@ function TemplateDetailPage() {
     return (
       <TemplateDetailFrame>
         <TemplateBackLink to="/templates" label={t.backToGallery} />
-        <p className="template-gallery-state template-gallery-state-error">{error ?? "Not found"}</p>
+        <p className="template-gallery-state template-gallery-state-error">
+          {error ?? "Not found"}
+        </p>
       </TemplateDetailFrame>
     );
   }
@@ -136,62 +142,73 @@ function TemplateDetailPage() {
         <TemplateBackLink to="/templates" label={t.backToGallery} />
 
         <div className="template-detail-grid">
-        <div>
-          <h1 className="template-detail-title">
-            {title}
-            {item.is_official ? <TemplateOfficialBadge label={t.official} /> : null}
-          </h1>
+          <div>
+            <h1 className="template-detail-title">
+              {title}
+              {item.is_official ? <TemplateOfficialBadge label={t.official} /> : null}
+            </h1>
 
-          <div className="template-detail-actions">
-            <button type="button" onClick={onOpen} disabled={opening} className="template-detail-primary-btn">
-              {opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-              {opening ? t.opening : t.openAsTemplate}
-            </button>
-            {item.has_pdf ? (
-              <Link
-                to="/templates/$templateId/pdf"
-                params={{ templateId }}
-                className="template-detail-secondary-btn"
+            <div className="template-detail-actions">
+              <button
+                type="button"
+                onClick={onOpen}
+                disabled={opening}
+                className="template-detail-primary-btn"
               >
-                {t.viewPdf}
-              </Link>
-            ) : null}
+                {opening ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                {opening ? t.opening : t.openAsTemplate}
+              </button>
+              {item.has_pdf ? (
+                <Link
+                  to="/templates/$templateId/pdf"
+                  params={{ templateId }}
+                  className="template-detail-secondary-btn"
+                >
+                  {t.viewPdf}
+                </Link>
+              ) : null}
+            </div>
+
+            <dl className="template-detail-meta">
+              <div>
+                <dt>{t.author}</dt>
+                <dd>{item.author}</dd>
+              </div>
+              <div>
+                <dt>{t.lastUpdated}</dt>
+                <dd>{updated}</dd>
+              </div>
+              <div>
+                <dt>{t.license}</dt>
+                <dd>{item.license || "—"}</dd>
+              </div>
+              <div>
+                <dt>{t.abstract}</dt>
+                <dd className="template-detail-abstract">{abstract}</dd>
+              </div>
+              <div>
+                <dt>{t.tags}</dt>
+                <dd>
+                  <TemplateTagList tags={item.tags} />
+                </dd>
+              </div>
+            </dl>
           </div>
 
-          <dl className="template-detail-meta">
-            <div>
-              <dt>{t.author}</dt>
-              <dd>{item.author}</dd>
-            </div>
-            <div>
-              <dt>{t.lastUpdated}</dt>
-              <dd>{updated}</dd>
-            </div>
-            <div>
-              <dt>{t.license}</dt>
-              <dd>{item.license || "—"}</dd>
-            </div>
-            <div>
-              <dt>{t.abstract}</dt>
-              <dd className="template-detail-abstract">{abstract}</dd>
-            </div>
-            <div>
-              <dt>{t.tags}</dt>
-              <dd>
-                <TemplateTagList tags={item.tags} />
-              </dd>
-            </div>
-          </dl>
+          <aside className="template-detail-preview">
+            {item.has_preview ? (
+              <img src={templatePreviewUrl(item.id)} alt="" />
+            ) : (
+              <div className="template-catalog-cover-placeholder template-detail-preview-empty">
+                Preview
+              </div>
+            )}
+          </aside>
         </div>
-
-        <aside className="template-detail-preview">
-          {item.has_preview ? (
-            <img src={templatePreviewUrl(item.id)} alt="" />
-          ) : (
-            <div className="template-catalog-cover-placeholder template-detail-preview-empty">Preview</div>
-          )}
-        </aside>
-      </div>
       </TemplateDetailFrame>
 
       <ProjectFormatNoticeDialog

@@ -4,8 +4,7 @@ import { inferManuscriptEditTask, parseChatSlashCommand } from "@/lib/chat-comma
 
 describe("parseChatSlashCommand", () => {
   it("uses custom text after /edit instead of the default placeholder", () => {
-    const custom =
-      "Đề xuất sửa mục bibliography cho \\cite{r4} — bổ sung metadata/DOI nếu thiếu";
+    const custom = "Đề xuất sửa mục bibliography cho \\cite{r4} — bổ sung metadata/DOI nếu thiếu";
     const parsed = parseChatSlashCommand(`/edit ${custom}`, "vi");
     expect(parsed.task).toBe("edit");
     expect(parsed.message).toBe(custom);
@@ -14,9 +13,7 @@ describe("parseChatSlashCommand", () => {
 
   it("infers edit task for natural-language shorten requests", () => {
     expect(
-      inferManuscriptEditTask(
-        "giúp tôi rút gọn phần introduction nhé, trông nó khá dài",
-      ),
+      inferManuscriptEditTask("giúp tôi rút gọn phần introduction nhé, trông nó khá dài"),
     ).toBe("edit");
     expect(inferManuscriptEditTask("help me shorten the introduction")).toBe("edit");
     expect(inferManuscriptEditTask("introduction là gì?")).toBeNull();

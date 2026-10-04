@@ -149,7 +149,9 @@ function TemplatePdfPage() {
             >
               −
             </button>
-            <span className="w-14 text-center tabular-nums text-white/90">{Math.round(scale * 100)}%</span>
+            <span className="w-14 text-center tabular-nums text-white/90">
+              {Math.round(scale * 100)}%
+            </span>
             <button
               type="button"
               onClick={() => {

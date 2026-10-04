@@ -1,5 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, BookOpen, Quote, ShieldCheck, GitCompare, ArrowRight, Upload, Eye, Lock, PenLine, Check, X, Zap } from "lucide-react";
+import {
+  FileText,
+  BookOpen,
+  Quote,
+  ShieldCheck,
+  GitCompare,
+  ArrowRight,
+  Upload,
+  Eye,
+  Lock,
+  PenLine,
+  Check,
+  X,
+  Zap,
+} from "lucide-react";
 import { useMemo } from "react";
 import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { HeroPeerReviewFigure } from "@/components/marketing/hero-figure";
@@ -11,9 +25,16 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Arionear — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học" },
-      { name: "description", content: "AI academic writing assistant for researchers. Improve academic prose, structure, citations and reviewer replies — without inventing data or results." },
+      {
+        name: "description",
+        content:
+          "AI academic writing assistant for researchers. Improve academic prose, structure, citations and reviewer replies — without inventing data or results.",
+      },
       { property: "og:title", content: "Arionear — Closer to Publication" },
-      { property: "og:description", content: "Help good research get published. AI as editor, human as author." },
+      {
+        property: "og:description",
+        content: "Help good research get published. AI as editor, human as author.",
+      },
     ],
   }),
   component: Index,
@@ -31,14 +52,17 @@ function Hero() {
       <div className="hero-split max-w-screen-2xl mx-auto px-4 sm:px-6 grid grid-cols-1 gap-0">
         <div className="hero-split-copy lg:border-r border-foreground p-4 sm:p-6 lg:p-8 xl:p-10">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono-data uppercase text-[10px] sm:text-xs tracking-widest mb-4 sm:mb-6">
-            <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">{h.breaking}</span>
+            <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">
+              {h.breaking}
+            </span>
             <span className="min-w-0">{h.deskEdition}</span>
           </div>
           <h1 className="hero-headline font-serif-display font-black tracking-tighter text-[2.35rem] leading-[0.95] sm:text-6xl sm:leading-none lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
             {locale === "vi" ? (
               <>
                 <span className="hero-headline-vi-fluid inline lg:hidden">
-                  Nghiên cứu <em className="italic font-serif-display">Xứng đáng</em> được đọc công bằng.
+                  Nghiên cứu <em className="italic font-serif-display">Xứng đáng</em> được đọc công
+                  bằng.
                 </span>
                 <span className="hidden lg:inline">
                   Nghiên cứu
@@ -59,13 +83,17 @@ function Hero() {
             )}
           </h1>
           <div className="mt-6 sm:mt-8 grid grid-cols-1 md:grid-cols-12 gap-6">
-            <p className="md:col-span-7 font-body text-base sm:text-lg leading-relaxed text-justify drop-cap">{h.lede}</p>
+            <p className="md:col-span-7 font-body text-base sm:text-lg leading-relaxed text-justify drop-cap">
+              {h.lede}
+            </p>
             <div className="md:col-span-5 border-l-0 md:border-l border-foreground md:pl-6">
               <div className="font-mono-data uppercase text-[10px] tracking-widest mb-3 pb-2 border-b border-foreground">
                 {h.fromEditor}
               </div>
               <p className="font-body italic text-base leading-relaxed">{h.editorQuote}</p>
-              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">{h.editorByline}</p>
+              <p className="mt-3 font-sans-ui text-xs uppercase tracking-widest">
+                {h.editorByline}
+              </p>
             </div>
           </div>
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3">
@@ -85,7 +113,9 @@ function Hero() {
         </div>
         <aside className="hero-split-demo p-4 sm:p-6 lg:p-6 xl:p-8 flex flex-col gap-4 sm:gap-5 lg:gap-6">
           <div className="hero-figure-frame border border-foreground p-4 lg:p-6 min-w-0 flex-1">
-            <div className="font-mono-data uppercase text-xs tracking-widest mb-3">{h.figCaption}</div>
+            <div className="font-mono-data uppercase text-xs tracking-widest mb-3">
+              {h.figCaption}
+            </div>
             <HeroPeerReviewFigure />
             <p className="font-body italic text-sm lg:text-base mt-4 leading-snug">{h.figNote}</p>
           </div>
@@ -93,7 +123,9 @@ function Hero() {
             {h.stats.map((s, i) => (
               <div key={i} className={`p-3 lg:p-4 ${i < 2 ? "border-r border-foreground" : ""}`}>
                 <div className="font-mono-data text-xl lg:text-2xl font-bold">{s.k}</div>
-                <div className="font-sans-ui text-[10px] lg:text-xs uppercase tracking-widest mt-1 text-muted-foreground">{s.v}</div>
+                <div className="font-sans-ui text-[10px] lg:text-xs uppercase tracking-widest mt-1 text-muted-foreground">
+                  {s.v}
+                </div>
               </div>
             ))}
           </div>
@@ -112,8 +144,13 @@ function Features() {
     <section id="features" className="border-b-4 border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-16">
         <div className="flex items-end justify-between border-b border-foreground pb-4 mb-0">
-          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">{f.sectionTitle}</h2>
-          <Link to="/features" className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]">
+          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+            {f.sectionTitle}
+          </h2>
+          <Link
+            to="/features"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]"
+          >
             {f.sectionLink}
           </Link>
         </div>
@@ -121,12 +158,17 @@ function Features() {
           {f.items.map(({ title, body }, i) => {
             const Icon = FEATURE_ICONS[i]!;
             return (
-              <article key={title} className="p-8 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors">
+              <article
+                key={title}
+                className="p-8 border-r border-b border-foreground hover:bg-foreground/[0.04] transition-colors"
+              >
                 <div className="flex items-center gap-4 mb-5">
                   <div className="h-12 w-12 border border-foreground flex items-center justify-center hover:bg-foreground hover:text-background transition-colors">
                     <Icon className="h-5 w-5" strokeWidth={1.5} />
                   </div>
-                  <span className="font-mono-data text-xs uppercase tracking-widest">No. {String(i + 1).padStart(2, "0")}</span>
+                  <span className="font-mono-data text-xs uppercase tracking-widest">
+                    No. {String(i + 1).padStart(2, "0")}
+                  </span>
                 </div>
                 <h3 className="font-serif-display font-bold text-2xl mb-3">{title}</h3>
                 <p className="font-body text-base leading-relaxed text-muted-foreground">{body}</p>
@@ -148,8 +190,13 @@ function WorkflowTeaser() {
     <section id="workflow" className="bg-foreground text-background border-b-4 border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-20">
         <div className="flex items-end justify-between border-b border-background/40 pb-4">
-          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">{w.sectionTitle}</h2>
-          <Link to="/workflow" className="font-mono-data uppercase text-xs tracking-widest hidden sm:block text-neutral-400 hover:text-background">
+          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+            {w.sectionTitle}
+          </h2>
+          <Link
+            to="/workflow"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block text-neutral-400 hover:text-background"
+          >
             {w.sectionLink}
           </Link>
         </div>
@@ -188,7 +235,9 @@ function Integrity() {
       <div className="max-w-screen-xl mx-auto px-4 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-0">
           <div className="lg:col-span-5 lg:border-r border-foreground lg:pr-10">
-            <span className="font-mono-data uppercase text-xs tracking-widest">{ig.policyLabel}</span>
+            <span className="font-mono-data uppercase text-xs tracking-widest">
+              {ig.policyLabel}
+            </span>
             <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-4">
               {ig.titleLine1} <br />
               <em className="italic">{ig.titleEm}</em>
@@ -205,7 +254,9 @@ function Integrity() {
 
           <div className="lg:col-span-7 lg:pl-10">
             <div className="flex items-end justify-between border-b border-foreground pb-3 mb-0">
-              <span className="font-mono-data uppercase text-xs tracking-widest">{ig.guaranteesLabel}</span>
+              <span className="font-mono-data uppercase text-xs tracking-widest">
+                {ig.guaranteesLabel}
+              </span>
               <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground hidden sm:inline">
                 {ig.sectionRef}
               </span>
@@ -227,7 +278,9 @@ function Integrity() {
                       </span>
                     </div>
                     <h3 className="font-serif-display font-bold text-xl leading-tight">{title}</h3>
-                    <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
+                    <p className="font-body text-sm text-muted-foreground mt-2 leading-relaxed">
+                      {body}
+                    </p>
                   </li>
                 );
               })}
@@ -267,7 +320,6 @@ function Plans() {
 
         {/* Two-column plan grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 border-l border-foreground">
-
           {/* ── FREE card ── */}
           <article className="p-8 border-r border-b border-foreground">
             <div className="flex items-center gap-3 mb-6">

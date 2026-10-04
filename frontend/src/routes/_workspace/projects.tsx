@@ -16,9 +16,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { refreshSession } from "@/lib/auth-store";
-import {
-  SHOW_PROJECTS_IMPORT,
-} from "@/components/workspace/workspace-layout";
+import { SHOW_PROJECTS_IMPORT } from "@/components/workspace/workspace-layout";
 import {
   createPaper,
   createPaperFromImport,
@@ -83,8 +81,13 @@ function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "grid">("list");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
-  const { open: formatNoticeOpen, setOpen: setFormatNoticeOpen, runWithNotice, confirm: confirmFormatNotice, dismiss: dismissFormatNotice } =
-    useProjectFormatNotice();
+  const {
+    open: formatNoticeOpen,
+    setOpen: setFormatNoticeOpen,
+    runWithNotice,
+    confirm: confirmFormatNotice,
+    dismiss: dismissFormatNotice,
+  } = useProjectFormatNotice();
 
   useEffect(() => {
     let cancelled = false;
@@ -404,64 +407,66 @@ function ProjectsPage() {
               </div>
             )}
 
-          {loadError && (
-            <div className="mb-4 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {loadError}
-            </div>
-          )}
-          {loading ? (
-            <ProjectsListSkeleton className="flex-1 overflow-y-auto" />
-          ) : filtered.length === 0 ? (
-            <EmptyProjects
-              hasSearch={!!search.trim()}
-              t={t}
-              onSample={() => runWithNotice(() => void handleCreateSample())}
-              disabled={!!creatingLabel}
-            />
-          ) : view === "list" ? (
-            <div className="projects-table-editorial">
-              <div className="projects-table-head-editorial">
-                <span className="projects-col-name">{t.colName}</span>
-                <span className="projects-col-created hidden md:block">{t.colCreated}</span>
-                <span className="projects-col-updated hidden md:block">{t.colUpdated}</span>
-                <span className="projects-col-actions" aria-hidden="true" />
+            {loadError && (
+              <div className="mb-4 border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {loadError}
               </div>
-              {filtered.map((project) => (
-                <ProjectRow
-                  key={project.id}
-                  project={project}
-                  deleting={deletingIds.has(project.id)}
-                  onOpen={() => openEditor(project.id)}
-                  onRename={(name) => handleRename(project.id, name)}
-                  onDelete={() => handleDelete(project.id)}
-                  onDefense={() => openDefense(project.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="projects-grid-editorial">
-              {filtered.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => openEditor(project.id)}
-                  disabled={deletingIds.has(project.id)}
-                  className="projects-grid-card-editorial"
-                >
-                  <div className="icon-box">
-                    <FileText className="h-5 w-5" strokeWidth={1.5} />
-                  </div>
-                  <p className="mt-3 truncate font-serif-body text-sm font-semibold">{project.name}</p>
-                  <p className="projects-row-date mt-1">
-                    {t.created} {formatProjectDateTime(project.createdAt, locale)}
-                  </p>
-                  <p className="projects-row-date mt-0.5">
-                    {t.updated} {formatProjectDateTime(project.updatedAt, locale)}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
+            )}
+            {loading ? (
+              <ProjectsListSkeleton className="flex-1 overflow-y-auto" />
+            ) : filtered.length === 0 ? (
+              <EmptyProjects
+                hasSearch={!!search.trim()}
+                t={t}
+                onSample={() => runWithNotice(() => void handleCreateSample())}
+                disabled={!!creatingLabel}
+              />
+            ) : view === "list" ? (
+              <div className="projects-table-editorial">
+                <div className="projects-table-head-editorial">
+                  <span className="projects-col-name">{t.colName}</span>
+                  <span className="projects-col-created hidden md:block">{t.colCreated}</span>
+                  <span className="projects-col-updated hidden md:block">{t.colUpdated}</span>
+                  <span className="projects-col-actions" aria-hidden="true" />
+                </div>
+                {filtered.map((project) => (
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    deleting={deletingIds.has(project.id)}
+                    onOpen={() => openEditor(project.id)}
+                    onRename={(name) => handleRename(project.id, name)}
+                    onDelete={() => handleDelete(project.id)}
+                    onDefense={() => openDefense(project.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="projects-grid-editorial">
+                {filtered.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => openEditor(project.id)}
+                    disabled={deletingIds.has(project.id)}
+                    className="projects-grid-card-editorial"
+                  >
+                    <div className="icon-box">
+                      <FileText className="h-5 w-5" strokeWidth={1.5} />
+                    </div>
+                    <p className="mt-3 truncate font-serif-body text-sm font-semibold">
+                      {project.name}
+                    </p>
+                    <p className="projects-row-date mt-1">
+                      {t.created} {formatProjectDateTime(project.createdAt, locale)}
+                    </p>
+                    <p className="projects-row-date mt-0.5">
+                      {t.updated} {formatProjectDateTime(project.updatedAt, locale)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -503,7 +508,12 @@ function EmptyProjects({
       <p>{t.emptyStartBody}</p>
 
       <div className="projects-empty-actions projects-empty-actions--single">
-        <button type="button" onClick={onSample} disabled={disabled} className="projects-empty-card">
+        <button
+          type="button"
+          onClick={onSample}
+          disabled={disabled}
+          className="projects-empty-card"
+        >
           <div className="icon-box">
             <BookOpen className="h-5 w-5" strokeWidth={1.5} />
           </div>

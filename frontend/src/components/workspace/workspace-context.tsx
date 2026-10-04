@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { fetchBillingStatus, type BillingStatus } from "@/lib/api/billing-api";
 
 type WorkspaceBillingContextValue = {
@@ -47,7 +55,9 @@ export function WorkspaceBillingProvider({ children }: { children: ReactNode }) 
     [billing, tierLoading, billingError, refreshBilling],
   );
 
-  return <WorkspaceBillingContext.Provider value={value}>{children}</WorkspaceBillingContext.Provider>;
+  return (
+    <WorkspaceBillingContext.Provider value={value}>{children}</WorkspaceBillingContext.Provider>
+  );
 }
 
 export function useWorkspaceBilling() {
