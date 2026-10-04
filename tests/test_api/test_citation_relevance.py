@@ -59,7 +59,7 @@ def mocked_layer4(monkeypatch):
 
     monkeypatch.setattr(relevance, "build_relevance_llm", lambda chat_provider=None: (llm, "google", "gemini"))
     monkeypatch.setattr(relevance, "fetch_source_text", fake_fetch_source_text)
-    monkeypatch.setattr(relevance, "enforce_llm_quota_for_paper", lambda _session_id: None)
+    monkeypatch.setattr(relevance, "enforce_llm_quota_for_paper", lambda _session_id, **_kwargs: None)
     return llm
 
 
@@ -118,7 +118,7 @@ async def test_relevance_endpoint_prefers_live_latex_and_is_read_only(client, mo
 async def test_relevance_endpoint_quota_exceeded_returns_429(client, mocked_layer4, monkeypatch):
     session_id = await _create_session(client)
 
-    def over_quota(_session_id):
+    def over_quota(_session_id, **_kwargs):
         raise QuotaExceededError("Bạn đã dùng hết hạn mức token hôm nay (1,000 token).")
 
     monkeypatch.setattr(relevance, "enforce_llm_quota_for_paper", over_quota)

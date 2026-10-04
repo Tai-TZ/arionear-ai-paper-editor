@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import re
+import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -223,7 +224,11 @@ def summarize_relevance(results: list[CitationRelevanceItem]) -> str:
     )
 
 
-async def run_citation_relevance(request: CitationRelevanceRequest) -> CitationRelevanceResponse:
+async def run_citation_relevance(
+    request: CitationRelevanceRequest,
+    *,
+    user_id: uuid.UUID | None = None,
+) -> CitationRelevanceResponse:
     """Endpoint service: resolve manuscript + bib, enforce quota, judge up to 15 keys, record usage.
 
     Raises ``QuotaExceededError`` (quota) or ``ValueError`` (no LLM provider key configured).
@@ -244,7 +249,7 @@ async def run_citation_relevance(request: CitationRelevanceRequest) -> CitationR
     provider: str | None = None
     model: str | None = None
     if any(claim_map.get(key) for key in keys):
-        enforce_llm_quota_for_paper(request.session_id)
+        enforce_llm_quota_for_paper(request.session_id, user_id=user_id)
         llm, provider, model = build_relevance_llm(request.llm_provider)
 
     settings = get_settings()

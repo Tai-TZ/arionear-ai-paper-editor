@@ -5,6 +5,7 @@ import contextlib
 import json
 import logging
 import time
+import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar
 
@@ -497,6 +498,7 @@ async def stream_chat(
     request: ChatRequest,
     *,
     cancel_event: asyncio.Event | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> AsyncIterator[str]:
     def _cancelled() -> bool:
         return cancel_event is not None and cancel_event.is_set()
@@ -532,7 +534,7 @@ async def stream_chat(
             )
 
         try:
-            enforce_llm_quota_for_paper(request.session_id)
+            enforce_llm_quota_for_paper(request.session_id, user_id=user_id)
         except QuotaExceededError as exc:
             message = str(exc)
             await tracker.fail(message)

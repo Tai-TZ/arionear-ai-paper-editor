@@ -112,15 +112,19 @@ def assert_llm_allowed(db: Session, user: User) -> None:
         )
 
 
-def enforce_llm_quota_for_paper(paper_id: str | None) -> None:
-    """Check quota for the owner of a paper/session. Skips if unauthenticated paper."""
+def enforce_llm_quota_for_paper(paper_id: str | None, user_id: uuid.UUID | None = None) -> None:
+    """Check LLM quota for the paper owner, else for the calling ``user_id``.
+
+    Call it once per LLM request: it also counts towards the per-minute rate limit. No-op only when
+    neither an owner nor a caller is known (in-memory dev/test mode without a database).
+    """
     if not db_is_ready():
         return
-    user_id = resolve_paper_user_id(paper_id)
-    if not user_id:
+    quota_user_id = resolve_paper_user_id(paper_id) or user_id
+    if not quota_user_id:
         return
     with get_db() as db:
-        user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+        user = db.query(User).filter(User.id == quota_user_id, User.is_active.is_(True)).first()
         if not user:
             return
         assert_llm_allowed(db, user)

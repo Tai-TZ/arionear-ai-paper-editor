@@ -255,7 +255,9 @@ async def test_run_relevance_caps_keys_and_uses_quota_and_llm(monkeypatch):
 
     monkeypatch.setattr(relevance, "build_relevance_llm", fake_build)
     monkeypatch.setattr(relevance, "fetch_source_text", fake_fetch_source_text)
-    monkeypatch.setattr(relevance, "enforce_llm_quota_for_paper", lambda session_id: quota_calls.append(session_id))
+    monkeypatch.setattr(
+        relevance, "enforce_llm_quota_for_paper", lambda session_id, **_kwargs: quota_calls.append(session_id)
+    )
 
     latex, bib = _manuscript(RELEVANCE_MAX_KEYS_PER_REQUEST + 3)
     keys = [f"key{i}" for i in range(RELEVANCE_MAX_KEYS_PER_REQUEST + 3)]

@@ -54,7 +54,7 @@ from src.services.latex_compile import (
 from src.services.llm import list_providers
 from src.services.llm_errors import friendly_llm_error
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
-from src.services.quota_policy import QuotaExceededError
+from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 
 router = APIRouter()
@@ -108,6 +108,14 @@ def _agent_input(**kwargs) -> dict:
     if not payload.get("llm_provider"):
         payload["llm_provider"] = settings.llm_provider
     return payload
+
+
+async def _enforce_llm_quota(session_id: str | None, user_id: uuid.UUID | None) -> None:
+    """Sync LLM entry points (/chat, /edit/style): quota + rate limit once per request, 429 when over."""
+    try:
+        await asyncio.to_thread(enforce_llm_quota_for_paper, session_id, user_id)
+    except QuotaExceededError as e:
+        raise HTTPException(status_code=429, detail=str(e)) from e
 
 
 @router.get("/status")
@@ -246,7 +254,7 @@ async def chat_stream(
 
     async def stream_with_disconnect():
         watcher = asyncio.create_task(watch_disconnect())
-        agen = stream_chat(request, cancel_event=cancel)
+        agen = stream_chat(request, cancel_event=cancel, user_id=user_id)
         try:
             async for chunk in flush_sse_stream(agen):
                 if cancel.is_set():
@@ -283,6 +291,7 @@ async def chat(
     user_id: uuid.UUID | None = Depends(get_agent_user_id),
 ):
     assert_paper_session_access(request.session_id or "", user_id)
+    await _enforce_llm_quota(request.session_id, user_id)
     try:
         if request.session_id and request.latex_content:
             session_store.get_or_create(
@@ -316,6 +325,7 @@ async def edit_style(
     user_id: uuid.UUID | None = Depends(get_agent_user_id),
 ):
     assert_paper_session_access(request.session_id, user_id)
+    await _enforce_llm_quota(request.session_id, user_id)
     try:
         session = session_store.get_or_create(request.session_id)
         session_store.update(request.session_id, latex_content=session.latex_content)
@@ -391,7 +401,7 @@ async def check_citations_relevance(
     """Citation Layer 4 — LLM judges whether each cited source supports its claim (read-only)."""
     assert_paper_session_access(request.session_id, user_id)
     try:
-        return await run_citation_relevance(request)
+        return await run_citation_relevance(request, user_id=user_id)
     except QuotaExceededError as e:
         raise HTTPException(status_code=429, detail=str(e)) from e
     except ValueError as e:
