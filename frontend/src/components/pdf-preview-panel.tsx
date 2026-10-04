@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -254,7 +254,7 @@ function PdfPageView({
   );
 }
 
-export function PdfPreviewPanel({
+export const PdfPreviewPanel = memo(function PdfPreviewPanel({
   pdfData,
   isCompiling,
   compileError,
@@ -986,4 +986,4 @@ export function PdfPreviewPanel({
       )}
     </section>
   );
-}
+});

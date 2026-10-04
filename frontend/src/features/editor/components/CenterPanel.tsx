@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type React from "react";
 import { FileOutput, FileText, GraduationCap, Redo2, Share2, Undo2, Wrench } from "lucide-react";
 import { useLocale } from "@/components/locale-context";
@@ -19,7 +19,10 @@ import { toInlineSuggestion } from "../lib/editor-inline-suggestion";
 import { LatexEditor } from "./LatexEditor";
 import { PendingEditsPanel } from "./PendingEditsPanel";
 
-export function CenterPanel({
+// Fingerprints every pending edit's file on render; skip that while only chat state changes.
+const MemoPendingEditsPanel = memo(PendingEditsPanel);
+
+export const CenterPanel = memo(function CenterPanel({
   latex,
   activeFile,
   activeAsset = null,
@@ -280,7 +283,7 @@ export function CenterPanel({
         </div>
 
         {pendingEdits?.length ? (
-          <PendingEditsPanel
+          <MemoPendingEditsPanel
             pendingEdits={pendingEdits}
             activeEditId={activeEditId}
             mainFile={mainFile}
@@ -334,4 +337,4 @@ export function CenterPanel({
       </div>
     </section>
   );
-}
+});

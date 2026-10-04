@@ -433,6 +433,30 @@ export function EditorWorkspace() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectionPick, handleQuickEditSelection]);
 
+  // Stable handlers so the memoized sidebar / center / preview / tools panels skip re-rendering
+  // on updates that do not concern them (e.g. every streamed chat token).
+  const { fileInputRef, folderInputRef, zipInputRef, assetInputRef } = project;
+  const { setToolsOpen } = tools;
+  const handleSidebarExpandedChange = useCallback((next: boolean) => {
+    setSidebarExpanded(next);
+    window.localStorage.setItem(EDITOR_SIDEBAR_STORAGE_KEY, next ? "expanded" : "collapsed");
+  }, []);
+  const handleUploadClick = useCallback(() => fileInputRef.current?.click(), [fileInputRef]);
+  const handleUploadFolderClick = useCallback(
+    () => folderInputRef.current?.click(),
+    [folderInputRef],
+  );
+  const handleUploadZipClick = useCallback(() => zipInputRef.current?.click(), [zipInputRef]);
+  const handleUploadAssetClick = useCallback(() => assetInputRef.current?.click(), [assetInputRef]);
+  const handleDismissSelectionToolbar = useCallback(() => setSelectionPick(null), []);
+  const handleToggleTools = useCallback(() => setToolsOpen((v) => !v), [setToolsOpen]);
+  const handleCloseTools = useCallback(() => setToolsOpen(false), [setToolsOpen]);
+  const handleOpenShare = useCallback(() => setShareOpen(true), []);
+  const handleOpenExport = useCallback(() => setExportOpen(true), []);
+  const handleOpenDefense = useMemo(
+    () => (projectId ? () => void navigate({ to: "/defense", search: { projectId } }) : undefined),
+    [navigate, projectId],
+  );
   const pdfPreviewProps = useMemo(
     () => ({
       pdfData: latexWs.pdfData,
@@ -592,18 +616,12 @@ export function EditorWorkspace() {
               tab={sidebarTab}
               onTabChange={setSidebarTab}
               expanded={sidebarExpanded}
-              onExpandedChange={(next) => {
-                setSidebarExpanded(next);
-                window.localStorage.setItem(
-                  EDITOR_SIDEBAR_STORAGE_KEY,
-                  next ? "expanded" : "collapsed",
-                );
-              }}
+              onExpandedChange={handleSidebarExpandedChange}
               onSelectFile={openProjectFile}
-              onUpload={() => project.fileInputRef.current?.click()}
-              onUploadFolder={() => project.folderInputRef.current?.click()}
-              onUploadZip={() => project.zipInputRef.current?.click()}
-              onUploadAsset={() => project.assetInputRef.current?.click()}
+              onUpload={handleUploadClick}
+              onUploadFolder={handleUploadFolderClick}
+              onUploadZip={handleUploadZipClick}
+              onUploadAsset={handleUploadAssetClick}
               isDirty={project.isDirty}
               chatThreads={chatThreads}
               activeChatId={activeChatId}
@@ -628,18 +646,14 @@ export function EditorWorkspace() {
                   selectionPick={selectionPick}
                   onAddSelectionToChat={handleAddSelectionToChat}
                   onQuickEditSelection={handleQuickEditSelection}
-                  onDismissSelectionToolbar={() => setSelectionPick(null)}
+                  onDismissSelectionToolbar={handleDismissSelectionToolbar}
                   onQuickEditRequest={openQuickEditFromPick}
                   chatOpen={chatOpen}
                   toolsOpen={tools.toolsOpen}
-                  onToggleTools={() => tools.setToolsOpen((v) => !v)}
-                  onShare={() => setShareOpen(true)}
-                  onExport={() => setExportOpen(true)}
-                  onDefense={
-                    projectId
-                      ? () => void navigate({ to: "/defense", search: { projectId } })
-                      : undefined
-                  }
+                  onToggleTools={handleToggleTools}
+                  onShare={handleOpenShare}
+                  onExport={handleOpenExport}
+                  onDefense={handleOpenDefense}
                   exportEnabled={Boolean(latexWs.pdfData)}
                   shareEnabled={Boolean(project.shareStatus?.enabled)}
                   pendingEdits={pendingEdits}
@@ -665,7 +679,7 @@ export function EditorWorkspace() {
                     logicAuditLoading={auditInProgress}
                     logicAuditSectionProgress={auditSectionProgress}
                     onCancelLogicAudit={handleStopChat}
-                    onClose={() => tools.setToolsOpen(false)}
+                    onClose={handleCloseTools}
                     {...toolsPanelBindings}
                   />
                 ) : (

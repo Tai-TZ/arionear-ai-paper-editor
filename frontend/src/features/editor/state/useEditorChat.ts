@@ -1104,35 +1104,43 @@ export function useEditorChat(options: UseEditorChatOptions) {
     [activeFile, mainFile, latex, mainLatexSource, projectFiles, setProjectFiles, recordNow],
   );
 
-  const runLogicAuditFromPanel = (
-    mode: LogicAuditMode,
-    scope: LogicAuditScope,
-    sections: string[],
-  ) => {
-    if (chatLoading || auditInProgress || scoreAuditLoading || !projectId) return;
-    if (scope !== "full" && sections.length === 0) return;
-    const full = scope === "full";
-    const auditCopy = t.logicAudit.panelLaunch;
-    const sectionOptions = listLogicAuditSectionOptions(parseLatexOutline(mainLatexSource));
-    const targetSectionCount = logicAuditTargetSectionCount(
-      mode,
-      scope,
-      sections.length,
-      sectionOptions.length,
-      sectionOptions,
-    );
-    logicAuditLaunchRef.current = {
-      mode: "quick",
-      scope,
-      sections,
-      targetSectionCount,
-      userDisplay: full ? auditCopy.displayQuickFull : auditCopy.displayQuick,
-      message: full ? auditCopy.messageFull : auditCopy.messageQuickSelected,
-    };
-    setLogicAuditScopeHint(scope);
-    openChatPanel();
-    void handleSend();
-  };
+  const runLogicAuditFromPanel = useCallback(
+    (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => {
+      if (chatLoading || auditInProgress || scoreAuditLoading || !projectId) return;
+      if (scope !== "full" && sections.length === 0) return;
+      const full = scope === "full";
+      const auditCopy = t.logicAudit.panelLaunch;
+      const sectionOptions = listLogicAuditSectionOptions(parseLatexOutline(mainLatexSource));
+      const targetSectionCount = logicAuditTargetSectionCount(
+        mode,
+        scope,
+        sections.length,
+        sectionOptions.length,
+        sectionOptions,
+      );
+      logicAuditLaunchRef.current = {
+        mode: "quick",
+        scope,
+        sections,
+        targetSectionCount,
+        userDisplay: full ? auditCopy.displayQuickFull : auditCopy.displayQuick,
+        message: full ? auditCopy.messageFull : auditCopy.messageQuickSelected,
+      };
+      setLogicAuditScopeHint(scope);
+      openChatPanel();
+      void handleSend();
+    },
+    [
+      chatLoading,
+      auditInProgress,
+      scoreAuditLoading,
+      projectId,
+      t.logicAudit.panelLaunch,
+      mainLatexSource,
+      openChatPanel,
+      handleSend,
+    ],
+  );
 
   const runAgentEdit = useCallback(
     (message: string, userDisplay?: string) => {

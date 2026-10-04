@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { compileLatex, type CompileMode } from "@/lib/api/academic";
@@ -346,26 +346,51 @@ export function useLatexWorkspace({
 
   const compileErrorLine = compileError ? parseCompileErrorLine(compileError) : null;
 
-  return {
-    compileLog,
-    synctexBase64,
-    pdfBase64,
-    highlightLine,
-    setHighlightLine,
-    synctexHighlight,
-    isCompiling,
-    pdfData,
-    compileError,
-    compileWarning,
-    executeCompile,
-    markCompileAfterEdit,
-    scheduleCompile,
-    handleCompile,
-    resetCompileCache,
-    jumpToSynctex,
-    jumpToOutlineLine,
-    handleSynctexHit,
-    canAskArioFixCompile,
-    compileErrorLine,
-  };
+  // One stable object per actual change, so consumers that memoize on it (PDF preview props)
+  // do not re-render on unrelated editor updates such as streamed chat tokens.
+  return useMemo(
+    () => ({
+      compileLog,
+      synctexBase64,
+      pdfBase64,
+      highlightLine,
+      setHighlightLine,
+      synctexHighlight,
+      isCompiling,
+      pdfData,
+      compileError,
+      compileWarning,
+      executeCompile,
+      markCompileAfterEdit,
+      scheduleCompile,
+      handleCompile,
+      resetCompileCache,
+      jumpToSynctex,
+      jumpToOutlineLine,
+      handleSynctexHit,
+      canAskArioFixCompile,
+      compileErrorLine,
+    }),
+    [
+      compileLog,
+      synctexBase64,
+      pdfBase64,
+      highlightLine,
+      synctexHighlight,
+      isCompiling,
+      pdfData,
+      compileError,
+      compileWarning,
+      executeCompile,
+      markCompileAfterEdit,
+      scheduleCompile,
+      handleCompile,
+      resetCompileCache,
+      jumpToSynctex,
+      jumpToOutlineLine,
+      handleSynctexHit,
+      canAskArioFixCompile,
+      compileErrorLine,
+    ],
+  );
 }

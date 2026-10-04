@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { HelpCircle, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-context";
@@ -18,7 +18,7 @@ import type { StructureSuggestion } from "@/lib/structure-suggestions";
 import { computeProjectStats, countDiffStats } from "../lib/editor-project-stats";
 import type { ToolsTab } from "../types";
 
-export function ToolsPanel({
+export const ToolsPanel = memo(function ToolsPanel({
   latex,
   projectId,
   autoCompile,
@@ -398,4 +398,4 @@ export function ToolsPanel({
       </div>
     </section>
   );
-}
+});
