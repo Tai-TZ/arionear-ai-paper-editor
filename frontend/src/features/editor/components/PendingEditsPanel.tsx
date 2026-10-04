@@ -90,6 +90,8 @@ export function PendingEditsPanel({
                 tabIndex={0}
                 onClick={() => onSelectEdit?.(e.id)}
                 onKeyDown={(evt) => {
+                  // Let Enter/Space reach the nested Accept / Reject buttons.
+                  if (evt.target !== evt.currentTarget) return;
                   if (evt.key === "Enter" || evt.key === " ") {
                     evt.preventDefault();
                     onSelectEdit?.(e.id);

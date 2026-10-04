@@ -635,6 +635,8 @@ function ProjectRow({
         onOpen();
       }}
       onKeyDown={(e) => {
+        // Keys pressed on the row's own buttons (rename, delete…) belong to those buttons.
+        if (e.target !== e.currentTarget) return;
         if (deleting || renaming) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
