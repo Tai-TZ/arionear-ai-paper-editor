@@ -274,21 +274,8 @@ function schedulePaperFlush(id: string, immediate = false) {
       queue.timer = setTimeout(runFlush, 50);
       return;
     }
-    if (Object.keys(queue.pending).length === 0) {
-      if (queue.inflight) {
-        void queue.inflight.then(
-          (result) => {
-            const waiters = queue.flushWaiters.splice(0);
-            waiters.forEach((w) => w.resolve(result));
-          },
-          (err) => {
-            const waiters = queue.flushWaiters.splice(0);
-            waiters.forEach((w) => w.reject(err));
-          },
-        );
-      }
-      return;
-    }
+    // Nothing queued: every waiter was registered with a patch and is settled by the request that sent it.
+    if (Object.keys(queue.pending).length === 0) return;
 
     const patch = queue.pending;
     queue.pending = {};

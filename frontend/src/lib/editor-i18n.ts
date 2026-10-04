@@ -151,7 +151,7 @@ export type EditorCopy = {
     jumpToIssue: string;
     askArio: string;
     claimLabel: string;
-    partialChatStopped: (count) => string;
+    partialChatStopped: (count: number) => string;
     partialChatTimeout: (count: number) => string;
     scanQuick: string;
     scanQuickSubtitle: string;

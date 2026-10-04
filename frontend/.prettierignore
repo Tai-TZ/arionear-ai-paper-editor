@@ -5,3 +5,8 @@ dist
 pnpm-lock.yaml
 package-lock.json
 routeTree.gen.ts
+
+# Third-party agent skills (pinned by skills-lock.json)
+.claude/
+.agents/
+skills-lock.json

@@ -88,7 +88,6 @@ export function isImportantFeedEvent(state: ChatAiStatePayload): boolean {
   if (state.step_id.endsWith("-synthesize") && state.status !== "done") return false;
   if (state.status === "done") return true;
   if (state.step_id === "logic-start") return true;
-  if (state.step_id === "edit-scope" && state.status === "done") return true;
   return false;
 }
 

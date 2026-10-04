@@ -70,6 +70,11 @@ export class PdfLinkService {
     this.page = pageNumber;
   }
 
+  /** Part of IPDFLinkService; the annotation layer never calls it, so page-level navigation is enough. */
+  goToXY(pageNumber: number, _x: number, _y: number) {
+    this.goToPage(pageNumber);
+  }
+
   goToPage(val: number | string) {
     const pageNumber = typeof val === "string" ? Number.parseInt(val, 10) : val;
     if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > this.pagesCount) return;

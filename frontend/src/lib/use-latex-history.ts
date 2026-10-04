@@ -10,7 +10,7 @@ export function useLatexHistory(initial = "") {
   const historyRef = useRef<string[]>([initial]);
   const indexRef = useRef(0);
   const skipPushRef = useRef(false);
-  const debounceRef = useRef<number>();
+  const debounceRef = useRef<number | undefined>(undefined);
 
   const syncMeta = useCallback(() => {
     setCanUndo(indexRef.current > 0);

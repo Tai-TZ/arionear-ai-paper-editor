@@ -570,8 +570,7 @@ export function useEditorChat(options: UseEditorChatOptions) {
       logicLaunch?.userDisplay ??
       editLaunch?.userDisplay ??
       (parsed.command ? `/${parsed.command} · ${text}` : raw);
-    const logicAuditMode =
-      logicLaunch?.mode ?? parsed.logicAuditMode ?? (task === "logic" ? "quick" : undefined);
+    const logicAuditMode = logicLaunch?.mode ?? (task === "logic" ? "quick" : undefined);
     const logicAuditScope =
       logicLaunch?.scope ?? parsed.logicAuditScope ?? (task === "logic" ? "selected" : undefined);
     const logicAuditSections = logicLaunch?.sections;

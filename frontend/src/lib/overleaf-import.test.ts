@@ -29,7 +29,7 @@ describe("importOverleafZip", () => {
     const file = makeZip({
       "my-paper/main.tex":
         "\\documentclass{article}\\title{Root Paper}\\begin{document}X\\end{document}",
-      "my-paper/figures/plot.png": strToU8([137, 80, 78, 71]),
+      "my-paper/figures/plot.png": new Uint8Array([137, 80, 78, 71]),
     });
     const result = await importOverleafZip(file);
     expect(result.mainFile).toBe("main.tex");
@@ -51,11 +51,11 @@ describe("importOverleafZip", () => {
     const file = makeZip({
       "main.tex": "\\documentclass{article}\\begin{document}\\end{document}",
       "references.bib": "@article{a}",
-      "Accuracy.png": strToU8([137, 80, 78, 71]),
-      "Co thi.jpg": strToU8([255, 216, 255]),
-      "Eff_met.png": strToU8([137, 80, 78, 71]),
-      "Img3.png": strToU8([137, 80, 78, 71]),
-      "Predict.png": strToU8([137, 80, 78, 71]),
+      "Accuracy.png": new Uint8Array([137, 80, 78, 71]),
+      "Co thi.jpg": new Uint8Array([255, 216, 255]),
+      "Eff_met.png": new Uint8Array([137, 80, 78, 71]),
+      "Img3.png": new Uint8Array([137, 80, 78, 71]),
+      "Predict.png": new Uint8Array([137, 80, 78, 71]),
     });
     const result = await importOverleafZip(file);
     expect(result.files).toHaveLength(2);

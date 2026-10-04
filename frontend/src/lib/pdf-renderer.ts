@@ -1,7 +1,6 @@
 import { isValidPdfCitationSearch } from "@/lib/defense-pdf-stopwords";
 import {
   AnnotationLayer,
-  DOMSVGFactory,
   getDocument,
   GlobalWorkerOptions,
   TextLayer,
@@ -46,7 +45,8 @@ export async function renderPageToCanvas(
   }
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
-  await page.render({ canvasContext: context, viewport }).promise;
+  // pdf.js v5: `canvas` defaults to canvasContext.canvas; pass it explicitly (same element).
+  await page.render({ canvas, canvasContext: context, viewport }).promise;
 
   return {
     pageNumber: page.pageNumber,
@@ -98,7 +98,7 @@ function pdfPointFromTextLayerSpan(
     const topPct = Number.parseFloat(topRaw) / 100;
     const vx = leftPct * viewport.width;
     const vy = topPct * viewport.height;
-    return viewport.convertToPdfPoint(vx, vy);
+    return viewport.convertToPdfPoint(vx, vy) as [number, number];
   }
 
   const rect = span.getBoundingClientRect();
@@ -107,7 +107,7 @@ function pdfPointFromTextLayerSpan(
   const cy = rect.top + rect.height / 2;
   const vx = (cx - canvasRect.left) * (viewport.width / canvasRect.width);
   const vy = (cy - canvasRect.top) * (viewport.height / canvasRect.height);
-  return viewport.convertToPdfPoint(vx, vy);
+  return viewport.convertToPdfPoint(vx, vy) as [number, number];
 }
 
 /** Best-effort PDF point for SyncTeX: span style → text content → raw click. */
@@ -302,7 +302,7 @@ export async function renderPageTextLayer(
 
 export async function renderPageAnnotationLayer(
   page: PDFPageProxy,
-  container: HTMLElement,
+  container: HTMLDivElement,
   viewport: PageViewport,
   linkService: PdfLinkService,
 ): Promise<AnnotationLayer> {
@@ -322,6 +322,11 @@ export async function renderPageAnnotationLayer(
     page,
     viewport,
     structTreeLayer: null,
+    // pdf.js v5 reads the link service from the constructor (render() ignores it). Without it every
+    // link annotation throws and the whole layer fails, so citation links were not clickable.
+    linkService,
+    commentManager: null,
+    annotationStorage: null,
   });
 
   const annotations = await page.getAnnotations({ intent: "display" });
@@ -332,7 +337,6 @@ export async function renderPageAnnotationLayer(
     page,
     linkService,
     renderForms: false,
-    svgFactory: new DOMSVGFactory(),
   });
 
   bindInternalPdfLinkClicks(container, linkService);

@@ -75,7 +75,7 @@ function ShareViewerPage() {
 
         const main = normalized.mainFile ?? "main.tex";
         const files =
-          normalized.files?.length > 0
+          normalized.files && normalized.files.length > 0
             ? normalized.files
             : [{ path: main, content: normalized.latex }];
         const mainContent = files.find((f) => f.path === main)?.content ?? normalized.latex;
