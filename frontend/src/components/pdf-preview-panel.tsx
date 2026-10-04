@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from "pdfjs-dist";
 import { fetchCompileStatus, lookupSynctexInverse, type LatexCompiler } from "@/lib/api/academic";
+import { unreachableServerMessage } from "@/lib/api/api-errors";
 import { CompileLogPanel } from "@/components/compile-log-panel";
 import {
   computeFitScale,
@@ -655,7 +656,9 @@ export function PdfPreviewPanel({
           );
         }
       } catch {
-        flashSynctexHint("SyncTeX failed — start backend on port 8001 and restart npm run dev.");
+        flashSynctexHint(
+          unreachableServerMessage("SyncTeX failed — check the backend and restart npm run dev"),
+        );
       } finally {
         synctexBusyRef.current = false;
       }
@@ -866,10 +869,16 @@ export function PdfPreviewPanel({
             </p>
             {engineReady === false && !compileError && (
               <p className="mt-3 max-w-md text-xs text-amber-800">
-                Chưa phát hiện <code className="rounded bg-amber-100 px-1">pdflatex</code>. Cài
-                MiKTeX:{" "}
-                <code className="rounded bg-amber-100 px-1">winget install MiKTeX.MiKTeX</code> rồi
-                restart backend.
+                {import.meta.env.DEV ? (
+                  <>
+                    Chưa phát hiện <code className="rounded bg-amber-100 px-1">pdflatex</code>. Cài
+                    MiKTeX:{" "}
+                    <code className="rounded bg-amber-100 px-1">winget install MiKTeX.MiKTeX</code>{" "}
+                    rồi restart backend.
+                  </>
+                ) : (
+                  t.pdf.engineUnavailable
+                )}
               </p>
             )}
             {engineReady === null && !compileError && (

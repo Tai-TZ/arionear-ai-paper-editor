@@ -6,6 +6,7 @@ import {
   streamErrorMessage,
   streamInterruptedMessage,
   toUserFacingMessage,
+  unreachableServerMessage,
 } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
 import { contentFingerprint } from "@/lib/pending-edit-utils";
@@ -249,8 +250,11 @@ function buildChatRequestBody(
   return body;
 }
 
-const COMPILE_CONNECTION_MSG =
-  "Không kết nối được backend. Chạy: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8000";
+function compileConnectionMessage(): string {
+  return unreachableServerMessage(
+    "start the backend: python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8000",
+  );
+}
 
 const TRACE_STAGE_LABELS: Record<string, string> = {
   request_received: "Nhận yêu cầu",
@@ -289,7 +293,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error(path.startsWith("/compile") ? COMPILE_CONNECTION_MSG : "NETWORK_ERROR");
+    throw new Error(path.startsWith("/compile") ? compileConnectionMessage() : "NETWORK_ERROR");
   }
   if (res.status === 401) {
     logoutUser();
@@ -893,7 +897,7 @@ export async function compileLatex(
     try {
       res = await postCompileBody(buildPayload(delta));
     } catch {
-      throw new Error(COMPILE_CONNECTION_MSG);
+      throw new Error(compileConnectionMessage());
     }
     if (res.status === 401) {
       logoutUser();

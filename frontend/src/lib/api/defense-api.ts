@@ -1,6 +1,7 @@
 import { resolveApiBase } from "./base-url";
 import {
   mapApiHttpError,
+  networkErrorMsg,
   streamErrorMessage,
   streamInterruptedMessage,
   toUserFacingMessage,
@@ -274,7 +275,7 @@ export async function fetchDefenseQuota(): Promise<DefenseQuota> {
       headers: { Authorization: `Bearer ${authToken}` },
     });
   } catch {
-    throw new Error("Cannot reach the server.");
+    throw new Error(networkErrorMsg());
   }
 
   if (!res.ok) {

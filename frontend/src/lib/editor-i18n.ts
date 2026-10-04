@@ -68,6 +68,7 @@ export type EditorCopy = {
     searchMatchOf: (current: number, total: number) => string;
     searchPrev: string;
     searchNext: string;
+    engineUnavailable: string;
   };
   tools: {
     projectInfo: string;
@@ -377,6 +378,8 @@ const EN: EditorCopy = {
     searchMatchOf: (current, total) => `${current} of ${total}`,
     searchPrev: "Previous match",
     searchNext: "Next match",
+    engineUnavailable:
+      "The LaTeX compiler is not available on the server right now. Please try again later.",
   },
   tools: {
     projectInfo: "Project Info",
@@ -714,6 +717,8 @@ const VI: EditorCopy = {
     searchMatchOf: (current, total) => `${current}/${total}`,
     searchPrev: "Kết quả trước",
     searchNext: "Kết quả sau",
+    engineUnavailable:
+      "Trình biên dịch LaTeX trên server hiện chưa sẵn sàng. Vui lòng thử lại sau.",
   },
   tools: {
     projectInfo: "Thông tin dự án",

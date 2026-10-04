@@ -18,6 +18,15 @@ export function networkErrorMsg(locale?: UiLanguage): string {
   return msgs(locale).network;
 }
 
+/**
+ * "Could not reach the server" in the UI locale. Development builds append `devHint` (e.g. how to
+ * start the backend); production users never see developer instructions.
+ */
+export function unreachableServerMessage(devHint?: string, locale?: UiLanguage): string {
+  const message = networkErrorMsg(locale);
+  return import.meta.env.DEV && devHint ? `${message} (${devHint})` : message;
+}
+
 export function streamInterruptedMessage(locale?: UiLanguage): string {
   return msgs(locale).streamInterrupted;
 }

@@ -1,6 +1,6 @@
 import { getAccessToken } from "@/lib/auth-store";
 import { resolveApiBase } from "@/lib/api/base-url";
-import { mapApiHttpError } from "@/lib/api/api-errors";
+import { mapApiHttpError, unreachableServerMessage } from "@/lib/api/api-errors";
 import { fetchDedupe, invalidateFetchPrefix } from "@/lib/api/fetch-dedupe";
 
 const API_BASE = resolveApiBase();
@@ -181,7 +181,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
       headers,
     });
   } catch {
-    throw new Error("Cannot reach the server. Check that the backend is running.");
+    throw new Error(unreachableServerMessage("check that the backend is running"));
   }
 
   if (!res.ok) {

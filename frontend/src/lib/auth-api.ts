@@ -1,3 +1,4 @@
+import { unreachableServerMessage } from "./api/api-errors";
 import { resolveApiBase } from "./api/base-url";
 import { mapAuthHttpError, parseAuthErrorResponse, type AuthErrorCode } from "./auth-api-errors";
 
@@ -50,7 +51,7 @@ async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000
     if (e instanceof DOMException && e.name === "AbortError") {
       throw new Error("Request timed out. The server may be busy — try again in a moment.");
     }
-    throw new Error("Cannot reach the server. Check that the backend is running.");
+    throw new Error(unreachableServerMessage("check that the backend is running"));
   } finally {
     window.clearTimeout(timer);
   }
@@ -148,7 +149,7 @@ export async function apiLogin(
         error: "Request timed out. The server may be busy — try again in a moment.",
       };
     }
-    return { ok: false, error: "Cannot reach the server. Check that the backend is running." };
+    return { ok: false, error: unreachableServerMessage("check that the backend is running") };
   } finally {
     window.clearTimeout(timer);
   }
