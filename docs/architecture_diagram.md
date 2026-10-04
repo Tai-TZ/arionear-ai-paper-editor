@@ -1,7 +1,7 @@
 # Architecture Diagram — Arionear
 
-**Dự án:** Arionear · *Closer to Publication*  
-**Cập nhật:** 08/07/2026 · Đồng bộ Gate 3 production (custom domain + admin LLM keys/failover + editor onboarding)  
+**Tagline:** *Closer to Publication*  
+**Cập nhật:** 08/07/2026 · Đồng bộ production v1.0 (custom domain + admin LLM keys/failover + editor onboarding)  
 **Live:** [https://arionear.id.vn/](https://arionear.id.vn/) · API: [https://api.arionear.id.vn](https://api.arionear.id.vn)
 
 Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.
@@ -343,5 +343,4 @@ flowchart LR
 
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — mô tả chi tiết kiến trúc
 - [README.md](../README.md) — setup & Live URL (`https://arionear.id.vn`)
-- [AutoResearchReferee.md](../AutoResearchReferee.md) — ARC adopt/adapt/drop
 - [pdf-preview-deploy.md](./pdf-preview-deploy.md) — TeX & Docker ops

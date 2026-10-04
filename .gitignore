@@ -62,7 +62,5 @@ frontend/public/core/
 # Vendor clones (reference only — not part of Arionear runtime)
 _vendor/
 
-.ai-log/*.jsonl
-.ai-log/archive/
-.ai-log/.hook_state.json
-.ai-log/.hook_payload.json
+# Local AI usage logs (never commit)
+.ai-log/

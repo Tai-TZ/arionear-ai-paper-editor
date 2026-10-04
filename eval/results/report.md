@@ -1,4 +1,4 @@
-# Eval Evidence — Arionear (Arionear)
+# Eval Evidence — Arionear
 
 > ≥5 manual test cases với output thật từ LLM (không mock)
 > **Ngày chạy:** 2026-07-08 12:13:04 UTC
@@ -226,5 +226,5 @@ Nếu bạn muốn tôi chèn khung (template) cho các mục này vào file mai
 
 ## Related metrics
 
-- Gate 3 summary: [`gate3_summary.md`](./gate3_summary.md)
-- Gate 3 machine report: [`gate3_report.json`](./gate3_report.json)
+- Benchmark summary: [`gate3_summary.md`](./gate3_summary.md)
+- Benchmark machine report: [`gate3_report.json`](./gate3_report.json)

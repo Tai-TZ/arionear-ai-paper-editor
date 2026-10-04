@@ -228,7 +228,7 @@ npm install
 **Lần đầu** (tạo toàn bộ bảng):
 
 ```bash
-# Tạo migration có tên (khuyên dùng cho team)
+# Tạo migration có tên (khuyên dùng)
 npm run db:migrate
 # Prisma sẽ hỏi tên migration, ví dụ: init_arionear_schema
 

@@ -133,7 +133,7 @@ export const aboutContent: MarketingPageContent = {
     {
       paragraphs: [
         "Arionear helps authors improve language, structure, and citations while keeping the human author in control.",
-        "The product is developed by Arionear for the Arionear.",
+        "Arionear is designed and built by Nguyễn Thành Tài.",
       ],
     },
   ],
@@ -148,7 +148,7 @@ export const contactContent: MarketingPageContent = {
     {
       paragraphs: [
         "Email: support@arionear.example",
-        "For course submissions and demo-day inquiries, contact your team lead directly.",
+        "For bug reports or feature requests, please include the steps to reproduce and the browser you are using.",
       ],
     },
   ],

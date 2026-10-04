@@ -1,8 +1,8 @@
-# ROADMAP — Arionear (Arionear)
+# ROADMAP — Arionear
 
 **Tagline:** *Closer to Publication*  
 **Cập nhật:** 16/06/2026  
-**Tham chiếu:** [ARCHITECTURE.md](./ARCHITECTURE.md) · [AutoResearchReferee.md](./AutoResearchReferee.md)
+**Tham chiếu:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 
@@ -29,8 +29,6 @@ Arionear là nền tảng **Assisted Editing** — AI đóng vai biên tập vi�
 
 ## 2. Trạng thái hiện tại (baseline 16/06/2026)
 
-Sau merge PR [#11](https://github.com/Tai-TZ/arionear-ai-paper-editor/pull/11) vào `develop`.
-
 ### ✅ Đã hoàn thành
 
 | Lớp | Thành phần | Ghi chú |
@@ -47,7 +45,7 @@ Sau merge PR [#11](https://github.com/Tai-TZ/arionear-ai-paper-editor/pull/11) v
 | **Infra** | Researcher profile (`/profile`, `GET/PATCH /users/me/profile`) | ✅ |
 | **L4 Audit** | `revisionAction` on Accept/Reject, `GET /sessions/{id}/revisions` | ✅ |
 | **Persistence** | `revision_history` + `citation_registry` qua DB session store | ✅ |
-| **DevOps** | CI (pytest + ruff), Docker backend, AI usage logging hooks | |
+| **DevOps** | CI (pytest + ruff), Docker backend | |
 
 ### ⚠️ Còn thiếu / partial (P2+)
 
@@ -135,7 +133,7 @@ flowchart TB
 | 1.5 | Structure + Template + Chat streaming | ✅ |
 | 1.6 | Prompts external YAML (C9) | ✅ |
 
-**Deliverable:** Style fix + citation validation + diff gate — **đạt**.
+**Kết quả:** Style fix + citation validation + diff gate — **đạt**.
 
 ---
 
@@ -174,7 +172,7 @@ flowchart TB
 | Schema + API `GET/PATCH /users/me/profile` | ✅ |
 | UI `/profile` + editor integration | ✅ |
 
-**Deliverable P1.5:** ✅ Audit trail hoạt động + DB persist revision/citation + profile + docs (cập nhật tiếp).
+**Kết quả P1.5:** ✅ Audit trail hoạt động + DB persist revision/citation + profile + docs (cập nhật tiếp).
 
 ---
 
@@ -232,7 +230,7 @@ flowchart TB
 | Structure auto-apply (optional) | Diff cho từng suggestion — user bật/tắt |
 | LLM intent classifier ổn định hơn | Giảm fallback regex |
 
-**Deliverable P2:** Full assisted-editing feature set theo ARC adapt — logic + review + multi-format import + citation L4.
+**Kết quả P2:** Full assisted-editing feature set theo ARC adapt — logic + review + multi-format import + citation L4.
 
 ---
 
@@ -254,7 +252,7 @@ flowchart TB
 | 3.7 | **Semantic integrity scoring** | Embedding/model score thay vì chỉ rule-based L2 |
 | 3.8 | **Domain calibration** | Ngưỡng embedding theo lĩnh vực (y sinh, CS, …) |
 
-**Deliverable P3:** Deploy được cho institution; báo cáo AI contribution; quality học dần từ usage.
+**Kết quả P3:** Deploy được cho institution; báo cáo AI contribution; quality học dần từ usage.
 
 ---
 
@@ -338,9 +336,7 @@ gantt
 | File | Nội dung |
 |------|----------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc 4 tầng, guardrail, API |
-| [AutoResearchReferee.md](./AutoResearchReferee.md) | Phân tích ARC adopt/adapt/drop |
 | [docs/DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) | Prisma + Postgres setup |
-| [WORKLOG.md](./WORKLOG.md) | Nhật ký team theo ngày |
 
 ---
 

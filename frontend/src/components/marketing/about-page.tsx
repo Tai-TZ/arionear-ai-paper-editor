@@ -6,11 +6,7 @@ import { aboutPageCopy, marketingPageContent, marketingPageUi } from "@/lib/mark
 import { EditorialBoardFigure } from "./editorial-board-figure";
 import { MarketingLayout } from "./marketing-layout";
 
-const teamMembers = [
-  { name: "Nguyễn Thành Tài", id: "***" },
-  { name: "Nguyễn Trọng Nguyên", id: "***" },
-  { name: "Ngô Thị Ánh", id: "***" },
-];
+const teamMembers = [{ name: "Nguyễn Thành Tài", tag: "Founder" }];
 
 export function AboutPage() {
   const { locale } = useLocale();
@@ -54,7 +50,7 @@ export function AboutPage() {
 
               <ul className="divide-y divide-foreground border-t border-foreground">
                 {teamMembers.map((member, index) => (
-                  <li key={member.id}>
+                  <li key={member.name}>
                     <button
                       type="button"
                       onClick={() => setActiveIndex(index)}
@@ -73,7 +69,7 @@ export function AboutPage() {
                       </div>
                       <div className="sm:text-right">
                         <span className="inline-block border border-foreground px-3 py-1.5 font-mono-data text-xs tracking-widest bg-background">
-                          {member.id}
+                          {member.tag}
                         </span>
                       </div>
                     </button>

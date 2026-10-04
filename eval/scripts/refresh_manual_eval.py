@@ -295,7 +295,7 @@ def main() -> int:
 
     # Markdown report
     lines = [
-        "# Eval Evidence — Arionear (Arionear)",
+        "# Eval Evidence — Arionear",
         "",
         "> ≥5 manual test cases với output thật từ LLM (không mock)",
         f"> **Ngày chạy:** {ts}",
@@ -391,8 +391,8 @@ def main() -> int:
     lines += [
         "## Related metrics",
         "",
-        "- Gate 3 summary: [`gate3_summary.md`](./gate3_summary.md)",
-        "- Gate 3 machine report: [`gate3_report.json`](./gate3_report.json)",
+        "- Benchmark summary: [`gate3_summary.md`](./gate3_summary.md)",
+        "- Benchmark machine report: [`gate3_report.json`](./gate3_report.json)",
         "",
     ]
     (RESULTS / "report.md").write_text("\n".join(lines), encoding="utf-8")

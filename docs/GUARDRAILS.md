@@ -1,8 +1,8 @@
-# Guardrails — Arionear (Gate 3)
+# Guardrails — Arionear
 
 Arionear implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production on Cloud Run.
 
-**Eval evidence (mentor):** [`EVALUATION.md`](../EVALUATION.md) · [`eval/results/gate3_summary.md`](../eval/results/gate3_summary.md)
+**Eval evidence:** [`EVALUATION.md`](../EVALUATION.md) · [`eval/results/gate3_summary.md`](../eval/results/gate3_summary.md)
 
 ## Overview
 
@@ -102,7 +102,7 @@ On every AI edit proposal (when not blocked by L2 errors):
 2. User Accept or Reject → `POST /api/v1/revisions/{session_id}/{revision_id}` with action `accepted` | `rejected`
 3. Status updated on the suggestion record; visible under **Tools → Versions** in the editor
 
-> **Note:** The `audit_logs` table exists in the schema for future institution features; current Gate 3 audit trail uses the `suggestions` revision history.
+> **Note:** The `audit_logs` table exists in the schema for future institution features; the current audit trail uses the `suggestions` revision history.
 
 ---
 
@@ -121,12 +121,12 @@ pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
 
 | Artefact | Content |
 |----------|---------|
-| `EVALUATION.md` | BTC Eval Evidences (bảng TC + metrics) |
+| `EVALUATION.md` | Test evidence (bảng TC + metrics) |
 | `eval/results/gate3_report.json` | Machine-readable results |
-| `eval/results/gate3_summary.md` | Gate 3 metrics vs baseline (incl. guardrail) |
+| `eval/results/gate3_summary.md` | Benchmark metrics vs baseline (incl. guardrail) |
 | `eval/datasets/gate3_guardrail_cases.json` | 4 guardrail test cases |
 
-**Gate 3 result:** `guardrail_test_pass_rate` = **1.00** (4/4 cases)
+**Benchmark result:** `guardrail_test_pass_rate` = **1.00** (4/4 cases)
 
 ### Verified cases
 

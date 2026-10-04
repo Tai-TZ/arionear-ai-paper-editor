@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from src.config import Settings
 
-# Production frontends/API on *.arionear.id.vn (e.g. arionear.id.vn).
+# Production frontends/API on *.arionear.id.vn (e.g. app.arionear.id.vn).
 _ARIONEAR_ORIGIN_REGEX = r"https://([a-zA-Z0-9-]+\.)*arionear\.id\.vn"
 
 

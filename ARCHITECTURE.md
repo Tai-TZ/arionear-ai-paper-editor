@@ -1,12 +1,12 @@
 # Architecture Document — Arionear
 
-**Dự án:** Arionear · AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
+**Dự án:** AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *Closer to Publication*  
 **Phiên bản tài liệu:** 3.1 · **Cập nhật:** 08/07/2026
 
-> Kiến trúc dựa trên phân tích [AutoResearchReferee.md](./AutoResearchReferee.md) (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
+> Kiến trúc tham khảo framework mã nguồn mở AutoResearchClaw (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
-Tài liệu này mô tả **kiến trúc đã triển khai** tại Gate 3 (production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
+Tài liệu này mô tả **kiến trúc đã triển khai** (v1.0, production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
 
 **Production URLs:** https://arionear.id.vn · https://api.arionear.id.vn
 
@@ -36,12 +36,12 @@ Arionear là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải th
 | Compile | TeX Live server-side (`latex_compile.py`), SyncTeX, delta asset compile, PDF cache |
 | Auth | JWT (email/password + Google SSO) · god admin provisioning |
 | Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout |
-| Observability | Inngest (optional), AI Usage Logging hooks (`.cursor/hooks.json`) |
+| Observability | Inngest (optional) |
 | DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `arionear.id.vn` |
 
 ---
 
-## 2. Kiến trúc tổng thể (đã triển khai — Gate 3)
+## 2. Kiến trúc tổng thể (đã triển khai — v1.0)
 
 > **Quy ước sơ đồ:** Chỉ gồm thành phần **đã code và chạy production** (✅). Tính năng roadmap *(planned P2)* không vẽ vào đây — xem [§12 Roadmap](#12-roadmap-tóm-tắt). `Researcher` là actor (người dùng), không phải module phần mềm.
 
@@ -176,7 +176,7 @@ sequenceDiagram
 | `/guide` | User Guide v2 | ✅ |
 | `/pricing`, `/about`, `/features`, … | Marketing pages (EN/VI) | ✅ |
 
-**Editor architecture** — refactor Gate 3 (`features/editor/`):
+**Editor architecture** — sau refactor (`features/editor/`):
 
 | Hook / module | Trách nhiệm |
 |---------------|-------------|
@@ -422,7 +422,7 @@ Chi tiết: [docs/GUARDRAILS.md](./docs/GUARDRAILS.md)
 
 ---
 
-## 6. Ánh xạ AutoResearchReferee → Arionear
+## 6. Ánh xạ AutoResearchClaw (ARC) → Arionear
 
 | ARC | Quyết định | Arionear equivalent | Trạng thái |
 |-----|------------|---------------------|------------|
@@ -436,8 +436,6 @@ Chi tiết: [docs/GUARDRAILS.md](./docs/GUARDRAILS.md)
 | C8 MetaClaw | Deferred P3 | Meta-patterns only | — |
 | C9 Prompts YAML | ADOPT | `prompts.default.yaml` | ✅ |
 | C10 KB | ADAPT | Paper Store (PostgreSQL + session cache) | ✅ |
-
-Chi tiết: [AutoResearchReferee.md](./AutoResearchReferee.md) §3–4.
 
 ---
 
@@ -552,7 +550,7 @@ cd frontend && bun run dev
 | Frontend | TanStack Start | SSR + file routing; editor feature module |
 | Backend | FastAPI | Async, OpenAPI, SSE streaming |
 | Agent | LangGraph + `chat_stream` | Graph cho sync; stream service cho production UX |
-| LLM default | Z.AI GLM + Gemini defense/audit | Chi phí thấp; chất lượng đủ Gate 3 metrics |
+| LLM default | Z.AI GLM + Gemini defense/audit | Chi phí thấp; chất lượng đạt benchmark metrics |
 | LLM keys | Admin platform keys + env fallback + priority failover | Tránh hard-fail một key; quay vòng khi auth/rate error |
 | Human gate | Line diff + explicit accept | "Show, Don't Overwrite" (C7) |
 | Logic audit | Comment-only debate | Giữ niềm tin researcher; không auto-apply |
@@ -566,7 +564,7 @@ cd frontend && bun run dev
 
 ## 11. Trạng thái triển khai vs kiến trúc mục tiêu
 
-| Thành phần | Hiện tại (Gate 3) | Target / gap |
+| Thành phần | Hiện tại (v1.0) | Target / gap |
 |------------|-------------------|--------------|
 | Document Parser | LaTeX + Overleaf ZIP | + DOCX/PDF adapters |
 | Paper Store | PostgreSQL + session cache + localStorage | Full offline sync |
@@ -588,7 +586,7 @@ cd frontend && bun run dev
 | Chat streaming | SSE activity/reasoning/token | ✅ |
 | Compile | Delta assets, gzip, PDF cache, SyncTeX | ✅ |
 | Tests | 296 pytest + frontend vitest | More FE integration tests |
-| Eval | Gate 3 — 8/9 metrics vs baseline | `health_latency_p95` cold-start |
+| Eval | Benchmark — 8/9 metrics vs baseline | `health_latency_p95` cold-start |
 
 ---
 
@@ -598,12 +596,12 @@ cd frontend && bun run dev
 |-------|-----------|------------|
 | **P1 MVP** | Style, structure, citation, template, diff gate, streaming | ✅ Done |
 | **P1.5** | Auth, PostgreSQL, profile, revisions, L4 audit | ✅ Done |
-| **P2 Gate 3** | Logic audit, defense, billing, admin, production deploy, eval | ✅ Done |
+| **P2** | Logic audit, defense, billing, admin, production deploy, eval | ✅ Done |
 | **P2+** | Peer-review response, OpenAlex, DOCX/PDF import | Planned |
 | **P3** | MetaClaw patterns, LangSmith production tracing, AI Contribution export | Deferred |
-| **GO PRODUCT** | Demo Day → maintenance, pitch deck, video demo | In progress (09/07) |
+| **Maintenance** | Bảo trì production, bug fix | In progress |
 
-Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Gate 3 evidence: **[eval/results/gate3_summary.md](./eval/results/gate3_summary.md)**
+Lộ trình chi tiết: **[ROADMAP.md](./ROADMAP.md)** · Benchmark evidence: **[eval/results/gate3_summary.md](./eval/results/gate3_summary.md)**
 
 ---
 
@@ -643,10 +641,8 @@ frontend/src/
 
 ## Tài liệu liên quan
 
-- [AutoResearchReferee.md](./AutoResearchReferee.md) — phân tích ARC & quyết định adopt/adapt/drop
 - [docs/ARCHITECTURE.png](./docs/ARCHITECTURE.png) — sơ đồ kiến trúc tổng thể (ảnh)
 - [docs/architecture_diagram.md](./docs/architecture_diagram.md) — sơ đồ workflow & component map
 - [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) — guardrail layers L1–L4
-- [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) — Gate 3 eval metrics & production evidence
+- [eval/results/gate3_summary.md](./eval/results/gate3_summary.md) — benchmark eval metrics & production evidence
 - [README.md](./README.md) — hướng dẫn chạy dự án
-- [WORKLOG.md](./WORKLOG.md) · [JOURNAL.md](./JOURNAL.md) — team deliverables log

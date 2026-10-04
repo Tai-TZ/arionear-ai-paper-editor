@@ -87,7 +87,6 @@ $googleApiKey = Get-DotEnvValue "GOOGLE_API_KEY"
 $googleSecret = Get-DotEnvValue "GOOGLE_CLIENT_SECRET"
 $smtpPassword = Get-DotEnvValue "SMTP_PASSWORD"
 $adminPassword = Get-DotEnvValue "ADMIN_GOD_PASSWORD"
-$aiLogKey = Get-DotEnvValue "AI_LOG_API_KEY"
 $langchainKey = Get-DotEnvValue "LANGCHAIN_API_KEY"
 
 if (-not $authSecret -or $authSecret -eq "change-me-generate-with-openssl-rand-hex-32" -or $authSecret -eq "dev-only-change-in-production") {
@@ -114,9 +113,6 @@ Set-GcpSecret "smtp-password" $smtpPassword
 Set-GcpSecret "admin-god-password" $adminPassword
 if ($langchainKey -and $langchainKey -ne "your-langsmith-key-here") {
     Set-GcpSecret "langchain-api-key" $langchainKey
-}
-if ($aiLogKey) {
-    Set-GcpSecret "ai-log-api-key" $aiLogKey
 }
 
 if ($SecretsOnly) {
@@ -166,7 +162,6 @@ $openrouterSiteUrl = $FrontendUrl
 $openrouterAppName = Get-DotEnvValue "OPENROUTER_APP_NAME"
 $langchainProject = Get-DotEnvValue "LANGCHAIN_PROJECT"
 $langchainTracing = Get-DotEnvValue "LANGCHAIN_TRACING_V2"
-$aiLogServer = Get-DotEnvValue "AI_LOG_SERVER"
 
 $secretBindings = @(
     "DIRECT_DATABASE_URL=direct-database-url:latest",
@@ -178,9 +173,6 @@ $secretBindings = @(
 )
 if ($langchainKey -and $langchainKey -ne "your-langsmith-key-here") {
     $secretBindings += "LANGCHAIN_API_KEY=langchain-api-key:latest"
-}
-if ($aiLogKey) {
-    $secretBindings += "AI_LOG_API_KEY=ai-log-api-key:latest"
 }
 if ($zaiKey) {
     $secretBindings += "ZAI_API_KEY=zai-api-key:latest"
@@ -214,7 +206,6 @@ $envVars = @(
 )
 if ($langchainProject) { $envVars += "LANGCHAIN_PROJECT=$langchainProject" }
 if ($langchainTracing) { $envVars += "LANGCHAIN_TRACING_V2=$langchainTracing" }
-if ($aiLogServer) { $envVars += "AI_LOG_SERVER=$aiLogServer" }
 
 Write-Host "`n=== Step 3: Deploy Cloud Run ===" -ForegroundColor Cyan
 # Write env vars to YAML to avoid gcloud comma/colon escaping issues on Windows.

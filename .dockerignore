@@ -9,7 +9,6 @@ __pycache__
 frontend/node_modules
 frontend/dist
 docs/
-presentation/
 eval/
 *.md
 !requirements.txt

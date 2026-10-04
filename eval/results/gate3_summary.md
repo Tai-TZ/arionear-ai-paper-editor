@@ -1,11 +1,11 @@
-# Gate 3 Eval Summary
+# Benchmark Eval Summary
 
 **Generated:** 2026-07-08 12:08:11 UTC
 **API:** https://api.arionear.id.vn
 **Frontend:** https://arionear.id.vn
 
 > Companion evidence (LLM thật + JWT): [`report.md`](./report.md) — 6/6 TC pass @ 2026-07-08 12:13:04 UTC.
-> Note: `chat_latency_p50_s` / `style_latency_p50_s` trong script Gate 3 này đo probe không JWT (HTTP 401 nhanh); latency LLM thật xem `report.md` (~3–5s).
+> Note: `chat_latency_p50_s` / `style_latency_p50_s` trong script benchmark này đo probe không JWT (HTTP 401 nhanh); latency LLM thật xem `report.md` (~3–5s).
 
 ## Metrics vs baseline
 

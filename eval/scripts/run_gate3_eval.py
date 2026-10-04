@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate 3 evaluation runner — offline metrics + optional live API probes.
+"""Benchmark evaluation runner — offline metrics + optional live API probes.
 
 Usage:
   python eval/scripts/run_gate3_eval.py
@@ -39,7 +39,7 @@ SAMPLE_LATEX = (
 
 MINIMAL_COMPILE_LATEX = (
     r"\documentclass{article}"
-    r"\begin{document}Hello Arionear Gate 3.\end{document}"
+    r"\begin{document}Hello Arionear.\end{document}"
 )
 
 
@@ -385,7 +385,7 @@ def compare_to_baselines(metrics: dict[str, float], baselines: dict) -> list[dic
 
 def write_summary_md(report: dict, path: Path) -> None:
     lines = [
-        "# Gate 3 Eval Summary",
+        "# Benchmark Eval Summary",
         "",
         f"**Generated:** {report['timestamp']}",
         f"**API:** {report.get('api_url') or '(offline only)'}",
@@ -406,7 +406,7 @@ def write_summary_md(report: dict, path: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run Gate 3 evaluation")
+    parser = argparse.ArgumentParser(description="Run benchmark evaluation")
     parser.add_argument(
         "--api-url",
         default=os.environ.get("GATE3_API_URL", "").strip(),

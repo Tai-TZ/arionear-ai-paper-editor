@@ -1,151 +1,206 @@
-# Arionear — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học
+<div align="center">
 
-> **Tagline:** *Closer to Publication*  
-> **Chương trình:** [Arionear](https://github.com/Tai-TZ/arionear-ai-paper-editor)
+# Arionear
 
-Arionear là nền tảng **Assisted Editing** giúp researcher cải thiện bản thảo LaTeX bằng trợ lý AI **Ario**. Mọi thay đổi hiển thị dưới dạng **diff** — người dùng **Accept/Reject** trước khi áp dụng; AI không tự publish thay tác giả.
+### *Closer to Publication*
 
-**Luồng MVP chính:** đăng nhập → mở project → soạn LaTeX trong editor → chat Ario (style / structure / citation / template) → xem diff → Accept → compile PDF.
+**Trợ lý AI biên tập bài báo khoa học trên LaTeX — gợi ý như một biên tập viên, quyết định vẫn thuộc về tác giả.**
 
----
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![React](https://img.shields.io/badge/React_19-149ECA?style=for-the-badge&logo=react&logoColor=white)
+![TanStack](https://img.shields.io/badge/TanStack_Start-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=for-the-badge&logo=latex&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 
-## Links (Deliverables)
+[Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Đánh giá](#-kết-quả-đánh-giá) · [Tài liệu](#-tài-liệu)
 
-- **GitHub repo (public):** [Tai-TZ/arionear-ai-paper-editor](https://github.com/Tai-TZ/arionear-ai-paper-editor)
-- **Live URL:** `https://arionear.id.vn/`
-- **Video demo (3–5 phút):** `https://drive.google.com/file/d/1MUBC6YgKQKtuL3ds_-efpO5xGLwTzZdS/view?usp=sharing`
-- **Pitch deck:** `https://docs.google.com/presentation/d/1bb85CRWJjaKUjBKVzjWXfERb6PWs8aWrNw_tmIp84UA/edit?usp=sharing` **hoặc** `presentation/Pitching Deck.pptx`
-- **Eval Evidences (BTC):** [EVALUATION.md](./EVALUATION.md)
-
----
-
-## Tech Stack
-
-
-| Layer    | Công nghệ                                              |
-| -------- | ------------------------------------------------------ |
-| Frontend | TanStack Start, React 19, shadcn/ui, Tailwind v4, Vite |
-| Backend  | FastAPI, Python 3.11+, LangGraph                       |
-| LLM      | Google (Gemini) · OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
-| Database | Prisma + PostgreSQL                                    |
-| PDF      | pdflatex + PDF.js + SyncTeX                            |
-
+</div>
 
 ---
 
-## Prerequisites
+## 📖 Giới thiệu
 
-- **Python 3.11+**
-- **Node.js 20+** và npm (hoặc Bun)
-- **Git**
-- **LLM API key** — ít nhất một trong: `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ZAI_API_KEY`, `ANTHROPIC_API_KEY`
-- **TeX distribution** (tùy chọn, cho PDF preview): MiKTeX (Windows) / TeX Live (Linux/macOS)
+Viết một bài báo khoa học tốt không chỉ là chuyện ngữ pháp: văn phong học thuật, cấu trúc IMRaD, trích dẫn chính xác và mạch lập luận nhất quán đều quyết định bản thảo có được chấp nhận hay không. Các công cụ AI phổ thông thường **viết lại** thay cho tác giả — và đôi khi **bịa** số liệu hoặc trích dẫn.
+
+**Arionear** đi theo hướng ngược lại: một nền tảng **Assisted Editing** nơi trợ lý AI **Ario** đóng vai biên tập viên. Ario đọc bản thảo LaTeX, đề xuất chỉnh sửa có ngữ cảnh, và **mọi thay đổi đều hiển thị dưới dạng diff** để tác giả **Accept / Reject** — AI không bao giờ tự sửa hay tự publish thay con người.
+
+```text
+Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reject → Compile PDF
+```
+
+### Nguyên tắc thiết kế
+
+| | Nguyên tắc | Ý nghĩa |
+|---|---|---|
+| 🧑‍⚖️ | **Human Gate** | Mọi output của AI đi qua diff + Accept/Reject — tác giả luôn là người quyết định cuối cùng |
+| 🛡️ | **Integrity Guard** | Không thay đổi ý nghĩa khoa học, không bịa dữ liệu, kết quả hay trích dẫn |
+| 🧱 | **Guardrail 4 lớp** | Prompt constraints → kiểm tra numeric drift / độ dài → Human Gate → audit log |
+| 🔌 | **Model-agnostic** | Chọn provider/model ngay trong editor; admin cấu hình platform keys với failover theo độ ưu tiên |
 
 ---
 
-## Setup
+## ✨ Tính năng
 
-### 1. Clone repository
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### ✍️ Biên tập với Ario
+- **Style** — nâng văn phong học thuật, giữ nguyên nội dung
+- **Structure** — phân tích IMRaD, chỉ ra phần thiếu/thừa
+- **Template** — sinh khung section còn thiếu
+- **Citation** — xác minh trích dẫn qua arXiv · CrossRef · Semantic Scholar
+- **Quick Edit** (`Ctrl+K`) — bôi đen một đoạn và ra lệnh trực tiếp
+- **Slash commands** và chat streaming (SSE)
+
+</td>
+<td width="50%" valign="top">
+
+### 🔬 Đánh giá chất lượng bài
+- **Logic Audit** (Quick / Deep) — kiểm tra mạch lập luận xuyên suốt các phần
+- **Publication Score Gate** — chấm điểm bản thảo trước khi export
+- **Defense Mode** — hội đồng AI phản biện thử (mock viva)
+- **Academic Integrity Monitor** — chặn chỉnh sửa làm lệch số liệu
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 📄 Môi trường LaTeX đầy đủ
+- Editor đa file với outline, upload hình ảnh và tài nguyên
+- Compile PDF phía server (TeX Live) + **SyncTeX** nhảy qua lại code ↔ PDF
+- Import **Overleaf ZIP** và **template gallery** (IEEE, …)
+- Chia sẻ bản thảo bằng **link read-only** (Yjs + WebSocket)
+
+</td>
+<td width="50%" valign="top">
+
+### ⚙️ Nền tảng
+- Xác thực **JWT** (email/password, xác minh email) + **Google SSO**
+- **Admin console** — người dùng, chính sách LLM, quota, báo cáo chi phí
+- **Billing** theo tier (FREE / PRO) với giới hạn lượt Defense
+- Giao diện **song ngữ EN / VI**, dark mode, responsive cho mobile
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗️ Kiến trúc
+
+![Kiến trúc hệ thống Arionear](./docs/ARCHITECTURE.png)
+
+Luồng chính của editor chạy qua **SSE streaming**: Intent Router phân loại yêu cầu (rules → LLM fallback), chuyển đến agent tương ứng; output đi qua Integrity Monitor trước khi trở thành diff cho người dùng duyệt.
+
+```mermaid
+sequenceDiagram
+    actor R as Researcher
+    participant FE as Editor (React)
+    participant API as FastAPI
+    participant IR as Intent Router
+    participant AG as Ario Agents
+    participant AIM as Integrity Monitor
+    participant LLM as LLM Provider
+
+    R->>FE: "Chỉnh abstract cho học thuật hơn"
+    FE->>API: POST /api/v1/chat/stream (SSE)
+    API->>IR: classify_intent (rules → LLM)
+    IR->>AG: Style / Edit / Structure / Citation / Template / Logic
+    AG->>LLM: Prompt + guardrail L1
+    LLM-->>AG: Suggestion + edits[]
+    AG->>AIM: L2 — numeric drift, length check
+    AIM-->>FE: diff + flags (stream)
+    R->>FE: Accept ✅ / Reject ❌
+    FE->>API: POST /api/v1/compile → PDF + SyncTeX
+```
+
+Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](./ARCHITECTURE.md) và [docs/architecture_diagram.md](./docs/architecture_diagram.md).
+
+### Tech stack
+
+| Layer | Công nghệ |
+|---|---|
+| **Frontend** | TanStack Start · React 19 · shadcn/ui · Tailwind CSS v4 · Vite · PDF.js |
+| **Backend** | FastAPI · Python 3.11+ · LangGraph · SQLAlchemy · SSE / WebSocket |
+| **LLM** | Google Gemini · OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
+| **Dữ liệu** | PostgreSQL · Prisma (schema & migrations) |
+| **LaTeX** | pdflatex (TeX Live) · SyncTeX · delta asset compile + PDF cache |
+| **Hạ tầng** | Docker · Google Cloud Run · GitHub Actions CI |
+| **Observability** | LangSmith tracing · Inngest *(tùy chọn)* |
+
+---
+
+## 🚀 Bắt đầu nhanh
+
+### Yêu cầu
+
+- **Python 3.11+**, **Node.js 20+** (npm hoặc Bun)
+- **PostgreSQL** (local hoặc Prisma Postgres)
+- Ít nhất **một LLM API key**: `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` hoặc `ZAI_API_KEY`
+- *(Tùy chọn)* **TeX distribution** để compile PDF — MiKTeX (Windows) / TeX Live (macOS, Linux)
+
+### 1. Clone & cấu hình
 
 ```bash
 git clone https://github.com/Tai-TZ/arionear-ai-paper-editor.git
-cd Arionear
+cd arionear-ai-paper-editor
+cp .env.example .env   # điền API key, DIRECT_DATABASE_URL, AUTH_SECRET_KEY
 ```
 
-### 2. Cấu hình môi trường
-
-```bash
-cp .env.example .env
-# Mở .env và điền API keys + DATABASE_URL (xem bảng bên dưới)
-```
-
-### 3. Backend (Python)
+### 2. Backend
 
 ```bash
 python -m venv .venv
-
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-
-# macOS / Linux
-# source .venv/bin/activate
-
+source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-**Database (Prisma Postgres):**
+### 3. Database
 
 ```bash
-# Trong .env: DIRECT_DATABASE_URL=postgresql://... (bắt buộc cho backend)
-# DATABASE_URL=prisma+postgres://... (cho npm run db:migrate)
 npm install
 npm run db:generate
 npm run db:migrate
 ```
 
+> Xem [docs/DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) để cấu hình PostgreSQL local hoặc Prisma Postgres.
+
 ### 4. Frontend
 
 ```bash
-cd frontend
-npm install
-cd ..
+cd frontend && npm install && cd ..
 ```
 
-### 5. AI Usage Logging hooks (BTC deliverable)
+### 5. Chạy development
 
 ```bash
-# Linux / macOS / Git Bash
-bash scripts/setup_hooks.sh
-
-# Windows PowerShell
-powershell -ExecutionPolicy Bypass -File scripts\setup_hooks.ps1
-```
-
-### 6. Chạy development
-
-Mở **hai terminal**. Backend và frontend phải dùng **cùng port** với `.env` (`APP_PORT`, mặc định trong `.env.example` là `8000`).
-
-```bash
-# Terminal 1 — Backend
+# Terminal 1 — Backend (http://127.0.0.1:8000)
 python -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
 
 # Terminal 2 — Frontend (proxy /api/v1 → backend)
-cd frontend
-# Nếu backend không chạy ở 8000, set proxy target:
-# Windows PowerShell:
-#   $env:VITE_DEV_API_PROXY="http://127.0.0.1:8000"; npm run dev
-# macOS / Linux:
-#   VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm run dev
-npm run dev
+cd frontend && npm run dev
 ```
 
-Mở trình duyệt tại URL Vite in ra (thường `http://localhost:8080`).
+Mở URL mà Vite in ra (mặc định `http://localhost:8080`). Nếu backend chạy port khác, đặt `VITE_DEV_API_PROXY=http://127.0.0.1:<port>` trước khi chạy frontend.
 
-### 7. Kiểm tra nhanh
+### 6. Kiểm tra
 
 ```bash
-curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8000/api/v1/status
-curl http://127.0.0.1:8000/api/v1/compile/status
+curl http://127.0.0.1:8000/health               # → "status": "ok"
+curl http://127.0.0.1:8000/api/v1/compile/status # → "available": true nếu đã cài TeX
 ```
 
-Kỳ vọng: `health` → `"status": "ok"`; `compile/status` → `"available": true` nếu đã cài TeX.
+<details>
+<summary><b>🐳 Chạy bằng Docker</b></summary>
 
-> **Lưu ý:** Chỉ chạy **một** instance uvicorn để tránh DB lock khi dùng PostgreSQL remote.
+<br>
 
-### 8. PDF Preview — cài TeX (local)
-
-
-| OS          | Lệnh                                                                                |
-| ----------- | ----------------------------------------------------------------------------------- |
-| **Windows** | `winget install MiKTeX.MiKTeX`                                                      |
-| **macOS**   | `brew install --cask miktex`                                                        |
-| **Linux**   | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
-
-
-Sau khi cài, restart terminal và chạy lại backend.
-
-### 9. Docker (production backend)
+Image backend đã bao gồm TeX Live và chạy ở port `8000`.
 
 ```bash
 docker compose build
@@ -153,258 +208,168 @@ docker compose up -d
 curl http://localhost:8000/api/v1/compile/status
 ```
 
-Docker image dùng port **8000** và đã gồm TeX Live. Chi tiết deploy: `docs/pdf-preview-deploy.md`.
+Cài TeX thủ công cho môi trường local:
+
+| OS | Lệnh |
+|---|---|
+| Windows | `winget install MiKTeX.MiKTeX` |
+| macOS | `brew install --cask miktex` |
+| Linux | `sudo apt install texlive-latex-base texlive-latex-extra texlive-fonts-recommended` |
+
+Chi tiết vận hành PDF preview: [docs/pdf-preview-deploy.md](./docs/pdf-preview-deploy.md).
+
+</details>
 
 ---
 
-## Environment Variables
+## 🔧 Cấu hình môi trường
 
-Copy từ `[.env.example](./.env.example)`. **Không commit file `.env`.**
+Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example). **Không commit file `.env`.**
 
-### Bắt buộc (tối thiểu để chạy agent)
-
-
-| Biến                  | Mô tả                                                         | Ví dụ                   |
-| --------------------- | ------------------------------------------------------------- | ----------------------- |
-| `LLM_PROVIDER`        | Provider mặc định: `google`, `openrouter`, `zai`, `openai`, `anthropic` | `google`        |
-| `GOOGLE_API_KEY`      | Key Google AI Studio / Gemini (chat, defense, logic audit)    | *(aistudio.google.com)* |
-| `OPENROUTER_API_KEY`  | Key OpenRouter (nếu dùng OpenRouter)                          | `sk-or-...`             |
-| `OPENAI_API_KEY`      | Key OpenAI (nếu dùng OpenAI)                                  | `sk-...`                |
-| `ZAI_API_KEY`         | Key Z.AI GLM (nếu dùng Z.AI)                                  | `...`                   |
-| `ANTHROPIC_API_KEY`   | Key Anthropic (nếu dùng Claude)                               | `sk-ant-...`            |
-| `DATABASE_URL`        | Prisma Accelerate URL (Prisma CLI)                            | `prisma+postgres://...` |
-| `DIRECT_DATABASE_URL` | PostgreSQL TCP cho FastAPI/SQLAlchemy (**bắt buộc**)          | `postgresql://...`      |
-| `AUTH_SECRET_KEY`     | JWT secret — generate: `openssl rand -hex 32`                 | `a1b2c3...`             |
-| `AI_LOG_API_KEY`      | Key BTC cho AI usage logging                                  | *(từ link mời BTC)*     |
-
-
-> Cần **ít nhất một** LLM API key tương ứng với `LLM_PROVIDER`. Có thể đổi provider/model trực tiếp trong editor chat dock.
-
-### Database (PostgreSQL / Prisma)
-
-
-| Biến                  | Mô tả                                                          |
-| --------------------- | -------------------------------------------------------------- |
-| `DATABASE_URL`        | URL cho Prisma CLI (có thể là `prisma+postgres://` Accelerate) |
-| `DIRECT_DATABASE_URL` | URL TCP trực tiếp `postgresql://...` cho FastAPI/SQLAlchemy    |
-
-
-### App & CORS
-
-
-| Biến                | Mặc định                    | Mô tả                                 |
-| ------------------- | --------------------------- | ------------------------------------- |
-| `APP_ENV`           | `development`               | `development` | `production` | `test` |
-| `APP_PORT`          | `8000`                      | Port backend (khớp lệnh uvicorn)      |
-| `APP_HOST`          | `127.0.0.1`                 | Host bind                             |
-| `CORS_ORIGINS`      | `http://localhost:8080,...` | Origins frontend được phép            |
-| `FRONTEND_BASE_URL` | `http://localhost:8080`     | URL frontend (email/OAuth redirect)   |
-| `BACKEND_BASE_URL`  | `http://127.0.0.1:8000`     | URL backend công khai                 |
-
-
-### Auth & OAuth (tùy chọn)
-
-
-| Biến                        | Mô tả                                                   |
-| --------------------------- | ------------------------------------------------------- |
-| `GOOGLE_CLIENT_ID`          | Google OAuth client ID                                  |
-| `GOOGLE_CLIENT_SECRET`      | Google OAuth secret                                     |
-| `GOOGLE_OAUTH_REDIRECT_URI` | VD: `http://127.0.0.1:8000/api/v1/auth/google/callback` |
-| `SMTP_`*                    | Gửi email xác minh đăng ký (dev: code in ra log)        |
-
-
-### Observability (tùy chọn)
-
-
-| Biến                   | Mô tả                                        |
-| ---------------------- | -------------------------------------------- |
-| `LANGCHAIN_API_KEY`    | LangSmith tracing (deliverable AI Logs)      |
-| `LANGCHAIN_PROJECT`    | Tên project trên LangSmith                   |
-| `LANGCHAIN_TRACING_V2` | `true` để bật trace                          |
-| `INNGEST_DEV`          | `1` để chạy Inngest dev server local         |
-| `AI_LOG_SERVER`        | Endpoint submit AI logs (pre-configured BTC) |
-
-
-### Frontend build
-
-
-| Biến                 | Mô tả                                          |
-| -------------------- | ---------------------------------------------- |
-| `VITE_DEV_API_PROXY` | Target proxy dev (VD: `http://127.0.0.1:8000`) |
-| `VITE_API_URL`       | API URL khi build production                   |
-
-
-Danh sách đầy đủ và comment: `[.env.example](./.env.example)`.
+| Biến | Bắt buộc | Mô tả |
+|---|:---:|---|
+| `LLM_PROVIDER` | ✅ | Provider mặc định: `google` · `openrouter` · `openai` · `anthropic` · `zai` |
+| `GOOGLE_API_KEY` / `OPENROUTER_API_KEY` / … | ✅ | Ít nhất một key khớp với `LLM_PROVIDER` |
+| `DIRECT_DATABASE_URL` | ✅ | PostgreSQL TCP cho FastAPI / SQLAlchemy |
+| `DATABASE_URL` | ✅ | URL cho Prisma CLI (có thể là `prisma+postgres://`) |
+| `AUTH_SECRET_KEY` | ✅ | JWT secret — tạo bằng `openssl rand -hex 32` |
+| `FRONTEND_BASE_URL` · `BACKEND_BASE_URL` · `CORS_ORIGINS` | | URL công khai và origins được phép |
+| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | | Đăng nhập Google SSO |
+| `SMTP_*` | | Gửi email xác minh (dev: mã in ra log) |
+| `LANGCHAIN_API_KEY` · `LANGCHAIN_TRACING_V2` | | LangSmith tracing |
+| `VITE_API_URL` | | API URL khi build frontend production |
 
 ---
 
-## Sample Queries
+## 💬 Ví dụ sử dụng
 
-Các ví dụ dưới đây dùng bản thảo mẫu ngắn. Trong UI, mở `/editor`, paste LaTeX vào `main.tex`, rồi gửi prompt tương ứng trong chat Ario.
+Mở `/editor`, tạo project mẫu rồi gửi các yêu cầu sau trong khung chat Ario:
 
-**LaTeX mẫu** (`SAMPLE_LATEX` trong `frontend/src/lib/project-store.ts`):
+| Task | Prompt mẫu | Kết quả |
+|---|---|---|
+| `chat` | *Giải thích ngắn gọn abstract của bài này* | Trả lời theo ngữ cảnh, không tạo diff |
+| `style` | *Chỉnh sửa abstract cho văn phong học thuật hơn* | Diff đỏ/xanh + Accept/Reject |
+| `structure` | *Phân tích cấu trúc IMRaD của bài này* | Danh sách section thiếu/thừa |
+| `template` | *Thêm các section IMRaD còn thiếu* | Khung section gợi ý |
+| `citation` | *Kiểm tra trích dẫn trong bài* | Báo cáo xác minh từng cite key |
 
-```latex
-\documentclass{article}
-\begin{document}
-\begin{abstract}
-Machine learning models achieve strong results but often lack interpretability.
-\end{abstract}
-\section{Introduction}
-Prior work cites \cite{smith2020}.
-\end{document}
-```
-
-### Trong Editor (UI)
-
-
-| #   | Task        | Sample query (gửi trong chat)                            | Kỳ vọng                        |
-| --- | ----------- | -------------------------------------------------------- | ------------------------------ |
-| 1   | `chat`      | Giải thích ngắn gọn abstract của bài này bằng tiếng Việt | Trả lời tiếng Việt, không diff |
-| 2   | `style`     | Chỉnh sửa abstract cho văn phong học thuật hơn           | Diff đỏ/xanh + Accept/Reject   |
-| 3   | `structure` | Phân tích cấu trúc IMRaD của bài này                     | Gợi ý section thiếu/thừa       |
-| 4   | `template`  | Thêm các section IMRaD còn thiếu                         | Gợi ý skeleton IMRaD           |
-| 5   | `citation`  | Kiểm tra trích dẫn trong bài                             | Báo cáo verify từng cite key   |
-| 6   | compile     | Nhấn **Compile** trên toolbar                            | PDF preview bên phải           |
-
-
-Bạn cũng có thể **bôi đen** một đoạn trong editor → **Quick Edit** (`Ctrl+K`) với prompt như: *"Viết lại đoạn này trang trọng hơn"*.
-
-### Qua API (`curl`)
-
-Thay `8000` nếu backend chạy port khác. Body dùng `latex_content` để Ario có ngữ cảnh manuscript.
-
-**TC1 — Chat**
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"message\":\"Giải thích ngắn gọn abstract của bài này bằng tiếng Việt\",\"task\":\"chat\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\\\end{abstract}\\\\end{document}\"}"
-```
-
-**TC2 — Style**
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"message\":\"Chỉnh sửa abstract cho văn phong học thuật hơn\",\"task\":\"style\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\\\end{abstract}\\\\end{document}\"}"
-```
-
-**TC3 — Structure**
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"message\":\"Phân tích cấu trúc IMRaD của bài này\",\"task\":\"structure\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}...\\\\end{abstract}\\\\section{Introduction}...\\\\end{document}\"}"
-```
-
-**TC4 — Template (SSE stream — luồng chính của editor)**
+Gọi trực tiếp qua API (SSE stream — luồng chính của editor):
 
 ```bash
 curl -N -X POST http://127.0.0.1:8000/api/v1/chat/stream \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d "{\"message\":\"Thêm các section IMRaD còn thiếu\",\"task\":\"template\",\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}\\\\begin{abstract}Test\\\\end{abstract}\\\\end{document}\"}"
+  -d '{
+    "message": "Chỉnh sửa abstract cho văn phong học thuật hơn",
+    "task": "style",
+    "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\end{abstract}\\end{document}"
+  }'
 ```
 
-**TC5 — Compile PDF**
+---
+
+## 🔌 API
+
+Tất cả endpoint nằm dưới prefix `/api/v1`. Tài liệu tương tác (Swagger UI) có sẵn tại `http://127.0.0.1:8000/docs` khi chạy backend.
+
+| Nhóm | Endpoint | Mô tả |
+|---|---|---|
+| **Ario** | `POST /chat/stream` · `POST /chat` | Chat với agent (SSE / sync qua LangGraph) |
+| | `POST /edit/style` | Chỉnh văn phong một đoạn |
+| | `POST /citations/verify` | Xác minh trích dẫn |
+| | `POST /defense/stream` | Defense Mode — mock viva |
+| **LaTeX** | `POST /compile` · `POST /compile/synctex` | Compile PDF · tra vị trí SyncTeX |
+| **Dữ liệu** | `/papers` · `/sessions` · `/templates` | CRUD bản thảo, phiên làm việc, template |
+| | `POST /revisions/{session}/{id}` | Ghi nhận Accept / Reject |
+| **Chia sẻ** | `/papers/{id}/share` · `WS /ws/share/{token}` | Link read-only realtime |
+| **Tài khoản** | `/auth/*` · `/users/me/profile` · `/billing/*` | Đăng nhập, SSO, hồ sơ, gói dịch vụ |
+| **Quản trị** | `/admin/*` | Người dùng, LLM keys & policy, báo cáo chi phí |
+| **Hệ thống** | `GET /health` · `GET /status` · `GET /providers` | Health check, trạng thái agent, provider khả dụng |
+
+---
+
+## 📊 Kết quả đánh giá
+
+Benchmark chạy trên môi trường production với bộ test nội bộ (11 case intent routing, 4 case guardrail) và so sánh với baseline LLM thuần không có router/guardrail:
+
+| Metric | Arionear | Baseline |
+|---|:---:|:---:|
+| Intent routing accuracy | **100%** | 65% |
+| Edit scope accuracy | **100%** | 40% |
+| Numeric drift detection | **100%** | 0% |
+| Compile success rate | **100%** | 70% |
+| Latency trung bình (LLM thật) | **~3.4 s** | — |
+| Chi phí ước tính | **~$1.2 / user / tháng** | $4.5 |
+
+Báo cáo đầy đủ — gồm cả các case chưa đạt và hướng khắc phục — trong [EVALUATION.md](./EVALUATION.md). Tái chạy: `python eval/scripts/run_gate3_eval.py --help`.
+
+---
+
+## 🧪 Kiểm thử
 
 ```bash
-curl -s -X POST http://127.0.0.1:8000/api/v1/compile \
-  -H "Content-Type: application/json" \
-  -d "{\"latex_content\":\"\\\\documentclass{article}\\\\begin{document}Hello Arionear.\\\\end{document}\",\"main_file\":\"main.tex\"}"
+pytest tests/ -v                 # 300+ test backend (API, services, guardrails)
+ruff check src tests             # lint Python
+cd frontend && npm test          # unit test frontend (Vitest)
 ```
 
-**TC6 — Citation verify**
-
-```bash
-# Tạo session trước
-curl -s -X POST http://127.0.0.1:8000/api/v1/sessions \
-  -H "Content-Type: application/json" \
-  -d "{\"name\":\"eval\",\"latex_content\":\"\\\\cite{smith2020}\",\"metadata\":{}}"
-
-# Verify (thay SESSION_ID)
-curl -s -X POST http://127.0.0.1:8000/api/v1/citations/verify \
-  -H "Content-Type: application/json" \
-  -d "{\"session_id\":\"SESSION_ID\",\"latex_content\":\"\\\\cite{smith2020}\",\"bib_content\":\"@article{smith2020, title={Deep Learning}, year={2020}}\"}"
-```
-
-Kết quả eval thực tế (BTC format): `[EVALUATION.md](./EVALUATION.md)` · raw log: `[eval/results/_live_outputs.json](./eval/results/_live_outputs.json)`.
-
-### API tham khảo
-
-
-| Method   | Path                       | Mô tả                         |
-| -------- | -------------------------- | ----------------------------- |
-| GET      | `/health`                  | Health + DB status            |
-| GET      | `/api/v1/status`           | Agent name, provider, storage |
-| GET      | `/api/v1/providers`        | LLM providers khả dụng        |
-| POST     | `/api/v1/sessions`         | Tạo paper session             |
-| POST     | `/api/v1/chat`             | Chat sync (LangGraph)         |
-| POST     | `/api/v1/chat/stream`      | Chat SSE (editor chính)       |
-| POST     | `/api/v1/citations/verify` | Xác minh trích dẫn            |
-| POST     | `/api/v1/compile`          | Compile LaTeX → PDF           |
-| POST     | `/api/v1/auth/login`       | Đăng nhập JWT                 |
-| GET/POST | `/api/v1/papers`           | CRUD papers (cần auth)        |
-
+CI trên GitHub Actions tự động chạy lint, test backend, test và build frontend cho mỗi push/PR.
 
 ---
 
-## Testing
+## 📁 Cấu trúc thư mục
 
-```bash
-# Backend unit/integration tests
-pytest tests/ -v
-
-# Lint
-ruff check src tests
+```text
+arionear-ai-paper-editor/
+├── src/                  # Backend FastAPI
+│   ├── agents/           #   LangGraph graph & các agent của Ario
+│   ├── api/              #   REST / SSE / WebSocket routes
+│   ├── services/         #   Logic audit, defense, compile, citation, guardrails…
+│   ├── prompts/          #   Prompt templates (YAML)
+│   ├── db/  models/      #   SQLAlchemy models & Pydantic schemas
+│   └── main.py           #   Entry point
+├── frontend/             # TanStack Start + React 19
+│   └── src/{routes,features,components,lib}
+├── prisma/               # Database schema & migrations
+├── tests/                # Pytest suite
+├── eval/                 # Bộ dữ liệu, script và kết quả đánh giá
+├── scripts/              # Setup & deploy (Cloud Run)
+├── docs/                 # Tài liệu kỹ thuật
+├── Dockerfile · docker-compose.yml
+└── ARCHITECTURE.md · ROADMAP.md · EVALUATION.md
 ```
 
 ---
 
-## Documentation
+## ☁️ Triển khai
 
+Backend và frontend được đóng gói thành container và triển khai lên **Google Cloud Run**; secrets được quản lý qua Secret Manager.
 
-| Tài liệu                                                                       | Nội dung                                |
-| ------------------------------------------------------------------------------ | --------------------------------------- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md)                                           | Kiến trúc 4 tầng, agents, guardrail     |
-| [docs/ARCHITECTURE.png](./docs/ARCHITECTURE.png)                               | Sơ đồ kiến trúc (ảnh)                    |
-| [docs/architecture_diagram.md](./docs/architecture_diagram.md)                 | Sơ đồ component & data flow             |
-| [ROADMAP.md](./ROADMAP.md)                                                     | Lộ trình phase                          |
-| [EVALUATION.md](./EVALUATION.md)                                               | Eval Evidences BTC (bảng TC + metrics)   |
-| [eval/results/report.md](./eval/results/report.md)                             | Báo cáo đánh giá chi tiết (6 TC)         |
-| [eval/results/_live_outputs.json](./eval/results/_live_outputs.json)           | Raw output 6 TC (LLM thật)               |
-| [eval/results/gate3_summary.md](./eval/results/gate3_summary.md)               | Gate 3 metrics vs baseline               |
-| [docs/GUARDRAILS.md](./docs/GUARDRAILS.md)                                     | Guardrail 4 lớp                          |
-| [Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book)  | Hướng dẫn Arionear 10 chương                |
-
-
----
-
-## AI Usage Logging
-
-Hooks tự động log prompt khi dùng Cursor, Claude Code, Codex, Gemini CLI, Copilot. Log lưu tại `.ai-log/session.jsonl` và submit khi `git push`.
-
-```bash
-# Log thủ công (ChatGPT / web)
-bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you asked"
+```powershell
+.\scripts\deploy-cloudrun-backend.ps1 -ProjectId <gcp-project> -FrontendUrl https://<your-domain>
+.\scripts\deploy-cloudrun-frontend.ps1 -ProjectId <gcp-project>
 ```
 
 ---
 
-## Team
+## 📚 Tài liệu
 
-
-| Thành viên              | MSSV        |
-| ----------------------- | ----------- |
-| **Nguyễn Trọng Nguyên** | *** |
-| **Nguyễn Thành Tài**    | *** |
-| **Ngô Thị Ánh**         | *** |
-
-
+| Tài liệu | Nội dung |
+|---|---|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc tổng thể, agents, guardrail, deployment |
+| [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
+| [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) | Thiết kế guardrail 4 lớp |
+| [docs/DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) | Thiết lập PostgreSQL / Prisma |
+| [docs/pdf-preview-deploy.md](./docs/pdf-preview-deploy.md) | Vận hành compile & PDF preview |
+| [EVALUATION.md](./EVALUATION.md) | Kết quả kiểm thử & benchmark |
+| [ROADMAP.md](./ROADMAP.md) | Lộ trình phát triển |
 
 ---
 
-## License
+## 👤 Tác giả
 
-MIT — Sử dụng tự do cho mục đích giáo dục.
+**Nguyễn Thành Tài** — [@Tai-TZ](https://github.com/Tai-TZ)
+
+## 📄 License
+
+MIT

@@ -28,7 +28,7 @@ curl http://localhost:8000/api/v1/compile/status
 
 ## Production (Docker)
 
-The production `Dockerfile` installs TeX Live. Team members do **not** need MiKTeX on the server if using Docker.
+The production `Dockerfile` installs TeX Live. Developers do **not** need MiKTeX on the server if using Docker.
 
 ```bash
 docker compose build

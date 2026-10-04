@@ -155,7 +155,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
       {
         paragraphs: [
           "Arionear giúp tác giả cải thiện ngôn ngữ, cấu trúc và trích dẫn trong khi giữ quyền kiểm soát cho con người.",
-          "Sản phẩm do Arionear phát triển cho Arionear.",
+          "Arionear được thiết kế và phát triển bởi Nguyễn Thành Tài.",
         ],
       },
     ],
@@ -169,7 +169,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
       {
         paragraphs: [
           "Email: support@arionear.example",
-          "Với bài nộp khóa học và demo-day, hãy liên hệ trực tiếp team lead của bạn.",
+          "Khi báo lỗi hoặc đề xuất tính năng, vui lòng mô tả các bước tái hiện và trình duyệt bạn đang dùng.",
         ],
       },
     ],
@@ -365,35 +365,35 @@ const VI_WORKFLOW: WorkflowPageCopy = {
 
 const EN_ABOUT: AboutPageCopy = {
   publishedBy: "Published by",
-  teamName: "Arionear",
-  teamSubtitle: "Arionear · Phase 1 MVP",
+  teamName: "Nguyễn Thành Tài",
+  teamSubtitle: "Founder & Engineer · Closer to Publication",
   mastheadTitle: "The Masthead",
-  membersLabel: (count) => `${count} members`,
-  figCaption: "Fig. 3.1 — The editorial board, Arionear.",
-  illustrationAria: "Interactive illustration of the Arionear editorial board — three members at a shared desk",
+  membersLabel: (count) => `${count} ${count === 1 ? "member" : "members"}`,
+  figCaption: "Fig. 3.1 — The Arionear editorial desk.",
+  illustrationAria: "Interactive illustration of the Arionear editorial desk — three editors at a shared desk",
   manuscriptLabel: "LaTeX Manuscript",
   liveDemo: "Live",
   paused: "Paused · interactive",
   playDemo: "Play demo",
   pauseDemo: "Pause demo",
-  loopHint: "Auto-cycles · click a member to focus",
+  loopHint: "Auto-cycles · click an editor to focus",
   editorRoles: ["Lead editor", "LaTeX desk", "Copy editor"],
 };
 
 const VI_ABOUT: AboutPageCopy = {
   publishedBy: "Xuất bản bởi",
-  teamName: "Arionear",
-  teamSubtitle: "Arionear · Giai đoạn GO PRODUCT",
+  teamName: "Nguyễn Thành Tài",
+  teamSubtitle: "Founder & Engineer · Closer to Publication",
   mastheadTitle: "Ban biên tập",
   membersLabel: (count) => `${count} thành viên`,
-  figCaption: "Hình 3.1 — Ban biên tập, Arionear.",
-  illustrationAria: "Minh họa tương tác ban biên tập Arionear — ba thành viên tại bàn biên tập chung",
+  figCaption: "Hình 3.1 — Bàn biên tập Arionear.",
+  illustrationAria: "Minh họa tương tác bàn biên tập Arionear — ba biên tập viên tại bàn biên tập chung",
   manuscriptLabel: "Bản thảo LaTeX",
   liveDemo: "Trực tiếp",
   paused: "Tạm dừng · tương tác",
   playDemo: "Phát demo",
   pauseDemo: "Tạm dừng demo",
-  loopHint: "Tự chuyển · bấm thành viên để chọn",
+  loopHint: "Tự chuyển · bấm biên tập viên để chọn",
   editorRoles: ["Biên tập trưởng", "Bàn LaTeX", "Biên tập bản thảo"],
 };
 

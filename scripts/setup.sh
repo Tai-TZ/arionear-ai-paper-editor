@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script cho Arionear project
+# Setup script cho Arionear
 
 set -e
 
-echo "=== Arionear Project Setup ==="
+echo "=== Arionear Setup ==="
 
 # Check Python version
 python3 -c "import sys; assert sys.version_info >= (3, 11), 'Python 3.11+ required'"

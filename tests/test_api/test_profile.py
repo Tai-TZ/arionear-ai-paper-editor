@@ -40,7 +40,7 @@ async def test_get_profile_defaults(client, profile_db):
         name="Dr. Profile",
         email="profile@university.edu",
         password="SecurePass1",
-        affiliation="VinUniversity",
+        affiliation="Example University",
     )
     token = reg_body["access_token"]
 
@@ -52,7 +52,7 @@ async def test_get_profile_defaults(client, profile_db):
     body = res.json()
     assert body["name"] == "Dr. Profile"
     assert body["email"] == "profile@university.edu"
-    assert body["affiliation"] == "VinUniversity"
+    assert body["affiliation"] == "Example University"
     assert body["citation_style"] == "ieee"
     assert body["auto_save"] is True
     assert body["auto_compile"] is False
@@ -65,7 +65,7 @@ async def test_patch_profile(client, profile_db):
         name="Dr. Profile",
         email="profile@university.edu",
         password="SecurePass1",
-        affiliation="VinUniversity",
+        affiliation="Example University",
     )
     token = reg_body["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -100,7 +100,7 @@ async def test_patch_profile_invalid_orcid(client, profile_db):
         name="Dr. Profile",
         email="profile@university.edu",
         password="SecurePass1",
-        affiliation="VinUniversity",
+        affiliation="Example University",
     )
     token = reg_body["access_token"]
 
@@ -119,7 +119,7 @@ async def test_patch_profile_empty_strings_coerced(client, profile_db):
         name="Dr. Profile",
         email="profile@university.edu",
         password="SecurePass1",
-        affiliation="VinUniversity",
+        affiliation="Example University",
     )
     token = reg_body["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
