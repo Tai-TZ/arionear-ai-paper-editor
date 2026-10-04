@@ -14,6 +14,9 @@ on:
       - frontend/Dockerfile
       - frontend/package.json
       - frontend/package-lock.json
+      - frontend/vite.config.ts
+      - frontend/.npmrc
+      - frontend/.dockerignore
       - .github/workflows/docker.yml
   pull_request:
     paths:
@@ -24,6 +27,9 @@ on:
       - frontend/Dockerfile
       - frontend/package.json
       - frontend/package-lock.json
+      - frontend/vite.config.ts
+      - frontend/.npmrc
+      - frontend/.dockerignore
       - .github/workflows/docker.yml
   schedule:
     - cron: "41 4 * * 1" # weekly — base images and apt packages drift
