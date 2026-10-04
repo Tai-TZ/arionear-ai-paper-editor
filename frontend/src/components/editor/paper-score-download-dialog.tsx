@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/components/locale-context";
 import { PaperScoreAuditAnimation } from "@/components/editor/paper-score-audit-animation";
+import { AiDisclosureSection } from "@/components/editor/ai-disclosure-section";
 import { useAnimatedNumber } from "@/hooks/use-animated-score";
 import type { LogicAuditReport } from "@/lib/api/academic";
 import { editorCopy } from "@/lib/editor-i18n";
@@ -28,6 +29,8 @@ type PaperScoreDownloadDialogProps = {
   auditError?: string | null;
   onRetryAudit?: () => void;
   onOpenCitationsTab?: () => void;
+  /** Server paper id; enables the AI disclosure section. */
+  paperId?: string | null;
 };
 
 const ISSUE_SEVERITY_ORDER: Record<string, number> = {
@@ -192,6 +195,7 @@ export function PaperScoreDownloadDialog({
   auditError = null,
   onRetryAudit,
   onOpenCitationsTab,
+  paperId = null,
 }: PaperScoreDownloadDialogProps) {
   const { locale } = useLocale();
   const t = editorCopy(locale).scoreGate;
@@ -388,6 +392,8 @@ export function PaperScoreDownloadDialog({
                 />
               ))}
             </div>
+
+            {paperId ? <AiDisclosureSection key={paperId} paperId={paperId} /> : null}
           </main>
         </div>
 

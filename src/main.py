@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.admin_routes import router as admin_router
+from src.api.ai_disclosure_routes import router as ai_disclosure_router
 from src.api.auth_routes import router as auth_router
 from src.api.billing_routes import router as billing_router
 from src.api.defense_routes import router as defense_router
@@ -87,6 +88,7 @@ app.add_middleware(CORSMiddleware, **build_cors_middleware_kwargs(settings))
 app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(papers_router, prefix="/api/v1")
+app.include_router(ai_disclosure_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
