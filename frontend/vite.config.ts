@@ -58,5 +58,8 @@ export default defineConfig({
   nitro: {
     // Cloud Run / Docker: standard Node HTTP server (default Lovable preset is cloudflare).
     preset: "node-server",
+    // Pin the layout the Dockerfile copies (dist/server/index.mjs + dist/client); newer
+    // @lovable.dev/vite-tanstack-config releases no longer set it outside their sandbox.
+    output: { dir: "dist", serverDir: "dist/server", publicDir: "dist/client" },
   },
 });
