@@ -219,9 +219,9 @@ describe("stream clients over the shared parser", () => {
       sseEvent("token", { delta: "world" }) +
       'event: done\ndata: {"response":"Hello, world"}';
 
+    const HEADERS_RECEIVED = 2;
     /** Grows `responseText` in 9-character steps, firing `onprogress` each time, then `onload`. */
     class FakeXhr {
-      static readonly HEADERS_RECEIVED = 2;
       readyState = 0;
       status = 200;
       statusText = "OK";
@@ -236,7 +236,7 @@ describe("stream clients over the shared parser", () => {
       abort() {}
       send() {
         queueMicrotask(() => {
-          this.readyState = FakeXhr.HEADERS_RECEIVED;
+          this.readyState = HEADERS_RECEIVED;
           this.onreadystatechange?.();
           for (let i = 9; i < stream.length + 9; i += 9) {
             this.responseText = stream.slice(0, i);
@@ -246,7 +246,9 @@ describe("stream clients over the shared parser", () => {
         });
       }
     }
-    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    // The constant is attached here rather than declared on the class: Tailwind scans src/ and
+    // would turn that class-member keyword into a positioning utility in the global stylesheet.
+    vi.stubGlobal("XMLHttpRequest", Object.assign(FakeXhr, { HEADERS_RECEIVED }));
 
     const tokens: string[] = [];
     const onDone = vi.fn();

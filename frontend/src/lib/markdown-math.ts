@@ -51,7 +51,7 @@ function subscribe(listener: () => void): () => void {
 export function useMarkdownMath(text: string, ready: boolean): MarkdownMathPlugins | null {
   const hasMath = mayContainMath(text);
   // Same snapshot on the server: nothing loads there (effects never run), so it is null unless a
-  // caller preloaded the plugins, e.g. a test rendering to static markup.
+  // caller preloaded the plugins, e.g. a test using renderToStaticMarkup.
   const getSnapshot = () => (hasMath && ready ? loaded : null);
   const plugins = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
