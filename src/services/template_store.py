@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import threading
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from src.models.template_schemas import (
     PaperTemplateUpdateRequest,
 )
 from src.services.paper_service import create_paper
+from src.services.template_builtins import PUBLISHER_TEMPLATES, BuiltinTemplate
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _TEMPLATES_ROOT = _PROJECT_ROOT / "data" / "templates"
@@ -205,7 +207,11 @@ def list_templates(*, query: str | None = None, tag: str | None = None) -> list[
                 continue
         if tag_q:
             tags = [str(t).lower() for t in row.get("tags") or []]
-            if tag_q not in tags and tag_q not in str(row.get("format") or "").lower():
+            if (
+                tag_q not in tags
+                and tag_q not in str(row.get("format") or "").lower()
+                and tag_q != str(row.get("venue") or "").lower()
+            ):
                 continue
         filtered.append(row)
 
@@ -491,27 +497,76 @@ IEEE_PREVIEW_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="320" height
 """
 
 
-def _ensure_sample_pdf(template_id: str) -> None:
+IEEE_JOURNAL_TEMPLATE_ID = "ieee-journal"
+BUILTIN_TEMPLATE_IDS: tuple[str, ...] = (IEEE_JOURNAL_TEMPLATE_ID, *(t.id for t in PUBLISHER_TEMPLATES))
+_PUBLISHER_TEMPLATES_BY_ID: dict[str, BuiltinTemplate] = {t.id: t for t in PUBLISHER_TEMPLATES}
+# Registry key listing built-in ids already seeded once; they are never re-added, so admin
+# edits, renames and deletions of built-in templates survive restarts.
+_SEEDED_BUILTINS_KEY = "seeded_builtins"
+_SEED_LOCK = threading.Lock()
+
+
+def _ensure_sample_pdf(template_id: str, title: str | None = None) -> None:
     folder = _template_dir(template_id)
     if not folder.is_dir():
         return
     pdf_path = folder / "sample.pdf"
     if pdf_path.is_file() and _is_valid_pdf(pdf_path):
         return
-    pdf_path.write_bytes(_build_placeholder_pdf())
+    pdf_path.write_bytes(_build_placeholder_pdf(title) if title else _build_placeholder_pdf())
+
+
+def _seeded_builtin_ids(data: dict[str, Any]) -> list[str]:
+    raw = data.get(_SEEDED_BUILTINS_KEY)
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    # Registry written before seed tracking: the IEEE template was seeded whenever the registry
+    # was empty, so a non-empty legacy registry has already had it (even if an admin removed it).
+    return [IEEE_JOURNAL_TEMPLATE_ID] if data["templates"] else []
+
+
+def _seed_publisher_template(spec: BuiltinTemplate, now: str) -> dict[str, Any]:
+    folder = _template_dir(spec.id)
+    folder.mkdir(parents=True, exist_ok=True)
+    for rel_path, content in spec.files.items():
+        (folder / rel_path).write_text(content, encoding="utf-8")
+    _ensure_sample_pdf(spec.id, spec.sample_title)
+    return spec.registry_row(now)
 
 
 def ensure_template_seed() -> None:
-    """Create default IEEE journal template if registry is empty."""
-    _ensure_dirs()
-    data = _read_registry()
-    if data["templates"]:
-        for row in data["templates"]:
-            _ensure_sample_pdf(str(row.get("id") or ""))
-        return
+    """Seed the built-in gallery templates (IEEE, Springer LNCS, Elsevier, ACM).
 
-    template_id = "ieee-journal"
-    now = _utcnow().isoformat()
+    Idempotent: each built-in is added at most once, also to an existing registry. Rows already
+    present (admin-edited built-ins or admin rows reusing a built-in id) are never overwritten,
+    and built-ins recorded under ``seeded_builtins`` are not re-added after an admin deletes them.
+    """
+    with _SEED_LOCK:
+        _ensure_dirs()
+        data = _read_registry()
+        seeded = _seeded_builtin_ids(data)
+        missing = [template_id for template_id in BUILTIN_TEMPLATE_IDS if template_id not in seeded]
+        if missing:
+            existing_ids = {str(row.get("id") or "") for row in data["templates"]}
+            now = _utcnow().isoformat()
+            for template_id in missing:
+                if template_id in existing_ids:
+                    continue
+                if template_id == IEEE_JOURNAL_TEMPLATE_ID:
+                    data["templates"].append(_seed_ieee_journal(now))
+                else:
+                    data["templates"].append(_seed_publisher_template(_PUBLISHER_TEMPLATES_BY_ID[template_id], now))
+            data[_SEEDED_BUILTINS_KEY] = [*seeded, *missing]
+            _write_registry(data)
+
+        for row in data["templates"]:
+            template_id = str(row.get("id") or "")
+            spec = _PUBLISHER_TEMPLATES_BY_ID.get(template_id)
+            _ensure_sample_pdf(template_id, spec.sample_title if spec else None)
+
+
+def _seed_ieee_journal(now: str) -> dict[str, Any]:
+    template_id = IEEE_JOURNAL_TEMPLATE_ID
     row = {
         "id": template_id,
         "slug": template_id,
@@ -545,8 +600,6 @@ def ensure_template_seed() -> None:
         "created_at": now,
         "updated_at": now,
     }
-    data["templates"] = [row]
-    _write_registry(data)
 
     folder = _template_dir(template_id)
     folder.mkdir(parents=True, exist_ok=True)
@@ -569,3 +622,4 @@ def ensure_template_seed() -> None:
                 shutil.copy2(src, folder / name)
 
     _ensure_sample_pdf(template_id)
+    return row
