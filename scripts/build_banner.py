@@ -2,7 +2,7 @@
 """Build the README masthead banner (``docs/assets/banner.svg``).
 
 The wordmark matches the app's ``ArionearWordmark``: Playfair Display Black, tight tracking,
-"Ario" in newsprint and "near" in editorial red, set on an ink masthead like the editor's top bar.
+"Ario" in ink and "near" in editorial red, on the light newsprint page like the landing masthead.
 Text is converted to outlines (fontTools + HarfBuzz shaping), so GitHub renders the exact face
 without loading fonts.
 
@@ -33,7 +33,7 @@ FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisp
 ROMAN, ITALIC = "PlayfairDisplay[wght].ttf", "PlayfairDisplay-Italic[wght].ttf"
 
 W, H, M = 1040, 300, 40
-INK, PAPER, RED = "#0A0A0A", "#F7F6F2", "#EE3533"  # app tokens: ink · newsprint · editorial red (dark)
+INK, PAPER, RED = "#0A0A0A", "#F7F6F2", "#C9000C"  # app light tokens: ink · newsprint · editorial red
 MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace"
 
 
@@ -122,16 +122,17 @@ def build() -> str:
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
         f'role="img" aria-label="{escape(label)}"><title>{escape(label)}</title>'
-        f"<style>.m{{font-family:{MONO};font-size:13px;font-weight:700;letter-spacing:.12em;fill:{PAPER};"
-        f"fill-opacity:.72}}</style>"
-        f'<rect width="{W}" height="{H}" fill="{INK}"/>'
+        f"<style>.m{{font-family:{MONO};font-size:13px;font-weight:700;letter-spacing:.12em;fill:{INK};"
+        f"fill-opacity:.78}}</style>"
+        f'<rect width="{W}" height="{H}" fill="{PAPER}"/>'
+        f'<rect x=".75" y=".75" width="{W - 1.5}" height="{H - 1.5}" fill="none" stroke="{INK}" stroke-width="1.5"/>'
         f'<text x="{M}" y="38" class="m">VOL. I · NO. 01</text>'
         f'<text x="{W - M}" y="38" class="m" text-anchor="end">AI-ASSISTED LATEX EDITOR</text>'
-        f'<path d="M {M} 52 H {W - M}" stroke="{PAPER}" stroke-opacity=".35"/>'
-        f'<path d="{ario}" fill="{PAPER}"/><path d="{near}" fill="{RED}"/>'
-        f'<path d="{tagline}" fill="{PAPER}" fill-opacity=".86"/>'
-        f'<rect x="{M}" y="256" width="{W - 2 * M}" height="3" fill="{PAPER}"/>'
-        f'<path d="M {M} 263.5 H {W - M}" stroke="{PAPER}" stroke-opacity=".6"/>'
+        f'<path d="M {M} 52 H {W - M}" stroke="{INK}" stroke-opacity=".45"/>'
+        f'<path d="{ario}" fill="{INK}"/><path d="{near}" fill="{RED}"/>'
+        f'<path d="{tagline}" fill="{INK}" fill-opacity=".8"/>'
+        f'<rect x="{M}" y="256" width="{W - 2 * M}" height="3" fill="{INK}"/>'
+        f'<path d="M {M} 263.5 H {W - M}" stroke="{INK}" stroke-opacity=".7"/>'
         f"{''.join(tick)}</svg>\n"
     )
 
