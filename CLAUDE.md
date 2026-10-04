@@ -9,7 +9,7 @@ Backend (repo root, Python 3.11+; `.venv` is the local virtualenv):
 ```bash
 pip install -r requirements-dev.txt        # runtime + ruff/pytest (runtime-only: requirements.txt)
 python -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
-pytest tests/ -q                           # full suite (~300 tests, no DB/LLM needed)
+pytest tests/ -q                           # full suite (~770 tests, no DB/LLM needed; never reads .env)
 pytest tests/test_services/test_cors_config.py -q   # single file
 ruff check src tests && ruff format --check src tests
 make check                                 # lint + format-check + tests
@@ -31,9 +31,9 @@ Database (repo root): `npm install && npm run db:generate && npm run db:migrate`
 
 ## Architecture map
 
-- `src/main.py` — FastAPI app, routers mounted under `/api/v1`; CORS in `src/cors_config.py`; settings in `src/config.py` (pydantic-settings, reads `.env`).
+- `src/main.py` — FastAPI app, routers mounted under `/api/v1`; `/health` (liveness) and `/ready` (DB + TeX, `src/api/health_routes.py`) at the root. CORS in `src/cors_config.py`; settings in `src/config.py` (pydantic-settings, reads `.env`; `validate_production_settings` refuses a weak `AUTH_SECRET_KEY` in production). Middleware: `src/security_headers.py`, `src/request_context.py` (X-Request-ID); logging in `src/logging_config.py` (JSON lines outside development).
 - `src/api/` — routes (chat/compile/citations in `routes.py`, plus auth, papers, admin, billing, defense, share, templates).
-- `src/services/` — business logic: `chat_stream.py` (SSE editor path), `intent_router.py`, `guardrails/` (L1 prompt, L2 output checks), `logic_audit/`, `defense_*`, `latex_compile.py` (TeX Live + SyncTeX), `citations/` (arXiv/CrossRef/S2/OpenAlex + L4 relevance), `peer_review/`, `document_import/` (DOCX/PDF → LaTeX), `ai_disclosure.py`, `template_builtins.py` (Springer/Elsevier/ACM seeds).
+- `src/services/` — business logic: `chat_stream.py` (SSE editor path; shared SSE helpers in `sse.py`), `intent_router.py`, `llm_json.py` (the one place LLM replies are parsed as JSON, json-repair fallback), `guardrails/` (L1 prompt, L2 output checks), `logic_audit/`, `defense_*`, `latex_compile.py` (TeX Live + SyncTeX, sandboxed subprocess env), `citations/` (arXiv/CrossRef/S2/OpenAlex + L4 relevance; `title_match.py` uses rapidfuzz), `parser/latex.py` (bibtexparser v2 + cite-key matcher), `quota_policy.py` (every LLM path is metered), `peer_review/`, `document_import/` (DOCX/PDF → LaTeX), `ai_disclosure.py`, `template_builtins.py` (Springer/Elsevier seeds).
 - `src/agents/graph.py` — LangGraph graph for the sync `POST /chat` path. Prompts live in `src/prompts/prompts.default.yaml`.
 - `src/db/` — SQLAlchemy models mirroring `prisma/schema.prisma` (Prisma owns migrations).
 - `frontend/src/routes/` — file-based routes; `frontend/src/routeTree.gen.ts` is generated, never edit it. Editor lives in `frontend/src/features/editor/` (`EditorWorkspace.tsx` + `state/` hooks). API clients in `frontend/src/lib/api/`.
@@ -55,8 +55,14 @@ Core invariant: AI output never applies itself — every edit goes through the I
 ## Known state
 
 - Vite builds without type-checking, so run `npm run typecheck` yourself; CI fails on any type error.
-- pdf.js is v5: `AnnotationLayer` takes `linkService` in its constructor (render() ignores it) and `page.render()` needs `canvas`.
+- pdf.js is v5: `AnnotationLayer` takes `linkService` in its constructor (render() ignores it) and `page.render()` needs `canvas`. `getDocument` runs with `isEvalSupported: false`; PDF links are limited to http(s)/mailto (`frontend/src/lib/pdf-safe-url.ts`).
 - One vitest test is timing-sensitive and can fail once under heavy CPU load; re-run before investigating.
+- DB URLs are rewritten to `postgresql+psycopg2://` (`sqlalchemy_database_url`): SQLAlchemy 2.1 defaults bare `postgresql://` to psycopg 3, which isn't installed.
+- `tests/conftest.py` disables `.env` loading for the whole suite — tests must never reach the real database or LLM keys.
+- TeX runs with an allowlisted env, `shell_escape=f`, `openin_any=p`/`openout_any=p` (TeX Live; MiKTeX ignores the kpathsea vars). `main_file` must match `[A-Za-z0-9._/-]+` and end in `.tex`/`.latex`. Rerun detection reads the TeX `.log` (batchmode keeps warnings out of stdout).
+- Live share sync (`WS /ws/share/{token}`) is owner-only: the client sends subprotocols `["arionear-share", "bearer.<jwt>"]`; anonymous viewers get the `GET /share/{token}` snapshot.
+- Billing: the payment-less QR checkout only runs when `BILLING_DEMO_CHECKOUT` is on (off by default in production); `/billing/upgrade` is god-admin only.
+- Prisma migrations were verified locally against Postgres 16 (`migrate deploy` + `migrate diff --exit-code` with a shadow DB); CI repeats that check.
 
 ## Tooling
 
