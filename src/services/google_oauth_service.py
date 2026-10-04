@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
 import httpx
-from jose import JWTError, jwt
+import jwt
 
 from src.config import get_settings
 
@@ -49,7 +49,7 @@ def decode_oauth_state(state: str) -> dict | None:
     settings = get_settings()
     try:
         payload = jwt.decode(state, settings.auth_secret_key, algorithms=["HS256"])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
     return_to = payload.get("return_to")
     if not isinstance(return_to, str) or not return_to.startswith("/") or return_to.startswith("//"):

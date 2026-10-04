@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 from sqlalchemy.orm import Session
 
 from src.config import Settings, get_settings
@@ -77,7 +77,7 @@ def decode_access_token(token: str) -> dict | None:
     settings = get_settings()
     try:
         return jwt.decode(token, settings.auth_secret_key, algorithms=["HS256"])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 
