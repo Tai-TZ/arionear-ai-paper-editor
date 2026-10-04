@@ -12,6 +12,7 @@ from src.api.billing_routes import router as billing_router
 from src.api.defense_routes import router as defense_router
 from src.api.paper_routes import router as papers_router
 from src.api.profile_routes import router as profile_router
+from src.api.review_routes import router as review_router
 from src.api.routes import router
 from src.api.share_routes import router as share_router
 from src.api.template_routes import router as template_router
@@ -93,6 +94,7 @@ app.include_router(profile_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
 app.include_router(defense_router, prefix="/api/v1")
+app.include_router(review_router, prefix="/api/v1")
 app.include_router(template_router, prefix="/api/v1")
 app.include_router(billing_router, prefix="/api/v1")
 

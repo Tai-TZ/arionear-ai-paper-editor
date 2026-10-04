@@ -4,10 +4,13 @@ import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-context";
 import { CitationRelevancePanel } from "@/components/editor/citation-relevance-panel";
 import { LogicAuditPanel } from "@/components/editor/logic-audit-panel";
+import { PeerReviewPanel } from "@/components/editor/peer-review-panel";
 import { StructureSuggestionsPanel } from "@/components/editor/structure-suggestions-panel";
 import { Switch } from "@/components/ui/switch";
 import { verifyCitations, type LogicAuditReport, type RevisionRecord } from "@/lib/api/academic";
+import type { LLMProvider } from "@/lib/api/academic";
 import { editorCopy, revisionActionLabel, translateCitationSummary } from "@/lib/editor-i18n";
+import { peerReviewCopy } from "@/lib/peer-review-i18n";
 import { buildCitationFixPrompt } from "@/lib/citation-prompts";
 import { formatTimeAgo, parseApiTimestamp } from "@/lib/project-store";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
@@ -45,6 +48,8 @@ export function ToolsPanel({
   canJumpToLogicIssue,
   onCitationsUpdated,
   onClose,
+  llmProvider,
+  llmModel,
 }: {
   latex: string;
   projectId: string;
@@ -75,6 +80,8 @@ export function ToolsPanel({
   canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
+  llmProvider?: LLMProvider;
+  llmModel?: string;
 }) {
   const tab = toolsTab;
   const setTab = onToolsTabChange;
@@ -147,6 +154,7 @@ export function ToolsPanel({
               { id: "structure" as const, label: t.tools.structure },
               { id: "logic" as const, label: t.tools.logicAudit },
               { id: "citations" as const, label: t.tools.citations },
+              { id: "peerReview" as const, label: peerReviewCopy(locale).tab },
               { id: "versions" as const, label: t.tools.versions },
             ] as const
           ).map((item) => (
@@ -236,6 +244,17 @@ export function ToolsPanel({
               onJumpToIssue={onJumpToLogicIssue}
               onAskArio={onAskArioLogic}
               canJumpToIssue={canJumpToLogicIssue}
+            />
+          </div>
+        ) : tab === "peerReview" ? (
+          <div className="tools-section">
+            <h2 className="tools-section-title">{peerReviewCopy(locale).title}</h2>
+            <PeerReviewPanel
+              key={projectId}
+              projectId={projectId}
+              latex={latex}
+              llmProvider={llmProvider}
+              llmModel={llmModel}
             />
           </div>
         ) : tab === "citations" ? (

@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useLocale } from "@/components/locale-context";
 import { editorCopy } from "@/lib/editor-i18n";
-import type { LogicAuditReport, RevisionRecord } from "@/lib/api/academic";
+import type { LLMProvider, LogicAuditReport, RevisionRecord } from "@/lib/api/academic";
 import type { LogicAuditMode, LogicAuditScope } from "@/lib/logic-audit";
 import type { StructureSuggestion } from "@/lib/structure-suggestions";
 import type { ToolsTab } from "../types";
@@ -37,6 +37,8 @@ export function MobileToolsSheet({
   onAskArioLogic,
   canJumpToLogicIssue,
   onCitationsUpdated,
+  llmProvider,
+  llmModel,
 }: {
   onClose: () => void;
   latex: string;
@@ -67,6 +69,8 @@ export function MobileToolsSheet({
   onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
   canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
+  llmProvider?: LLMProvider;
+  llmModel?: string;
 }) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
@@ -115,6 +119,8 @@ export function MobileToolsSheet({
           canJumpToLogicIssue={canJumpToLogicIssue}
           onCitationsUpdated={onCitationsUpdated}
           onClose={onClose}
+          llmProvider={llmProvider}
+          llmModel={llmModel}
         />
       </div>
     </div>
