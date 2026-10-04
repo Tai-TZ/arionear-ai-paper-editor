@@ -20,7 +20,7 @@
 ![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=for-the-badge&logo=latex&logoColor=white)
 ![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 
-[Giao diện](#️-giao-diện) · [Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Cấu trúc](#-cấu-trúc-thư-mục)
+[Giao diện](#️-giao-diện) · [Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [Cấu trúc](#-cấu-trúc-thư-mục)
 
 </div>
 
@@ -286,56 +286,6 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 | `PLATFORM_REQUEST_TIMEOUT_SEC` · `GCP_PROJECT_ID` | | Giới hạn thời gian request của nền tảng (Cloud Run: 300s) · gắn log với Cloud Trace |
 | `LANGCHAIN_API_KEY` · `LANGCHAIN_TRACING_V2` | | LangSmith tracing |
 | `VITE_API_URL` | | API URL khi build frontend production (bỏ trống → cùng origin `/api/v1`) |
-
----
-
-## 💬 Ví dụ sử dụng
-
-Mở `/editor`, tạo project mẫu rồi gửi các yêu cầu sau trong khung chat Ario:
-
-| Task | Prompt mẫu | Kết quả |
-|---|---|---|
-| `chat` | *Giải thích ngắn gọn abstract của bài này* | Trả lời theo ngữ cảnh, không tạo diff |
-| `style` | *Chỉnh sửa abstract cho văn phong học thuật hơn* | Diff đỏ/xanh + Accept/Reject |
-| `structure` | *Phân tích cấu trúc IMRaD của bài này* | Danh sách section thiếu/thừa |
-| `template` | *Thêm các section IMRaD còn thiếu* | Khung section gợi ý |
-| `citation` | *Kiểm tra trích dẫn trong bài* | Báo cáo xác minh từng cite key |
-
-Gọi trực tiếp qua API (SSE stream — luồng chính của editor):
-
-```bash
-curl -N -X POST http://127.0.0.1:8000/api/v1/chat/stream \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{
-    "message": "Chỉnh sửa abstract cho văn phong học thuật hơn",
-    "task": "style",
-    "latex_content": "\\documentclass{article}\\begin{document}\\begin{abstract}Machine learning models achieve strong results but often lack interpretability.\\end{abstract}\\end{document}"
-  }'
-```
-
----
-
-## 🔌 API
-
-Tất cả endpoint nằm dưới prefix `/api/v1`. Tài liệu tương tác (Swagger UI) có sẵn tại `http://127.0.0.1:8000/docs` khi chạy backend.
-
-| Nhóm | Endpoint | Mô tả |
-|---|---|---|
-| **Ario** | `POST /chat/stream` · `POST /chat` | Chat với agent (SSE / sync qua LangGraph) |
-| | `POST /edit/style` | Chỉnh văn phong một đoạn |
-| | `POST /citations/verify` · `POST /citations/relevance` | Xác minh trích dẫn · chấm độ liên quan (L4) |
-| | `POST /review/respond` | Soạn phản hồi peer review |
-| | `POST /defense/stream` | Defense Mode — mock viva |
-| **LaTeX** | `POST /compile` · `POST /compile/synctex` | Compile PDF · tra vị trí SyncTeX |
-| **Dữ liệu** | `/papers` · `/sessions` · `/templates` | CRUD bản thảo, phiên làm việc, template |
-| | `POST /import/document` | Import DOCX / PDF → LaTeX |
-| | `GET /papers/{id}/ai-disclosure` | Báo cáo đóng góp của AI |
-| | `POST /revisions/{session}/{id}` | Ghi nhận Accept / Reject |
-| **Chia sẻ** | `/papers/{id}/share` · `GET /share/{token}` · `WS /ws/share/{token}` | Link read-only; WebSocket đồng bộ live chỉ cho chủ sở hữu (subprotocol `bearer.<token>`) |
-| **Tài khoản** | `/auth/*` · `/users/me/profile` · `/billing/*` | Đăng nhập, SSO, hồ sơ, gói dịch vụ |
-| **Quản trị** | `/admin/*` | Người dùng, LLM keys & policy, báo cáo chi phí |
-| **Hệ thống** | `GET /health` · `GET /ready` · `GET /status` · `GET /providers` | Liveness, readiness (DB + TeX), trạng thái agent, provider khả dụng |
 
 ---
 
