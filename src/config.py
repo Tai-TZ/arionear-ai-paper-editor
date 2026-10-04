@@ -25,6 +25,19 @@ def normalize_llm_provider(provider: str | None) -> LLMProvider | None:
     return provider  # type: ignore[return-value]
 
 
+def _with_psycopg2_driver(url: str) -> str:
+    """Pin the psycopg2 driver on bare postgres URLs.
+
+    SQLAlchemy 2.1 made psycopg 3 the default driver for ``postgresql://``; only psycopg2 is
+    installed, so a bare URL would fail to connect and the app would fall back to the
+    in-memory store. URLs that already name a driver (``postgresql+...://``) are kept.
+    """
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg2://" + url[len(prefix) :]
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Load repo-root .env regardless of current working directory.
@@ -124,14 +137,10 @@ class Settings(BaseSettings):
     def sqlalchemy_database_url(self) -> str:
         direct = self.direct_database_url.strip()
         if direct:
-            if direct.startswith("postgres://"):
-                direct = "postgresql://" + direct[len("postgres://") :]
-            return direct
+            return _with_psycopg2_driver(direct)
         url = self.database_url.strip()
-        if url.startswith("postgres://"):
-            url = "postgresql://" + url[len("postgres://") :]
-        if url.startswith("postgresql://"):
-            return url
+        if url.startswith(("postgres://", "postgresql://")):
+            return _with_psycopg2_driver(url)
         return ""
 
     # Guardrails

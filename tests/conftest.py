@@ -1,10 +1,19 @@
+import os
 from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from src.main import app
+from src.config import Settings
+
+# Tests must behave the same locally as in CI: never read the developer's .env (it can point at a
+# real database and carry real API keys). Done before importing the app, which reads settings.
+Settings.model_config["env_file"] = None
+for _var in ("DIRECT_DATABASE_URL", "DATABASE_URL"):
+    os.environ.pop(_var, None)
+
+from src.main import app  # noqa: E402
 
 
 @pytest_asyncio.fixture

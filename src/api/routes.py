@@ -112,11 +112,7 @@ def _agent_input(**kwargs) -> dict:
 async def agent_status():
     settings = get_settings()
     if db_is_ready():
-        storage = (
-            "postgresql"
-            if get_settings().sqlalchemy_database_url().startswith(("postgresql://", "postgres://"))
-            else "database"
-        )
+        storage = "postgresql" if get_settings().sqlalchemy_database_url().startswith("postgresql") else "database"
     elif is_db_enabled():
         storage = "database (connection failed — check DATABASE_URL)"
     else:
