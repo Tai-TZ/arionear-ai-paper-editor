@@ -8,6 +8,7 @@ import {
 } from "./api-errors";
 import { getAccessToken } from "@/lib/auth-store";
 import type { LLMProvider } from "./academic";
+import { createSseStreamParser } from "./sse";
 
 const API_BASE = resolveApiBase();
 
@@ -49,37 +50,18 @@ export type DefenseStreamCallbacks = {
   onError: (message: string) => void;
 };
 
-// ─── SSE parsing (shared with academic.ts pattern) ────────────────────────
-
-function normalizeSseText(text: string): string {
-  return text.replace(/\r\n/g, "\n");
-}
-
-function parseSseBlock(block: string): { event: string; data: string } | null {
-  const normalized = normalizeSseText(block.trim());
-  if (!normalized || normalized.startsWith(":")) return null;
-  let event = "message";
-  let data = "";
-  for (const line of normalized.split("\n")) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    else if (line.startsWith("data:")) data += line.slice(5).trim();
-  }
-  if (!data) return null;
-  return { event, data };
-}
+// ─── SSE event dispatch (parsing lives in ./sse, shared with academic.ts) ─
 
 function createDefenseDispatcher(callbacks: DefenseStreamCallbacks): {
-  dispatchBlock: (block: string) => void;
+  dispatchEvent: (event: string, data: string) => void;
   isFinished: () => boolean;
 } {
   let finished = false;
 
-  const dispatchBlock = (block: string) => {
-    const parsed = parseSseBlock(block);
-    if (!parsed) return;
+  const dispatchEvent = (event: string, data: string) => {
     try {
-      const payload = JSON.parse(parsed.data) as Record<string, unknown>;
-      const eventType = parsed.event !== "message" ? parsed.event : inferEventType(payload);
+      const payload = JSON.parse(data) as Record<string, unknown>;
+      const eventType = event !== "message" ? event : inferEventType(payload);
       switch (eventType) {
         case "activity":
           if (typeof payload.text === "string") callbacks.onActivity(payload.text);
@@ -107,7 +89,7 @@ function createDefenseDispatcher(callbacks: DefenseStreamCallbacks): {
     }
   };
 
-  return { dispatchBlock, isFinished: () => finished };
+  return { dispatchEvent, isFinished: () => finished };
 }
 
 function inferEventType(payload: Record<string, unknown>): string {
@@ -116,20 +98,6 @@ function inferEventType(payload: Record<string, unknown>): string {
   if ("response" in payload) return "done";
   if (typeof payload.message === "string") return "error";
   return "unknown";
-}
-
-function ingestSseText(
-  buffer: string,
-  incoming: string,
-  dispatchBlock: (block: string) => void,
-): string {
-  let next = normalizeSseText(buffer + incoming);
-  const parts = next.split("\n\n");
-  next = parts.pop() ?? "";
-  for (const part of parts) {
-    if (part.trim()) dispatchBlock(part);
-  }
-  return next;
 }
 
 // ─── XHR streaming (preferred — avoids Vite proxy buffering) ──────────────
@@ -144,13 +112,13 @@ function streamDefenseWithXhr(
 ): Promise<void> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    const { dispatchBlock, isFinished } = createDefenseDispatcher(callbacks);
-    let buffer = "";
+    const { dispatchEvent, isFinished } = createDefenseDispatcher(callbacks);
+    const sse = createSseStreamParser(dispatchEvent);
     let responseSeen = 0;
     let failed = false;
 
     const finish = () => {
-      buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
+      sse.flush();
       if (!failed && !isFinished() && !signal?.aborted) {
         callbacks.onError(streamErrorMessage(interruptedMsg));
       }
@@ -181,7 +149,7 @@ function streamDefenseWithXhr(
       const chunk = xhr.responseText.slice(responseSeen);
       responseSeen = xhr.responseText.length;
       if (!chunk) return;
-      buffer = ingestSseText(buffer, chunk, dispatchBlock);
+      sse.feed(chunk);
     };
 
     xhr.onload = finish;
@@ -237,8 +205,8 @@ async function streamDefenseWithFetch(
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  const { dispatchBlock, isFinished } = createDefenseDispatcher(callbacks);
-  let buffer = "";
+  const { dispatchEvent, isFinished } = createDefenseDispatcher(callbacks);
+  const sse = createSseStreamParser(dispatchEvent);
 
   const onAbort = () => void reader.cancel().catch(() => {});
   signal?.addEventListener("abort", onAbort, { once: true });
@@ -254,9 +222,9 @@ async function streamDefenseWithFetch(
     }
     const { done, value } = chunk;
     if (done) break;
-    buffer = ingestSseText(buffer, decoder.decode(value, { stream: true }), dispatchBlock);
+    sse.feed(decoder.decode(value, { stream: true }));
   }
-  if (buffer.trim()) dispatchBlock(buffer);
+  sse.flush();
   if (!isFinished() && !signal?.aborted) {
     callbacks.onError(streamErrorMessage(interruptedMsg));
   }

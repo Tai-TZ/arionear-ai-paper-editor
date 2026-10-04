@@ -9,6 +9,7 @@ import {
   unreachableServerMessage,
 } from "./api-errors";
 import { fetchDedupe, invalidateFetchKey } from "./fetch-dedupe";
+import { createSseStreamParser } from "./sse";
 import { contentFingerprint } from "@/lib/pending-edit-utils";
 
 const API_BASE = resolveApiBase();
@@ -468,10 +469,6 @@ export type StreamChatCallbacks = {
 /** SSE error code — server cache miss/stale; client should retry with full LaTeX body. */
 export const CHAT_CONTENT_RESYNC_CODE = "content_resync_required";
 
-function normalizeSseText(text: string): string {
-  return text.replace(/\r\n/g, "\n");
-}
-
 function inferSseEventType(event: string, payload: Record<string, unknown>): string {
   if (event !== "message") return event;
   if (typeof payload.step_id === "string") return "state";
@@ -483,31 +480,16 @@ function inferSseEventType(event: string, payload: Record<string, unknown>): str
   return event;
 }
 
-function parseSseBlock(block: string): { event: string; data: string } | null {
-  const normalized = normalizeSseText(block.trim());
-  if (!normalized || normalized.startsWith(":")) return null;
-  let event = "message";
-  let data = "";
-  for (const line of normalized.split("\n")) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    else if (line.startsWith("data:")) data += line.slice(5).trim();
-  }
-  if (!data) return null;
-  return { event, data };
-}
-
 function createSseDispatcher(callbacks: StreamChatCallbacks): {
-  dispatchBlock: (block: string) => void;
+  dispatchEvent: (event: string, data: string) => void;
   isFinished: () => boolean;
 } {
   let finished = false;
 
-  const dispatchBlock = (block: string) => {
-    const parsed = parseSseBlock(block);
-    if (!parsed) return;
+  const dispatchEvent = (event: string, data: string) => {
     try {
-      const payload = JSON.parse(parsed.data) as Record<string, unknown>;
-      const eventType = inferSseEventType(parsed.event, payload);
+      const payload = JSON.parse(data) as Record<string, unknown>;
+      const eventType = inferSseEventType(event, payload);
       switch (eventType) {
         case "activity":
           if (typeof payload.text === "string" && !isProgressNoiseActivity(payload.text)) {
@@ -580,23 +562,9 @@ function createSseDispatcher(callbacks: StreamChatCallbacks): {
   };
 
   return {
-    dispatchBlock,
+    dispatchEvent,
     isFinished: () => finished,
   };
-}
-
-function ingestSseText(
-  buffer: string,
-  incoming: string,
-  dispatchBlock: (block: string) => void,
-): string {
-  let next = normalizeSseText(buffer + incoming);
-  const parts = next.split("\n\n");
-  next = parts.pop() ?? "";
-  for (const part of parts) {
-    if (part.trim()) dispatchBlock(part);
-  }
-  return next;
 }
 
 /** XHR onprogress receives chunks as they arrive; fetch().body often buffers via dev proxy. */
@@ -608,13 +576,13 @@ function streamChatWithXhr(
 ): Promise<void> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    const { dispatchBlock, isFinished } = createSseDispatcher(callbacks);
-    let buffer = "";
+    const { dispatchEvent, isFinished } = createSseDispatcher(callbacks);
+    const sse = createSseStreamParser(dispatchEvent);
     let responseSeen = 0;
     let failed = false;
 
     const finish = () => {
-      buffer = ingestSseText(buffer, "\n\n", dispatchBlock);
+      sse.flush();
       if (!failed && !isFinished() && !signal?.aborted) {
         callbacks.onError(streamInterruptedMessage());
       }
@@ -647,7 +615,7 @@ function streamChatWithXhr(
       const chunk = xhr.responseText.slice(responseSeen);
       responseSeen = xhr.responseText.length;
       if (!chunk) return;
-      buffer = ingestSseText(buffer, chunk, dispatchBlock);
+      sse.feed(chunk);
     };
 
     xhr.onload = finish;
@@ -706,8 +674,8 @@ async function streamChatWithFetch(
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  const { dispatchBlock, isFinished } = createSseDispatcher(callbacks);
-  let buffer = "";
+  const { dispatchEvent, isFinished } = createSseDispatcher(callbacks);
+  const sse = createSseStreamParser(dispatchEvent);
 
   const onAbort = () => {
     void reader.cancel().catch(() => {});
@@ -725,9 +693,9 @@ async function streamChatWithFetch(
     }
     const { done, value } = chunk;
     if (done) break;
-    buffer = ingestSseText(buffer, decoder.decode(value, { stream: true }), dispatchBlock);
+    sse.feed(decoder.decode(value, { stream: true }));
   }
-  if (buffer.trim()) dispatchBlock(buffer);
+  sse.flush();
 
   if (!isFinished()) {
     if (signal?.aborted) return;

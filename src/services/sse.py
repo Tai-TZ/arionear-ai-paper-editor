@@ -1,7 +1,7 @@
 """Server-Sent Events helpers shared by the editor chat stream and the defense stream.
 
-Event names and JSON payloads are part of the frontend contract (``frontend/src/lib/api/academic.ts`` and
-``defense-api.ts`` parse ``event:`` / ``data:`` blocks and skip ``:`` comment lines).
+Event names and JSON payloads are part of the frontend contract (``frontend/src/lib/api/sse.ts`` parses the stream
+for ``academic.ts`` and ``defense-api.ts`` with ``eventsource-parser``; ``:`` comment lines are skipped).
 """
 
 from __future__ import annotations
