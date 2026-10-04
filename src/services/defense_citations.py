@@ -188,6 +188,32 @@ def _already_linked(text: str, search: str) -> bool:
     return f"search={search.lower()}" in text.lower()
 
 
+_MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\([^)]*\)")
+
+
+def _link_first_outside_links(content: str, pattern: re.Pattern[str], make_link) -> str:
+    """Link the first match of ``pattern`` that is not inside an existing markdown link.
+
+    The model writes links such as ``[phần phương pháp](#pdf?passage=method)``; linking a phrase
+    inside that label would nest links, which markdown renders as raw brackets.
+    """
+    pieces: list[str] = []
+    last = 0
+    linked = False
+    for link in _MARKDOWN_LINK_RE.finditer(content):
+        plain = content[last : link.start()]
+        if not linked and pattern.search(plain):
+            plain = pattern.sub(make_link, plain, count=1)
+            linked = True
+        pieces.append(plain + link.group(0))
+        last = link.end()
+    tail = content[last:]
+    if not linked and pattern.search(tail):
+        tail = pattern.sub(make_link, tail, count=1)
+    pieces.append(tail)
+    return "".join(pieces)
+
+
 def autolink_defense_terms(content: str, latex_terms: list[str]) -> str:
     if not content.strip() or not latex_terms:
         return content
@@ -196,24 +222,14 @@ def autolink_defense_terms(content: str, latex_terms: list[str]) -> str:
     for term in latex_terms:
         if len(term) < 3 or not is_valid_pdf_citation_search(term) or _already_linked(out, term):
             continue
-        pattern = re.compile(rf"(?<!\[)\b({re.escape(term)})\b(?![^\[]*\]\()", re.I)
-        if pattern.search(out):
-            out = pattern.sub(
-                lambda m: f"[{m.group(1)}](#pdf?search={term})",
-                out,
-                count=1,
-            )
+        pattern = re.compile(rf"\b({re.escape(term)})\b", re.I)
+        out = _link_first_outside_links(out, pattern, lambda m, t=term: f"[{m.group(1)}](#pdf?search={t})")
 
     for phrase_re, candidates in _VI_PHRASE_RULES:
         search = next((c for c in candidates if is_valid_pdf_citation_search(c)), None)
         if not search or _already_linked(out, search):
             continue
-        if phrase_re.search(out):
-            out = phrase_re.sub(
-                lambda m, s=search: f"[{m.group(0)}](#pdf?search={s})",
-                out,
-                count=1,
-            )
+        out = _link_first_outside_links(out, phrase_re, lambda m, s=search: f"[{m.group(0)}](#pdf?search={s})")
 
     return out
 
