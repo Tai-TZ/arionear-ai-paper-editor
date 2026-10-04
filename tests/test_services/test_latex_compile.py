@@ -498,3 +498,14 @@ def test_pass_needs_rerun_reads_tex_log(tmp_path):
     (tmp_path / "main.log").write_text("Label(s) may have changed. Rerun to get cross-references right.")
     assert lc._pass_needs_rerun("", tmp_path, "main") is True
     assert lc._pass_needs_rerun("LaTeX Warning: There were undefined references.", tmp_path, "other") is True
+
+
+def test_extract_cite_keys_covers_natbib_and_biblatex_forms():
+    latex = r"\citep[see][p.~3]{a,b} \parencite{c} \textcite{d} \cite{e} \nocite{*} \citestyle{plain}"
+    assert lc._extract_cite_keys(latex) == {"a", "b", "c", "d", "e"}
+
+
+def test_ensure_bibliography_stubs_natbib_cite_keys(tmp_path):
+    latex = r"\citep[p.~3]{smith2020} \bibliography{refs}"
+    lc._ensure_bibliography(tmp_path, latex)
+    assert "smith2020" in (tmp_path / "refs.bib").read_text(encoding="utf-8")

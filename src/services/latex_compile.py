@@ -21,6 +21,7 @@ from src.models.schemas import (
     CompileResponse,
     CompileStatusResponse,
 )
+from src.services.parser.latex import extract_cite_keys
 
 logger = logging.getLogger(__name__)
 
@@ -561,13 +562,8 @@ def _max_direct_passes(latex: str, *, fast: bool = False) -> int:
 
 
 def _extract_cite_keys(latex: str) -> set[str]:
-    keys: set[str] = set()
-    for match in re.finditer(r"\\cite[a-zA-Z*]*\{([^}]+)\}", latex):
-        for key in match.group(1).split(","):
-            cleaned = key.strip()
-            if cleaned:
-                keys.add(cleaned)
-    return keys
+    # Same matcher as the citation tools: \cite, natbib \citep[..][..]{..}, biblatex \parencite, …
+    return set(extract_cite_keys(latex))
 
 
 def _strip_latex_comments(latex: str) -> str:
