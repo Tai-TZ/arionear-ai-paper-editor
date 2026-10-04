@@ -174,6 +174,11 @@ export type AdminCopy = {
     cleared: string;
     clearError: string;
     clearAdminKeys: string;
+    confirmDeleteTitle: string;
+    confirmDeleteBody: (keyHint: string) => string;
+    confirmDeleteAction: string;
+    confirmClearTitle: string;
+    confirmClearBody: (provider: string, count: number) => string;
     inactive: string;
     lastVerified: string;
     googleTestHint: string;
@@ -218,6 +223,7 @@ export type AdminCopy = {
     saveChanges: string;
     loadingTemplate: string;
     confirmDelete: (id: string) => string;
+    confirmDeleteBody: string;
     toastCreated: string;
     toastSaved: string;
     toastDeleted: string;
@@ -417,6 +423,13 @@ const EN: AdminCopy = {
     cleared: "All admin keys cleared for provider",
     clearError: "Could not clear keys",
     clearAdminKeys: "Clear all admin keys",
+    confirmDeleteTitle: "Delete this API key?",
+    confirmDeleteBody: (keyHint) =>
+      `The key ${keyHint} will be removed. Requests fall back to the next key by priority (or .env).`,
+    confirmDeleteAction: "Delete key",
+    confirmClearTitle: "Clear all admin keys?",
+    confirmClearBody: (provider, count) =>
+      `All ${count} admin-managed key${count === 1 ? "" : "s"} for ${provider} will be removed. Only the .env key (if any) will remain.`,
     inactive: "Inactive",
     lastVerified: "Verified",
     googleTestHint:
@@ -463,6 +476,8 @@ const EN: AdminCopy = {
     saveChanges: "Save changes",
     loadingTemplate: "Loading template…",
     confirmDelete: (id) => `Delete template "${id}"?`,
+    confirmDeleteBody:
+      "It will be removed from the public gallery together with its preview and PDF. This can't be undone.",
     toastCreated: "Template created",
     toastSaved: "Template saved",
     toastDeleted: "Deleted",
@@ -662,6 +677,13 @@ const VI: AdminCopy = {
     cleared: "Đã xóa mọi key admin của provider",
     clearError: "Không xóa được key",
     clearAdminKeys: "Xóa mọi key admin",
+    confirmDeleteTitle: "Xóa API key này?",
+    confirmDeleteBody: (keyHint) =>
+      `Key ${keyHint} sẽ bị xóa. Yêu cầu sẽ chuyển sang key kế tiếp theo độ ưu tiên (hoặc .env).`,
+    confirmDeleteAction: "Xóa key",
+    confirmClearTitle: "Xóa mọi key admin?",
+    confirmClearBody: (provider, count) =>
+      `Toàn bộ ${count} key do admin quản lý của ${provider} sẽ bị xóa. Chỉ còn key trong .env (nếu có).`,
     inactive: "Tắt",
     lastVerified: "Đã kiểm tra",
     googleTestHint:
@@ -708,6 +730,8 @@ const VI: AdminCopy = {
     saveChanges: "Lưu thay đổi",
     loadingTemplate: "Đang tải mẫu…",
     confirmDelete: (id) => `Xóa mẫu "${id}"?`,
+    confirmDeleteBody:
+      "Mẫu sẽ bị gỡ khỏi thư viện công khai cùng ảnh xem trước và PDF. Không thể hoàn tác.",
     toastCreated: "Đã tạo mẫu",
     toastSaved: "Đã lưu mẫu",
     toastDeleted: "Đã xóa",

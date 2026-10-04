@@ -44,6 +44,7 @@ import {
 import { documentImportCopy } from "@/lib/document-import-i18n";
 import { notifyDocumentImportWarnings } from "@/components/projects/document-import-notice";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ProjectsListSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
@@ -87,6 +88,8 @@ function ProjectsPage() {
   const [creatingLabel, setCreatingLabel] = useState<string | null>(null);
   const [creatingDetail, setCreatingDetail] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "grid">("list");
@@ -498,7 +501,10 @@ function ProjectsPage() {
                     deleting={deletingIds.has(project.id)}
                     onOpen={() => openEditor(project.id)}
                     onRename={(name) => handleRename(project.id, name)}
-                    onDelete={() => handleDelete(project.id)}
+                    onDelete={() => {
+                      setDeleteTarget({ id: project.id, name: project.name });
+                      setDeleteDialogOpen(true);
+                    }}
                     onDefense={() => openDefense(project.id)}
                   />
                 ))}
@@ -532,6 +538,19 @@ function ProjectsPage() {
           </div>
         </div>
       </main>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={t.deleteConfirmTitle}
+        description={deleteTarget ? t.deleteConfirmBody(deleteTarget.name) : undefined}
+        confirmLabel={t.deleteConfirmAction}
+        cancelLabel={t.cancel}
+        destructive
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget.id);
+        }}
+      />
 
       <ProjectFormatNoticeDialog
         open={formatNoticeOpen}

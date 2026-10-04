@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, KeyRound, Loader2, PlugZap, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useLocale } from "@/components/locale-context";
 import { adminCopy } from "@/lib/admin-i18n";
 import {
@@ -20,6 +21,10 @@ type DraftState = Record<
   string,
   { apiKey: string; priority: number; label: string; testModel: string }
 >;
+
+type PendingConfirm =
+  | { kind: "delete"; keyId: string; keyHint: string }
+  | { kind: "clear"; provider: string; providerLabel: string; count: number };
 
 function ProviderIcon({ providerId }: { providerId: string }) {
   const icon = providerIconUrl(normalizeLlmProvider(providerId));
@@ -52,6 +57,7 @@ function ModelChip({ modelId, providerId }: { modelId: string; providerId: strin
 export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () => void }) {
   const { locale } = useLocale();
   const t = useMemo(() => adminCopy(locale).llmKeys, [locale]);
+  const cancelLabel = adminCopy(locale).cancel;
 
   const [providers, setProviders] = useState<LlmProviderStatus[]>([]);
   const [keys, setKeys] = useState<ProviderKeyRow[]>([]);
@@ -60,6 +66,13 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
   const [drafts, setDrafts] = useState<DraftState>({});
   const [working, setWorking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const requestConfirm = (action: PendingConfirm) => {
+    setPendingConfirm(action);
+    setConfirmOpen(true);
+  };
 
   const refreshKeys = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -362,7 +375,15 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
                             type="button"
                             className="admin-inline-btn text-destructive"
                             disabled={Boolean(working)}
-                            onClick={() => void handleDelete(row.id)}
+                            aria-label={t.confirmDeleteAction}
+                            title={t.confirmDeleteAction}
+                            onClick={() =>
+                              requestConfirm({
+                                kind: "delete",
+                                keyId: row.id,
+                                keyHint: row.key_hint,
+                              })
+                            }
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -457,7 +478,14 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
                       type="button"
                       className="admin-secondary-btn text-destructive"
                       disabled={Boolean(busy)}
-                      onClick={() => void handleClear(providerId)}
+                      onClick={() =>
+                        requestConfirm({
+                          kind: "clear",
+                          provider: providerId,
+                          providerLabel: providerMeta.label,
+                          count: rows.length,
+                        })
+                      }
                     >
                       {t.clearAdminKeys}
                     </button>
@@ -468,6 +496,26 @@ export function AdminProviderKeysPanel({ onKeysChanged }: { onKeysChanged?: () =
           </div>
         );
       })}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={pendingConfirm?.kind === "clear" ? t.confirmClearTitle : t.confirmDeleteTitle}
+        description={
+          pendingConfirm?.kind === "clear"
+            ? t.confirmClearBody(pendingConfirm.providerLabel, pendingConfirm.count)
+            : pendingConfirm?.kind === "delete"
+              ? t.confirmDeleteBody(pendingConfirm.keyHint)
+              : undefined
+        }
+        confirmLabel={pendingConfirm?.kind === "clear" ? t.clearAdminKeys : t.confirmDeleteAction}
+        cancelLabel={cancelLabel}
+        destructive
+        onConfirm={() => {
+          if (pendingConfirm?.kind === "delete") void handleDelete(pendingConfirm.keyId);
+          else if (pendingConfirm?.kind === "clear") void handleClear(pendingConfirm.provider);
+        }}
+      />
     </section>
   );
 }

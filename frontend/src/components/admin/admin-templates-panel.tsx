@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Image as ImageIcon, LayoutTemplate, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useLocale } from "@/components/locale-context";
 import {
   Dialog,
@@ -141,6 +142,8 @@ export function AdminTemplatesPanel() {
   const previewRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
@@ -238,8 +241,12 @@ export function AdminTemplatesPanel() {
     }
   }
 
+  function requestDelete(id: string) {
+    setDeleteTargetId(id);
+    setDeleteDialogOpen(true);
+  }
+
   async function onDelete(id: string) {
-    if (!window.confirm(tt.confirmDelete(id))) return;
     setBusyId(id);
     try {
       await adminDeleteTemplate(id);
@@ -444,7 +451,7 @@ export function AdminTemplatesPanel() {
                           type="button"
                           className="admin-action-chip is-danger"
                           disabled={busy}
-                          onClick={() => void onDelete(row.id)}
+                          onClick={() => requestDelete(row.id)}
                         >
                           {tt.delete}
                         </button>
@@ -608,6 +615,19 @@ export function AdminTemplatesPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={tt.confirmDelete(deleteTargetId ?? "")}
+        description={tt.confirmDeleteBody}
+        confirmLabel={tt.delete}
+        cancelLabel={t.cancel}
+        destructive
+        onConfirm={() => {
+          if (deleteTargetId) void onDelete(deleteTargetId);
+        }}
+      />
     </section>
   );
 }

@@ -48,6 +48,10 @@ type ProjectsCopy = {
   errorImport: string;
   errorRename: string;
   errorDelete: string;
+  deleteConfirmTitle: string;
+  deleteConfirmBody: (name: string) => string;
+  deleteConfirmAction: string;
+  cancel: string;
   formatNoticeTitle: string;
   formatNoticeBody: string;
   formatNoticeImradLabel: string;
@@ -106,6 +110,11 @@ const EN: ProjectsCopy = {
   errorImport: "ZIP import failed.",
   errorRename: "Failed to rename project.",
   errorDelete: "Failed to delete project.",
+  deleteConfirmTitle: "Delete this project?",
+  deleteConfirmBody: (name) =>
+    `“${name}” and all of its files, chats and history will be permanently deleted. This can’t be undone.`,
+  deleteConfirmAction: "Delete project",
+  cancel: "Cancel",
   formatNoticeTitle: "Journal templates & IMRaD",
   formatNoticeBody:
     "Arionear works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS or Elsevier (elsarticle).",
@@ -167,6 +176,11 @@ const VI: ProjectsCopy = {
   errorImport: "Nhập ZIP thất bại.",
   errorRename: "Đổi tên dự án thất bại.",
   errorDelete: "Xóa dự án thất bại.",
+  deleteConfirmTitle: "Xóa dự án này?",
+  deleteConfirmBody: (name) =>
+    `“${name}” cùng toàn bộ file, đoạn chat và lịch sử sẽ bị xóa vĩnh viễn. Không thể hoàn tác.`,
+  deleteConfirmAction: "Xóa dự án",
+  cancel: "Hủy",
   formatNoticeTitle: "Mẫu tạp chí & IMRaD",
   formatNoticeBody:
     "Arionear hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS hoặc Elsevier (elsarticle).",
