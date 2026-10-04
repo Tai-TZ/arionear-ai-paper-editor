@@ -28,12 +28,12 @@ copyleft license (weak or strong); see the next section for how each one is used
 <!-- BEGIN:license-summary -->
 | License | Python | Frontend |
 | --- | ---: | ---: |
-| MIT | 41 | 268 |
+| MIT | 41 | 288 |
 | BSD-3-Clause | 16 | 3 |
 | Apache-2.0 | 12 | 4 |
-| ISC | — | 9 |
+| ISC | — | 10 |
+| BSD-2-Clause | 4 | 1 |
 | MPL-2.0 † | 1 | 4 |
-| BSD-2-Clause | 4 | — |
 | Apache-2.0 OR MIT | 3 | — |
 | 0BSD | — | 1 |
 | Apache-2.0 / BSD-3-Clause (+ bundled PDFium deps) | 1 | — |
@@ -49,10 +49,10 @@ copyleft license (weak or strong); see the next section for how each one is used
 | PSF-2.0 | 1 | — |
 | Python-2.0 | — | 1 |
 | Unlicense | — | 1 |
-| **Total** | **87** | **292** |
+| **Total** | **87** | **314** |
 <!-- END:license-summary -->
 
-Bundled assets add: OFL-1.1 (KaTeX fonts), GUST Font License (Latin Modern fonts), LPPL 1.3 / 1.3c (IEEEtran,
+Bundled assets add: OFL-1.1 (KaTeX fonts, vendored and from the `katex` package), GUST Font License (Latin Modern fonts), LPPL 1.3 / 1.3c (IEEEtran,
 tikz-cd).
 
 ## Copyleft and items for owner review
@@ -222,6 +222,11 @@ superset: `dependencies` also holds build-time plugins (`@tailwindcss/vite`, `@t
 `vite-tsconfig-paths`, `tailwindcss`), so packages such as `typescript`, `lightningcss`, `@babel/*` and
 `caniuse-lite` are listed although they only run during the build.
 
+**Fonts inside `katex`.** `katex` is MIT, but the stylesheet `katex/dist/katex.min.css` (imported by
+`frontend/src/lib/markdown-math-plugins.ts`) makes Vite copy the KaTeX fonts — 20 faces as `.woff2`/`.woff`/`.ttf` —
+into `dist/client/assets/`. Their font name tables state OFL-1.1 with Reserved Font Names, © 2009–2010 Design Science,
+Inc. and © 2014–2018 Khan Academy (same as the vendored copies under [Bundled assets](#bundled-assets)).
+
 **Bundled from a devDependency.** The Nitro server runtime comes from `nitro` (a devDependency, MIT) and is therefore
 not in the table or in the CI gate. Besides the packages above, the server bundle contains code from `h3`, `hookable`,
 `ocache`, `ohash`, `unstorage`, `croner` and `unctx` (the last two vendored inside `nitro/dist/node_modules/`) — all MIT
@@ -328,6 +333,7 @@ according to their `package.json`.
 | @types/estree | 1.0.8 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/estree-jsx | 1.0.5 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/hast | 3.0.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
+| @types/katex | 0.16.8 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/mdast | 4.0.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/ms | 2.1.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/node | 22.20.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
@@ -352,6 +358,7 @@ according to their `package.json`.
 | chokidar | 5.0.0 | MIT | <https://github.com/paulmillr/chokidar> |
 | clsx | 2.1.1 | MIT | <https://github.com/lukeed/clsx> |
 | comma-separated-tokens | 2.0.3 | MIT | <https://github.com/wooorm/comma-separated-tokens> |
+| commander | 15.0.0 | MIT | <https://github.com/tj/commander.js> |
 | convert-source-map | 2.0.0 | MIT | <https://github.com/thlorenz/convert-source-map> |
 | cookie-es | 3.1.1 | MIT | <https://github.com/unjs/cookie-es> |
 | crossws | 0.4.5 | MIT | <https://github.com/h3js/crossws> |
@@ -365,10 +372,12 @@ according to their `package.json`.
 | diff | 8.0.4 | BSD-3-Clause | <https://github.com/kpdecker/jsdiff> |
 | electron-to-chromium | 1.5.444 | ISC | <https://github.com/Kilian/electron-to-chromium> |
 | enhanced-resolve | 5.26.0 | MIT | <https://github.com/webpack/enhanced-resolve> |
+| entities | 6.0.1 | BSD-2-Clause | <https://github.com/fb55/entities> |
 | esbuild | 0.28.2 | MIT | <https://github.com/evanw/esbuild> |
 | escalade | 3.2.0 | MIT | <https://github.com/lukeed/escalade> |
 | escape-string-regexp | 5.0.0 | MIT | <https://github.com/sindresorhus/escape-string-regexp> |
 | estree-util-is-identifier-name | 3.0.0 | MIT | <https://github.com/syntax-tree/estree-util-is-identifier-name> |
+| eventsource-parser | 4.1.1 | MIT | <https://github.com/rexxars/eventsource-parser> |
 | exsolve | 1.1.3 | MIT | <https://github.com/unjs/exsolve> |
 | extend | 3.0.2 | MIT | <https://github.com/justmoon/node-extend> |
 | fdir | 6.5.0 | MIT | <https://github.com/thecodrr/fdir> |
@@ -379,8 +388,16 @@ according to their `package.json`.
 | globrex | 0.1.2 | MIT | <https://github.com/terkelg/globrex> |
 | graceful-fs | 4.2.11 | ISC | <https://github.com/isaacs/node-graceful-fs> |
 | h3 | 2.0.1-rc.20 | MIT | <https://github.com/h3js/h3> |
+| hast-util-from-dom | 5.0.1 | ISC | <https://github.com/syntax-tree/hast-util-from-dom> |
+| hast-util-from-html | 2.0.3 | MIT | <https://github.com/syntax-tree/hast-util-from-html> |
+| hast-util-from-html-isomorphic | 2.0.0 | MIT | <https://github.com/syntax-tree/hast-util-from-html-isomorphic> |
+| hast-util-from-parse5 | 8.0.3 | MIT | <https://github.com/syntax-tree/hast-util-from-parse5> |
+| hast-util-is-element | 3.0.0 | MIT | <https://github.com/syntax-tree/hast-util-is-element> |
+| hast-util-parse-selector | 4.0.0 | MIT | <https://github.com/syntax-tree/hast-util-parse-selector> |
 | hast-util-to-jsx-runtime | 2.3.6 | MIT | <https://github.com/syntax-tree/hast-util-to-jsx-runtime> |
+| hast-util-to-text | 4.0.2 | MIT | <https://github.com/syntax-tree/hast-util-to-text> |
 | hast-util-whitespace | 3.0.0 | MIT | <https://github.com/syntax-tree/hast-util-whitespace> |
+| hastscript | 9.0.1 | MIT | <https://github.com/syntax-tree/hastscript> |
 | html-url-attributes | 3.0.1 | MIT | <https://github.com/rehypejs/rehype-minify.git#main> |
 | inline-style-parser | 0.2.7 | MIT | <https://github.com/remarkablemark/inline-style-parser> |
 | input-otp | 1.5.0 | MIT | <https://github.com/guilhermerodz/input-otp> |
@@ -396,6 +413,7 @@ according to their `package.json`.
 | js-yaml | 4.3.2 | MIT | <https://github.com/nodeca/js-yaml> |
 | jsesc | 3.1.0 | MIT | <https://github.com/mathiasbynens/jsesc> |
 | json5 | 2.2.3 | MIT | <https://github.com/json5/json5> |
+| katex | 0.19.0 | MIT | <https://github.com/KaTeX/KaTeX> |
 | lib0 | 0.2.117 | MIT | <https://github.com/dmonad/lib0> |
 | lightningcss | 1.32.0 | MPL-2.0 † | <https://github.com/parcel-bundler/lightningcss> |
 | lightningcss | 1.33.0 | MPL-2.0 † | <https://github.com/parcel-bundler/lightningcss> |
@@ -414,6 +432,7 @@ according to their `package.json`.
 | mdast-util-gfm-strikethrough | 2.0.0 | MIT | <https://github.com/syntax-tree/mdast-util-gfm-strikethrough> |
 | mdast-util-gfm-table | 2.0.0 | MIT | <https://github.com/syntax-tree/mdast-util-gfm-table> |
 | mdast-util-gfm-task-list-item | 2.0.0 | MIT | <https://github.com/syntax-tree/mdast-util-gfm-task-list-item> |
+| mdast-util-math | 3.0.0 | MIT | <https://github.com/syntax-tree/mdast-util-math> |
 | mdast-util-mdx-expression | 2.0.1 | MIT | <https://github.com/syntax-tree/mdast-util-mdx-expression> |
 | mdast-util-mdx-jsx | 3.2.0 | MIT | <https://github.com/syntax-tree/mdast-util-mdx-jsx> |
 | mdast-util-mdxjs-esm | 2.0.1 | MIT | <https://github.com/syntax-tree/mdast-util-mdxjs-esm> |
@@ -430,6 +449,7 @@ according to their `package.json`.
 | micromark-extension-gfm-table | 2.1.1 | MIT | <https://github.com/micromark/micromark-extension-gfm-table> |
 | micromark-extension-gfm-tagfilter | 2.0.0 | MIT | <https://github.com/micromark/micromark-extension-gfm-tagfilter> |
 | micromark-extension-gfm-task-list-item | 2.1.0 | MIT | <https://github.com/micromark/micromark-extension-gfm-task-list-item> |
+| micromark-extension-math | 3.1.0 | MIT | <https://github.com/micromark/micromark-extension-math> |
 | micromark-factory-destination | 2.0.1 | MIT | <https://github.com/micromark/micromark.git#main> |
 | micromark-factory-label | 2.0.1 | MIT | <https://github.com/micromark/micromark.git#main> |
 | micromark-factory-space | 2.0.1 | MIT | <https://github.com/micromark/micromark.git#main> |
@@ -453,6 +473,7 @@ according to their `package.json`.
 | nanoid | 3.3.19 | MIT | <https://github.com/ai/nanoid> |
 | node-releases | 2.0.57 | MIT | <https://github.com/chicoxyzzy/node-releases> |
 | parse-entities | 4.0.2 | MIT | <https://github.com/wooorm/parse-entities> |
+| parse5 | 7.3.0 | MIT | <https://github.com/inikulin/parse5> |
 | pathe | 2.0.3 | MIT | <https://github.com/unjs/pathe> |
 | pdfjs-dist | 5.4.296 | Apache-2.0 | <https://github.com/mozilla/pdf.js> |
 | picocolors | 1.1.1 | ISC | <https://github.com/alexeyraspopov/picocolors> |
@@ -469,7 +490,9 @@ according to their `package.json`.
 | react-resizable-panels | 4.14.1 | MIT | <https://github.com/bvaughn/react-resizable-panels> |
 | react-style-singleton | 2.2.3 | MIT | <https://github.com/theKashey/react-style-singleton> |
 | readdirp | 5.1.1 | MIT | <https://github.com/paulmillr/readdirp> |
+| rehype-katex | 7.0.1 | MIT | <https://github.com/remarkjs/remark-math.git#main> |
 | remark-gfm | 4.0.1 | MIT | <https://github.com/remarkjs/remark-gfm> |
+| remark-math | 6.0.0 | MIT | <https://github.com/remarkjs/remark-math.git#main> |
 | remark-parse | 11.0.0 | MIT | <https://github.com/remarkjs/remark.git#main> |
 | remark-rehype | 11.1.2 | MIT | <https://github.com/remarkjs/remark-rehype> |
 | remark-stringify | 11.0.0 | MIT | <https://github.com/remarkjs/remark.git#main> |
@@ -501,8 +524,10 @@ according to their `package.json`.
 | ufo | 1.6.4 | MIT | <https://github.com/unjs/ufo> |
 | undici-types | 6.21.0 | MIT | <https://github.com/nodejs/undici> |
 | unified | 11.0.5 | MIT | <https://github.com/unifiedjs/unified> |
+| unist-util-find-after | 5.0.0 | MIT | <https://github.com/syntax-tree/unist-util-find-after> |
 | unist-util-is | 6.0.1 | MIT | <https://github.com/syntax-tree/unist-util-is> |
 | unist-util-position | 5.0.0 | MIT | <https://github.com/syntax-tree/unist-util-position> |
+| unist-util-remove-position | 5.0.0 | MIT | <https://github.com/syntax-tree/unist-util-remove-position> |
 | unist-util-stringify-position | 4.0.0 | MIT | <https://github.com/syntax-tree/unist-util-stringify-position> |
 | unist-util-visit | 5.1.0 | MIT | <https://github.com/syntax-tree/unist-util-visit> |
 | unist-util-visit-parents | 6.0.2 | MIT | <https://github.com/syntax-tree/unist-util-visit-parents> |
@@ -512,10 +537,12 @@ according to their `package.json`.
 | use-sidecar | 1.1.3 | MIT | <https://github.com/theKashey/use-sidecar> |
 | use-sync-external-store | 1.6.0 | MIT | <https://github.com/facebook/react> |
 | vfile | 6.0.3 | MIT | <https://github.com/vfile/vfile> |
+| vfile-location | 5.0.3 | MIT | <https://github.com/vfile/vfile-location> |
 | vfile-message | 4.0.3 | MIT | <https://github.com/vfile/vfile-message> |
 | vite | 7.3.6 | MIT | <https://github.com/vitejs/vite> |
 | vite-tsconfig-paths | 6.1.1 | MIT | <https://github.com/aleclarson/vite-tsconfig-paths> |
 | vitefu | 1.1.3 | MIT | <https://github.com/svitejs/vitefu> |
+| web-namespaces | 2.0.1 | MIT | <https://github.com/wooorm/web-namespaces> |
 | webpack-virtual-modules | 0.6.2 | MIT | <https://github.com/sysgears/webpack-virtual-modules> |
 | xmlbuilder2 | 4.0.3 | MIT | <https://github.com/oozcitak/xmlbuilder2> |
 | yallist | 3.1.1 | ISC | <https://github.com/isaacs/yallist> |
@@ -619,7 +646,7 @@ Canonical texts from [spdx/license-list-data](https://github.com/spdx/license-li
 | --- | --- |
 | [`0BSD.txt`](./LICENSES/0BSD.txt) | tslib |
 | [`Apache-2.0.txt`](./LICENSES/Apache-2.0.txt) | pdfjs-dist, openai, requests, inngest, google-genai, … |
-| [`BSD-2-Clause.txt`](./LICENSES/BSD-2-Clause.txt) | python-json-logger, pyasn1, xxhash, … |
+| [`BSD-2-Clause.txt`](./LICENSES/BSD-2-Clause.txt) | python-json-logger, pyasn1, xxhash, entities, … |
 | [`BSD-3-Clause.txt`](./LICENSES/BSD-3-Clause.txt) | starlette, uvicorn, click, httpx, … |
 | [`CC-BY-4.0.txt`](./LICENSES/CC-BY-4.0.txt) | caniuse-lite (browser-support data); Springer LNCS sample text |
 | [`CNRI-Python.txt`](./LICENSES/CNRI-Python.txt) | regex (together with Apache-2.0) |
@@ -632,7 +659,7 @@ Canonical texts from [spdx/license-list-data](https://github.com/spdx/license-li
 | [`MIT-0.txt`](./LICENSES/MIT-0.txt) | cffi |
 | [`MIT-CMU.txt`](./LICENSES/MIT-CMU.txt) | pillow |
 | [`MPL-2.0.txt`](./LICENSES/MPL-2.0.txt) | certifi, orjson, lightningcss |
-| [`OFL-1.1.txt`](./LICENSES/OFL-1.1.txt) | KaTeX fonts (and the Google Fonts families above) |
+| [`OFL-1.1.txt`](./LICENSES/OFL-1.1.txt) | KaTeX fonts, vendored and from the `katex` package (and the Google Fonts families above) |
 | [`PSF-2.0.txt`](./LICENSES/PSF-2.0.txt) | typing_extensions |
 | [`Python-2.0.txt`](./LICENSES/Python-2.0.txt) | argparse (npm port of Python's argparse) |
 | [`Unlicense.txt`](./LICENSES/Unlicense.txt) | isbot |
