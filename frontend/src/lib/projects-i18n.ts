@@ -58,7 +58,8 @@ type ProjectsCopy = {
 
 const EN: ProjectsCopy = {
   pageTitle: "Your Projects — Arionear",
-  pageDescription: "Write IMRaD scientific papers in IEEE format, or import from Overleaf.",
+  pageDescription:
+    "Write IMRaD scientific papers with IEEE, Springer, Elsevier or ACM templates, or import an existing project.",
   headerTitle: "Your Projects",
   searchPlaceholder: "Search",
   searchAria: "Search projects",
@@ -105,20 +106,21 @@ const EN: ProjectsCopy = {
   errorImport: "ZIP import failed.",
   errorRename: "Failed to rename project.",
   errorDelete: "Failed to delete project.",
-  formatNoticeTitle: "IEEEtran & IMRaD only",
+  formatNoticeTitle: "Journal templates & IMRaD",
   formatNoticeBody:
-    "Arionear currently supports scientific papers in IEEE journal format (IEEEtran) with an IMRaD structure.",
+    "Arionear works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS, Elsevier (elsarticle) or ACM (acmart).",
   formatNoticeImradLabel: "IMRaD sections",
   formatNoticeImradDetail:
-    "Introduction · Methods · Results · Discussion — plus Abstract and IEEE keywords.",
+    "Introduction · Methods · Results · Discussion — plus Abstract and keywords.",
   formatNoticeImportNote:
-    "Blank and sample projects use this format automatically. Imported Overleaf projects work best when they already follow IEEEtran and IMRaD.",
+    "Blank and sample projects start from the IEEE template — pick another journal in the template gallery. Imported projects work best when they already follow an IMRaD structure.",
   formatNoticeConfirm: "Got it",
 };
 
 const VI: ProjectsCopy = {
   pageTitle: "Dự án của bạn — Arionear",
-  pageDescription: "Viết bài báo khoa học theo IMRaD và chuẩn IEEE, hoặc nhập từ Overleaf.",
+  pageDescription:
+    "Viết bài báo khoa học theo IMRaD với mẫu IEEE, Springer, Elsevier hoặc ACM, hoặc nhập dự án có sẵn.",
   headerTitle: "Dự án của bạn",
   searchPlaceholder: "Tìm kiếm",
   searchAria: "Tìm dự án",
@@ -165,14 +167,14 @@ const VI: ProjectsCopy = {
   errorImport: "Nhập ZIP thất bại.",
   errorRename: "Đổi tên dự án thất bại.",
   errorDelete: "Xóa dự án thất bại.",
-  formatNoticeTitle: "Chỉ hỗ trợ IEEEtran & IMRaD",
+  formatNoticeTitle: "Mẫu tạp chí & IMRaD",
   formatNoticeBody:
-    "Hiện tại Arionear chỉ hỗ trợ viết bài báo khoa học theo định dạng tạp chí IEEE (IEEEtran) và cấu trúc IMRaD.",
+    "Arionear hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS, Elsevier (elsarticle) hoặc ACM (acmart).",
   formatNoticeImradLabel: "Các phần IMRaD",
   formatNoticeImradDetail:
-    "Giới thiệu · Phương pháp · Kết quả · Thảo luận — kèm Tóm tắt (Abstract) và từ khóa IEEE.",
+    "Giới thiệu · Phương pháp · Kết quả · Thảo luận — kèm Tóm tắt (Abstract) và từ khóa.",
   formatNoticeImportNote:
-    "Dự án trống và dự án mẫu đã dùng sẵn khung này. Dự án nhập từ Overleaf hoạt động tốt nhất khi đã theo IEEEtran và IMRaD.",
+    "Dự án trống và dự án mẫu bắt đầu từ mẫu IEEE — chọn tạp chí khác trong thư viện mẫu. Dự án nhập vào hoạt động tốt nhất khi đã theo cấu trúc IMRaD.",
   formatNoticeConfirm: "Đã hiểu",
 };
 
