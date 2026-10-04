@@ -1,6 +1,7 @@
 {
   "name": "arionear-db",
   "private": true,
+  "license": "MIT",
   "description": "Prisma schema & migrations for Arionear (Python FastAPI connects via DATABASE_URL)",
   "scripts": {
     "db:generate": "prisma generate",

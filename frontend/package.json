@@ -1,6 +1,7 @@
 {
   "name": "arionear-frontend",
   "private": true,
+  "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "scripts": {
