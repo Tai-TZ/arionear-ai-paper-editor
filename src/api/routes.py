@@ -222,11 +222,7 @@ async def get_session_citations(
         raise HTTPException(status_code=404, detail="Session not found")
     results = session.citation_registry or []
     verified = sum(1 for r in results if r.get("status") == "verified")
-    summary = (
-        f"Verified {verified}/{len(results)} citations."
-        if results
-        else "No citation verification on file."
-    )
+    summary = f"Verified {verified}/{len(results)} citations." if results else "No citation verification on file."
     return CitationVerifyResponse(results=results, summary=summary)
 
 
@@ -413,6 +409,7 @@ async def compile_manuscript(request: Request):
         raise HTTPException(status_code=504, detail="LaTeX compilation timed out.") from e
     except Exception as e:
         import traceback
+
         tb = traceback.format_exc()
         print(f"[COMPILE_ERROR] {tb}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e

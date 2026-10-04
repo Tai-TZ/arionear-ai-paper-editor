@@ -41,16 +41,16 @@ async def _check_crossref(doi: str) -> dict[str, Any]:
                 "source": "crossref",
                 "title": titles[0] if titles else "",
                 "doi": data.get("DOI", doi),
-                "year": str((data.get("published-print") or data.get("published-online") or {}).get("date-parts", [[""]])[0][0]),
+                "year": str(
+                    (data.get("published-print") or data.get("published-online") or {}).get("date-parts", [[""]])[0][0]
+                ),
             }
     except Exception:
         pass
     return {"found": False}
 
 
-async def _check_semantic_scholar(
-    title: str, api_key: str = ""
-) -> dict[str, Any]:
+async def _check_semantic_scholar(title: str, api_key: str = "") -> dict[str, Any]:
     if not title.strip():
         return {"found": False}
     headers: dict[str, str] = {}
@@ -205,7 +205,5 @@ async def verify_citations(
 ) -> list[dict]:
     results = []
     for entry in entries:
-        results.append(
-            await verify_single_citation(entry, semantic_scholar_api_key)
-        )
+        results.append(await verify_single_citation(entry, semantic_scholar_api_key))
     return results

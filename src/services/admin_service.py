@@ -243,7 +243,7 @@ def get_usage_summary(db: Session) -> AdminUsageSummary:
 
     # Quota alerts — compare correct windows against limits
     over_token = 0  # today's tokens > daily cap
-    over_cost = 0   # this month's cost > monthly cap
+    over_cost = 0  # this month's cost > monthly cap
     for user in users:
         limits = get_llm_limits_from_profile(user.profile_settings)
         uid = str(user.id)
@@ -255,9 +255,7 @@ def get_usage_summary(db: Session) -> AdminUsageSummary:
     return AdminUsageSummary(
         total_users=len(users),
         active_users=sum(1 for u in users if u.is_active),
-        admin_users=sum(
-            1 for u in users if (u.role.value if isinstance(u.role, UserRole) else u.role) == "ADMIN"
-        ),
+        admin_users=sum(1 for u in users if (u.role.value if isinstance(u.role, UserRole) else u.role) == "ADMIN"),
         total_tokens=total_tokens,
         total_sessions=total_sessions,
         estimated_total_cost_usd=round(total_cost, 4),
@@ -276,11 +274,7 @@ def _aware(dt: datetime) -> datetime:
 
 def _aggregate_session_model_usage(db: Session) -> list[AdminModelUsageRow]:
     token_expr = effective_tokens_expr()
-    rows = (
-        db.query(AiSession.metadata_, token_expr.label("tokens"))
-        .filter(_meaningful_session_filter())
-        .all()
-    )
+    rows = db.query(AiSession.metadata_, token_expr.label("tokens")).filter(_meaningful_session_filter()).all()
     agg: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"sessions": 0, "tokens": 0})
     for meta, tokens in rows:
         md = meta or {}
@@ -331,15 +325,9 @@ def get_admin_overview(db: Session) -> AdminOverviewResponse:
     cutoff_30d = now - timedelta(days=30)
 
     users = db.query(User).order_by(User.created_at.desc()).all()
-    new_users_1d = sum(
-        1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_1d
-    )
-    new_users_7d = sum(
-        1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_7d
-    )
-    new_users_30d = sum(
-        1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_30d
-    )
+    new_users_1d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_1d)
+    new_users_7d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_7d)
+    new_users_30d = sum(1 for user in users if user.created_at and _aware(user.created_at) >= cutoff_30d)
 
     recent_users: list[AdminRecentUserRow] = []
     for user in users[:8]:

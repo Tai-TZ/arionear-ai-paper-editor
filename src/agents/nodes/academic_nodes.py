@@ -240,11 +240,7 @@ def prepare_edit_target(state: AgentState, query: str = "") -> dict:
         }
         sel_start = state.get("selection_start")
         sel_end = state.get("selection_end")
-        if (
-            isinstance(sel_start, int)
-            and isinstance(sel_end, int)
-            and sel_end > sel_start
-        ):
+        if isinstance(sel_start, int) and isinstance(sel_end, int) and sel_end > sel_start:
             prepared["selection_start"] = sel_start
             prepared["selection_end"] = sel_end
         return prepared
@@ -639,11 +635,14 @@ async def structure_node(state: AgentState) -> dict:
         system = build_system_prompt("structure")
         llm = get_llm(provider=_provider(state), model=_model(state), temperature=resolve_llm_temperature(0.2))
         section_summary = format_sections_summary(sections)
-        user_content = render_user_prompt(
-            "structure",
-            sections_summary=section_summary,
-            query=state.get("query", ""),
-        ) or f"Manuscript sections:\n{section_summary}"
+        user_content = (
+            render_user_prompt(
+                "structure",
+                sections_summary=section_summary,
+                query=state.get("query", ""),
+            )
+            or f"Manuscript sections:\n{section_summary}"
+        )
         try:
             response = await llm.ainvoke(
                 [
@@ -663,9 +662,7 @@ async def structure_node(state: AgentState) -> dict:
         for s in all_suggestions
     ]
     response_text = (
-        "Gợi ý cấu trúc:\n" + "\n".join(lines)
-        if lines
-        else "Cấu trúc bài báo trông ổn — không có gợi ý bổ sung."
+        "Gợi ý cấu trúc:\n" + "\n".join(lines) if lines else "Cấu trúc bài báo trông ổn — không có gợi ý bổ sung."
     )
 
     return {
@@ -750,12 +747,7 @@ async def respond_node(state: AgentState) -> dict:
         if flags:
             flag_note = "\n\n⚠️ " + "; ".join(f["message"] for f in flags)
         label = "chỉnh sửa" if task == "edit" else "cải thiện văn phong"
-        return {
-            "response": (
-                f"Đề xuất {label} (xem diff bên dưới, Accept/Reject để áp dụng):"
-                f"{flag_note}"
-            )
-        }
+        return {"response": (f"Đề xuất {label} (xem diff bên dưới, Accept/Reject để áp dụng):{flag_note}")}
 
     if task == "citation" and state.get("citation_results") is not None:
         return {"response": state.get("response", "Citation check complete.")}

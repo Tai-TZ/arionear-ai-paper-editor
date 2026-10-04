@@ -406,4 +406,3 @@ class PaperSharePublicResponse(BaseModel):
     latex: str
     metadata: dict
     updated_at: datetime
-

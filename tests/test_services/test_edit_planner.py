@@ -120,9 +120,7 @@ def test_validator_blocks_truncated_document_replacement():
 
 
 def test_validator_blocks_documentclass_after_end_document():
-    latex = (
-        "\\documentclass{article}\n\\begin{document}\nBody\n\\end{document}\n"
-    )
+    latex = "\\documentclass{article}\n\\begin{document}\nBody\n\\end{document}\n"
     plan = EditPlan(target_type="document", operation="replace_snippet")
     resolved = resolve_edit_plan(latex, plan)
     assert resolved is not None

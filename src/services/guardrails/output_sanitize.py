@@ -180,8 +180,7 @@ def clamp_selection_replacement(
         return orig
 
     leaked_preamble = bool(
-        re.search(r"\\documentclass\b", sugg, re.IGNORECASE)
-        or re.search(r"\\begin\{document\}", sugg, re.IGNORECASE)
+        re.search(r"\\documentclass\b", sugg, re.IGNORECASE) or re.search(r"\\begin\{document\}", sugg, re.IGNORECASE)
     )
     orig_lines = max(1, orig.count("\n") + 1)
     sugg_lines = max(1, sugg.count("\n") + 1)

@@ -1,4 +1,5 @@
 """Tests for defense PDF autolink helpers."""
+
 from __future__ import annotations
 
 from src.services.defense_citations import (

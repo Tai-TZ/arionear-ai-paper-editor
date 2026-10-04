@@ -32,11 +32,7 @@ async def test_edit_node_section_produces_edits(monkeypatch):
         )
 
     async def _mock_execute(*_args, **_kwargs):
-        return (
-            "\\begin{abstract}\n"
-            "We present a concise abstract for efficient network classification.\n"
-            "\\end{abstract}"
-        )
+        return "\\begin{abstract}\nWe present a concise abstract for efficient network classification.\n\\end{abstract}"
 
     monkeypatch.setattr("src.agents.nodes.academic_nodes.plan_edit", _mock_plan_edit)
     monkeypatch.setattr("src.agents.nodes.academic_nodes.execute_edit_plan", _mock_execute)
@@ -59,11 +55,7 @@ async def test_edit_node_section_produces_edits(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_edit_node_title_substring_replace(monkeypatch):
-    latex = (
-        "\\documentclass{article}\n"
-        "\\title{Paper with EfficientNetV2}\n"
-        "\\begin{document}Body\\end{document}\n"
-    )
+    latex = "\\documentclass{article}\n\\title{Paper with EfficientNetV2}\n\\begin{document}Body\\end{document}\n"
 
     async def _mock_plan_edit(*_args, **_kwargs):
         return EditPlan(

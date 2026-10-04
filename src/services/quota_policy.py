@@ -75,8 +75,7 @@ def check_rate_limit(user_id: uuid.UUID, limit_per_min: int) -> None:
     bucket[:] = [t for t in bucket if now - t < 60]
     if len(bucket) >= limit_per_min:
         raise QuotaExceededError(
-            f"Bạn gửi quá nhiều yêu cầu ({limit_per_min} lượt/phút). "
-            "Vui lòng đợi một chút rồi thử lại."
+            f"Bạn gửi quá nhiều yêu cầu ({limit_per_min} lượt/phút). Vui lòng đợi một chút rồi thử lại."
         )
     bucket.append(now)
 
@@ -85,9 +84,7 @@ def assert_llm_allowed(db: Session, user: User) -> None:
     """Raise QuotaExceededError if the user may not call the LLM."""
     limits = get_llm_limits_from_profile(user.profile_settings)
     if not limits.llm_enabled:
-        raise QuotaExceededError(
-            "Tài khoản của bạn chưa được bật quyền dùng AI. Liên hệ quản trị viên để được hỗ trợ."
-        )
+        raise QuotaExceededError("Tài khoản của bạn chưa được bật quyền dùng AI. Liên hệ quản trị viên để được hỗ trợ.")
 
     check_rate_limit(user.id, limits.rate_limit_per_min)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -239,7 +239,3 @@ def build_manuscript_outline(latex: str) -> ManuscriptOutline:
         )
 
     return outline
-
-
-def outline_as_dict(outline: ManuscriptOutline) -> dict:
-    return asdict(outline)

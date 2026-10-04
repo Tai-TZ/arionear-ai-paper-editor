@@ -135,9 +135,7 @@ class FailoverChatModel(BaseChatModel):
         for index, api_key in enumerate(keys):
             try:
                 llm = self._build_llm(api_key)
-                async for chunk in llm._astream(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                ):
+                async for chunk in llm._astream(messages, stop=stop, run_manager=run_manager, **kwargs):
                     yield chunk
                 return
             except Exception as exc:

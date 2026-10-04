@@ -1,4 +1,5 @@
 """Tests for paper_gate_skim — lightweight pre-publication gate scan."""
+
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -73,6 +74,7 @@ class TestPickGateSections:
 # _extract_json
 # ---------------------------------------------------------------------------
 
+
 class TestExtractJson:
     def test_parses_clean_json(self):
         raw = '{"summary": "ok", "sections": []}'
@@ -81,7 +83,7 @@ class TestExtractJson:
         assert result["summary"] == "ok"
 
     def test_parses_json_with_markdown_fence(self):
-        raw = "```json\n{\"summary\": \"ok\"}\n```"
+        raw = '```json\n{"summary": "ok"}\n```'
         result = _extract_json(raw)
         assert result is not None
 
@@ -97,7 +99,7 @@ class TestExtractJson:
         assert _extract_json("[]") is None  # list, not dict
 
     def test_strips_thinking_markup(self):
-        raw = "<think>internal thoughts</think>{\"summary\": \"clean\"}"
+        raw = '<think>internal thoughts</think>{"summary": "clean"}'
         result = _extract_json(raw)
         assert result is not None
         assert result["summary"] == "clean"
@@ -106,6 +108,7 @@ class TestExtractJson:
 # ---------------------------------------------------------------------------
 # _normalise_section
 # ---------------------------------------------------------------------------
+
 
 class TestNormaliseSection:
     def test_basic_structure(self):
@@ -130,10 +133,7 @@ class TestNormaliseSection:
         assert len(result["weak_claims"]) == 1
 
     def test_caps_conflicts_at_4(self):
-        conflicts = [
-            {"id": f"c{i}", "comment": f"Issue {i}", "type": "unclear_reasoning"}
-            for i in range(10)
-        ]
+        conflicts = [{"id": f"c{i}", "comment": f"Issue {i}", "type": "unclear_reasoning"} for i in range(10)]
         raw = {"section": "Results", "conflicts": conflicts}
         result = _normalise_section(raw)
         assert len(result["conflicts"]) <= 4
@@ -173,6 +173,7 @@ class TestNormaliseSection:
 # Integration: run_paper_gate_skim with mocked LLM
 # ---------------------------------------------------------------------------
 
+
 class TestRunPaperGateSkimIntegration:
     """Integration tests that mock the LLM call."""
 
@@ -184,6 +185,7 @@ class TestRunPaperGateSkimIntegration:
             async def ainvoke(self, messages):
                 class Resp:
                     content = '{"summary": "Looks fine.", "sections": [{"section": "Abstract", "conflicts": [], "weak_claims": []}], "cross_section_conflicts": []}'
+
                 return Resp()
 
         monkeypatch.setattr(paper_gate_skim, "get_llm", lambda **kw: FakeLLM())
@@ -205,6 +207,7 @@ class TestRunPaperGateSkimIntegration:
             async def ainvoke(self, messages):
                 class Resp:
                     content = "Sorry, I cannot help with that."
+
                 return Resp()
 
         monkeypatch.setattr(paper_gate_skim, "get_llm", lambda **kw: FakeLLM())
@@ -233,6 +236,7 @@ class TestRunPaperGateSkimIntegration:
                             {"type": "mismatch", "description": "Abstract claims differ from conclusion."}
                         ]
                     }"""
+
                 return Resp()
 
         monkeypatch.setattr(paper_gate_skim, "get_llm", lambda **kw: FakeLLM())

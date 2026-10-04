@@ -1,4 +1,5 @@
 """Tests for billing subscription and defense turn quota."""
+
 from __future__ import annotations
 
 import uuid

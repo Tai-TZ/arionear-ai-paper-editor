@@ -237,9 +237,7 @@ class DatabaseSessionStore:
             )
 
     @retry_on_lock_timeout()
-    def set_revision_action(
-        self, session_id: str, revision_id: str, action: str
-    ) -> RevisionRecord | None:
+    def set_revision_action(self, session_id: str, revision_id: str, action: str) -> RevisionRecord | None:
         with get_db() as db:
             paper = _load_paper(db, _parse_uuid(session_id))
             if not paper:

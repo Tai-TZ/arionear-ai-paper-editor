@@ -37,9 +37,7 @@ def test_global_defaults_apply_to_users_without_custom_limits(policy_env):
 
 
 def test_profile_overrides_merge_on_top_of_global_defaults(policy_env):
-    write_global_defaults(
-        LlmGlobalDefaults(daily_token_max=80_000, monthly_cost_cap_usd=30.0, rate_limit_per_min=15)
-    )
+    write_global_defaults(LlmGlobalDefaults(daily_token_max=80_000, monthly_cost_cap_usd=30.0, rate_limit_per_min=15))
     limits = get_llm_limits_from_profile({"llm_limits": {"daily_token_max": 12_000}})
     assert limits.daily_token_max == 12_000
     assert limits.monthly_cost_cap_usd == 30.0

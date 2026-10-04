@@ -4,6 +4,7 @@ Single-call, fast path: reads abstract, intro, methods, results and conclusion
 and returns a brief LogicAuditReport suitable for the score dialog.  Skips the
 full multi-persona debate to stay under ~45 s.
 """
+
 from __future__ import annotations
 
 import asyncio

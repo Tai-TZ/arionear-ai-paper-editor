@@ -28,6 +28,7 @@ LogicSectionFn = Callable[[dict], None]
 class LogicAuditCancelledError(Exception):
     """Raised when logic audit is cancelled mid-stream."""
 
+
 PERSONA_LABELS: dict[str, str] = {
     "novice_reader": "Độc giả mới",
     "critical_reviewer": "Reviewer khắt khe",

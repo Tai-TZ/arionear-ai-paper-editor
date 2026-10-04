@@ -4,29 +4,19 @@ import re
 
 from src.services.quota_policy import QuotaExceededError
 
-LLM_USER_ERROR_MSG = (
-    "Úi, kết nối tới AI đang bị gián đoạn một chút. Bạn thử đổi Model/Provider giúp mình nhé!"
-)
+LLM_USER_ERROR_MSG = "Úi, kết nối tới AI đang bị gián đoạn một chút. Bạn thử đổi Model/Provider giúp mình nhé!"
 
-_PROVIDER_RATE_LIMIT_MSG = (
-    "Provider AI đang giới hạn tốc độ. Đợi vài giây hoặc đổi model/provider khác."
-)
+_PROVIDER_RATE_LIMIT_MSG = "Provider AI đang giới hạn tốc độ. Đợi vài giây hoặc đổi model/provider khác."
 
-_PROVIDER_OVERLOADED_MSG = (
-    "Server AI đang quá tải. Thử lại sau vài giây hoặc đổi provider."
-)
+_PROVIDER_OVERLOADED_MSG = "Server AI đang quá tải. Thử lại sau vài giây hoặc đổi provider."
 
-_PROVIDER_NO_KEY_MSG = (
-    "Chưa cấu hình API key cho provider này. God-admin có thể thêm key trong Admin → LLM Keys."
-)
+_PROVIDER_NO_KEY_MSG = "Chưa cấu hình API key cho provider này. God-admin có thể thêm key trong Admin → LLM Keys."
 
 _PROVIDER_KEY_EXHAUSTED_MSG = (
     "API key provider đã hết quota hoặc không hợp lệ. God-admin: cập nhật key mới trong Admin → LLM Keys."
 )
 
-_PROVIDER_MODEL_MSG = (
-    "Model không khả dụng với provider đã chọn. Hãy chọn model khác trong menu chat."
-)
+_PROVIDER_MODEL_MSG = "Model không khả dụng với provider đã chọn. Hãy chọn model khác trong menu chat."
 
 _USER_SAFE_HINTS = (
     "thử đổi model",
@@ -88,12 +78,7 @@ def _classify_provider_error(msg: str) -> str | None:
     lower = msg.lower()
     if _is_quota_user_message(msg):
         return None
-    if (
-        "rate limit" in lower
-        or "rate_limit" in lower
-        or "too many requests" in lower
-        or re.search(r"\b429\b", msg)
-    ):
+    if "rate limit" in lower or "rate_limit" in lower or "too many requests" in lower or re.search(r"\b429\b", msg):
         return _PROVIDER_RATE_LIMIT_MSG
     if "overloaded" in lower or re.search(r"\b503\b", msg):
         return _PROVIDER_OVERLOADED_MSG
@@ -105,14 +90,8 @@ def _classify_provider_error(msg: str) -> str | None:
         or "authentication" in lower
     ):
         return _PROVIDER_NO_KEY_MSG
-    if (
-        "model" in lower
-        and (
-            "not found" in lower
-            or "does not exist" in lower
-            or "not available" in lower
-            or "unknown model" in lower
-        )
+    if "model" in lower and (
+        "not found" in lower or "does not exist" in lower or "not available" in lower or "unknown model" in lower
     ):
         return _PROVIDER_MODEL_MSG
     if "insufficient balance" in lower or "please recharge" in lower:

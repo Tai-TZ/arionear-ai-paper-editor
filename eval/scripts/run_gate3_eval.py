@@ -20,11 +20,10 @@ import statistics
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
-from urllib.parse import urljoin
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -117,10 +116,7 @@ def run_offline_edit_scope() -> dict[str, Any]:
         "Sửa tiêu đề bài báo thành model EfficientNetV3 nhé",
         "Đổi đề tài từ EfficientNetV2 sang V3 giúp tôi nhé",
     ]
-    latex = (
-        "\\title{Vietnamese herbariums Species Classification with EfficientNetV2}\n"
-        "\\author{Anh Hoang Tuan}\n"
-    )
+    latex = "\\title{Vietnamese herbariums Species Classification with EfficientNetV2}\n\\author{Anh Hoang Tuan}\n"
     outline = build_manuscript_outline(latex)
     results = []
     for query in queries:
@@ -166,10 +162,7 @@ def run_offline_guardrails(cases: list[dict]) -> dict[str, Any]:
                 case["suggestion"],
                 scope=case.get("scope", "selection"),
             )
-            flagged = any(
-                f.get("code") in {"numeric_drift", "numeric_removed", "numeric_added"}
-                for f in flags
-            )
+            flagged = any(f.get("code") in {"numeric_drift", "numeric_removed", "numeric_added"} for f in flags)
             expect = case["expect_flag"]
             numeric_results.append(
                 {
@@ -339,9 +332,7 @@ def run_live_probes(api_base: str, *, live_llm: bool) -> dict[str, Any]:
                     "status": status,
                     "latency_s": round(elapsed, 3),
                     "has_response": bool(isinstance(body, dict) and body.get("response")),
-                    "integrity_flags": (
-                        body.get("integrity_flags", []) if isinstance(body, dict) else []
-                    ),
+                    "integrity_flags": (body.get("integrity_flags", []) if isinstance(body, dict) else []),
                 }
             )
         probes["llm_chat"] = llm_results
@@ -398,9 +389,7 @@ def write_summary_md(report: dict, path: Path) -> None:
     ]
     for row in report.get("comparison", []):
         improved = "yes" if row["improved_vs_baseline"] else "no"
-        lines.append(
-            f"| {row['metric']} | {row['arionear']} | {row['baseline']} | {improved} |"
-        )
+        lines.append(f"| {row['metric']} | {row['arionear']} | {row['baseline']} | {improved} |")
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -463,7 +452,7 @@ def main() -> int:
             measured["style_latency_p50_s"] = live["style_latency_p50_s"]
 
     report = {
-        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "api_url": args.api_url or None,
         "frontend_url": args.frontend_url or None,
         "offline": offline,
@@ -500,9 +489,7 @@ def main() -> int:
     print(f"Wrote {md_path}")
     for row in report["comparison"]:
         mark = "+" if row["improved_vs_baseline"] else "-"
-        print(
-            f"  [{mark}] {row['metric']}: {row['arionear']} vs baseline {row['baseline']}"
-        )
+        print(f"  [{mark}] {row['metric']}: {row['arionear']} vs baseline {row['baseline']}")
     return 0
 
 

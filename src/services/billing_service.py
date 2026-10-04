@@ -6,6 +6,7 @@ V2: Stripe/PayOS — add stripe_customer_id, stripe_subscription_id to
     stripe.checkout.sessions.create() and confirm_checkout with
     webhook signature verification.
 """
+
 from __future__ import annotations
 
 import base64
@@ -137,10 +138,7 @@ def create_checkout_session(user: User) -> str:
     user_id_str = str(user.id)
 
     # Invalidate any previous un-used checkout for this user to avoid orphans.
-    stale = [
-        k for k, v in _pending_checkouts.items()
-        if v["user_id"] == user_id_str and not v["used"]
-    ]
+    stale = [k for k, v in _pending_checkouts.items() if v["user_id"] == user_id_str and not v["used"]]
     for k in stale:
         del _pending_checkouts[k]
 
@@ -217,12 +215,7 @@ def assert_defense_allowed(db: Session, user: User) -> None:
 
 def record_defense_turn(db: Session, user: User) -> None:
     """Atomically increment defense turn counter when still under daily limit."""
-    sub = (
-        db.query(UserSubscription)
-        .filter(UserSubscription.user_id == user.id)
-        .with_for_update()
-        .first()
-    )
+    sub = db.query(UserSubscription).filter(UserSubscription.user_id == user.id).with_for_update().first()
     if sub is None:
         sub = UserSubscription(
             user_id=user.id,

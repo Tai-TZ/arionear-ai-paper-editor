@@ -1,4 +1,5 @@
 """Tests for defense council boilerplate stripping."""
+
 from __future__ import annotations
 
 from src.models.schemas import DefenseConversationTurn

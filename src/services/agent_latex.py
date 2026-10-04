@@ -22,16 +22,8 @@ def resolve_latex_sources(
     """
     main_file = (request.main_file or "main.tex").strip() or "main.tex"
     active_file = (request.active_file or main_file).strip() or main_file
-    main_latex = (
-        resolved_main
-        if resolved_main is not None
-        else (request.latex_content or "")
-    )
-    active_latex = (
-        resolved_active
-        if resolved_active is not None
-        else (request.active_file_content or "").strip()
-    )
+    main_latex = resolved_main if resolved_main is not None else (request.latex_content or "")
+    active_latex = resolved_active if resolved_active is not None else (request.active_file_content or "").strip()
     if not active_latex or active_file == main_file:
         active_latex = main_latex
 

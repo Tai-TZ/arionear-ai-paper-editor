@@ -30,9 +30,7 @@ from src.services.prompts import (
 Action = Literal["edit", "style", "structure", "logic", "citation", "template", "chat"]
 Scope = Literal["document", "selection"]
 
-_VALID_ACTIONS: frozenset[str] = frozenset(
-    {"edit", "style", "structure", "logic", "citation", "template", "chat"}
-)
+_VALID_ACTIONS: frozenset[str] = frozenset({"edit", "style", "structure", "logic", "citation", "template", "chat"})
 _VALID_SCOPES: frozenset[str] = frozenset({"document", "selection"})
 
 ROUTER_LLM_TIMEOUT_SEC = 20.0
@@ -102,10 +100,7 @@ def _should_use_fast_intent(
         return True
     if looks_like_manuscript_edit_request(query):
         return True
-    return bool(
-        _RENAME_EDIT_RE.search(q)
-        or re.search(r"chỉnh\s*sửa", q, re.IGNORECASE)
-    )
+    return bool(_RENAME_EDIT_RE.search(q) or re.search(r"chỉnh\s*sửa", q, re.IGNORECASE))
 
 
 async def classify_intent(
@@ -128,11 +123,7 @@ async def classify_intent(
         return IntentResult(action="chat")
 
     if explicit_task and explicit_task != "chat":
-        scope: Scope = (
-            "selection"
-            if has_selection and explicit_task in ("style", "edit")
-            else "document"
-        )
+        scope: Scope = "selection" if has_selection and explicit_task in ("style", "edit") else "document"
         return IntentResult(action=explicit_task, scope=scope)  # type: ignore[arg-type]
 
     followup = infer_followup_intent(

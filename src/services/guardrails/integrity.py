@@ -8,9 +8,7 @@ from typing import Literal
 IntegrityStrictness = Literal["relaxed", "standard", "strict"]
 EditScope = Literal["document", "selection"]
 
-NUMBER_RE = re.compile(
-    r"(?<![a-zA-Z])[-+]?\d+(?:\.\d+)?(?:%|pp|bps)?(?![a-zA-Z])"
-)
+NUMBER_RE = re.compile(r"(?<![a-zA-Z])[-+]?\d+(?:\.\d+)?(?:%|pp|bps)?(?![a-zA-Z])")
 
 # Numbers in layout / package lines cause false positives on full-file LLM edits.
 _LATEX_LAYOUT_RE = re.compile(
@@ -129,8 +127,8 @@ def check_integrity(
 ) -> list[dict]:
     """Layer-2 guardrail: numeric drift + optional semantic overlap.
 
-  ``standard`` (default): numeric drift yields warnings; user reviews diff before Accept.
-  ``strict``: blocks when new metrics appear in selection scope.
+    ``standard`` (default): numeric drift yields warnings; user reviews diff before Accept.
+    ``strict``: blocks when new metrics appear in selection scope.
     """
     flags: list[dict] = []
 
@@ -152,25 +150,17 @@ def check_integrity(
             flags.append(
                 {
                     "code": "numeric_drift",
-                    "message": (
-                        "Phát hiện số mới trong gợi ý: "
-                        f"{', '.join(sorted(new_nums)[:5])}"
-                    ),
+                    "message": (f"Phát hiện số mới trong gợi ý: {', '.join(sorted(new_nums)[:5])}"),
                     "severity": severity,
                 }
             )
 
     if removed_nums and orig_nums:
-        severity: Literal["error", "warning"] = (
-            "error" if strictness == "strict" and scope != "document" else "warning"
-        )
+        severity: Literal["error", "warning"] = "error" if strictness == "strict" and scope != "document" else "warning"
         flags.append(
             {
                 "code": "numeric_removed",
-                "message": (
-                    "Số trong bản gốc không còn trong gợi ý: "
-                    f"{', '.join(sorted(removed_nums)[:5])}"
-                ),
+                "message": (f"Số trong bản gốc không còn trong gợi ý: {', '.join(sorted(removed_nums)[:5])}"),
                 "severity": severity,
             }
         )
@@ -183,9 +173,7 @@ def check_integrity(
             flags.append(
                 {
                     "code": "semantic_drift",
-                    "message": (
-                        f"Gợi ý có thể đổi nghĩa (độ tương đồng {combined:.2f} < {semantic_threshold})"
-                    ),
+                    "message": (f"Gợi ý có thể đổi nghĩa (độ tương đồng {combined:.2f} < {semantic_threshold})"),
                     "severity": "warning" if strictness != "strict" else "error",
                 }
             )

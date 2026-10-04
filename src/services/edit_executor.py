@@ -146,17 +146,6 @@ def _apply_substring(original: str, find: str, replace: str) -> str | None:
     return None
 
 
-def _rebuild_command(command: str, inner: str, original_block: str) -> str:
-    optional = re.match(
-        rf"(\\{re.escape(command)}(?:\s*\[[^\]]*\])?)\s*{{)",
-        original_block,
-        re.IGNORECASE | re.DOTALL,
-    )
-    if optional:
-        return f"{optional.group(1)}{inner}}}"
-    return f"\\{command}{{{inner}}}"
-
-
 def apply_plan_to_snippet(plan: EditPlan, original: str) -> str | None:
     if plan.operation == "replace_substring":
         applied = _apply_substring(original, plan.find, plan.replace)
@@ -350,4 +339,3 @@ def build_edit_payload(
 
 
 # Late import removed — infer_edit_plan_rules imported at top
-

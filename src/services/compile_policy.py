@@ -29,7 +29,5 @@ def check_compile_rate_limit(client_key: str) -> None:
         bucket = _buckets.setdefault(client_key, [])
         bucket[:] = [t for t in bucket if now - t < 60]
         if len(bucket) >= limit:
-            raise CompileRateLimitedError(
-                f"Quá nhiều yêu cầu compile ({limit}/phút). Vui lòng đợi rồi thử lại."
-            )
+            raise CompileRateLimitedError(f"Quá nhiều yêu cầu compile ({limit}/phút). Vui lòng đợi rồi thử lại.")
         bucket.append(now)

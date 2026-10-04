@@ -62,13 +62,10 @@ def format_provider_test_failure(
         )
 
     if provider == "google" and (
-        "invalid api key" in msg.lower()
-        or "api key not valid" in msg.lower()
-        or "api_key_invalid" in msg.lower()
+        "invalid api key" in msg.lower() or "api key not valid" in msg.lower() or "api_key_invalid" in msg.lower()
     ):
         return (
-            "API key Google không hợp lệ. Lấy key tại aistudio.google.com/apikey "
-            f"(bắt đầu bằng AIza…). ({msg[:100]})"
+            f"API key Google không hợp lệ. Lấy key tại aistudio.google.com/apikey (bắt đầu bằng AIza…). ({msg[:100]})"
         )
 
     return msg[:240]

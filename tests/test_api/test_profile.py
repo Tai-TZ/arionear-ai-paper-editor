@@ -33,6 +33,7 @@ def profile_db(monkeypatch):
         except OSError:
             pass
 
+
 @pytest.mark.asyncio
 async def test_get_profile_defaults(client, profile_db):
     reg_body = await register_user_via_verification(

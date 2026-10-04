@@ -93,9 +93,7 @@ async def test_stream_structure_emits_done(monkeypatch):
 
     async def _mock_structure_node(_state):
         return {
-            "structure_suggestions": [
-                {"section": "Methods", "severity": "warning", "message": "Thiếu Methods"}
-            ],
+            "structure_suggestions": [{"section": "Methods", "severity": "warning", "message": "Thiếu Methods"}],
             "response": "Gợi ý cấu trúc:\n- [WARNING] Methods: Thiếu Methods",
         }
 
@@ -161,9 +159,7 @@ async def test_stream_scope_guard_blocks_before_manuscript_parse(monkeypatch):
     )
     events = await _collect_stream(request)
     assert not classify_called
-    parse_states = [
-        data for name, data in events if name == "state" and data.get("step_id") == "parse"
-    ]
+    parse_states = [data for name, data in events if name == "state" and data.get("step_id") == "parse"]
     assert parse_states == []
     done = next(data for name, data in events if name == "done")
     assert done["task"] == "chat"

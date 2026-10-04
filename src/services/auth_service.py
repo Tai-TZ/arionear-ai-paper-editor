@@ -157,42 +157,6 @@ def user_to_dict(user: User) -> dict:
     }
 
 
-def register_user(
-    db: Session,
-    *,
-    name: str,
-    email: str,
-    password: str,
-    affiliation: str | None = None,
-) -> tuple[User | None, str | None]:
-    full_name = name.strip()
-    normalized = normalize_email(email)
-    if not full_name:
-        return None, "Please enter your full name."
-    if not validate_email(normalized):
-        return None, "Please enter a valid email address."
-    pw_error = validate_password_strength(password)
-    if pw_error:
-        return None, pw_error
-
-    existing = db.query(User).filter(User.email == normalized).first()
-    if existing:
-        return None, "An account with this email already exists."
-
-    user = User(
-        email=normalized,
-        full_name=full_name,
-        institution=affiliation.strip() if affiliation else None,
-        password_hash=hash_password(password),
-        role=UserRole.RESEARCHER,
-        is_active=True,
-        last_active_at=datetime.now(UTC),
-    )
-    db.add(user)
-    db.flush()
-    return user, None
-
-
 AUTH_INVALID_CREDENTIALS = "invalid_credentials"
 AUTH_ACCOUNT_DISABLED = "account_disabled"
 
@@ -311,11 +275,7 @@ def request_signup_verification(
     if not delivery.ok:
         return SignupCodeRequestResult(error=delivery.error or "Could not send verification email.")
 
-    dev_code = (
-        code
-        if settings.app_env in ("development", "test") and delivery.dev_echo
-        else None
-    )
+    dev_code = code if settings.app_env in ("development", "test") and delivery.dev_echo else None
     return SignupCodeRequestResult(dev_code=dev_code, email_sent_via_smtp=delivery.delivered_via_smtp)
 
 
@@ -402,11 +362,7 @@ def request_password_reset(db: Session, email: str) -> PasswordResetRequestResul
     if not delivery.ok:
         return PasswordResetRequestResult(error=delivery.error or "Could not send password reset email.")
 
-    dev_url = (
-        reset_url
-        if settings.app_env in ("development", "test") and delivery.dev_echo
-        else None
-    )
+    dev_url = reset_url if settings.app_env in ("development", "test") and delivery.dev_echo else None
     return PasswordResetRequestResult(
         dev_reset_url=dev_url,
         email_sent_via_smtp=delivery.delivered_via_smtp,

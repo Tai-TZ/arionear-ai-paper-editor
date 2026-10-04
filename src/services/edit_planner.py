@@ -63,8 +63,8 @@ class EditPlan:
         if self.label:
             return self.label
         if self.target_type == "latex_command":
-            return f"Tiêu đề · \\{self.target_id}{{...}}" if self.target_id == "title" else (
-                f"\\{self.target_id}{{...}}"
+            return (
+                f"Tiêu đề · \\{self.target_id}{{...}}" if self.target_id == "title" else (f"\\{self.target_id}{{...}}")
             )
         if self.target_type == "section" and self.target_id:
             return f"Phần {self.target_id}"
@@ -164,9 +164,7 @@ def infer_edit_plan_rules(
         title_cmd = outline.get_command("title")
         new_model = _model_in_query(query)
         if title_cmd and new_model:
-            old_model_match = _MODEL_RE.search(title_cmd.preview) or _MODEL_RE.search(
-                title_cmd.full_text
-            )
+            old_model_match = _MODEL_RE.search(title_cmd.preview) or _MODEL_RE.search(title_cmd.full_text)
             if old_model_match:
                 return EditPlan(
                     target_type="latex_command",
@@ -223,10 +221,7 @@ def infer_edit_plan_rules(
                 label=f"Thay '{old_text[:40]}'",
             )
 
-    section_dicts = [
-        {"name": sec.name, "content": sec.preview, "kind": sec.kind}
-        for sec in outline.sections
-    ]
+    section_dicts = [{"name": sec.name, "content": sec.preview, "kind": sec.kind} for sec in outline.sections]
     matched = find_section_for_query(query, section_dicts)
     if matched:
         return EditPlan(

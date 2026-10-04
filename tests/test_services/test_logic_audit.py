@@ -90,9 +90,7 @@ def test_fallback_from_perspectives_creates_issues():
 def test_cap_section_payload_limits_issues():
     payload = {
         "section": "Intro",
-        "conflicts": [
-            {"id": str(i), "severity": "info", "comment": f"info {i}"} for i in range(20)
-        ],
+        "conflicts": [{"id": str(i), "severity": "info", "comment": f"info {i}"} for i in range(20)],
         "weak_claims": [f"weak {i}" for i in range(10)],
         "consensus_notes": [],
     }

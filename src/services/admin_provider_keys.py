@@ -23,7 +23,6 @@ from src.services.provider_key_store import (
     delete_provider_key,
     list_provider_key_rows,
     mark_provider_key_verified,
-    provider_has_api_key,
     row_to_admin_dict,
     upsert_provider_key,
 )
@@ -120,7 +119,3 @@ async def test_admin_provider_key(
         provider=provider,
         key_hint=hint,
     )
-
-
-def provider_configured_for_admin(provider: str) -> bool:
-    return provider_has_api_key(provider)

@@ -34,9 +34,7 @@ def test_revision_and_citation_registry():
     session_id = str(uuid.uuid4())
     session_store.create(session_id=session_id)
 
-    revision = session_store.add_revision(
-        session_id, section="intro", original="old text", suggestion="new text"
-    )
+    revision = session_store.add_revision(session_id, section="intro", original="old text", suggestion="new text")
     assert revision is not None
     assert revision.action == "pending"
 

@@ -43,18 +43,11 @@ from src.services.google_oauth_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-FORGOT_PASSWORD_MESSAGE = (
-    "If that email is registered, we sent a password reset link. "
-    "The link expires in 30 minutes."
-)
+FORGOT_PASSWORD_MESSAGE = "If that email is registered, we sent a password reset link. The link expires in 30 minutes."
 SIGNUP_CODE_SENT_MESSAGE = (
-    "We sent a 6-digit verification code to your email. "
-    "Enter it below to finish creating your account."
+    "We sent a 6-digit verification code to your email. Enter it below to finish creating your account."
 )
-SIGNUP_CODE_DEV_MESSAGE = (
-    "Development mode: no email was sent. "
-    "Use the verification code shown on this page."
-)
+SIGNUP_CODE_DEV_MESSAGE = "Development mode: no email was sent. Use the verification code shown on this page."
 INVALID_CREDENTIALS = "Invalid email or password."
 ACCOUNT_DISABLED_MESSAGE = "Your account has been disabled by an administrator."
 DB_BUSY_MESSAGE = "Database is busy. Please wait a moment and try again."

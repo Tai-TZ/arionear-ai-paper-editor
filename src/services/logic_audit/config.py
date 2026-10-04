@@ -100,11 +100,7 @@ def select_logic_targets(
     if normalized_scope == LOGIC_AUDIT_SCOPE_FULL:
         limit = max_sections
         if limit is None:
-            limit = (
-                DEEP_FULL_MAX_SECTIONS
-                if normalized_mode == "deep"
-                else QUICK_FULL_MAX_SECTIONS
-            )
+            limit = DEEP_FULL_MAX_SECTIONS if normalized_mode == "deep" else QUICK_FULL_MAX_SECTIONS
         return available[:limit]
 
     if section_filter:

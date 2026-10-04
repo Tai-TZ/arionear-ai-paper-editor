@@ -57,6 +57,7 @@ def retry_on_lock_timeout(
 
     return decorator
 
+
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 _db_ready: bool = False
@@ -66,6 +67,7 @@ _db_error: str | None = None
 def is_db_enabled() -> bool:
     url = get_settings().sqlalchemy_database_url()
     return bool(url) and not url.startswith("memory://")
+
 
 def db_error_detail() -> str | None:
     return _db_error
@@ -128,10 +130,7 @@ def _ensure_platform_provider_keys_table(conn) -> None:
             )
         )
         conn.execute(
-            text(
-                "CREATE INDEX IF NOT EXISTS ix_platform_provider_keys_provider "
-                "ON platform_provider_keys (provider)"
-            )
+            text("CREATE INDEX IF NOT EXISTS ix_platform_provider_keys_provider ON platform_provider_keys (provider)")
         )
         conn.commit()
     # SQLite: created via Base.metadata.create_all in init_db

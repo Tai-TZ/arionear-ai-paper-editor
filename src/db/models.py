@@ -192,9 +192,7 @@ class UserSubscription(Base):
     turns_reset_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     upgraded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     user: Mapped[User] = relationship(back_populates="subscription")
 
@@ -236,9 +234,7 @@ class Paper(Base):
     __table_args__ = (Index("ix_papers_user_id", "user_id"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     title: Mapped[str] = mapped_column(String(512), default="Untitled")
     status: Mapped[PaperStatus] = mapped_column(
         Enum(PaperStatus, name="paper_status", native_enum=False),
@@ -250,20 +246,12 @@ class Paper(Base):
     raw_latex: Mapped[str] = mapped_column(Text, default="")
     metadata_: Mapped[dict] = mapped_column("metadata", JsonType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     user: Mapped[User | None] = relationship(back_populates="papers")
-    sections: Mapped[list[PaperSection]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan"
-    )
-    ai_sessions: Mapped[list[AiSession]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan"
-    )
-    citations: Mapped[list[Citation]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan"
-    )
+    sections: Mapped[list[PaperSection]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    ai_sessions: Mapped[list[AiSession]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    citations: Mapped[list[Citation]] = relationship(back_populates="paper", cascade="all, delete-orphan")
     reviewer_comments: Mapped[list[ReviewerComment]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
     )
@@ -286,16 +274,12 @@ class PaperSection(Base):
     original_content: Mapped[str] = mapped_column(Text, default="")
     current_content: Mapped[str] = mapped_column(Text, default="")
     word_count: Mapped[int] = mapped_column(Integer, default=0)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     paper: Mapped[Paper] = relationship(back_populates="sections")
     ai_sessions: Mapped[list[AiSession]] = relationship(back_populates="section")
     suggestions: Mapped[list[Suggestion]] = relationship(back_populates="section")
-    citation_usages: Mapped[list[CitationUsage]] = relationship(
-        back_populates="section", cascade="all, delete-orphan"
-    )
+    citation_usages: Mapped[list[CitationUsage]] = relationship(back_populates="section", cascade="all, delete-orphan")
 
 
 class AiSession(Base):
@@ -312,12 +296,8 @@ class AiSession(Base):
     section_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("paper_sections.id", ondelete="SET NULL")
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
-    )
-    task_type: Mapped[TaskType] = mapped_column(
-        Enum(TaskType, name="task_type", native_enum=False), nullable=False
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    task_type: Mapped[TaskType] = mapped_column(Enum(TaskType, name="task_type", native_enum=False), nullable=False)
     user_input: Mapped[str] = mapped_column(Text, default="")
     ai_output: Mapped[str] = mapped_column(Text, default="")
     metadata_: Mapped[dict] = mapped_column("metadata", JsonType, default=dict)
@@ -328,9 +308,7 @@ class AiSession(Base):
     paper: Mapped[Paper] = relationship(back_populates="ai_sessions")
     section: Mapped[PaperSection | None] = relationship(back_populates="ai_sessions")
     user: Mapped[User | None] = relationship(back_populates="ai_sessions")
-    suggestions: Mapped[list[Suggestion]] = relationship(
-        back_populates="ai_session", cascade="all, delete-orphan"
-    )
+    suggestions: Mapped[list[Suggestion]] = relationship(back_populates="ai_session", cascade="all, delete-orphan")
     response_suggestions: Mapped[list[ResponseSuggestion]] = relationship(
         back_populates="ai_session", cascade="all, delete-orphan"
     )
@@ -400,9 +378,7 @@ class Citation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     paper: Mapped[Paper] = relationship(back_populates="citations")
-    usages: Mapped[list[CitationUsage]] = relationship(
-        back_populates="citation", cascade="all, delete-orphan"
-    )
+    usages: Mapped[list[CitationUsage]] = relationship(back_populates="citation", cascade="all, delete-orphan")
 
 
 class CitationUsage(Base):
@@ -482,12 +458,8 @@ class AuditLog(Base):
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
-    )
-    paper_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("papers.id", ondelete="SET NULL")
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    paper_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("papers.id", ondelete="SET NULL"))
     action_type: Mapped[AuditActionType] = mapped_column(
         Enum(AuditActionType, name="audit_action_type", native_enum=False), nullable=False
     )
@@ -520,6 +492,4 @@ class PlatformProviderKey(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

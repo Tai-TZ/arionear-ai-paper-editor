@@ -52,16 +52,6 @@ def get_prompt(key: str, field: str = "system") -> str:
     return ""
 
 
-def get_stage_meta(key: str) -> dict[str, Any]:
-    """Return stage metadata (max_tokens, json_mode, etc.) excluding prompt fields."""
-    section = _stage_dict(key)
-    return {
-        k: v
-        for k, v in section.items()
-        if k not in {"system", "user"}
-    }
-
-
 def render_template(template: str, **variables: Any) -> str:
     """Safe-ish format for {var} placeholders; unknown keys left as-is."""
     if not template:
@@ -130,7 +120,3 @@ def format_sections_summary(sections: list[dict]) -> str:
         length = len(section.get("content", "") or "")
         lines.append(f"- {name}: ~{length} chars")
     return "\n".join(lines)
-
-
-def clear_prompt_cache() -> None:
-    load_prompts.cache_clear()

@@ -11,9 +11,7 @@ REPO = Path(__file__).resolve().parents[1]
 def test_gate3_intent_routing_meets_baseline():
     from src.services.intent_rules import fallback_intent
 
-    cases = json.loads(
-        (REPO / "eval" / "datasets" / "gate3_intent_cases.json").read_text(encoding="utf-8")
-    )
+    cases = json.loads((REPO / "eval" / "datasets" / "gate3_intent_cases.json").read_text(encoding="utf-8"))
     baselines = json.loads((REPO / "eval" / "baselines.json").read_text(encoding="utf-8"))
     passed = 0
     for case in cases:

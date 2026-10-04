@@ -45,8 +45,7 @@ def _merge_assets(existing: list[dict], incoming: list[dict]) -> list[dict]:
             (
                 i
                 for i, item in enumerate(merged)
-                if str(item.get("name", "")).replace("\\", "/").replace("./", "").strip().lower()
-                == name.lower()
+                if str(item.get("name", "")).replace("\\", "/").replace("./", "").strip().lower() == name.lower()
             ),
             -1,
         )
@@ -70,11 +69,7 @@ def list_papers(db: Session, user_id: uuid.UUID) -> list[Paper]:
 
 
 def get_paper(db: Session, user_id: uuid.UUID, paper_id: uuid.UUID) -> Paper | None:
-    return (
-        db.query(Paper)
-        .filter(Paper.id == paper_id, Paper.user_id == user_id)
-        .one_or_none()
-    )
+    return db.query(Paper).filter(Paper.id == paper_id, Paper.user_id == user_id).one_or_none()
 
 
 def create_paper(

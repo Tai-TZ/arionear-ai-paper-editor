@@ -238,9 +238,7 @@ def _resolve_document_class(latex: str, work_dir: Path) -> tuple[str, list[str]]
             latex,
             count=1,
         )
-        warnings.append(
-            f"Missing {cls_name}.cls - auto-switched to IEEEtran conference layout for preview."
-        )
+        warnings.append(f"Missing {cls_name}.cls - auto-switched to IEEEtran conference layout for preview.")
         _copy_latex_stubs(work_dir, substituted)
         return substituted, warnings
 
@@ -407,11 +405,7 @@ def _store_cached_pdf(cache_key: str, response: CompileResponse) -> None:
 
 def _prune_workspaces(now: float | None = None) -> None:
     now = now or time.monotonic()
-    expired = [
-        key
-        for key, workspace in _workspaces.items()
-        if now - workspace.last_used > _WORKSPACE_TTL_SEC
-    ]
+    expired = [key for key, workspace in _workspaces.items() if now - workspace.last_used > _WORKSPACE_TTL_SEC]
     for key in expired:
         workspace = _workspaces.pop(key)
         shutil.rmtree(workspace.path, ignore_errors=True)
@@ -604,9 +598,7 @@ def _resolve_algorithm_package_conflict(latex: str) -> tuple[str, list[str]]:
     """algorithm2e and algorithms/algorithm packages cannot be loaded together."""
     warnings: list[str] = []
     has_algo2e = bool(re.search(r"\\usepackage(?:\[[^\]]*\])?\{algorithm2e\}", latex))
-    has_algorithms = bool(
-        re.search(r"\\usepackage(?:\[[^\]]*\])?\{[^}]*\balgorithms?\b", latex)
-    )
+    has_algorithms = bool(re.search(r"\\usepackage(?:\[[^\]]*\])?\{[^}]*\balgorithms?\b", latex))
     if has_algo2e and has_algorithms:
         latex = re.sub(r"\\usepackage(?:\[[^\]]*\])?\{algorithm2e\}\s*\n?", "", latex)
         warnings.append("Removed `algorithm2e` (conflicts with `algorithm` / `algorithms`).")
@@ -730,9 +722,7 @@ def _prepare_latex_source(latex: str, work_dir: Path, asset_names: set[str]) -> 
     prepared = _strip_droppable_packages(prepared)
 
     figure_paths = re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", prepared)
-    missing_figures = [
-        path for path in figure_paths if not _figure_available(path, work_dir)
-    ]
+    missing_figures = [path for path in figure_paths if not _figure_available(path, work_dir)]
     if missing_figures and "\\usepackage{graphicx}" in prepared:
         prepared = prepared.replace(
             "\\usepackage{graphicx}",
@@ -753,8 +743,7 @@ def _extract_latex_error(log: str) -> str:
     if missing_cls:
         cls_file = missing_cls.group(1)
         return (
-            f"Missing LaTeX class file `{cls_file}`. "
-            f"Upload {cls_file} as a project asset, or change \\documentclass."
+            f"Missing LaTeX class file `{cls_file}`. Upload {cls_file} as a project asset, or change \\documentclass."
         )
 
     lines = log.splitlines()
@@ -1042,9 +1031,7 @@ def _force_apply_known_fallbacks(latex: str) -> tuple[str, list[str]]:
         )
         if pattern.search(latex):
             latex = pattern.sub(lambda _m: fallback_decl, latex, count=1)
-            applied.append(
-                f"Missing {cls_name}.cls - auto-switched to IEEEtran conference layout for preview."
-            )
+            applied.append(f"Missing {cls_name}.cls - auto-switched to IEEEtran conference layout for preview.")
     return latex, applied
 
 
@@ -1350,11 +1337,7 @@ def _resolve_line_by_context(
             if needle and needle not in phrase:
                 continue
 
-            hits = [
-                index + 1
-                for index, line in enumerate(lines)
-                if phrase in _normalize_match_text(line)
-            ]
+            hits = [index + 1 for index, line in enumerate(lines) if phrase in _normalize_match_text(line)]
             if len(hits) == 1:
                 return hits[0]
             if len(hits) > 1:
@@ -1558,9 +1541,7 @@ def parse_synctex_inverse_disambiguated(
                 "y": y,
             }
 
-        candidates = (
-            _lines_containing_word(source_latex, word) if word.strip() and source_latex.strip() else []
-        )
+        candidates = _lines_containing_word(source_latex, word) if word.strip() and source_latex.strip() else []
         if len(candidates) > 1:
             raw_line = int(base.get("line", 0))
             if raw_line in candidates:
@@ -1588,32 +1569,3 @@ def parse_synctex_inverse_disambiguated(
     finally:
         if temp_dir is not None:
             temp_dir.cleanup()
-
-
-def parse_synctex_inverse(
-    synctex_gz_b64: str,
-    pdf_b64: str,
-    page: int,
-    x: float,
-    y: float,
-    jobname: str = "main",
-) -> dict[str, str | int | float] | None:
-    """Inverse SyncTeX via `synctex edit` (page click → source line)."""
-    synctex = find_synctex()
-    if not synctex or not synctex_gz_b64 or not pdf_b64:
-        return None
-
-    safe_job = Path(jobname).stem or "main"
-    pdf_name = f"{safe_job}.pdf"
-
-    try:
-        pdf_bytes = base64.b64decode(pdf_b64)
-        synctex_bytes = base64.b64decode(synctex_gz_b64)
-    except (OSError, ValueError):
-        return None
-
-    with tempfile.TemporaryDirectory(prefix="arionear-synctex-") as tmp:
-        work_dir = Path(tmp)
-        (work_dir / pdf_name).write_bytes(pdf_bytes)
-        (work_dir / f"{safe_job}.synctex.gz").write_bytes(synctex_bytes)
-        return _synctex_inverse_with_workdir(synctex, work_dir, pdf_name, page, x, y)

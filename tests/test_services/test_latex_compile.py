@@ -133,7 +133,7 @@ def test_synctex_inverse_when_available():
     )
     result = lc.compile_latex(req)
     assert result.success and result.synctex_base64
-    hit = lc.parse_synctex_inverse(result.synctex_base64, result.pdf_base64, 1, 200.0, 650.0, "main")
+    hit = lc.parse_synctex_inverse_disambiguated(result.synctex_base64, result.pdf_base64, 1, 200.0, 650.0, "main")
     assert hit is not None
     assert hit["line"] >= 1
 

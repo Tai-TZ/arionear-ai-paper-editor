@@ -53,9 +53,7 @@ def find_section_for_query(query: str, sections: list[dict]) -> dict | None:
 
 def parse_latex_sections(latex: str) -> list[dict]:
     sections: list[dict] = []
-    abstract_match = re.search(
-        r"\\begin\{abstract\}(.*?)\\end\{abstract\}", latex, re.DOTALL | re.IGNORECASE
-    )
+    abstract_match = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", latex, re.DOTALL | re.IGNORECASE)
     if abstract_match:
         sections.append(
             {
@@ -71,11 +69,7 @@ def parse_latex_sections(latex: str) -> list[dict]:
         next_section = SECTION_RE.search(latex, start)
         end = next_section.start() if next_section else len(latex)
         body = latex[start:end].strip()
-        subsections = [
-            sub.group(1).strip()
-            for sub in SUBSECTION_RE.finditer(body)
-            if sub.group(1).strip()
-        ]
+        subsections = [sub.group(1).strip() for sub in SUBSECTION_RE.finditer(body) if sub.group(1).strip()]
         sections.append(
             {
                 "name": name,
@@ -223,10 +217,7 @@ def analyze_structure(sections: list[dict]) -> list[dict]:
         if label == "Abstract":
             msg = "Thiếu Abstract — nên có \\begin{abstract} hoặc section tóm tắt."
         elif label == "Methods":
-            msg = (
-                "Thiếu phần Methods/Phương pháp — bài IMRaD cần mô tả phương pháp "
-                "trước Results."
-            )
+            msg = "Thiếu phần Methods/Phương pháp — bài IMRaD cần mô tả phương pháp trước Results."
         else:
             msg = f"Thiếu phần {label} — khung IMRaD thường cần section này."
         suggestions.append(
@@ -252,9 +243,7 @@ def analyze_structure(sections: list[dict]) -> list[dict]:
                 {
                     "type": "misplaced",
                     "section": curr_label,
-                    "message": (
-                        f"Thứ tự IMRaD: {prev_label} nên đứng trước {curr_label}."
-                    ),
+                    "message": (f"Thứ tự IMRaD: {prev_label} nên đứng trước {curr_label}."),
                     "severity": "warning",
                 }
             )
@@ -275,10 +264,7 @@ def analyze_structure(sections: list[dict]) -> list[dict]:
             section.get("kind") == "section"
             and any(p in lower for p in _group_patterns("Methods"))
             and idx > 0
-            and any(
-                p in name_list[max(0, idx - 1)]
-                for p in _group_patterns("Results")
-            )
+            and any(p in name_list[max(0, idx - 1)] for p in _group_patterns("Results"))
         ):
             suggestions.append(
                 {

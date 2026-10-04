@@ -1,4 +1,5 @@
 """SSE streaming service for the defense viva agent."""
+
 from __future__ import annotations
 
 import asyncio
@@ -143,7 +144,7 @@ def _build_turn_directive(history: list[DefenseConversationTurn], *, locale: str
     else:
         lines = [
             "Đây là lượt hỏi tiếp theo sau câu trả lời của tác giả.",
-            "CẤM mở đầu bằng: \"Tôi ghi nhận điều đó\", \"Cảm ơn bạn\", \"I acknowledge that\", hoặc bất kỳ câu ghi nhận chung nào.",
+            'CẤM mở đầu bằng: "Tôi ghi nhận điều đó", "Cảm ơn bạn", "I acknowledge that", hoặc bất kỳ câu ghi nhận chung nào.',
             "Bắt đầu trực tiếp bằng câu hỏi hoặc một nhận xét cụ thể về nội dung bài/câu trả lời vừa rồi.",
         ]
         if recent_openers:
@@ -268,6 +269,7 @@ async def stream_defense(
             messages.append(HumanMessage(content=turn.content))
         else:
             from langchain_core.messages import AIMessage
+
             messages.append(AIMessage(content=turn.content))
 
     # If starting fresh (proactive mode), the system prompt already instructs
@@ -280,17 +282,9 @@ async def stream_defense(
 
     # Emit initial activity (localized; UI also maps to its own copy)
     if locale == "en":
-        activity_text = (
-            "Analyzing the research paper..."
-            if turn_count == 0
-            else "Preparing the next question..."
-        )
+        activity_text = "Analyzing the research paper..." if turn_count == 0 else "Preparing the next question..."
     else:
-        activity_text = (
-            "Đang phân tích bài nghiên cứu..."
-            if turn_count == 0
-            else "Đang soạn câu hỏi tiếp theo..."
-        )
+        activity_text = "Đang phân tích bài nghiên cứu..." if turn_count == 0 else "Đang soạn câu hỏi tiếp theo..."
     yield _sse("activity", {"text": activity_text})
 
     use_stripper = any(t.role == "user" for t in request.conversation_history)

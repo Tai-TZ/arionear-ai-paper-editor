@@ -28,7 +28,7 @@ _SELECTION_REPLACE_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 
 def _clean_fragment(text: str) -> str:
-    cleaned = text.strip().strip("*#.,;:!?\"'""''")
+    cleaned = text.strip().strip("*#.,;:!?\"'''")
     cleaned = re.sub(r"\s+(?:giúp\s+tôi|please)(?:\s+nhé)?\s*$", "", cleaned, flags=re.IGNORECASE)
     return cleaned.strip().strip(".,;:!?")
 
@@ -116,10 +116,6 @@ def try_metadata_scoped_edit(query: str, latex: str) -> tuple[str, str, str] | N
     replacement_cmd = f"\\title{{{new_body}}}"
     full_next = latex[:start] + replacement_cmd + latex[end:]
     return original_cmd, replacement_cmd, full_next
-
-
-def query_targets_title(query: str) -> bool:
-    return _TITLE_QUERY_RE.search(query) is not None
 
 
 def _word_permutations(words: list[str]) -> list[str]:

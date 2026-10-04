@@ -283,17 +283,19 @@ def test_find_or_create_google_user(auth_db):
 
 def test_find_or_create_google_user_links_existing_email(auth_db):
     from src.db.engine import get_db
-    from src.services.auth_service import find_or_create_google_user, register_user
+    from src.db.models import User, UserRole
+    from src.services.auth_service import find_or_create_google_user, hash_password
 
     with get_db() as db:
-        existing, reg_error = register_user(
-            db,
-            name="Existing User",
+        existing = User(
             email="existing@uni.edu",
-            password="SecurePass1",
+            full_name="Existing User",
+            password_hash=hash_password("SecurePass1"),
+            role=UserRole.RESEARCHER,
+            is_active=True,
         )
-        assert reg_error is None
-        assert existing is not None
+        db.add(existing)
+        db.flush()
 
         linked, link_error = find_or_create_google_user(
             db,

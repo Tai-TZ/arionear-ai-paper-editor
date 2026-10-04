@@ -5,6 +5,7 @@ V1: QR-based mock payment — POST /billing/checkout creates a short-lived
 V2 path: replace checkout body with Stripe Checkout Session creation;
     replace confirm with Stripe webhook signature verification.
 """
+
 from __future__ import annotations
 
 import json
@@ -189,7 +190,7 @@ _CHECKOUT_FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
     '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600'
-    "&family=Lora:wght@400;600;700&display=swap\" rel=\"stylesheet\">"
+    '&family=Lora:wght@400;600;700&display=swap" rel="stylesheet">'
 )
 
 _CHECKOUT_STYLES = """
@@ -264,10 +265,7 @@ _CLOCK_SVG = (
     '<svg viewBox="0 0 24 24" aria-hidden="true">'
     '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round"/></svg>'
 )
-_X_SVG = (
-    '<svg viewBox="0 0 24 24" aria-hidden="true">'
-    '<path d="M7 7l10 10M17 7L7 17" stroke-linecap="round"/></svg>'
-)
+_X_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke-linecap="round"/></svg>'
 
 _REDIRECT_SCRIPT = """
 <script>
@@ -367,7 +365,7 @@ def _checkout_html(*, success: bool, already_done: bool = False) -> str:
             ],
             icon_svg=_CHECK_SVG,
             show_pro_badge=True,
-            hint="Tự động về bảng giá sau <span id=\"redirect-seconds\">3</span> giây…",
+            hint='Tự động về bảng giá sau <span id="redirect-seconds">3</span> giây…',
             redirect_pricing=True,
         )
 
@@ -382,6 +380,6 @@ def _checkout_html(*, success: bool, already_done: bool = False) -> str:
         ],
         icon_svg=_CHECK_SVG,
         show_pro_badge=True,
-        hint="Tự động về bảng giá sau <span id=\"redirect-seconds\">3</span> giây…",
+        hint='Tự động về bảng giá sau <span id="redirect-seconds">3</span> giây…',
         redirect_pricing=True,
     )

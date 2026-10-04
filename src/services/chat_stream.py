@@ -78,6 +78,7 @@ class ContentResyncRequiredError(Exception):
         self.reason = reason
         super().__init__(message)
 
+
 _AGENT_RESPONSE_VI: dict[str, str] = {
     "No LaTeX source available to edit.": "Chưa có nội dung LaTeX để chỉnh sửa.",
     "No edit instruction provided.": "Chưa có hướng dẫn chỉnh sửa.",
@@ -215,10 +216,6 @@ def _emit_state(
     return _sse("state", payload), _sse("activity", {"text": activity})
 
 
-def _task_label(task: str) -> str:
-    return _TASK_LABELS.get(task, task)
-
-
 def _localize_agent_response(msg: str) -> str:
     stripped = (msg or "").strip()
     if not stripped:
@@ -350,22 +347,6 @@ def _activity_for_task(
     return "Trả lời câu hỏi"
 
 
-async def _stream_llm_tokens(llm, messages: list) -> AsyncIterator[str]:
-    async for chunk in llm.astream(messages):
-        if isinstance(chunk, AIMessageChunk):
-            content = chunk.content
-            if isinstance(content, str) and content:
-                yield content
-            elif isinstance(content, list):
-                for part in content:
-                    if isinstance(part, str) and part:
-                        yield part
-                    elif isinstance(part, dict) and part.get("type") == "text":
-                        text = part.get("text", "")
-                        if text:
-                            yield text
-
-
 async def _stream_chat_tokens_from_chunk(
     chunk: AIMessageChunk,
 ) -> AsyncIterator[tuple[str, str]]:
@@ -385,15 +366,6 @@ async def _stream_chat_tokens_from_chunk(
                 text = part.get("text", "")
                 if text:
                     yield "token", text
-
-
-async def _stream_chat_tokens(
-    llm, messages: list
-) -> AsyncIterator[tuple[str, str]]:
-    """Yield ('reasoning'|'token', delta) for chat streams (Z.AI thinking mode)."""
-    async for chunk in llm.astream(messages):
-        async for item in _stream_chat_tokens_from_chunk(chunk):
-            yield item
 
 
 def _usage_from_chunk(chunk: AIMessageChunk) -> int | None:
@@ -724,9 +696,7 @@ async def stream_chat(
                 "integrity_strictness": strictness,
                 "active_file": active_file,
                 "main_file": main_file,
-                "conversation_history": [
-                    {"role": t.role, "content": t.content} for t in request.conversation_history
-                ],
+                "conversation_history": [{"role": t.role, "content": t.content} for t in request.conversation_history],
             }
         else:
             if has_selection:
@@ -763,9 +733,7 @@ async def stream_chat(
                 "integrity_strictness": strictness,
                 "active_file": active_file,
                 "main_file": main_file,
-                "conversation_history": [
-                    {"role": t.role, "content": t.content} for t in request.conversation_history
-                ],
+                "conversation_history": [{"role": t.role, "content": t.content} for t in request.conversation_history],
             }
             if request.selection_start is not None:
                 state["selection_start"] = request.selection_start
@@ -833,9 +801,7 @@ async def stream_chat(
                 selection=request.selection or "",
                 latex=latex,
                 sections=chat_sections,
-                include_manuscript=chat_query_needs_manuscript_context(
-                    effective_message
-                ),
+                include_manuscript=chat_query_needs_manuscript_context(effective_message),
             )
             messages = build_chat_llm_messages(
                 system=chat_system,
@@ -906,11 +872,7 @@ async def stream_chat(
             )
             scope_label = str(prepared.get("scope_label") or scope_detail or "").strip()
             original_text = str(prepared.get("original_text") or "")
-            char_hint = (
-                f"~{len(original_text):,} ký tự".replace(",", ".")
-                if original_text
-                else ""
-            )
+            char_hint = f"~{len(original_text):,} ký tự".replace(",", ".") if original_text else ""
             scope_preview_detail = (
                 f"{scope_label} · {char_hint}" if scope_label and char_hint else scope_label or char_hint
             )
@@ -977,18 +939,12 @@ async def stream_chat(
             yield state_evt
             yield act_evt
             _merge_agent_into_done(done_payload, edit_result)
-            edit_done = (
-                "Updated — review the diff and Accept/Reject."
-                if ui_locale == "en"
-                else EDIT_DONE_MSG
-            )
+            edit_done = "Updated — review the diff and Accept/Reject." if ui_locale == "en" else EDIT_DONE_MSG
             if edit_result.get("suggestion"):
                 respond = edit_done
             else:
                 respond = _localize_agent_response(
-                    edit_result.get("error")
-                    or edit_result.get("response")
-                    or "Không có thay đổi."
+                    edit_result.get("error") or edit_result.get("response") or "Không có thay đổi."
                 )
             for piece in _chunk_text(respond, size=12):
                 yield _sse("token", {"delta": piece})
@@ -1107,9 +1063,7 @@ async def stream_chat(
                 respond = STYLE_DONE_MSG
             else:
                 respond = _localize_agent_response(
-                    style_result.get("error")
-                    or style_result.get("response")
-                    or "Không có thay đổi."
+                    style_result.get("error") or style_result.get("response") or "Không có thay đổi."
                 )
             for piece in _chunk_text(respond, size=12):
                 yield _sse("token", {"delta": piece})
@@ -1203,9 +1157,7 @@ async def stream_chat(
                 partial_sections: list[dict[str, Any]] = []
                 partial_report: dict[str, Any] | None = None
 
-                def _logic_progress(
-                    step_id: str, label: str, detail: str, status: str
-                ) -> None:
+                def _logic_progress(step_id: str, label: str, detail: str, status: str) -> None:
                     progress_queue.put_nowait(("state", step_id, label, detail, status))
 
                 def _logic_reasoning(delta: str) -> None:
@@ -1290,20 +1242,12 @@ async def stream_chat(
                         return None
 
                 while logic_result is None:
-                    if (
-                        persist_pending_report
-                        and persist_debounce > 0
-                        and time.perf_counter() >= persist_after
-                    ):
+                    if persist_pending_report and persist_debounce > 0 and time.perf_counter() >= persist_after:
                         if request.session_id:
                             _persist_logic_report(persist_pending_report)
                         persist_pending_report = None
                         persist_after = 0.0
-                    elif (
-                        persist_pending_report
-                        and persist_debounce <= 0
-                        and request.session_id
-                    ):
+                    elif persist_pending_report and persist_debounce <= 0 and request.session_id:
                         _persist_logic_report(persist_pending_report)
                         persist_pending_report = None
                     if _cancelled():
@@ -1363,9 +1307,7 @@ async def stream_chat(
                                 if request.session_id and partial_report:
                                     if persist_debounce > 0:
                                         persist_pending_report = partial_report
-                                        persist_after = (
-                                            time.perf_counter() + persist_debounce
-                                        )
+                                        persist_after = time.perf_counter() + persist_debounce
                                     else:
                                         _persist_logic_report(partial_report)
                             yield _sse("logic_section", {"section": item[1]})
@@ -1476,10 +1418,7 @@ async def stream_chat(
                 return
 
             citation_result = citation_result or {}
-            verified = sum(
-                1 for r in (citation_result.get("citation_results") or [])
-                if r.get("status") == "verified"
-            )
+            verified = sum(1 for r in (citation_result.get("citation_results") or []) if r.get("status") == "verified")
             state_evt, act_evt = _emit_state(
                 "scope",
                 "Hoàn tất kiểm tra trích dẫn",

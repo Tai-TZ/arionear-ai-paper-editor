@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
@@ -51,9 +51,7 @@ def load_dotenv(path: Path) -> dict[str, str]:
             continue
         key, val = line.split("=", 1)
         val = val.strip()
-        if (val.startswith('"') and val.endswith('"')) or (
-            val.startswith("'") and val.endswith("'")
-        ):
+        if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
             val = val[1:-1]
         out[key.strip()] = val
     return out
@@ -172,10 +170,7 @@ def main() -> int:
         r"Prior work cites \cite{smith2020}."
         r"\end{document}"
     )
-    citation_bib = (
-        "@article{smith2020, title={Deep Learning}, year={2020},"
-        " author={Smith}, journal={JMLR}}"
-    )
+    citation_bib = "@article{smith2020, title={Deep Learning}, year={2020}, author={Smith}, journal={JMLR}}"
     ensure_session_latex(token, session_id, citation_latex)
 
     cases = [
@@ -279,7 +274,7 @@ def main() -> int:
         rows.append((name, task, url.replace(API, ""), status, elapsed, passed, note))
         print(f"  -> {status} {elapsed:.2f}s pass={passed} ({note})")
 
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ts = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     live = {
         "session_id": session_id,
         "timestamp": ts,
@@ -289,9 +284,7 @@ def main() -> int:
         "tests": tests,
     }
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / "_live_outputs.json").write_text(
-        json.dumps(live, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    (RESULTS / "_live_outputs.json").write_text(json.dumps(live, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Markdown report
     lines = [
@@ -300,7 +293,7 @@ def main() -> int:
         "> ≥5 manual test cases với output thật từ LLM (không mock)",
         f"> **Ngày chạy:** {ts}",
         f"> **API:** {API}",
-        f"> **Frontend:** https://arionear.id.vn",
+        "> **Frontend:** https://arionear.id.vn",
         "> **Raw data:** [`_live_outputs.json`](./_live_outputs.json)",
         "",
         f"**Môi trường:** Session `{session_id}` · Agent Ario v1.0 · Production Cloud Run · PostgreSQL · Health `ok`",
@@ -315,9 +308,7 @@ def main() -> int:
     ]
     for name, task, path, status, elapsed, passed, note in rows:
         mark = "✅" if passed else "⚠️"
-        lines.append(
-            f"| {name.split('_')[0]} | `{task}` | `POST {path}` | {status} | {elapsed:.2f}s | {mark} {note} |"
-        )
+        lines.append(f"| {name.split('_')[0]} | `{task}` | `POST {path}` | {status} | {elapsed:.2f}s | {mark} {note} |")
     passed_n = sum(1 for *_, p, __ in rows if p)
     lines += [
         "",
@@ -339,7 +330,9 @@ def main() -> int:
         lines.append(json.dumps(entry["input"], ensure_ascii=False, indent=2))
         lines.append("```")
         lines.append("")
-        lines.append(f"**HTTP:** {entry['status_code']} · **Latency:** {entry['elapsed_s']}s · **Pass:** {entry['pass']}")
+        lines.append(
+            f"**HTTP:** {entry['status_code']} · **Latency:** {entry['elapsed_s']}s · **Pass:** {entry['pass']}"
+        )
         lines.append("")
         if name.startswith("TC1") and isinstance(body, dict):
             lines.append("**Output:**")

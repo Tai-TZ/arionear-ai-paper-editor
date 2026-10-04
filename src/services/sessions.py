@@ -113,9 +113,7 @@ class InMemorySessionStore:
         session.updated_at = _utcnow()
         return record
 
-    def set_revision_action(
-        self, session_id: str, revision_id: str, action: str
-    ) -> RevisionRecord | None:
+    def set_revision_action(self, session_id: str, revision_id: str, action: str) -> RevisionRecord | None:
         session = self.get(session_id)
         if not session:
             return None

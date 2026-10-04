@@ -527,8 +527,7 @@ def ensure_template_seed() -> None:
         ),
         "abstract": IEEE_JOURNAL_ABSTRACT,
         "abstract_vi": (
-            "Đây là file khung minh họa IEEEtran.cls dùng cho bài gửi tạp chí IEEE. "
-            "Có thể kèm file BibTeX mẫu."
+            "Đây là file khung minh họa IEEEtran.cls dùng cho bài gửi tạp chí IEEE. Có thể kèm file BibTeX mẫu."
         ),
         "author": "IEEE template (Arionear gallery)",
         "license": "Other (as stated in the work)",

@@ -213,9 +213,7 @@ async def test_admin_provider_keys_crud(client, admin_db, monkeypatch):
         headers=headers,
     )
     assert cleared.status_code == 204
-    assert (await client.get("/api/v1/admin/llm/keys?provider=openrouter", headers=headers)).json()[
-        "keys"
-    ] == []
+    assert (await client.get("/api/v1/admin/llm/keys?provider=openrouter", headers=headers)).json()["keys"] == []
 
 
 @pytest.mark.asyncio

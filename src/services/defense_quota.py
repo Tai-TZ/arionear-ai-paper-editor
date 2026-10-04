@@ -3,6 +3,7 @@
 Kept for backward compat: defense_stream.py imports assert_defense_allowed
 and record_defense_turn from here.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
