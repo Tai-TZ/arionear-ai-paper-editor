@@ -1,0 +1,61 @@
+# CLAUDE.md
+
+Arionear — AI-assisted LaTeX editor for scientific papers. FastAPI + LangGraph backend (`src/`), TanStack Start + React 19 frontend (`frontend/`), PostgreSQL via Prisma schema + SQLAlchemy runtime.
+
+## Commands
+
+Backend (repo root, Python 3.11+; `.venv` is the local virtualenv):
+
+```bash
+pip install -r requirements-dev.txt        # runtime + ruff/pytest (runtime-only: requirements.txt)
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
+pytest tests/ -q                           # full suite (~300 tests, no DB/LLM needed)
+pytest tests/test_services/test_cors_config.py -q   # single file
+ruff check src tests && ruff format --check src tests
+make check                                 # lint + format-check + tests
+```
+
+Frontend (`cd frontend`, Node 22, npm — `package-lock.json` is the only lockfile):
+
+```bash
+npm install
+npm run dev        # Vite dev server, proxies /api/v1 → http://127.0.0.1:8000 (override: VITE_DEV_API_PROXY)
+npm test           # vitest run
+npm run build
+npm run lint       # eslint (prettier enforced as a lint rule)
+npm run format     # prettier --write .
+npx tsc --noEmit -p .   # type check (see "Known state")
+```
+
+Database (repo root): `npm install && npm run db:generate && npm run db:migrate`. Diagrams: `python scripts/build_diagrams.py [name]` regenerates every SVG in `docs/assets/`.
+
+## Architecture map
+
+- `src/main.py` — FastAPI app, routers mounted under `/api/v1`; CORS in `src/cors_config.py`; settings in `src/config.py` (pydantic-settings, reads `.env`).
+- `src/api/` — routes (chat/compile/citations in `routes.py`, plus auth, papers, admin, billing, defense, share, templates).
+- `src/services/` — business logic: `chat_stream.py` (SSE editor path), `intent_router.py`, `guardrails/` (L1 prompt, L2 output checks), `logic_audit/`, `defense_*`, `latex_compile.py` (TeX Live + SyncTeX), `citations/`.
+- `src/agents/graph.py` — LangGraph graph for the sync `POST /chat` path. Prompts live in `src/prompts/prompts.default.yaml`.
+- `src/db/` — SQLAlchemy models mirroring `prisma/schema.prisma` (Prisma owns migrations).
+- `frontend/src/routes/` — file-based routes; `frontend/src/routeTree.gen.ts` is generated, never edit it. Editor lives in `frontend/src/features/editor/` (`EditorWorkspace.tsx` + `state/` hooks). API clients in `frontend/src/lib/api/`.
+- Docs: `ARCHITECTURE.md` (Vietnamese, diagrams in `docs/assets/`), `EVALUATION.md`, `docs/`.
+
+Core invariant: AI output never applies itself — every edit goes through the Integrity Monitor and a diff the user Accepts/Rejects.
+
+## Conventions
+
+- Python: ruff (line length 120, rules in `ruff.toml`), formatted with `ruff format`; CI fails on lint or format drift.
+- Frontend: Prettier (`frontend/.prettierrc`, width 100) + ESLint; keep `npm run lint` at 0 errors.
+- `frontend/vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, which already registers TanStack Start, React, Tailwind and path aliases — do not add those plugins again.
+- UI copy is bilingual (EN/VI) via `frontend/src/lib/*-i18n.ts`; update both locales.
+- Docs are Vietnamese with English technical terms. Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
+- Never commit `.env` (copy from `.env.example`).
+
+## Known state
+
+- `npx tsc --noEmit` reports 25 pre-existing type errors (Vite builds without type-checking). Don't add new ones; fixing existing ones may change behaviour, so verify carefully.
+- One vitest test is timing-sensitive and can fail once under heavy CPU load; re-run before investigating.
+
+## Tooling
+
+- **CodeGraph**: index lives in `.codegraph/` (local, git-ignored). After cloning run `codegraph init`; after large changes `codegraph sync`. Prefer `codegraph explore "<symbols or question>"` over grep for understanding code.
+- **Skills** (installed with `npx autoskills -a claude-code`, pinned in `skills-lock.json`): backend/data skills in `.claude/skills/` (FastAPI, Pydantic, SQLAlchemy, Prisma, Python testing, Bash, frontend-design, accessibility, SEO) and frontend-scoped skills in `frontend/.claude/skills/` (React, composition patterns, TanStack Start, Vite, Vitest, Tailwind, shadcn, TypeScript). Re-run autoskills in the same folder to update; `.agents/` copies are git-ignored.

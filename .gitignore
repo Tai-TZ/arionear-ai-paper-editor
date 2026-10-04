@@ -64,3 +64,6 @@ _vendor/
 
 # Local AI usage logs (never commit)
 .ai-log/
+
+# autoskills universal copies (Claude Code uses .claude/skills)
+.agents/
