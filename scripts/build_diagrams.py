@@ -1664,7 +1664,151 @@ def ci_cd() -> Diagram:
     return d
 
 
+# =============================================================================
+# Product desk (README overview figures)
+# =============================================================================
+
+
+def _chip(d: Diagram, x: float, y: float, w: float, label: str, *, h: float = 30, bullet: bool = True) -> None:
+    """Newsprint chip with an ink rule and a hard shadow, like the app's cards."""
+    d.add(
+        "blocks",
+        f'<rect x="{x + 3:.1f}" y="{y + 3:.1f}" width="{w:.1f}" height="{h}" class="sh"/>'
+        f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h}" class="t e"/>',
+    )
+    tx = x + 12
+    if bullet:
+        d.add("blocks", f'<rect x="{x + 12:.1f}" y="{y + h / 2 - 3:.1f}" width="6" height="6" class="r"/>')
+        tx = x + 26
+    d.text(tx, y + h / 2 + 5, label)
+
+
+def _chip_w(label: str) -> float:
+    return len(label) * 7.6 + 24
+
+
+def features() -> Diagram:
+    d = Diagram(
+        "features",
+        640,
+        title="Tính năng",
+        deck="Ario gợi ý như một biên tập viên — mọi thay đổi chờ tác giả Chấp nhận / Từ chối",
+        desk="PRODUCT DESK",
+        fig="0.1",
+        kicker="FEATURES",
+        source="frontend/ · src/services/",
+        ticker=("HUMAN-IN-THE-LOOP", "LATEX-NATIVE", "MULTI-LLM", "EN / VI"),
+    )
+    columns = (
+        (
+            "ARIO",
+            "Biên tập với Ario",
+            True,
+            (
+                "Style · văn phong",
+                "Structure · IMRaD",
+                "Template · section thiếu",
+                "Citation · L1 → L4",
+                "Quick Edit · Ctrl+K",
+                "Slash command · SSE",
+            ),
+        ),
+        (
+            "QA",
+            "Đánh giá chất lượng",
+            False,
+            (
+                "Logic Audit · Quick / Deep",
+                "Publication Score Gate",
+                "Defense Mode · mock viva",
+                "Integrity Monitor",
+                "Peer-review reply",
+                "AI disclosure · EN / VI",
+            ),
+        ),
+        (
+            "TEX",
+            "Môi trường LaTeX",
+            False,
+            (
+                "Editor đa file + outline",
+                "TeX Live + SyncTeX",
+                "Import ZIP · DOCX · PDF",
+                "IEEE · LNCS · Elsevier",
+                "PDF.js preview",
+                "Link chia sẻ read-only",
+            ),
+        ),
+        (
+            "APP",
+            "Nền tảng",
+            False,
+            (
+                "JWT + Google SSO",
+                "Admin console · quota",
+                "Gói FREE / PRO",
+                "Chọn model · failover",
+                "Song ngữ EN / VI",
+                "Dark mode · mobile",
+            ),
+        ),
+    )
+    xs = cols(4, M, W - M)
+    col_w = (W - 2 * M) / 4
+    for i in range(1, 4):
+        d.line(M + col_w * i, 222, M + col_w * i, 576, opacity=0.3)
+    for x, (code, title, key, items) in zip(xs, columns, strict=True):
+        d.block(x, 262, hw=34, bh=20, code=code, key=key, pulse=key)
+        d.text(x, 342, title, size=19, cls="d i", weight=700, anchor="middle")
+        chip_w = col_w - 22
+        for j, item in enumerate(items):
+            _chip(d, x - chip_w / 2, 362 + j * 36, chip_w, item)
+    return d
+
+
+def tech_stack() -> Diagram:
+    d = Diagram(
+        "tech-stack",
+        830,
+        title="Tech stack",
+        deck="Mỗi tầng dùng công cụ đã được kiểm chứng — không tự xây lại thứ đã có sẵn",
+        desk="ENGINEERING DESK",
+        fig="1.0",
+        kicker="STACK",
+        source="requirements.txt · frontend/package.json",
+        ticker=("PYTHON 3.11+", "NODE 22", "POSTGRES 16", "TEX LIVE", "DOCKER"),
+    )
+    layers = (
+        ("UI", "FRONTEND", ("TanStack Start", "React 19", "shadcn/ui", "Tailwind CSS v4", "Vite", "PDF.js")),
+        ("API", "BACKEND", ("FastAPI", "Python 3.11+", "LangGraph", "SQLAlchemy", "SSE", "WebSocket")),
+        ("LLM", "LLM", ("Gemini", "OpenRouter", "OpenAI", "Anthropic", "Z.AI GLM")),
+        ("TEX", "LATEX", ("TeX Live", "pdflatex", "SyncTeX", "PDF cache")),
+        ("DB", "DATA", ("PostgreSQL 16", "Prisma migrations")),
+        ("OPS", "INFRA", ("Docker", "Cloud Run", "GitHub Actions")),
+        ("OBS", "OBSERVABILITY", ("JSON logs", "Request ID", "LangSmith", "Inngest")),
+    )
+    x_stack, hw, bh, gap, cy0 = 170, 54, 12, 76, 262
+    label_x = 290
+    # Exploded stack: draw the bottom slab first so each upper slab sits in front of the one below.
+    for i in reversed(range(len(layers))):
+        code = layers[i][0]
+        d.block(x_stack, cy0 + i * gap, hw=hw, bh=bh, code=code, key=code == "LLM")
+    for i, (_, name, chips) in enumerate(layers):
+        cy = cy0 + i * gap
+        d.edge(f"M {x_stack + hw + 8} {cy + bh / 2:.1f} H {label_x - 10}", arrow=False, dotted=True)
+        d.text(label_x, cy - 10, f"{i + 1:02d}", cls="m r", weight=700)
+        d.text(label_x + 30, cy - 10, name, cls="m k i", weight=700)
+        x = label_x
+        for chip in chips:
+            w = _chip_w(chip)
+            _chip(d, x, cy + 2, w, chip, h=28, bullet=False)
+            x += w + 10
+    return d
+
+
 DIAGRAMS = {
+    "features": features,
+    "tech-stack": tech_stack,
     "request-flow": request_flow,
     "architecture": architecture,
     "sequence": sequence,

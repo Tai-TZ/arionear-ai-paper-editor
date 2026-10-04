@@ -1,8 +1,6 @@
 <div align="center">
 
-# Arionear
-
-### *Closer to Publication*
+<img src="./docs/assets/banner.svg" alt="Arionear — Closer to Publication" width="100%">
 
 **Trợ lý AI biên tập bài báo khoa học trên LaTeX — gợi ý như một biên tập viên, quyết định vẫn thuộc về tác giả.**
 
@@ -20,7 +18,7 @@
 ![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=for-the-badge&logo=latex&logoColor=white)
 ![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 
-[Giao diện](#️-giao-diện) · [Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [Cấu trúc](#-cấu-trúc-thư-mục)
+[Giới thiệu](#-giới-thiệu) · [Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [Cấu trúc](#-cấu-trúc-thư-mục) · [Giao diện](#️-giao-diện)
 
 </div>
 
@@ -28,12 +26,12 @@
 
 ## 📖 Giới thiệu
 
-Viết một bài báo khoa học tốt không chỉ là chuyện ngữ pháp: văn phong học thuật, cấu trúc IMRaD, trích dẫn chính xác và mạch lập luận nhất quán đều quyết định bản thảo có được chấp nhận hay không. Các công cụ AI phổ thông thường **viết lại** thay cho tác giả — và đôi khi **bịa** số liệu hoặc trích dẫn.
+**Arionear** là trình biên tập LaTeX cho bài báo khoa học, đi kèm trợ lý AI **Ario** làm việc như một biên tập viên: đọc toàn bộ bản thảo, góp ý văn phong học thuật, cấu trúc IMRaD, trích dẫn và mạch lập luận. Mỗi đề xuất hiện thành **diff** để tác giả **Chấp nhận / Từ chối** — Ario không tự sửa bản thảo và không bịa số liệu hay trích dẫn.
 
-**Arionear** đi theo hướng ngược lại: một nền tảng **Assisted Editing** nơi trợ lý AI **Ario** đóng vai biên tập viên. Ario đọc bản thảo LaTeX, đề xuất chỉnh sửa có ngữ cảnh, và **mọi thay đổi đều hiển thị dưới dạng diff** để tác giả **Accept / Reject** — AI không bao giờ tự sửa hay tự publish thay con người.
+Mọi việc diễn ra ngay trong trình duyệt: soạn LaTeX, biên dịch PDF với SyncTeX, xác minh trích dẫn qua arXiv · Crossref · Semantic Scholar · OpenAlex, chấm điểm bản thảo trước khi nộp và luyện bảo vệ với hội đồng phản biện AI. Dự án hướng tới nhà nghiên cứu cần đưa bài lên chuẩn xuất bản quốc tế, đặc biệt là người viết tiếng Anh như một ngoại ngữ.
 
 ```text
-Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reject → Compile PDF
+Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / Từ chối → Biên dịch PDF
 ```
 
 ### Nguyên tắc thiết kế
@@ -47,100 +45,11 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 
 ---
 
-## 🖼️ Giao diện
-
-<p align="center">
-  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Arionear: đoạn mở đầu được Ario viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
-</p>
-<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Ario viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
-
-<table>
-<tr>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Arionear theo phong cách báo in">
-  <br><sub><b>Trang chủ</b> — phong cách báo in, demo phiên biên tập trực tiếp</sub>
-</td>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Ario">
-  <br><sub><b>Dark mode</b> — cùng phiên biên tập ở giao diện tối</sub>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/04-defense.webp" alt="Defense Mode: hội đồng AI đặt câu hỏi phản biện kèm link tới đoạn trong PDF">
-  <br><sub><b>Defense Mode</b> — hội đồng AI hỏi bám sát bài, link nhảy thẳng tới đoạn liên quan trong PDF</sub>
-</td>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/06-templates.webp" alt="Template gallery với mẫu IEEE, Springer LNCS và Elsevier">
-  <br><sub><b>Template gallery</b> — IEEE, Springer LNCS, Elsevier</sub>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/05-projects.webp" alt="Danh sách dự án của nhà nghiên cứu">
-  <br><sub><b>Dự án</b> — bàn làm việc của nhà nghiên cứu</sub>
-</td>
-<td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/07-admin.webp" alt="Admin console: người dùng, token và chi phí LLM">
-  <br><sub><b>Admin console</b> — người dùng, token, chi phí và chính sách LLM</sub>
-</td>
-</tr>
-</table>
-
-<sub>Ảnh chụp từ bản chạy local với dữ liệu demo; phản hồi AI trong ảnh lấy từ một LLM giả lập (OpenAI-compatible) để có thể tái lập.</sub>
-
----
-
 ## ✨ Tính năng
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### ✍️ Biên tập với Ario
-- **Style** — nâng văn phong học thuật, giữ nguyên nội dung
-- **Structure** — phân tích IMRaD, chỉ ra phần thiếu/thừa
-- **Template** — sinh khung section còn thiếu
-- **Citation** — xác minh trích dẫn qua arXiv · CrossRef · Semantic Scholar · OpenAlex
-- **Citation relevance (L4)** — LLM kiểm tra nguồn có thực sự ủng hộ câu khẳng định
-- **Quick Edit** (`Ctrl+K`) — bôi đen một đoạn và ra lệnh trực tiếp
-- **Slash commands** và chat streaming (SSE)
-
-</td>
-<td width="50%" valign="top">
-
-### 🔬 Đánh giá chất lượng bài
-- **Logic Audit** (Quick / Deep) — kiểm tra mạch lập luận xuyên suốt các phần
-- **Publication Score Gate** — chấm điểm bản thảo trước khi export
-- **Defense Mode** — hội đồng AI phản biện thử (mock viva)
-- **Academic Integrity Monitor** — chặn chỉnh sửa làm lệch số liệu
-- **Peer-review response** — tách góp ý reviewer, soạn thư phản hồi từng điểm (`[AUTHOR: …]` thay cho số liệu AI không biết)
-- **AI disclosure** — báo cáo đóng góp của AI + đoạn tuyên bố cho tạp chí (EN/VI, LaTeX)
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 📄 Môi trường LaTeX đầy đủ
-- Editor đa file với outline, upload hình ảnh và tài nguyên
-- Compile PDF phía server (TeX Live) + **SyncTeX** nhảy qua lại code ↔ PDF
-- Import **Overleaf ZIP**, **Word (.docx)** và **PDF** (text) thành LaTeX
-- **Template gallery**: IEEE, Springer LNCS, Elsevier (elsarticle)
-- Chia sẻ bản thảo bằng **link read-only**; đồng bộ live (Yjs + WebSocket) chỉ mở cho chủ sở hữu
-
-</td>
-<td width="50%" valign="top">
-
-### ⚙️ Nền tảng
-- Xác thực **JWT** (email/password, xác minh email) + **Google SSO**
-- **Admin console** — người dùng, chính sách LLM, quota, báo cáo chi phí
-- **Billing** theo tier (FREE / PRO) với giới hạn lượt Defense
-- Giao diện **song ngữ EN / VI**, dark mode, responsive cho mobile
-
-</td>
-</tr>
-</table>
+<p align="center">
+  <img src="./docs/assets/features.svg" alt="Bốn nhóm tính năng — Biên tập với Ario: Style, Structure, Template, Citation L1–L4, Quick Edit, slash command; Đánh giá chất lượng: Logic Audit, Publication Score Gate, Defense Mode, Integrity Monitor, phản hồi peer review, AI disclosure; Môi trường LaTeX: editor đa file, TeX Live + SyncTeX, import ZIP/DOCX/PDF, template IEEE/LNCS/Elsevier, xem PDF, link chia sẻ read-only; Nền tảng: JWT + Google SSO, admin console, gói FREE/PRO, chọn model có failover, song ngữ EN/VI, dark mode và mobile" width="100%">
+</p>
 
 ---
 
@@ -160,15 +69,9 @@ Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](
 
 ### Tech stack
 
-| Layer | Công nghệ |
-|---|---|
-| **Frontend** | TanStack Start · React 19 · shadcn/ui · Tailwind CSS v4 · Vite · PDF.js |
-| **Backend** | FastAPI · Python 3.11+ · LangGraph · SQLAlchemy · SSE / WebSocket |
-| **LLM** | Google Gemini · OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
-| **Dữ liệu** | PostgreSQL · Prisma (schema & migrations) |
-| **LaTeX** | pdflatex (TeX Live) · SyncTeX · delta asset compile + PDF cache |
-| **Hạ tầng** | Docker · Google Cloud Run · GitHub Actions CI/CD (không deploy) |
-| **Observability** | LangSmith tracing · Inngest *(tùy chọn)* |
+<p align="center">
+  <img src="./docs/assets/tech-stack.svg" alt="Tech stack 7 tầng — Frontend: TanStack Start, React 19, shadcn/ui, Tailwind CSS v4, Vite, PDF.js; Backend: FastAPI, Python 3.11+, LangGraph, SQLAlchemy, SSE, WebSocket; LLM: Gemini, OpenRouter, OpenAI, Anthropic, Z.AI GLM; LaTeX: TeX Live, pdflatex, SyncTeX, PDF cache; Data: PostgreSQL 16, Prisma migrations; Infra: Docker, Cloud Run, GitHub Actions; Observability: JSON logs, request ID, LangSmith, Inngest" width="100%">
+</p>
 
 ### CI/CD
 
@@ -310,6 +213,50 @@ arionear-ai-paper-editor/
 ├── Dockerfile · docker-compose.yml
 └── ARCHITECTURE.md · ROADMAP.md · EVALUATION.md
 ```
+
+---
+
+## 🖼️ Giao diện
+
+<p align="center">
+  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Arionear: đoạn mở đầu được Ario viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
+</p>
+<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Ario viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Arionear theo phong cách báo in">
+  <br><sub><b>Trang chủ</b> — phong cách báo in, demo phiên biên tập trực tiếp</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Ario">
+  <br><sub><b>Dark mode</b> — cùng phiên biên tập ở giao diện tối</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/04-defense.webp" alt="Defense Mode: hội đồng AI đặt câu hỏi phản biện kèm link tới đoạn trong PDF">
+  <br><sub><b>Defense Mode</b> — hội đồng AI hỏi bám sát bài, link nhảy thẳng tới đoạn liên quan trong PDF</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/06-templates.webp" alt="Template gallery với mẫu IEEE, Springer LNCS và Elsevier">
+  <br><sub><b>Template gallery</b> — IEEE, Springer LNCS, Elsevier</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/05-projects.webp" alt="Danh sách dự án của nhà nghiên cứu">
+  <br><sub><b>Dự án</b> — bàn làm việc của nhà nghiên cứu</sub>
+</td>
+<td width="50%" valign="top">
+  <img src="./docs/assets/screenshots/07-admin.webp" alt="Admin console: người dùng, token và chi phí LLM">
+  <br><sub><b>Admin console</b> — người dùng, token, chi phí và chính sách LLM</sub>
+</td>
+</tr>
+</table>
+
+<sub>Ảnh chụp từ bản chạy local với dữ liệu demo; phản hồi AI trong ảnh lấy từ một LLM giả lập (OpenAI-compatible) để có thể tái lập.</sub>
 
 ---
 

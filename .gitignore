@@ -70,3 +70,6 @@ _vendor/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Font cache for scripts/build_banner.py
+.cache/

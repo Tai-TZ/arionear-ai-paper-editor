@@ -27,7 +27,7 @@ npm run format     # prettier --write .
 npm run typecheck  # tsc --noEmit — must stay at 0 errors (CI enforces it)
 ```
 
-Database (repo root): `npm install && npm run db:generate && npm run db:migrate`. Diagrams: `python scripts/build_diagrams.py [name]` regenerates every SVG in `docs/assets/`.
+Database (repo root): `npm install && npm run db:generate && npm run db:migrate`. Diagrams: `python scripts/build_diagrams.py [name]` regenerates every SVG in `docs/assets/` (always the light newsprint palette); the README masthead comes from `python scripts/build_banner.py` (needs `pip install fonttools uharfbuzz`; downloads Playfair Display into `.cache/fonts/`).
 
 ## Architecture map
 
