@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
 import time
 import uuid
@@ -50,6 +49,8 @@ from src.services.prompts import build_system_prompt
 from src.services.quota_policy import QuotaExceededError, enforce_llm_quota_for_paper
 from src.services.sessions import session_store
 from src.services.slash_commands import parse_slash_command
+from src.services.sse import KEEPALIVE_SSE, chunk_text, sse_event
+from src.services.sse import flush_sse_stream as flush_sse_stream  # re-exported for src/api/routes.py
 from src.services.stream_i18n import (
     parse_detail as format_parse_detail,
 )
@@ -145,28 +146,13 @@ def _agent_timeout_message(task: str, timeout_sec: float) -> str:
     )
 
 
-_KEEPALIVE_SSE = ": keepalive\n\n"
-# Many proxies buffer until ~4KB; initial padding forces early flush to the browser.
-_SSE_FLUSH_PAD = ": " + (" " * 2048) + "\n\n"
+_KEEPALIVE_SSE = KEEPALIVE_SSE
+_sse = sse_event
 
-
-async def flush_sse_stream(source: AsyncIterator[str]) -> AsyncIterator[bytes]:
-    """Yield each SSE chunk immediately (avoid proxy / ASGI buffering)."""
-    first = True
-    async for chunk in source:
-        if first:
-            yield _SSE_FLUSH_PAD.encode("utf-8")
-            first = False
-        payload = chunk.encode("utf-8") if isinstance(chunk, str) else chunk
-        yield payload
-        # Vite / nginx often buffer sub-4KB bodies; pad small events so fetch/XHR flush.
-        if isinstance(chunk, str) and len(payload) < 2048:
-            yield _SSE_FLUSH_PAD.encode("utf-8")
-        await asyncio.sleep(0)
-
-
-def _sse(event: str, data: dict[str, Any]) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+# Raw provider failures (``Error code: 404 …``, JSON error bodies) arrive at the very start of a stream.
+# Only this many leading characters are checked, so a long answer that merely mentions an error code
+# is never aborted and the check stays O(1) per token instead of re-joining the whole buffer.
+_PROVIDER_ERROR_SCAN_CHARS = 400
 
 
 def _state_payload(
@@ -285,8 +271,7 @@ async def _monitor_long_task(
             yield _KEEPALIVE_SSE
 
 
-def _chunk_text(text: str, size: int = 1) -> list[str]:
-    return [text[i : i + size] for i in range(0, len(text), size)]
+_chunk_text = chunk_text
 
 
 def _merge_agent_into_done(done_payload: dict[str, Any], result: dict[str, Any]) -> None:
@@ -797,6 +782,7 @@ async def stream_chat(
             trace = await tracker.stage("llm_stream_start", task=task)
             yield _sse("trace", trace)
             first_token = True
+            response_chars = 0
             provider_tokens: int | None = None
             user_content = build_chat_user_content(
                 request.message,
@@ -827,12 +813,14 @@ async def stream_chat(
                             yield _sse("reasoning", {"delta": delta})
                         else:
                             full_response.append(delta)
-                            combined = "".join(full_response)
-                            if looks_like_provider_error(combined):
-                                message = friendly_llm_error(Exception(combined))
-                                await tracker.fail(message)
-                                yield _sse("error", {"message": message})
-                                return
+                            if response_chars < _PROVIDER_ERROR_SCAN_CHARS:
+                                response_chars += len(delta)
+                                head = "".join(full_response)[:_PROVIDER_ERROR_SCAN_CHARS]
+                                if looks_like_provider_error(head):
+                                    message = friendly_llm_error(Exception(head))
+                                    await tracker.fail(message)
+                                    yield _sse("error", {"message": message})
+                                    return
                             yield _sse("token", {"delta": delta})
             except Exception as exc:
                 message = friendly_llm_error(exc)
@@ -948,7 +936,7 @@ async def stream_chat(
                 respond = _localize_agent_response(
                     edit_result.get("error") or edit_result.get("response") or "Không có thay đổi."
                 )
-            for piece in _chunk_text(respond, size=12):
+            for piece in _chunk_text(respond):
                 yield _sse("token", {"delta": piece})
             done_payload["response"] = respond
 
@@ -1067,7 +1055,7 @@ async def stream_chat(
                 respond = _localize_agent_response(
                     style_result.get("error") or style_result.get("response") or "Không có thay đổi."
                 )
-            for piece in _chunk_text(respond, size=12):
+            for piece in _chunk_text(respond):
                 yield _sse("token", {"delta": piece})
             done_payload["response"] = respond
 

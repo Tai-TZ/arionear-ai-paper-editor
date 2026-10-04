@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
@@ -21,30 +20,12 @@ from src.services.llm import get_llm
 from src.services.llm_errors import friendly_llm_error
 from src.services.prompts import get_prompt, render_template
 from src.services.quota_policy import QuotaExceededError
+from src.services.sse import KEEPALIVE_SSE, sse_event
 
 logger = logging.getLogger(__name__)
 
-# Proxy/ASGI buffering workaround — same as chat_stream.py
-_SSE_FLUSH_PAD = ": " + (" " * 2048) + "\n\n"
-_KEEPALIVE_SSE = ": keepalive\n\n"
-
-
-async def flush_sse_stream(source: AsyncIterator[str]) -> AsyncIterator[bytes]:
-    """Yield each SSE chunk immediately (defeats proxy buffering)."""
-    first = True
-    async for chunk in source:
-        if first:
-            yield _SSE_FLUSH_PAD.encode("utf-8")
-            first = False
-        payload = chunk.encode("utf-8") if isinstance(chunk, str) else chunk
-        yield payload
-        if isinstance(chunk, str) and len(payload) < 2048:
-            yield _SSE_FLUSH_PAD.encode("utf-8")
-        await asyncio.sleep(0)
-
-
-def _sse(event: str, data: dict[str, Any]) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+_KEEPALIVE_SSE = KEEPALIVE_SSE
+_sse = sse_event
 
 
 _BOILERPLATE_OPENERS = (

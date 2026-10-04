@@ -13,7 +13,8 @@ from src.api.deps import get_current_user, get_db_session
 from src.db.models import User
 from src.models.schemas import DefenseQuotaResponse, DefenseRequest
 from src.services.defense_quota import defense_quota_status
-from src.services.defense_stream import flush_sse_stream, stream_defense
+from src.services.defense_stream import stream_defense
+from src.services.sse import flush_sse_stream
 
 router = APIRouter()
 
