@@ -394,8 +394,12 @@ export function useEditorTools({
         setCitationResults(results);
         setCitationSummary(summary);
       },
+      llmProvider,
+      llmModel,
     }),
     [
+      llmProvider,
+      llmModel,
       chatBridgeRef,
       revisionHistory,
       citationResults,
