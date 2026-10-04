@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 
 import { parseLatexOutline } from "@/lib/latex-outline";
 
@@ -15,7 +15,9 @@ export function LatexOutlineNav({
   onJumpToLine,
   compact = false,
 }: LatexOutlineNavProps) {
-  const items = useMemo(() => parseLatexOutline(latex), [latex]);
+  // Re-parse at background priority so typing in the editor is never blocked by the outline.
+  const deferredLatex = useDeferredValue(latex);
+  const items = useMemo(() => parseLatexOutline(deferredLatex), [deferredLatex]);
 
   if (!items.length) {
     return (

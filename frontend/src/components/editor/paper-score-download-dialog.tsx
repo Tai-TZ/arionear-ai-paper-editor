@@ -1,5 +1,5 @@
 import { AlertTriangle, Download } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useLocale } from "@/components/locale-context";
@@ -182,7 +182,21 @@ function ScoreSummaryPanel({
   );
 }
 
-export function PaperScoreDownloadDialog({
+export const PaperScoreDownloadDialog = memo(function PaperScoreDownloadDialog(
+  props: PaperScoreDownloadDialogProps,
+) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="paper-score-dialog gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none !fixed !left-1/2 !top-1/2 !z-50 !flex !h-auto !w-[calc(100%-1.5rem)] !max-w-[56rem] !-translate-x-1/2 !-translate-y-1/2 max-h-[calc(100dvh-2rem)] flex-col [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
+        {/* Radix mounts the content only while the dialog is open (or animating closed), so the
+            score below is no longer recomputed on every keystroke while the dialog is hidden. */}
+        <PaperScoreDialogBody {...props} />
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+function PaperScoreDialogBody({
   open,
   onOpenChange,
   projectName,
@@ -250,170 +264,168 @@ export function PaperScoreDownloadDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="paper-score-dialog gap-0 overflow-hidden border-2 border-foreground p-0 shadow-[8px_8px_0_0_rgba(0,0,0,0.08)] sm:rounded-none !fixed !left-1/2 !top-1/2 !z-50 !flex !h-auto !w-[calc(100%-1.5rem)] !max-w-[56rem] !-translate-x-1/2 !-translate-y-1/2 max-h-[calc(100dvh-2rem)] flex-col [&>button.absolute]:right-4 [&>button.absolute]:top-4 [&>button.absolute]:z-10 [&>button.absolute]:rounded-md [&>button.absolute]:text-background [&>button.absolute]:opacity-90 [&>button.absolute]:hover:bg-background/15 [&>button.absolute]:hover:opacity-100">
-        <div className="relative shrink-0 border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
-          <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
-            {t.eyebrow}
-          </p>
-          <DialogTitle className="mt-2 font-serif-display text-2xl font-bold tracking-tight text-background">
-            {t.title}
-          </DialogTitle>
-          <DialogDescription className="mt-2 max-w-2xl text-sm leading-relaxed text-background/75">
-            {t.description}
-          </DialogDescription>
-          <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-background/55">
-            {t.gatePeerReviewNote}
-          </p>
-        </div>
+    <>
+      <div className="relative shrink-0 border-b border-background/15 bg-foreground px-6 py-5 pr-14 text-background">
+        <p className="font-sans-ui text-[10px] uppercase tracking-[0.22em] text-background/60">
+          {t.eyebrow}
+        </p>
+        <DialogTitle className="mt-2 font-serif-display text-2xl font-bold tracking-tight text-background">
+          {t.title}
+        </DialogTitle>
+        <DialogDescription className="mt-2 max-w-2xl text-sm leading-relaxed text-background/75">
+          {t.description}
+        </DialogDescription>
+        <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-background/55">
+          {t.gatePeerReviewNote}
+        </p>
+      </div>
 
-        {auditError ? (
-          <div className="shrink-0 flex items-start gap-2.5 border-b border-[color:var(--editorial-amber,#b45309)]/30 bg-[color:var(--editorial-amber,#b45309)]/8 px-6 py-3">
-            <AlertTriangle
-              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
-              aria-hidden
+      {auditError ? (
+        <div className="shrink-0 flex items-start gap-2.5 border-b border-[color:var(--editorial-amber,#b45309)]/30 bg-[color:var(--editorial-amber,#b45309)]/8 px-6 py-3">
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+              <span className="font-semibold">{t.errorTitle}: </span>
+              {auditError}
+            </p>
+            {!auditLoading && onRetryAudit ? (
+              <button
+                type="button"
+                onClick={onRetryAudit}
+                className="mt-2 font-sans-ui text-[10px] uppercase tracking-[0.14em] text-[color:var(--editorial-amber,#b45309)] underline underline-offset-2 hover:no-underline"
+              >
+                {t.retryAudit}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+        <aside className="flex shrink-0 flex-col justify-center border-b border-border/50 bg-muted/20 px-6 py-6 md:w-[min(260px,34%)] md:border-b-0 md:border-r md:self-stretch">
+          {auditLoading ? (
+            <PaperScoreAuditAnimation
+              progress={auditProgress}
+              label={t.auditAnimationLabel}
+              phrases={t.auditPhrases}
             />
-            <div className="min-w-0 flex-1">
+          ) : (
+            <ScoreSummaryPanel
+              scoreResult={scoreResult}
+              gradeColor={gradeColor}
+              agentScored={scoreResult.agentScored}
+              t={t}
+            />
+          )}
+        </aside>
+
+        <main className="paper-score-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {scoreResult.isPlaceholderTemplate && !auditLoading ? (
+            <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-amber,#b45309)]/35 bg-[color:var(--editorial-amber,#b45309)]/8 px-4 py-3">
+              <AlertTriangle
+                className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
+                aria-hidden
+              />
               <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                <span className="font-semibold">{t.errorTitle}: </span>
-                {auditError}
+                {t.templateBanner}
               </p>
-              {!auditLoading && onRetryAudit ? (
-                <button
-                  type="button"
-                  onClick={onRetryAudit}
-                  className="mt-2 font-sans-ui text-[10px] uppercase tracking-[0.14em] text-[color:var(--editorial-amber,#b45309)] underline underline-offset-2 hover:no-underline"
-                >
-                  {t.retryAudit}
-                </button>
+            </div>
+          ) : null}
+
+          {summaryText && !auditLoading ? (
+            <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
+              <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {auditError && !scoreResult.agentScored ? t.note : t.reviewSummary}
+              </p>
+              <p
+                className={`mt-1.5 text-sm leading-relaxed ${
+                  auditError && !scoreResult.agentScored
+                    ? "text-[color:var(--editorial-amber,#b45309)]"
+                    : "text-foreground/85"
+                }`}
+              >
+                {summaryText}
+              </p>
+              {gateStaleWarning ? (
+                <p className="mt-2 text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
+                  {t.staleWarning} {gateStaleWarning}
+                </p>
               ) : null}
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
-          <aside className="flex shrink-0 flex-col justify-center border-b border-border/50 bg-muted/20 px-6 py-6 md:w-[min(260px,34%)] md:border-b-0 md:border-r md:self-stretch">
-            {auditLoading ? (
-              <PaperScoreAuditAnimation
-                progress={auditProgress}
-                label={t.auditAnimationLabel}
-                phrases={t.auditPhrases}
-              />
-            ) : (
-              <ScoreSummaryPanel
-                scoreResult={scoreResult}
-                gradeColor={gradeColor}
-                agentScored={scoreResult.agentScored}
-                t={t}
-              />
-            )}
-          </aside>
-
-          <main className="paper-score-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            {scoreResult.isPlaceholderTemplate && !auditLoading ? (
-              <div className="mb-4 flex items-start gap-2.5 rounded border border-[color:var(--editorial-amber,#b45309)]/35 bg-[color:var(--editorial-amber,#b45309)]/8 px-4 py-3">
-                <AlertTriangle
-                  className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-amber,#b45309)]"
-                  aria-hidden
-                />
-                <p className="text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                  {t.templateBanner}
-                </p>
-              </div>
-            ) : null}
-
-            {summaryText && !auditLoading ? (
-              <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
-                <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {auditError && !scoreResult.agentScored ? t.note : t.reviewSummary}
-                </p>
-                <p
-                  className={`mt-1.5 text-sm leading-relaxed ${
-                    auditError && !scoreResult.agentScored
-                      ? "text-[color:var(--editorial-amber,#b45309)]"
-                      : "text-foreground/85"
-                  }`}
-                >
-                  {summaryText}
-                </p>
-                {gateStaleWarning ? (
-                  <p className="mt-2 text-xs leading-relaxed text-[color:var(--editorial-amber,#b45309)]">
-                    {t.staleWarning} {gateStaleWarning}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            {topIssues.length > 0 ? (
-              <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
-                <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {t.topIssues}
-                </p>
-                <ul className="mt-2 space-y-2">
-                  {topIssues.map((issue) => (
-                    <li key={issue.id} className="text-xs leading-relaxed text-foreground/85">
-                      <span
-                        className={`mr-1.5 font-semibold uppercase ${
-                          issue.severity === "critical"
-                            ? "text-[color:var(--editorial-red,#b91c1c)]"
-                            : "text-[color:var(--editorial-amber,#b45309)]"
-                        }`}
-                      >
-                        {issue.section}
-                      </span>
-                      {issue.comment}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {t.criteria}
-            </p>
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded border border-border/70 bg-border/70 sm:grid-cols-2">
-              {scoreResult.dimensions.map((dim, index) => (
-                <DimensionCard
-                  key={dim.id}
-                  dim={dim}
-                  animate={open}
-                  index={index}
-                  pending={auditLoading && dim.id === "logic"}
-                  actionLabel={
-                    dim.id === "citations" && citationsUnverified && onOpenCitationsTab
-                      ? t.openCitations
-                      : undefined
-                  }
-                  onAction={
-                    dim.id === "citations" && citationsUnverified && onOpenCitationsTab
-                      ? handleOpenCitations
-                      : undefined
-                  }
-                />
-              ))}
+          {topIssues.length > 0 ? (
+            <div className="mb-4 rounded border border-border/70 bg-card px-4 py-3">
+              <p className="font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {t.topIssues}
+              </p>
+              <ul className="mt-2 space-y-2">
+                {topIssues.map((issue) => (
+                  <li key={issue.id} className="text-xs leading-relaxed text-foreground/85">
+                    <span
+                      className={`mr-1.5 font-semibold uppercase ${
+                        issue.severity === "critical"
+                          ? "text-[color:var(--editorial-red,#b91c1c)]"
+                          : "text-[color:var(--editorial-amber,#b45309)]"
+                      }`}
+                    >
+                      {issue.section}
+                    </span>
+                    {issue.comment}
+                  </li>
+                ))}
+              </ul>
             </div>
+          ) : null}
 
-            {paperId ? <AiDisclosureSection key={paperId} paperId={paperId} /> : null}
-          </main>
-        </div>
-
-        <div className="shrink-0 border-t border-border/70 bg-muted/20 px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {auditLoading ? t.footerLoading : t.footerReady}
-            </p>
-            <button
-              type="button"
-              disabled={!pdfData || auditLoading}
-              onClick={handleDownload}
-              className="inline-flex w-full shrink-0 items-center justify-center gap-2 border border-foreground bg-foreground px-5 py-2.5 font-sans-ui text-[11px] uppercase tracking-[0.16em] text-background transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:w-auto sm:min-w-[10.5rem]"
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {auditLoading ? t.evaluating : t.downloadBtn}
-            </button>
+          <p className="mb-3 font-sans-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            {t.criteria}
+          </p>
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded border border-border/70 bg-border/70 sm:grid-cols-2">
+            {scoreResult.dimensions.map((dim, index) => (
+              <DimensionCard
+                key={dim.id}
+                dim={dim}
+                animate={open}
+                index={index}
+                pending={auditLoading && dim.id === "logic"}
+                actionLabel={
+                  dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                    ? t.openCitations
+                    : undefined
+                }
+                onAction={
+                  dim.id === "citations" && citationsUnverified && onOpenCitationsTab
+                    ? handleOpenCitations
+                    : undefined
+                }
+              />
+            ))}
           </div>
+
+          {paperId ? <AiDisclosureSection key={paperId} paperId={paperId} /> : null}
+        </main>
+      </div>
+
+      <div className="shrink-0 border-t border-border/70 bg-muted/20 px-6 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {auditLoading ? t.footerLoading : t.footerReady}
+          </p>
+          <button
+            type="button"
+            disabled={!pdfData || auditLoading}
+            onClick={handleDownload}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 border border-foreground bg-foreground px-5 py-2.5 font-sans-ui text-[11px] uppercase tracking-[0.16em] text-background transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:w-auto sm:min-w-[10.5rem]"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            {auditLoading ? t.evaluating : t.downloadBtn}
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 }

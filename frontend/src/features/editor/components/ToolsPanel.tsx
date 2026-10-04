@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { HelpCircle, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-context";
@@ -116,7 +116,10 @@ export const ToolsPanel = memo(function ToolsPanel({
     [revisions],
   );
 
-  const stats = computeProjectStats(latex);
+  // Word/figure counts scan the whole document; compute them at background priority (deferred)
+  // and only when the source changed, not on every panel re-render or keystroke.
+  const deferredLatex = useDeferredValue(latex);
+  const stats = useMemo(() => computeProjectStats(deferredLatex), [deferredLatex]);
 
   const statCards: { label: string; value: number }[] = [
     { label: t.tools.stats.words, value: stats.words },
