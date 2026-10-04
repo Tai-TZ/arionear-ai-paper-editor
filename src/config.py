@@ -201,6 +201,9 @@ class Settings(BaseSettings):
             return self.billing_demo_checkout
         return self.app_env != "production"
 
+    # Observability — GCP project for Cloud Logging trace links (falls back to GOOGLE_CLOUD_PROJECT)
+    gcp_project_id: str = ""
+
 
 def validate_production_settings(settings: Settings) -> None:
     """Refuse to start in production with a guessable JWT signing secret."""

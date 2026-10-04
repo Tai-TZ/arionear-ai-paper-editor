@@ -9,6 +9,9 @@ python-dotenv>=1.0.0
 pyyaml>=6.0.0
 httpx>=0.28.0
 inngest>=0.5.0
+# JSON log lines for Cloud Logging (src/logging_config.py): the standard stdlib-logging JSON formatter,
+# instead of a hand-written one. >=3.1 for the `pythonjsonlogger.json` module path.
+python-json-logger>=3.1
 
 # AI / LangChain
 langchain>=0.3.0

@@ -100,7 +100,6 @@ def _deliver_auth_email(
 
     if _dev_email_echo_allowed():
         logger.info("[auth] Dev %s for %s: %s", dev_log_label, to_email, dev_log_value)
-        print(f"[auth] Dev {dev_log_label} for {to_email}: {dev_log_value}")
         return EmailDeliveryResult(ok=True, dev_echo=True)
 
     return EmailDeliveryResult(ok=False, error="Email delivery is not configured.")

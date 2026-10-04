@@ -22,6 +22,7 @@ from src.cors_config import build_cors_middleware_kwargs
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
+from src.logging_config import configure_logging
 from src.security_headers import SecurityHeadersMiddleware
 from src.services.auth_service import ensure_god_admin
 from src.services.sessions import refresh_session_store
@@ -83,6 +84,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+configure_logging(app)
 
 settings = get_settings()
 app.add_middleware(CORSMiddleware, **build_cors_middleware_kwargs(settings))
