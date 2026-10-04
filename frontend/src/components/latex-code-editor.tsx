@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useImperativeHandle,
   useLayoutEffect,
@@ -9,7 +10,12 @@ import {
 import { useLatestRef } from "@/lib/use-latest-ref";
 
 import { HighlightedLatexLine } from "@/lib/latex-syntax";
-import { buildInlineSuggestionView, type InlineSuggestionInput } from "@/lib/inline-suggestion";
+import {
+  buildInlineSuggestionView,
+  type DiffLineKind,
+  type InlineSuggestionInput,
+} from "@/lib/inline-suggestion";
+import { nextLineKeys, type LineKeyState } from "@/lib/stable-line-keys";
 import {
   readEditorSelection,
   type EditorSelectionContext,
@@ -39,6 +45,82 @@ type LatexCodeEditorProps = {
   inlineSuggestion?: InlineSuggestionInput | null;
 };
 
+/** Line-number column; only re-renders when the line count or a highlighted range changes. */
+const LatexGutterLines = memo(function LatexGutterLines({
+  lineCount,
+  highlightLine,
+  changeStartLine,
+  changeEndLine,
+}: {
+  lineCount: number;
+  highlightLine: number | null;
+  changeStartLine: number | null;
+  changeEndLine: number | null;
+}) {
+  const rows = [];
+  for (let i = 0; i < lineCount; i += 1) {
+    const lineNo = i + 1;
+    const inChange =
+      changeStartLine !== null &&
+      changeEndLine !== null &&
+      lineNo >= changeStartLine &&
+      lineNo <= changeEndLine;
+    rows.push(
+      <div
+        key={i}
+        className={`latex-line-num ${
+          highlightLine === lineNo
+            ? "bg-primary/15 text-primary font-semibold"
+            : inChange
+              ? "latex-line-num-change"
+              : ""
+        }`}
+      >
+        {lineNo}
+      </div>,
+    );
+  }
+  return rows;
+});
+
+/** One highlighted source row; memoized so typing re-renders only the rows whose text changed. */
+const LatexCodeRow = memo(function LatexCodeRow({
+  text,
+  kind,
+  inChange,
+  highlightStart,
+  highlightEnd,
+}: {
+  text: string;
+  kind: DiffLineKind | undefined;
+  inChange: boolean;
+  highlightStart: number | null;
+  highlightEnd: number | null;
+}) {
+  return (
+    <div className={`latex-code-row ${inChange ? "latex-code-row-change" : ""}`}>
+      {kind === "del" ? (
+        <span className="latex-code-line diff-del">
+          <HighlightedLatexLine text={text} />
+        </span>
+      ) : kind === "ins" ? (
+        <span className="latex-code-line diff-ins">
+          <HighlightedLatexLine text={text} />
+        </span>
+      ) : (
+        <HighlightedLatexLine
+          text={text}
+          highlightRange={
+            highlightStart !== null && highlightEnd !== null
+              ? { start: highlightStart, end: highlightEnd }
+              : null
+          }
+        />
+      )}
+    </div>
+  );
+});
+
 export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditorProps>(
   function LatexCodeEditor(
     {
@@ -60,7 +142,13 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
       [latex, inlineSuggestion],
     );
     const displayLatex = suggestionView?.displayLatex ?? latex;
-    const lines = displayLatex.split(/\r?\n/);
+    const lines = useMemo(() => displayLatex.split(/\r?\n/), [displayLatex]);
+    const lineKeyStateRef = useRef<LineKeyState | null>(null);
+    const lineKeys = useMemo(() => {
+      const next = nextLineKeys(lineKeyStateRef.current, lines);
+      lineKeyStateRef.current = next;
+      return next.keys;
+    }, [lines]);
     const readOnly = Boolean(suggestionView) || readOnlyProp;
     const gutterRef = useRef<HTMLDivElement>(null);
     const highlightRef = useRef<HTMLDivElement>(null);
@@ -225,27 +313,12 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
           ref={gutterRef}
           className="latex-gutter shrink-0 overflow-hidden select-none py-4 pr-2 pl-3 md:pr-3 md:pl-4 text-right font-mono text-[11px] leading-[1.65]"
         >
-          {lines.map((_, i) => {
-            const lineNo = i + 1;
-            const inChange =
-              suggestionView &&
-              lineNo >= suggestionView.changeStartLine &&
-              lineNo <= suggestionView.changeEndLine;
-            return (
-              <div
-                key={i}
-                className={`latex-line-num ${
-                  highlightLine === lineNo
-                    ? "bg-primary/15 text-primary font-semibold"
-                    : inChange
-                      ? "latex-line-num-change"
-                      : ""
-                }`}
-              >
-                {lineNo}
-              </div>
-            );
-          })}
+          <LatexGutterLines
+            lineCount={lines.length}
+            highlightLine={highlightLine}
+            changeStartLine={suggestionView ? suggestionView.changeStartLine : null}
+            changeEndLine={suggestionView ? suggestionView.changeEndLine : null}
+          />
         </div>
 
         <div className="latex-code-area relative min-h-0 min-w-0 flex-1">
@@ -256,33 +329,20 @@ export const LatexCodeEditor = forwardRef<LatexCodeEditorHandle, LatexCodeEditor
           >
             {lines.map((line, i) => {
               const lineNo = i + 1;
-              const viewLine = suggestionView?.lines[i];
-              const range =
-                synctexHighlight?.line === lineNo
-                  ? { start: synctexHighlight.start, end: synctexHighlight.end }
-                  : null;
-              const inChange =
-                suggestionView &&
-                lineNo >= suggestionView.changeStartLine &&
-                lineNo <= suggestionView.changeEndLine;
-
+              const highlighted = synctexHighlight?.line === lineNo;
               return (
-                <div
-                  key={i}
-                  className={`latex-code-row ${inChange ? "latex-code-row-change" : ""}`}
-                >
-                  {viewLine?.kind === "del" ? (
-                    <span className="latex-code-line diff-del">
-                      <HighlightedLatexLine text={line} />
-                    </span>
-                  ) : viewLine?.kind === "ins" ? (
-                    <span className="latex-code-line diff-ins">
-                      <HighlightedLatexLine text={line} />
-                    </span>
-                  ) : (
-                    <HighlightedLatexLine text={line} highlightRange={range} />
+                <LatexCodeRow
+                  key={lineKeys[i]}
+                  text={line}
+                  kind={suggestionView?.lines[i]?.kind}
+                  inChange={Boolean(
+                    suggestionView &&
+                    lineNo >= suggestionView.changeStartLine &&
+                    lineNo <= suggestionView.changeEndLine,
                   )}
-                </div>
+                  highlightStart={highlighted ? synctexHighlight.start : null}
+                  highlightEnd={highlighted ? synctexHighlight.end : null}
+                />
               );
             })}
           </div>

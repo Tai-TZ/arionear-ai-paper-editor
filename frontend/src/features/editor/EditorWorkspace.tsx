@@ -238,6 +238,11 @@ export function EditorWorkspace() {
 
   persistActiveThreadNowRef.current = persistActiveThreadNow;
 
+  const inlineSuggestion = useMemo(
+    () => toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion),
+    [pendingEdits, activeEditId, pendingSuggestion],
+  );
+
   chatBridgeRef.current = {
     queueChatFollowUp,
     runAgentEdit,
@@ -726,11 +731,7 @@ export function EditorWorkspace() {
                       fullHeight
                       highlightLine={latexWs.highlightLine}
                       synctexHighlight={latexWs.synctexHighlight}
-                      inlineSuggestion={toInlineSuggestion(
-                        pendingEdits,
-                        activeEditId,
-                        pendingSuggestion,
-                      )}
+                      inlineSuggestion={inlineSuggestion}
                     />
                     {selectionPick && (
                       <EditorSelectionToolbar

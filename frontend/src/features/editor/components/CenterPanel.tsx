@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type React from "react";
 import { FileOutput, FileText, GraduationCap, Redo2, Share2, Undo2, Wrench } from "lucide-react";
 import { useLocale } from "@/components/locale-context";
@@ -146,6 +147,11 @@ export function CenterPanel({
 }) {
   const { locale } = useLocale();
   const t = editorCopy(locale);
+  // Stable reference so the memoized LatexEditor skips re-rendering when only chat state changes.
+  const inlineSuggestion = useMemo(
+    () => toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion),
+    [pendingEdits, activeEditId, pendingSuggestion],
+  );
 
   return (
     <section className="editor-code-panel flex h-full min-h-0 flex-col overflow-hidden min-w-0">
@@ -254,7 +260,7 @@ export function CenterPanel({
                 fullHeight
                 highlightLine={highlightLine}
                 synctexHighlight={synctexHighlight}
-                inlineSuggestion={toInlineSuggestion(pendingEdits, activeEditId, pendingSuggestion)}
+                inlineSuggestion={inlineSuggestion}
               />
               {selectionPick &&
                 onAddSelectionToChat &&
