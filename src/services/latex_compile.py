@@ -186,7 +186,9 @@ def _decode_asset_payload(content_base64: str) -> bytes:
 
 def _safe_asset_path(name: str) -> Path | None:
     normalized = name.replace("\\", "/").lstrip("/")
-    if not normalized or ".." in normalized.split("/"):
+    # ":" covers Windows drive letters (C:/x) and NTFS alternate streams (a.png:x), which
+    # pathlib would resolve outside the workspace.
+    if not normalized or ".." in normalized.split("/") or ":" in normalized:
         return None
     return Path(normalized)
 
@@ -1095,12 +1097,14 @@ def _force_apply_known_fallbacks(latex: str) -> tuple[str, list[str]]:
 def _collect_all_tex_sources(main_latex: str, work_dir: Path, main_file: str) -> str:
     """Merge main + \\input/\\include .tex files for citation/bib detection."""
     combined = [main_latex]
+    root = work_dir.resolve()
     for match in re.finditer(r"\\(?:input|include)\{([^}]+)\}", main_latex):
         rel = match.group(1).strip()
         if not rel.endswith((".tex", ".latex")):
             rel = f"{rel}.tex"
-        candidate = work_dir / rel.replace("\\", "/")
-        if candidate.is_file():
+        candidate = (work_dir / rel.replace("\\", "/")).resolve()
+        # `work_dir / "/abs/path"` is the absolute path itself — only read files in the workspace.
+        if candidate.is_relative_to(root) and candidate.is_file():
             combined.append(candidate.read_text(encoding="utf-8", errors="replace"))
     return "\n".join(combined)
 

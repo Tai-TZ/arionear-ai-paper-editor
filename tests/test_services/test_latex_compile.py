@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import uuid
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -509,3 +510,24 @@ def test_ensure_bibliography_stubs_natbib_cite_keys(tmp_path):
     latex = r"\citep[p.~3]{smith2020} \bibliography{refs}"
     lc._ensure_bibliography(tmp_path, latex)
     assert "smith2020" in (tmp_path / "refs.bib").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("name", ["C:/Windows/win.ini", "c:evil.png", "fig.png:stream", "../up.png", ""])
+def test_safe_asset_path_rejects_paths_outside_workspace(name):
+    assert lc._safe_asset_path(name) is None
+
+
+def test_safe_asset_path_keeps_nested_relative_names():
+    assert lc._safe_asset_path("figures/plot 1.png") == Path("figures/plot 1.png")
+
+
+def test_collect_all_tex_sources_ignores_inputs_outside_workspace(tmp_path):
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "intro.tex").write_text("INSIDE", encoding="utf-8")
+    outside = tmp_path / "secret.tex"
+    outside.write_text("OUTSIDE", encoding="utf-8")
+    latex = rf"\input{{intro}} \input{{{outside.as_posix()}}} \include{{../secret}}"
+    merged = lc._collect_all_tex_sources(latex, work, "main.tex")
+    assert "INSIDE" in merged
+    assert "OUTSIDE" not in merged
