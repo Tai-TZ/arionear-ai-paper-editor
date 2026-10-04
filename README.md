@@ -167,8 +167,16 @@ Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](
 | **LLM** | Google Gemini · OpenRouter · OpenAI · Anthropic · Z.AI (GLM) |
 | **Dữ liệu** | PostgreSQL · Prisma (schema & migrations) |
 | **LaTeX** | pdflatex (TeX Live) · SyncTeX · delta asset compile + PDF cache |
-| **Hạ tầng** | Docker · Google Cloud Run · GitHub Actions CI |
+| **Hạ tầng** | Docker · Google Cloud Run · GitHub Actions CI/CD (không deploy) |
 | **Observability** | LangSmith tracing · Inngest *(tùy chọn)* |
+
+### CI/CD
+
+<p align="center">
+  <img src="./docs/assets/ci-cd.svg" alt="CI/CD: pre-commit cục bộ → push/PR → CI, Security, Docker, LaTeX; tag vX.Y.Z → GitHub Release; Dependabot; không deploy" width="100%">
+</p>
+
+Mọi push/PR chạy CI (Ruff, pytest 3.11 + 3.12, frontend, Prisma trên Postgres 16), Security (CodeQL, pip-audit, npm audit, gitleaks), Docker (build + smoke test, không push) và LaTeX; tag `vX.Y.Z` tạo GitHub Release. Chi tiết: [ARCHITECTURE.md §8.1](./ARCHITECTURE.md#81-cicd-pipeline).
 
 ---
 
