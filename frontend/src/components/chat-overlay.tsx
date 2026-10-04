@@ -702,6 +702,8 @@ export const ChatInput = forwardRef<
           }}
           onKeyDown={(e) => {
             if (disabled) return;
+            // IME composition (Vietnamese, CJK…): Enter picks the candidate, it must not submit.
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
             if (showSlashMenu) {
               if (e.key === "ArrowDown") {
                 e.preventDefault();

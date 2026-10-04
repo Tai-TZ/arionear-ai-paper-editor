@@ -394,6 +394,8 @@ export function DefenseChatPanel({
   }, [messages.length, streamContentLen, isStreaming, activityText]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME composition (Vietnamese, CJK…): Enter picks the candidate, it must not submit.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!isStreaming && input.trim()) onSend();

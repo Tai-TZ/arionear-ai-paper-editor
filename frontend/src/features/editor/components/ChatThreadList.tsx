@@ -83,6 +83,8 @@ export function ChatThreadList({
                       onChange={(e) => setRenameValue(e.target.value)}
                       onBlur={commitRename}
                       onKeyDown={(e) => {
+                        // IME composition (Vietnamese, CJK…): Enter picks the candidate, it must not submit.
+                        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                         if (e.key === "Enter") commitRename();
                         if (e.key === "Escape") setRenamingId(null);
                       }}
