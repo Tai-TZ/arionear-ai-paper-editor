@@ -13,6 +13,7 @@ import base64
 import io
 import logging
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -21,6 +22,7 @@ import qrcode
 import qrcode.image.pil
 from sqlalchemy.orm import Session
 
+from src.config import get_settings
 from src.db.models import User, UserSubscription, UserTier
 from src.services.quota_policy import QuotaExceededError
 
@@ -47,6 +49,14 @@ except ZoneInfoNotFoundError:
 
 _pending_checkouts: dict[str, dict[str, Any]] = {}
 CHECKOUT_TTL_MINUTES: int = 15
+
+
+def demo_checkout_enabled() -> bool:
+    """Whether the payment-less QR checkout may upgrade accounts (BILLING_DEMO_CHECKOUT).
+
+    Defaults to off in production so nobody can self-upgrade to Pro for free there.
+    """
+    return get_settings().billing_demo_checkout_enabled()
 
 
 def _generate_qr_png_b64(data: str) -> str:
@@ -171,7 +181,8 @@ def confirm_checkout(db: Session, checkout_id: str) -> dict | None:
         logger.info("Checkout session %s expired", checkout_id[:8])
         return None
 
-    user = db.query(User).filter(User.id == session_data["user_id"]).first()
+    # Stored as str; a UUID object binds on every dialect (SQLite rejects the str form).
+    user = db.query(User).filter(User.id == uuid.UUID(session_data["user_id"])).first()
     if user is None:
         logger.warning("Checkout confirm: user %s not found", session_data["user_id"])
         return None

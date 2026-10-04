@@ -20,6 +20,7 @@ type MarketingCopy = {
     quotaLabel: string;
     quotaPeriodDaily: string;
     quotaFull: string;
+    checkoutUnavailable: string;
     free: {
       tier: string;
       price: string;
@@ -112,6 +113,8 @@ const EN: MarketingCopy = {
     quotaLabel: "Defense turns used",
     quotaPeriodDaily: "today",
     quotaFull: "You've used all your turns. Upgrade to Pro for 50 turns per day.",
+    checkoutUnavailable:
+      "Online payment isn't available yet. Please contact an administrator to upgrade to Pro.",
     free: {
       tier: "FREE",
       price: "Free",
@@ -312,6 +315,8 @@ const VI: MarketingCopy = {
     quotaLabel: "Lượt phản biện đã dùng",
     quotaPeriodDaily: "hôm nay",
     quotaFull: "Bạn đã hết lượt. Nâng cấp Pro để có thêm 50 lượt phản biện mỗi ngày.",
+    checkoutUnavailable:
+      "Thanh toán trực tuyến chưa được kích hoạt. Vui lòng liên hệ quản trị viên để nâng cấp Pro.",
     free: {
       tier: "MIỄN PHÍ",
       price: "Free",

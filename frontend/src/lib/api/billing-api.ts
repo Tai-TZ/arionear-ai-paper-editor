@@ -22,9 +22,28 @@ export type BillingStatus = {
 
 export type CheckoutResult =
   | { ok: true; checkoutId: string; confirmUrl: string; qrPngB64: string; expiresInMinutes: number }
-  | { ok: false; error: string };
+  | { ok: false; error: string; reason?: "checkout_disabled" };
+
+/** Backend code when the payment-less demo checkout is turned off (503). */
+export const CHECKOUT_DISABLED_CODE = "BILLING_CHECKOUT_DISABLED";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
+
+class BillingApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = "BillingApiError";
+  }
+}
+
+function detailCode(detail: unknown): string | null {
+  if (!detail || typeof detail !== "object") return null;
+  const code = (detail as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
 
 async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAccessToken();
@@ -45,7 +64,7 @@ async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* ignore */
     }
-    throw new Error(mapApiHttpError(res.status, detail));
+    throw new BillingApiError(mapApiHttpError(res.status, detail), detailCode(detail));
   }
 
   return res.json() as Promise<T>;
@@ -86,6 +105,9 @@ export async function createCheckout(): Promise<CheckoutResult> {
       expiresInMinutes: data.expires_in_minutes,
     };
   } catch (e) {
+    if (e instanceof BillingApiError && e.code === CHECKOUT_DISABLED_CODE) {
+      return { ok: false, error: e.message, reason: "checkout_disabled" };
+    }
     return { ok: false, error: e instanceof Error ? e.message : "Failed to create checkout." };
   }
 }

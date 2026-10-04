@@ -185,6 +185,22 @@ class Settings(BaseSettings):
     admin_god_password: str = ""
     admin_god_name: str = "Platform God Admin"
 
+    # Billing — the QR checkout upgrades to Pro WITHOUT a payment step (demo flow).
+    # None (unset) = enabled outside production only; set true/false to force it.
+    billing_demo_checkout: bool | None = None
+
+    @field_validator("billing_demo_checkout", mode="before")
+    @classmethod
+    def _parse_billing_demo_checkout(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    def billing_demo_checkout_enabled(self) -> bool:
+        if self.billing_demo_checkout is not None:
+            return self.billing_demo_checkout
+        return self.app_env != "production"
+
 
 def validate_production_settings(settings: Settings) -> None:
     """Refuse to start in production with a guessable JWT signing secret."""

@@ -236,7 +236,9 @@ export function PricingCards({
     setUpgrading(false);
 
     if (!result.ok) {
-      toast.error(result.error);
+      toast.error(
+        result.reason === "checkout_disabled" ? planCopy.checkoutUnavailable : result.error,
+      );
       return;
     }
 

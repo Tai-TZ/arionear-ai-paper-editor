@@ -8,11 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.config import get_settings
 from src.db.models import UserTier
 from src.services.billing_service import (
     FREE_DEFENSE_TURNS,
     PRO_DEFENSE_TURNS,
     assert_defense_allowed,
+    demo_checkout_enabled,
     get_billing_status,
     get_or_create_subscription,
     record_defense_turn,
@@ -150,3 +152,34 @@ def test_pro_quota_resets_after_period_end():
     assert sub.defense_turns_used == 0
     assert status["defense_turns_used"] == 0
     assert status["defense_turns_remaining"] == PRO_DEFENSE_TURNS
+
+
+@pytest.fixture
+def billing_env(monkeypatch):
+    def _apply(*, app_env: str, flag: str | None) -> None:
+        monkeypatch.setenv("APP_ENV", app_env)
+        if flag is None:
+            monkeypatch.delenv("BILLING_DEMO_CHECKOUT", raising=False)
+        else:
+            monkeypatch.setenv("BILLING_DEMO_CHECKOUT", flag)
+        get_settings.cache_clear()
+
+    yield _apply
+    get_settings.cache_clear()
+
+
+@pytest.mark.parametrize(
+    ("app_env", "flag", "expected"),
+    [
+        ("development", None, True),
+        ("test", None, True),
+        ("production", None, False),
+        ("production", "", False),
+        ("production", "true", True),
+        ("development", "false", False),
+        ("test", "0", False),
+    ],
+)
+def test_demo_checkout_enabled_defaults_off_in_production(billing_env, app_env, flag, expected):
+    billing_env(app_env=app_env, flag=flag)
+    assert demo_checkout_enabled() is expected

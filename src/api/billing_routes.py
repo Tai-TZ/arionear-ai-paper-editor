@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from src.api.deps import get_current_user, get_db_session
+from src.api.deps import get_admin_user, get_current_user, get_db_session
 from src.config import get_settings
 from src.db.models import User
 from src.models.billing_schemas import (
@@ -31,6 +31,7 @@ from src.services.billing_service import (
     _generate_qr_png_b64,
     confirm_checkout,
     create_checkout_session,
+    demo_checkout_enabled,
     get_billing_status,
     upgrade_to_pro,
 )
@@ -40,6 +41,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/billing", tags=["billing"])
 
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+CHECKOUT_DISABLED_CODE = "BILLING_CHECKOUT_DISABLED"
+CHECKOUT_DISABLED_MESSAGE = "Online payment is not configured yet. Please contact an administrator to upgrade to Pro."
 
 
 def _origin_base(url: str) -> str | None:
@@ -111,6 +115,11 @@ def billing_checkout(
     V2 path: replace body with stripe.checkout.sessions.create() and
     return the Stripe-hosted URL as confirm_url.
     """
+    if not demo_checkout_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail={"code": CHECKOUT_DISABLED_CODE, "message": CHECKOUT_DISABLED_MESSAGE},
+        )
     settings = get_settings()
 
     status = get_billing_status(db, user)
@@ -142,6 +151,12 @@ def billing_confirm(
 
     V2 path: becomes a Stripe webhook POST handler with signature verification.
     """
+    if not demo_checkout_enabled():
+        return HTMLResponse(
+            content=_checkout_html(success=False),
+            status_code=403,
+            media_type="text/html; charset=utf-8",
+        )
     result = confirm_checkout(db, checkout_id)
     if result is None:
         return HTMLResponse(
@@ -163,10 +178,10 @@ def billing_confirm(
 @router.post("/upgrade", response_model=UpgradeResponse)
 def billing_upgrade(
     payload: UpgradeRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_admin_user),
     db: Session = Depends(get_db_session),
 ) -> UpgradeResponse:
-    """Direct upgrade — kept for admin/testing use only.
+    """Direct upgrade (no payment) of the calling god admin — admin/testing use only.
 
     Normal clients should use POST /billing/checkout → scan QR → auto-upgrade.
     V2: remove this endpoint once Stripe webhooks are in place.
