@@ -12,6 +12,8 @@ from src.inngest.client import inngest_client
 
 logger = logging.getLogger(__name__)
 
+_pending_emits: set[asyncio.Task[None]] = set()
+
 
 def _inngest_enabled() -> bool:
     return get_settings().inngest_enabled()
@@ -91,5 +93,8 @@ async def emit_chat_event(name: str, data: dict[str, Any]) -> None:
         except Exception as exc:
             logger.debug("Inngest emit skipped (%s): %s", name, exc)
 
+    # The event loop keeps only weak references to tasks; hold a strong one until the send finishes so a
+    # fire-and-forget emit cannot be garbage-collected mid-flight.
     task = asyncio.create_task(_send())
-    task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+    _pending_emits.add(task)
+    task.add_done_callback(_pending_emits.discard)
