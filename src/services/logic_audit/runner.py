@@ -137,30 +137,6 @@ def _normalize_section_payload(data: dict[str, Any], section_name: str) -> dict[
     }
 
 
-def format_report_text(report: LogicAuditReport) -> str:
-    lines: list[str] = []
-    if report.summary:
-        lines.append(report.summary)
-        lines.append("")
-    for section in report.sections:
-        if not section.conflicts and not section.weak_claims:
-            continue
-        lines.append(f"## {section.section}")
-        for conflict in section.conflicts:
-            sev = conflict.severity.upper()
-            lines.append(f"- [{sev}] {conflict.comment}")
-            if conflict.claim_text:
-                lines.append(f"  Claim: {conflict.claim_text[:200]}")
-        for weak in section.weak_claims:
-            lines.append(f"- [WEAK] {weak}")
-        lines.append("")
-    for cross in report.cross_section_conflicts:
-        lines.append(f"- [CROSS] {cross.description}")
-    if not lines:
-        return "Không phát hiện mâu thuẫn logic rõ ràng trong phạm vi đã quét."
-    return "\n".join(lines).strip()
-
-
 MAX_CONFLICTS_PER_SECTION = 12
 MAX_WEAK_PER_SECTION = 5
 MAX_CROSS_CONFLICTS = 8

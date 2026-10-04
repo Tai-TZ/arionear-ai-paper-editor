@@ -8,7 +8,6 @@ from src.services.logic_audit.runner import (
     _fallback_from_perspectives,
     build_partial_audit_result,
     format_chat_summary,
-    format_report_text,
     merge_logic_section_into_report,
     merge_section_audit_payloads,
     upsert_partial_section,
@@ -42,34 +41,6 @@ def test_extract_json_object_from_fenced_block():
     data = _extract_json_object(raw)
     assert data is not None
     assert data.get("weak_claims") == ["x"]
-
-
-def test_format_report_text_empty():
-    report = LogicAuditReport(summary="", sections=[])
-    assert "Không phát hiện" in format_report_text(report)
-
-
-def test_format_report_text_with_conflict():
-    report = LogicAuditReport(
-        summary="Found issues",
-        sections=[
-            LogicSectionReport(
-                section="Introduction",
-                conflicts=[
-                    LogicConflictItem(
-                        id="1",
-                        type="unclear_reasoning",
-                        severity="warning",
-                        comment="Claim lacks support",
-                        claim_text="We prove X",
-                    )
-                ],
-            )
-        ],
-    )
-    text = format_report_text(report)
-    assert "Introduction" in text
-    assert "Claim lacks support" in text
 
 
 def test_strip_thinking_markup():

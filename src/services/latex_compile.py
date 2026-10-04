@@ -25,11 +25,7 @@ from src.models.schemas import (
 logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_LATEX_STUB_DIRS = (
-    _PROJECT_ROOT / "frontend" / "public" / "latex-stubs",
-    _PROJECT_ROOT / "frontend" / "public" / "assets" / "latex" / "ieee",
-    _PROJECT_ROOT / "frontend" / "public" / "assets" / "latex" / "tikz-cd",
-)
+_LATEX_STUB_DIRS = (_PROJECT_ROOT / "frontend" / "public" / "latex-stubs",)
 _STUB_FILES = ("IEEEtran.cls", "IEEEtran.bst", "tikz-cd.sty")
 _LATEX_SUPPORT_SUFFIXES = {".cls", ".bst", ".sty", ".bib"}
 _TEX_SUFFIXES = {".tex", ".latex"}

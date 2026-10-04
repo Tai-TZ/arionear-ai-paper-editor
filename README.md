@@ -15,7 +15,7 @@
 ![LaTeX](https://img.shields.io/badge/LaTeX-008080?style=for-the-badge&logo=latex&logoColor=white)
 ![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 
-[Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Đánh giá](#-kết-quả-đánh-giá) · [Tài liệu](#-tài-liệu)
+[Tính năng](#-tính-năng) · [Kiến trúc](#️-kiến-trúc) · [Bắt đầu nhanh](#-bắt-đầu-nhanh) · [API](#-api) · [Cấu trúc](#-cấu-trúc-thư-mục)
 
 </div>
 
@@ -272,37 +272,6 @@ Tất cả endpoint nằm dưới prefix `/api/v1`. Tài liệu tương tác (Sw
 
 ---
 
-## 📊 Kết quả đánh giá
-
-Benchmark chạy trên môi trường production với bộ test nội bộ (11 case intent routing, 4 case guardrail) và so sánh với baseline LLM thuần không có router/guardrail:
-
-| Metric | Arionear | Baseline |
-|---|:---:|:---:|
-| Intent routing accuracy | **100%** | 65% |
-| Edit scope accuracy | **100%** | 40% |
-| Numeric drift detection | **100%** | 0% |
-| Compile success rate | **100%** | 70% |
-| Latency trung bình (LLM thật) | **~3.4 s** | — |
-| Chi phí ước tính | **~$1.2 / user / tháng** | $4.5 |
-
-Báo cáo đầy đủ — gồm cả các case chưa đạt và hướng khắc phục — trong [EVALUATION.md](./EVALUATION.md). Tái chạy: `python eval/scripts/run_gate3_eval.py --help`.
-
----
-
-## 🧪 Kiểm thử
-
-```bash
-pytest tests/ -v                 # 300+ test backend (API, services, guardrails)
-ruff check src tests             # lint Python
-ruff format --check src tests    # kiểm tra format
-cd frontend && npm test          # unit test frontend (Vitest)
-npm run typecheck                # TypeScript (tsc --noEmit)
-```
-
-CI trên GitHub Actions tự động chạy lint + format check, test backend, type check, test và build frontend cho mỗi push/PR. Hoặc chạy toàn bộ kiểm tra backend bằng `make check`.
-
----
-
 ## 📁 Cấu trúc thư mục
 
 ```text
@@ -324,32 +293,6 @@ arionear-ai-paper-editor/
 ├── Dockerfile · docker-compose.yml
 └── ARCHITECTURE.md · ROADMAP.md · EVALUATION.md
 ```
-
----
-
-## ☁️ Triển khai
-
-Backend và frontend được đóng gói thành container và triển khai lên **Google Cloud Run**; secrets được quản lý qua Secret Manager.
-
-```powershell
-.\scripts\deploy-cloudrun-backend.ps1 -ProjectId <gcp-project> -FrontendUrl https://<your-domain>
-.\scripts\deploy-cloudrun-frontend.ps1 -ProjectId <gcp-project>
-```
-
----
-
-## 📚 Tài liệu
-
-| Tài liệu | Nội dung |
-|---|---|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc tổng thể, agents, guardrail, deployment |
-| [docs/architecture_diagram.md](./docs/architecture_diagram.md) | Sơ đồ component & data flow |
-| [docs/GUARDRAILS.md](./docs/GUARDRAILS.md) | Thiết kế guardrail 4 lớp |
-| [docs/DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) | Thiết lập PostgreSQL / Prisma |
-| [docs/pdf-preview-deploy.md](./docs/pdf-preview-deploy.md) | Vận hành compile & PDF preview |
-| [EVALUATION.md](./EVALUATION.md) | Kết quả kiểm thử & benchmark |
-| [ROADMAP.md](./ROADMAP.md) | Lộ trình phát triển |
-| [scripts/build_diagrams.py](./scripts/build_diagrams.py) | Sinh lại các sơ đồ SVG động trong `docs/assets/` |
 
 ---
 
