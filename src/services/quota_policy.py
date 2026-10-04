@@ -55,9 +55,10 @@ def _sum_tokens_for_user(
     end: datetime | None = None,
 ) -> int:
     token_expr = effective_tokens_expr()
+    # Index range scan on ix_ai_sessions_user_id_created_at — no join to papers (see resolved_user_id_expr).
     query = (
         db.query(func.coalesce(func.sum(token_expr), 0))
-        .outerjoin(Paper, AiSession.paper_id == Paper.id)
+        .select_from(AiSession)
         .filter(resolved_user_id_expr() == user_id)
         .filter(_meaningful_session_filter())
     )

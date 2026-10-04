@@ -25,8 +25,14 @@ def effective_tokens_expr():
 
 
 def resolved_user_id_expr():
-    """Prefer ai_sessions.user_id; fall back to paper owner."""
-    return func.coalesce(AiSession.user_id, Paper.user_id)
+    """Owner of a usage row: ``ai_sessions.user_id``, indexed with ``created_at``.
+
+    ``record_ai_usage`` always stores the paper owner's id, and migration
+    ``20261004120000_ai_sessions_user_id_created_at_index`` backfilled legacy rows from ``papers.user_id``,
+    so the old ``coalesce(ai_sessions.user_id, papers.user_id)`` join is no longer needed (and defeated the
+    ``ix_ai_sessions_user_id_created_at`` index).
+    """
+    return AiSession.user_id
 
 
 def record_ai_usage(

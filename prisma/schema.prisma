@@ -256,6 +256,7 @@ model AiSession {
 
   @@index([paperId])
   @@index([sectionId])
+  @@index([userId, createdAt], map: "ix_ai_sessions_user_id_created_at")
   @@map("ai_sessions")
 }
 

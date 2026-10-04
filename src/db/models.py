@@ -292,6 +292,8 @@ class AiSession(Base):
     __table_args__ = (
         Index("ix_ai_sessions_paper_id", "paper_id"),
         Index("ix_ai_sessions_section_id", "section_id"),
+        # Quota / admin usage windows: WHERE user_id = :uid AND created_at >= :start AND created_at < :end
+        Index("ix_ai_sessions_user_id_created_at", "user_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
