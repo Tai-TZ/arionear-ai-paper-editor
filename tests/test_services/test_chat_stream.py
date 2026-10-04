@@ -25,6 +25,12 @@ from src.services.intent_rules import IntentResult
 from src.services.quota_policy import QuotaExceededError
 
 
+@pytest.fixture(autouse=True)
+def _llm_key_configured(monkeypatch):
+    """Every LLM node is mocked here; give get_llm() a key so results don't depend on the local .env."""
+    monkeypatch.setattr("src.services.llm.get_provider_api_keys", lambda _provider: ["test-key"])
+
+
 def _parse_sse(chunks: list[str]) -> list[tuple[str, dict]]:
     events: list[tuple[str, dict]] = []
     for chunk in chunks:
@@ -120,6 +126,29 @@ async def test_stream_structure_emits_done(monkeypatch):
     done = next(data for name, data in events if name == "done")
     assert done["task"] == "structure"
     assert any(s.get("section") == "Methods" for s in done.get("structure_suggestions", []))
+
+
+@pytest.mark.asyncio
+async def test_stream_missing_provider_key_emits_friendly_error(monkeypatch):
+    """Regression: a nested import used to shadow friendly_llm_error, so this path raised UnboundLocalError."""
+
+    async def _mock_classify_intent(*_args, **_kwargs):
+        return IntentResult(action="structure")
+
+    def _no_key(*_args, **_kwargs):
+        raise ValueError("No API key configured for provider 'zai'.")
+
+    monkeypatch.setattr("src.services.chat_stream.classify_intent", _mock_classify_intent)
+    monkeypatch.setattr("src.services.chat_stream.get_llm", _no_key)
+    monkeypatch.setattr("src.services.chat_stream.enforce_llm_quota_for_paper", lambda *_args, **_kwargs: None)
+
+    request = ChatRequest(
+        message="/structure", session_id="no-key", latex_content=r"\section{Intro}Text.", task="structure"
+    )
+    events = await _collect_stream(request)
+    error = next((data for name, data in events if name == "error"), None)
+    assert error is not None
+    assert error["message"]
 
 
 @pytest.mark.asyncio

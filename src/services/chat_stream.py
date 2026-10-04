@@ -1281,8 +1281,6 @@ async def stream_chat(
                     if audit_task.done() and progress_queue.empty():
                         logic_result = await _collect_audit_task()
                         if logic_result is None:
-                            from src.services.llm_errors import friendly_llm_error
-
                             exc = audit_task.exception()
                             message = friendly_llm_error(exc) if exc else "Logic audit failed."
                             await tracker.fail(message)
@@ -1326,8 +1324,6 @@ async def stream_chat(
                         if audit_task.done():
                             logic_result = await _collect_audit_task()
                             if logic_result is None:
-                                from src.services.llm_errors import friendly_llm_error
-
                                 exc = audit_task.exception()
                                 message = friendly_llm_error(exc) if exc else "Logic audit failed."
                                 await tracker.fail(message)
