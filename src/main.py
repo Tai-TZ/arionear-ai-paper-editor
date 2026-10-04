@@ -22,6 +22,7 @@ from src.cors_config import build_cors_middleware_kwargs
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
 from src.inngest.functions import INNGEST_FUNCTIONS
+from src.security_headers import SecurityHeadersMiddleware
 from src.services.auth_service import ensure_god_admin
 from src.services.sessions import refresh_session_store
 from src.services.template_store import ensure_template_seed
@@ -85,6 +86,8 @@ app = FastAPI(
 
 settings = get_settings()
 app.add_middleware(CORSMiddleware, **build_cors_middleware_kwargs(settings))
+# Added last = outermost, so CORS preflights and error responses get the headers too.
+app.add_middleware(SecurityHeadersMiddleware, hsts=settings.app_env == "production")
 
 app.include_router(router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
