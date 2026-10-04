@@ -10,6 +10,10 @@ LLMProvider = Literal["openai", "anthropic", "openrouter", "zai", "google"]
 # Active providers for admin UI and editor selector (order = display priority).
 ENABLED_LLM_PROVIDERS: tuple[LLMProvider, ...] = ("google", "openrouter", "zai")
 
+# JWT signing secret: the default is for local dev only; production refuses it (validate_production_settings).
+DEFAULT_AUTH_SECRET_KEY = "dev-only-change-in-production"
+MIN_PRODUCTION_SECRET_LENGTH = 32
+
 
 def is_llm_provider_enabled(provider: str | None) -> bool:
     normalized = normalize_llm_provider(provider)
@@ -154,7 +158,7 @@ class Settings(BaseSettings):
     openalex_mailto: str = ""
 
     # Auth (JWT)
-    auth_secret_key: str = "dev-only-change-in-production"
+    auth_secret_key: str = DEFAULT_AUTH_SECRET_KEY
     auth_token_expire_hours: int = Field(default=72, ge=1, le=168)  # 3 days
     auth_token_remember_days: int = Field(default=30, ge=1, le=90)
     auth_reset_expire_minutes: int = Field(default=30, ge=5, le=120)
@@ -180,6 +184,20 @@ class Settings(BaseSettings):
     admin_god_email: str = ""
     admin_god_password: str = ""
     admin_god_name: str = "Platform God Admin"
+
+
+def validate_production_settings(settings: Settings) -> None:
+    """Refuse to start in production with a guessable JWT signing secret."""
+    if settings.app_env != "production":
+        return
+    secret = settings.auth_secret_key or ""
+    if secret == DEFAULT_AUTH_SECRET_KEY:
+        raise RuntimeError("AUTH_SECRET_KEY is still the development default; set a strong secret in production.")
+    if len(secret) < MIN_PRODUCTION_SECRET_LENGTH:
+        raise RuntimeError(
+            f"AUTH_SECRET_KEY must be at least {MIN_PRODUCTION_SECRET_LENGTH} characters in production "
+            "(generate one with: openssl rand -hex 32)."
+        )
 
 
 @lru_cache

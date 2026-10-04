@@ -17,7 +17,7 @@ from src.api.review_routes import router as review_router
 from src.api.routes import router
 from src.api.share_routes import router as share_router
 from src.api.template_routes import router as template_router
-from src.config import get_settings
+from src.config import get_settings, validate_production_settings
 from src.cors_config import build_cors_middleware_kwargs
 from src.db.engine import db_is_ready, get_db, init_db, is_db_enabled
 from src.inngest.client import inngest_client
@@ -51,8 +51,7 @@ def _refresh_provider_keys() -> None:
 async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
-    if settings.app_env == "production" and settings.auth_secret_key == "dev-only-change-in-production":
-        print("WARNING: AUTH_SECRET_KEY is still the default. Set a strong secret before production.")
+    validate_production_settings(settings)
     if is_db_enabled():
         try:
             await asyncio.wait_for(asyncio.to_thread(init_db), timeout=20.0)
