@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import gzip
-import hashlib
 import subprocess
 import uuid
+import zlib
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 
 from src.agents.graph import agent
 from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
@@ -37,6 +37,7 @@ from src.models.schemas import (
     SyncTeXLookupRequest,
     SyncTeXLookupResponse,
 )
+from src.services.auth_service import decode_access_token
 from src.services.chat_stream import AGENT_NAME, flush_sse_stream, stream_chat
 from src.services.citations.relevance import run_citation_relevance
 from src.services.citations.verifier import verify_citations
@@ -44,6 +45,7 @@ from src.services.compile_policy import CompileRateLimitedError, check_compile_r
 from src.services.latex_compile import (
     AssetResyncRequiredError,
     CompileBudgetExceededError,
+    UnsafeMainFileError,
     compile_latex,
     compile_status,
     parse_synctex_inverse_disambiguated,
@@ -401,19 +403,71 @@ async def get_compile_status():
     return compile_status()
 
 
+# Upper bound for the compile request body, both as sent and after gzip decompression.
+COMPILE_MAX_BODY_BYTES = 64 * 1024 * 1024
+
+
+def _payload_too_large() -> HTTPException:
+    limit_mb = COMPILE_MAX_BODY_BYTES // (1024 * 1024)
+    return HTTPException(status_code=413, detail=f"Compile request is too large (limit {limit_mb} MB).")
+
+
+async def _read_compile_body(request: Request) -> bytes:
+    """Read the body without ever buffering more than COMPILE_MAX_BODY_BYTES."""
+    limit = COMPILE_MAX_BODY_BYTES
+    declared = request.headers.get("content-length")
+    if declared is not None:
+        try:
+            declared_len = int(declared)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid Content-Length header.") from e
+        if declared_len > limit:
+            raise _payload_too_large()
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > limit:
+            raise _payload_too_large()
+    return bytes(body)
+
+
+def _gunzip_bounded(raw: bytes) -> bytes:
+    """Decompress gzip, refusing output above COMPILE_MAX_BODY_BYTES (no zip bombs)."""
+    limit = COMPILE_MAX_BODY_BYTES
+    decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    try:
+        out = decompressor.decompress(raw, limit + 1)
+    except zlib.error as e:
+        raise HTTPException(status_code=400, detail="Invalid gzip request body.") from e
+    if len(out) > limit or decompressor.unconsumed_tail:
+        raise _payload_too_large()
+    if not decompressor.eof:
+        raise HTTPException(status_code=400, detail="Truncated gzip request body.")
+    return out
+
+
 @router.post("/compile", response_model=CompileResponse)
 async def compile_manuscript(request: Request):
     try:
         client_key = _compile_client_key(request)
         check_compile_rate_limit(client_key)
-        raw = await request.body()
+        raw = await _read_compile_body(request)
         if request.headers.get("content-encoding", "").lower() == "gzip":
-            raw = gzip.decompress(raw)
+            raw = _gunzip_bounded(raw)
         body = CompileRequest.model_validate_json(raw)
         result = await asyncio.to_thread(compile_latex, body)
         return result
+    except HTTPException:
+        raise
     except CompileRateLimitedError as e:
         raise HTTPException(status_code=429, detail=str(e)) from e
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=e.errors(include_url=False, include_context=False, include_input=False),
+        ) from e
+    except UnsafeMainFileError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except AssetResyncRequiredError as e:
         raise HTTPException(
             status_code=409,
@@ -431,17 +485,30 @@ async def compile_manuscript(request: Request):
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from e
 
 
+def _client_ip(request: Request) -> str | None:
+    """Rightmost X-Forwarded-For hop (appended by Cloud Run's proxy); the leftmost is client-controlled."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    if hops:
+        return hops[-1]
+    if request.client and request.client.host:
+        return request.client.host
+    return None
+
+
 def _compile_client_key(request: Request) -> str:
+    """Rate-limit key: the authenticated user when the bearer token verifies, else the client IP.
+
+    Unverified token strings are never used as keys (anyone could rotate them to dodge the limit).
+    """
     auth = request.headers.get("authorization", "").strip()
     if auth.lower().startswith("bearer "):
-        digest = hashlib.sha256(auth[7:].strip().encode("utf-8")).hexdigest()[:32]
-        return f"auth:{digest}"
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return f"ip:{forwarded.split(',')[0].strip()}"
-    if request.client and request.client.host:
-        return f"ip:{request.client.host}"
-    return "ip:unknown"
+        payload = decode_access_token(auth.split(" ", 1)[1].strip())
+        sub = payload.get("sub") if payload else None
+        if sub:
+            return f"user:{sub}"
+    ip = _client_ip(request)
+    return f"ip:{ip}" if ip else "ip:unknown"
 
 
 @router.post("/compile/synctex", response_model=SyncTeXLookupResponse)
