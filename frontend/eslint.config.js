@@ -36,5 +36,12 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // File routes export `Route` next to their local page components. TanStack Router's Vite
+    // plugin code-splits those components into their own modules, so Fast Refresh still works;
+    // eslint-plugin-react-refresh >= 0.5 can't see that and flags every local component.
+    files: ["src/routes/**/*.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
   eslintPluginPrettier,
 );
