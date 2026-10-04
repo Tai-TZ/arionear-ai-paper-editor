@@ -42,7 +42,7 @@ curl http://localhost:8000/api/v1/compile/status
 |----------|-------------|------------|
 | `APP_ENV` | `development` | `production` |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | `https://app.your-domain.com` |
-| `VITE_API_URL` | (default localhost) | Set at **frontend build** time |
+| `VITE_API_URL` | (unset: same-origin `/api/v1` via the Vite proxy) | Set at **frontend build** time, or leave unset to call same-origin `/api/v1` |
 
 ### Frontend build
 
@@ -53,7 +53,7 @@ cd frontend
 VITE_API_URL=https://api.your-domain.com/api/v1 npm run build
 ```
 
-Deploy `frontend/dist` to your static host. Without this, the browser will call `localhost:8000` and compile will fail.
+Deploy `frontend/dist` to your static host. Without `VITE_API_URL` the browser calls same-origin `/api/v1`, so the reverse proxy in front of the frontend must route `/api/v1` to the backend.
 
 ### Reverse proxy
 
