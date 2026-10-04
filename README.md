@@ -93,7 +93,9 @@ Mở project → Soạn LaTeX → Chat với Ario → Xem diff → Accept / Reje
 
 ## 🏗️ Kiến trúc
 
-![Kiến trúc hệ thống Arionear](./docs/ARCHITECTURE.png)
+<p align="center">
+  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
+</p>
 
 Luồng chính của editor chạy qua **SSE streaming**: Intent Router phân loại yêu cầu (rules → LLM fallback), chuyển đến agent tương ứng; output đi qua Integrity Monitor trước khi trở thành diff cho người dùng duyệt.
 
