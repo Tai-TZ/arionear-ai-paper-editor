@@ -90,6 +90,16 @@ function toStoredSummary(paper: PaperSummaryResponse): StoredProject {
   };
 }
 
+/** Request failure; `status` is the HTTP status, absent for network errors. */
+class PapersRequestError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAccessToken();
   if (!token) {
@@ -107,7 +117,7 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error(networkErrorMsg());
+    throw new PapersRequestError(networkErrorMsg());
   }
 
   if (res.status === 204) {
@@ -120,7 +130,7 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
       if (typeof window !== "undefined") {
         window.location.assign("/signin");
       }
-      throw new Error("Not authenticated.");
+      throw new PapersRequestError("Not authenticated.", res.status);
     }
     let detail: unknown = res.statusText;
     try {
@@ -129,7 +139,7 @@ async function papersFetch<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* ignore */
     }
-    throw new Error(mapApiHttpError(res.status, detail));
+    throw new PapersRequestError(mapApiHttpError(res.status, detail), res.status);
   }
 
   return res.json() as Promise<T>;
@@ -181,14 +191,18 @@ type PaperPatchOptions = {
   immediate?: boolean;
 };
 
+type FlushWaiter = {
+  resolve: (value: StoredProject) => void;
+  reject: (reason?: unknown) => void;
+};
+
 type PaperQueue = {
+  /** Changes not sent yet, merged in call order. */
   pending: PaperPatch;
+  /** Callers whose changes are in `pending`; settled by the request that sends them. */
+  pendingWaiters: FlushWaiter[];
   timer: ReturnType<typeof setTimeout> | null;
-  inflight: Promise<StoredProject> | null;
-  flushWaiters: Array<{
-    resolve: (value: StoredProject) => void;
-    reject: (reason?: unknown) => void;
-  }>;
+  inflight: Promise<void> | null;
 };
 
 const PAPER_PATCH_DEBOUNCE_MS = 400;
@@ -206,6 +220,14 @@ function mergePaperPatch(base: PaperPatch, next: PaperPatch): PaperPatch {
     }
     merged.files = Array.from(byPath.values());
   }
+  // The server appends assets by name, so two queued uploads must both survive the merge.
+  if (base.assets?.length && next.assets?.length) {
+    const byName = new Map(base.assets.map((a) => [a.name, a]));
+    for (const a of next.assets) {
+      byName.set(a.name, a);
+    }
+    merged.assets = Array.from(byName.values());
+  }
   return merged;
 }
 
@@ -214,15 +236,16 @@ function buildPaperPatchBody(patch: PaperPatch): Record<string, unknown> {
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.latex !== undefined) body.latex = patch.latex;
   if (patch.assets !== undefined) body.assets = patch.assets;
-  if (patch.metadata !== undefined) {
-    body.metadata = patch.metadata;
-  } else if (
+  if (
+    patch.metadata !== undefined ||
     patch.files !== undefined ||
     patch.mainFile !== undefined ||
     patch.compiler !== undefined ||
     patch.chatThreads !== undefined
   ) {
+    // A queued patch can carry raw metadata and typed fields at once; send both.
     body.metadata = {
+      ...(patch.metadata ?? {}),
       ...(patch.files !== undefined ? { files: patch.files } : {}),
       ...(patch.mainFile !== undefined ? { mainFile: patch.mainFile } : {}),
       ...(patch.compiler !== undefined ? { compiler: patch.compiler } : {}),
@@ -253,10 +276,16 @@ async function executePaperPatch(
   }
 }
 
+/** Client errors (bad input, auth) fail the same way again, so their patch is not kept. */
+function isTransientSaveError(err: unknown): boolean {
+  const status = err instanceof PapersRequestError ? err.status : undefined;
+  return status === undefined || status >= 500 || status === 408 || status === 429;
+}
+
 function getPaperQueue(id: string): PaperQueue {
   let queue = paperQueues.get(id);
   if (!queue) {
-    queue = { pending: {}, timer: null, inflight: null, flushWaiters: [] };
+    queue = { pending: {}, pendingWaiters: [], timer: null, inflight: null };
     paperQueues.set(id, queue);
   }
   return queue;
@@ -270,6 +299,7 @@ function schedulePaperFlush(id: string, immediate = false) {
   }
 
   const runFlush = () => {
+    queue.timer = null;
     if (queue.inflight) {
       queue.timer = setTimeout(runFlush, 50);
       return;
@@ -277,24 +307,33 @@ function schedulePaperFlush(id: string, immediate = false) {
     // Nothing queued: every waiter was registered with a patch and is settled by the request that sent it.
     if (Object.keys(queue.pending).length === 0) return;
 
+    // Snapshot the patch together with its callers: anything queued while this request is in
+    // flight belongs to the next request and must not be settled by this one.
     const patch = queue.pending;
+    const waiters = queue.pendingWaiters;
     queue.pending = {};
-    queue.inflight = executePaperPatch(id, patch)
-      .then((result) => {
+    queue.pendingWaiters = [];
+    queue.inflight = executePaperPatch(id, patch).then(
+      (result) => {
         queue.inflight = null;
-        const waiters = queue.flushWaiters.splice(0);
         waiters.forEach((w) => w.resolve(result));
         if (Object.keys(queue.pending).length > 0) {
           schedulePaperFlush(id, true);
         }
-        return result;
-      })
-      .catch((err) => {
+      },
+      (err: unknown) => {
         queue.inflight = null;
-        const waiters = queue.flushWaiters.splice(0);
+        // Keep the unsent changes so the next save retries them; newer queued fields win.
+        if (isTransientSaveError(err)) {
+          queue.pending = mergePaperPatch(patch, queue.pending);
+        }
         waiters.forEach((w) => w.reject(err));
-        throw err;
-      });
+        // Retry right away only when newer saves are waiting; otherwise the next save carries it.
+        if (queue.pendingWaiters.length > 0) {
+          schedulePaperFlush(id, true);
+        }
+      },
+    );
   };
 
   if (immediate) {
@@ -312,7 +351,7 @@ export async function updatePaper(
   const queue = getPaperQueue(id);
   queue.pending = mergePaperPatch(queue.pending, patch);
   return new Promise((resolve, reject) => {
-    queue.flushWaiters.push({ resolve, reject });
+    queue.pendingWaiters.push({ resolve, reject });
     schedulePaperFlush(id, options?.immediate ?? false);
   });
 }
