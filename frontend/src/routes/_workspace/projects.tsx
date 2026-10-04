@@ -10,6 +10,7 @@ import {
   Pencil,
   FolderOpen,
   FileArchive,
+  FileUp,
   Trash2,
   Loader2,
   BookOpen,
@@ -34,6 +35,14 @@ import {
 } from "@/lib/project-store";
 import { importLatexFileList, type LatexImportResult } from "@/lib/latex-import";
 import { importOverleafZip } from "@/lib/overleaf-import";
+import { importDocumentFile } from "@/lib/api/document-import-api";
+import {
+  DOCUMENT_IMPORT_ACCEPT,
+  documentImportKind,
+  isDocumentImportFile,
+} from "@/lib/document-import";
+import { documentImportCopy } from "@/lib/document-import-i18n";
+import { notifyDocumentImportWarnings } from "@/components/projects/document-import-notice";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { ProjectsListSkeleton } from "@/components/workspace/workspace-content-skeleton";
 import { useLocale } from "@/components/locale-context";
@@ -69,8 +78,10 @@ function ProjectsPage() {
   const { locale } = useLocale();
   const t = useMemo(() => projectsCopy(locale), [locale]);
   const workspace = useMemo(() => commonCopy(locale).workspace, [locale]);
+  const docImport = useMemo(() => documentImportCopy(locale), [locale]);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const [projects, setProjects] = useState<StoredProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingLabel, setCreatingLabel] = useState<string | null>(null);
@@ -203,10 +214,43 @@ function ProjectsPage() {
     }
   };
 
+  const importDocument = async (file: File) => {
+    setCreatingLabel(docImport.importing);
+    setCreatingDetail(
+      documentImportKind(file.name) === "pdf"
+        ? docImport.importingDetailPdf
+        : docImport.importingDetailDocx,
+    );
+    setNewMenuOpen(false);
+    setLoadError(null);
+    try {
+      const imported = await importDocumentFile(file, locale);
+      await handleImportedProject(imported);
+      notifyDocumentImportWarnings(imported.warnings, locale);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : docImport.errors.generic;
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setCreatingLabel(null);
+      setCreatingDetail(null);
+    }
+  };
+
+  const handleDocumentImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) await importDocument(file);
+  };
+
   const handleZipImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (isDocumentImportFile(file.name)) {
+      await importDocument(file);
+      return;
+    }
     setCreatingLabel(t.importingZip);
     setCreatingDetail(t.importingZipDetail);
     setNewMenuOpen(false);
@@ -273,6 +317,13 @@ function ProjectsPage() {
         accept=".zip,application/zip"
         className="hidden"
         onChange={handleZipImport}
+      />
+      <input
+        ref={documentInputRef}
+        type="file"
+        accept={DOCUMENT_IMPORT_ACCEPT}
+        className="hidden"
+        onChange={handleDocumentImport}
       />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -373,6 +424,19 @@ function ProjectsPage() {
                       >
                         <FileArchive className="h-3.5 w-3.5" />
                         {t.importZip}
+                      </button>
+                      <button
+                        onClick={() =>
+                          runWithNotice(() => {
+                            setNewMenuOpen(false);
+                            documentInputRef.current?.click();
+                          })
+                        }
+                        className="projects-menu-item"
+                        title={docImport.menuItemTitle}
+                      >
+                        <FileUp className="h-3.5 w-3.5" />
+                        {docImport.menuItem}
                       </button>
                       <button
                         onClick={() =>
