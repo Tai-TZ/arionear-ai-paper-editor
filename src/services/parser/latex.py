@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import logging
 import re
+
+import bibtexparser
+from bibtexparser.middlewares import RemoveEnclosingMiddleware
+from bibtexparser.model import Block, Entry, ParsingFailedBlock
+
+logger = logging.getLogger(__name__)
 
 SECTION_RE = re.compile(r"\\section\*?\{([^}]*)\}", re.MULTILINE)
 SUBSECTION_RE = re.compile(r"\\subsection\*?\{([^}]*)\}", re.MULTILINE)
-CITE_RE = re.compile(r"\\cite[a-zA-Z*]*\{([^}]+)\}")
-BIB_ENTRY_RE = re.compile(r"@(\w+)\s*\{\s*([^,\s]+)\s*,([^@]*)", re.DOTALL)
-FIELD_RE = re.compile(r"(\w+)\s*=\s*\{([^}]*)\}|(\w+)\s*=\s*\"([^\"]*)\"", re.DOTALL)
+# \cite, natbib (\citep[pre][post]{…}, \citet, \citeauthor*) and biblatex (\parencite, \textcite, \autocite, …).
+CITE_RE = re.compile(r"\\([A-Za-z]*cite[A-Za-z]*)\*?(?:\s*\[[^\]]*\]){0,2}\s*\{([^}]+)\}")
+# Commands that match CITE_RE but do not cite a key in the text.
+_NON_CITE_COMMANDS = frozenset({"nocite", "citestyle", "setcitestyle"})
+# "@type{key," (or "@type(key,") — stripped from an entry's raw text to get its field body.
+_BIB_ENTRY_HEADER_RE = re.compile(r"^\s*@\s*\w+\s*[{(]\s*[^,\s]*\s*,?")
+_REMOVE_ENCLOSING = RemoveEnclosingMiddleware(allow_inplace_modification=True)
 
 STANDARD_SECTIONS = [
     "abstract",
@@ -85,7 +96,9 @@ def extract_cite_keys(latex: str) -> list[str]:
     keys: list[str] = []
     seen: set[str] = set()
     for match in CITE_RE.finditer(latex):
-        for key in match.group(1).split(","):
+        if match.group(1) in _NON_CITE_COMMANDS:
+            continue
+        for key in match.group(2).split(","):
             k = key.strip()
             if k and k not in seen:
                 seen.add(k)
@@ -102,36 +115,60 @@ def extract_bib_content(latex: str, bib_content: str = "") -> str:
     return ""
 
 
-def _parse_bib_fields(body: str) -> dict[str, str]:
-    fields: dict[str, str] = {}
-    for match in FIELD_RE.finditer(body):
-        if match.group(1):
-            fields[match.group(1).lower()] = match.group(2).strip()
-        elif match.group(3):
-            fields[match.group(3).lower()] = match.group(4).strip()
-    return fields
+def _usable_entry(block: Block, library: bibtexparser.Library) -> Entry | None:
+    """The entry a parsed block stands for; ``None`` for non-entries and blocks that failed to parse.
+
+    A duplicate cite key or a duplicate field makes bibtexparser set the entry aside as a failed block.
+    It is still used (later duplicates win, as with the former regex parser), so its enclosing is removed here.
+    """
+    if isinstance(block, Entry):
+        return block
+    inner = getattr(block, "ignore_error_block", None)
+    if not isinstance(inner, Entry):
+        return None
+    if RemoveEnclosingMiddleware.metadata_key() not in inner.parser_metadata:
+        inner = _REMOVE_ENCLOSING.transform_entry(inner, library)
+    return inner
 
 
 def parse_bib_entries(bib: str) -> dict[str, dict]:
+    """Map cite key → ``{key, type, title, author, year, doi, eprint, journal, raw}`` (all strings).
+
+    Field values are the BibTeX field text with only the outer ``{…}`` / ``"…"`` removed — inner braces and
+    LaTeX macros are kept and ``@string`` macros are resolved. ``raw`` is the entry body after ``key,``.
+    Blocks that cannot be parsed are skipped (and logged); this never raises.
+    """
     entries: dict[str, dict] = {}
     if not bib.strip():
         return entries
-    for match in BIB_ENTRY_RE.finditer(bib):
-        entry_type = match.group(1).lower()
-        key = match.group(2).strip()
-        body = match.group(3)
-        fields = _parse_bib_fields(body)
+    try:
+        library = bibtexparser.parse_string(bib)
+    except Exception:
+        logger.warning("parse_bib_entries: bibtexparser failed on the bibliography", exc_info=True)
+        return entries
+
+    skipped = 0
+    for block in library.blocks:
+        entry = _usable_entry(block, library)
+        if entry is None:
+            if isinstance(block, ParsingFailedBlock):
+                skipped += 1
+            continue
+        fields = {field.key.lower(): str(field.value).strip() for field in entry.fields}
+        key = entry.key.strip()
         entries[key] = {
             "key": key,
-            "type": entry_type,
+            "type": entry.entry_type.lower(),
             "title": fields.get("title", ""),
             "author": fields.get("author", ""),
             "year": fields.get("year", ""),
             "doi": fields.get("doi", ""),
             "eprint": fields.get("eprint", ""),
             "journal": fields.get("journal", ""),
-            "raw": body.strip(),
+            "raw": _BIB_ENTRY_HEADER_RE.sub("", entry.raw or "", count=1).strip(),
         }
+    if skipped:
+        logger.warning("parse_bib_entries: skipped %d BibTeX block(s) that could not be parsed", skipped)
     return entries
 
 

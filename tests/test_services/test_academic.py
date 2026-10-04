@@ -45,6 +45,16 @@ def test_extract_cite_keys():
     assert keys == ["smith2020", "jones2021"]
 
 
+def test_extract_cite_keys_natbib_and_biblatex_variants():
+    latex = r"\citep[see][p.~3]{a, b} \parencite{c} \textcite{d} \cite{e} \citeauthor*{f} \cite[ch.~2]{a}"
+    assert extract_cite_keys(latex) == ["a", "b", "c", "d", "e", "f"]
+
+
+def test_extract_cite_keys_ignores_nocite_and_style_commands():
+    latex = r"\nocite{*} \nocite{hidden} \setcitestyle{authoryear,round} \citestyle{plain} \citet{shown}"
+    assert extract_cite_keys(latex) == ["shown"]
+
+
 def test_parse_intent_json():
     from src.services.intent_router import parse_intent_payload
 
