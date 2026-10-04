@@ -14,6 +14,7 @@ from src.agents.graph import agent
 from src.api.agent_deps import assert_paper_session_access, get_agent_user_id
 from src.config import get_settings, is_llm_provider_enabled
 from src.db.engine import db_is_ready, is_db_enabled
+from src.models.citation_schemas import CitationRelevanceRequest, CitationRelevanceResponse
 from src.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -37,6 +38,7 @@ from src.models.schemas import (
     SyncTeXLookupResponse,
 )
 from src.services.chat_stream import AGENT_NAME, flush_sse_stream, stream_chat
+from src.services.citations.relevance import run_citation_relevance
 from src.services.citations.verifier import verify_citations
 from src.services.compile_policy import CompileRateLimitedError, check_compile_rate_limit
 from src.services.latex_compile import (
@@ -48,7 +50,9 @@ from src.services.latex_compile import (
     resolve_synctex_line_from_request,
 )
 from src.services.llm import list_providers
+from src.services.llm_errors import friendly_llm_error
 from src.services.parser.latex import extract_bib_content, extract_cite_keys, parse_bib_entries
+from src.services.quota_policy import QuotaExceededError
 from src.services.sessions import session_store
 
 router = APIRouter()
@@ -371,6 +375,7 @@ async def verify_session_citations(
     results = await verify_citations(
         entries,
         semantic_scholar_api_key=settings.semantic_scholar_api_key,
+        openalex_mailto=settings.openalex_mailto,
     )
     session_store.set_citation_registry(request.session_id, results)
     verified = sum(1 for r in results if r.get("status") == "verified")
@@ -378,6 +383,21 @@ async def verify_session_citations(
         results=results,
         summary=f"Verified {verified}/{len(results)} citations.",
     )
+
+
+@router.post("/citations/relevance", response_model=CitationRelevanceResponse)
+async def check_citations_relevance(
+    request: CitationRelevanceRequest,
+    user_id: uuid.UUID | None = Depends(get_agent_user_id),
+):
+    """Citation Layer 4 — LLM judges whether each cited source supports its claim (read-only)."""
+    assert_paper_session_access(request.session_id, user_id)
+    try:
+        return await run_citation_relevance(request)
+    except QuotaExceededError as e:
+        raise HTTPException(status_code=429, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=friendly_llm_error(e)) from e
 
 
 @router.get("/compile/status", response_model=CompileStatusResponse)

@@ -141,6 +141,8 @@ class Settings(BaseSettings):
 
     # External APIs (citation verification)
     semantic_scholar_api_key: str = ""
+    # OpenAlex polite pool (optional contact email, sent as `mailto`; no API key needed)
+    openalex_mailto: str = ""
 
     # Auth (JWT)
     auth_secret_key: str = "dev-only-change-in-production"
