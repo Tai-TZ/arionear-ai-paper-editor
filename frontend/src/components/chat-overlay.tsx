@@ -560,6 +560,9 @@ export function ChatMessages({
     if (chatLoading || !hasScrolledRef.current) {
       // Instant while streaming: a smooth scroll restarted on every frame only lags and stutters.
       el.scrollTop = el.scrollHeight;
+      // Record it now so the next user scroll is compared against this position, even when the
+      // browser coalesces our scroll event with the user's.
+      lastScrollTopRef.current = el.scrollTop;
     } else {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }
