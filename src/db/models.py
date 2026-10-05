@@ -250,18 +250,25 @@ class Paper(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     user: Mapped[User | None] = relationship(back_populates="papers")
-    sections: Mapped[list[PaperSection]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    # Children are removed by the database (ON DELETE CASCADE / SET NULL in the migrations), so
+    # deleting a paper never loads its sessions, citations or audit rows first.
+    sections: Mapped[list[PaperSection]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
     # Deterministic order: ``ai_sessions[-1]`` is the newest row, never an arbitrary one.
     ai_sessions: Mapped[list[AiSession]] = relationship(
         back_populates="paper",
         cascade="all, delete-orphan",
+        passive_deletes=True,
         order_by=lambda: (AiSession.created_at, AiSession.id),
     )
-    citations: Mapped[list[Citation]] = relationship(back_populates="paper", cascade="all, delete-orphan")
-    reviewer_comments: Mapped[list[ReviewerComment]] = relationship(
-        back_populates="paper", cascade="all, delete-orphan"
+    citations: Mapped[list[Citation]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
     )
-    audit_logs: Mapped[list[AuditLog]] = relationship(back_populates="paper")
+    reviewer_comments: Mapped[list[ReviewerComment]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", passive_deletes=True
+    )
+    audit_logs: Mapped[list[AuditLog]] = relationship(back_populates="paper", passive_deletes=True)
 
 
 class PaperSection(Base):
