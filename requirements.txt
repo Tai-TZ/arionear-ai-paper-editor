@@ -24,7 +24,7 @@ langchain-google-genai>=4.4.0
 langgraph>=0.2.0
 
 # Database — schema via Prisma, runtime via SQLAlchemy
-sqlalchemy>=2.1.1
+sqlalchemy>=2.1.2
 psycopg2-binary>=2.9.0
 
 # Auth
