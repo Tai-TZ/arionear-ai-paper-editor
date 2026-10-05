@@ -432,7 +432,14 @@ async def upload_template_pdf(template_id: str, file: UploadFile) -> PaperTempla
     return get_template(template_id)
 
 
-IEEE_JOURNAL_MAIN_TEX = r"""\documentclass[journal]{IEEEtran}
+# The starter is a shortened copy of bare_jrnl.tex from the IEEEtran bundle (LPPL 1.3), whose terms
+# ask for modified versions to say so; the header comment below and the gallery license label do.
+IEEE_JOURNAL_LICENSE = "LPPL 1.3 — modified version of bare_jrnl.tex from IEEEtran (IEEEtran.cls ships with TeX Live)"
+_IEEE_SUPERSEDED_LICENSES = ("Other (as stated in the work)",)
+IEEE_JOURNAL_MAIN_TEX = r"""% Arionear IEEE journal starter: a MODIFIED, shortened version of bare_jrnl.tex from the
+% IEEEtran bundle by Michael Shell (LaTeX Project Public License 1.3, https://ctan.org/pkg/ieeetran).
+% Changes: trimmed to a one-file skeleton with Arionear placeholder text.
+\documentclass[journal]{IEEEtran}
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
@@ -560,9 +567,13 @@ def ensure_template_seed() -> None:
             data[_SEEDED_BUILTINS_KEY] = [*seeded, *missing]
         # Correct retired default license labels on built-ins seeded earlier; admin-set labels stay.
         for row in data["templates"]:
-            spec = _PUBLISHER_TEMPLATES_BY_ID.get(str(row.get("id") or ""))
+            template_id = str(row.get("id") or "")
+            spec = _PUBLISHER_TEMPLATES_BY_ID.get(template_id)
             if spec and row.get("license") in spec.superseded_licenses:
                 row["license"] = spec.metadata["license"]
+                changed = True
+            elif template_id == IEEE_JOURNAL_TEMPLATE_ID and row.get("license") in _IEEE_SUPERSEDED_LICENSES:
+                row["license"] = IEEE_JOURNAL_LICENSE
                 changed = True
         if changed:
             _write_registry(data)
@@ -593,7 +604,7 @@ def _seed_ieee_journal(now: str) -> dict[str, Any]:
             "Đây là file khung minh họa IEEEtran.cls dùng cho bài gửi tạp chí IEEE. Có thể kèm file BibTeX mẫu."
         ),
         "author": "IEEE template (Arionear gallery)",
-        "license": "Other (as stated in the work)",
+        "license": IEEE_JOURNAL_LICENSE,
         "tags": [
             "Citations",
             "IEEE Official Templates",
