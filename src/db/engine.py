@@ -7,7 +7,7 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import TypeVar
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
@@ -73,6 +73,12 @@ def db_error_detail() -> str | None:
     return _db_error
 
 
+def _enable_sqlite_foreign_keys(dbapi_connection, _record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 def _get_engine() -> Engine:
     global _engine, _SessionLocal
     if _engine is None:
@@ -101,6 +107,10 @@ def _get_engine() -> Engine:
         else:
             engine_kwargs["pool_timeout"] = 10
         _engine = create_engine(db_url, **engine_kwargs)
+        if db_url.startswith("sqlite"):
+            # SQLite only enforces foreign keys (and their ON DELETE actions) when asked; tests rely
+            # on the same cascades as Postgres now that deletes are passive.
+            event.listen(_engine, "connect", _enable_sqlite_foreign_keys)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
 

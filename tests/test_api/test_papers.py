@@ -207,3 +207,56 @@ async def test_patch_merges_partial_files(client, papers_db):
     files = {f["path"]: f["content"] for f in patched.json()["metadata"]["files"]}
     assert files["main.tex"] == "updated main"
     assert files["refs.bib"] == "@article{a, title={A}}"
+
+
+@pytest.mark.asyncio
+async def test_delete_paper_lets_the_database_cascade(client, papers_db):
+    """Deleting a paper must not load its AI sessions; the FK cascades remove them."""
+    from sqlalchemy import event, func, select
+
+    from src.db.engine import _get_engine, get_db
+    from src.db.models import AiSession, Suggestion, SuggestionStatus, SuggestionType, TaskType, User
+    from src.services.paper_service import get_paper
+
+    token = await _register(client, "del-cascade@uni.edu", "Cascade User")
+    headers = {"Authorization": f"Bearer {token}"}
+    create = await client.post(
+        "/api/v1/papers", headers=headers, json={"name": "Cascade", "latex": r"\documentclass{article}"}
+    )
+    paper_id = create.json()["id"]
+    with get_db() as db:
+        user = db.query(User).filter(User.email == "del-cascade@uni.edu").one()
+        paper = get_paper(db, user.id, uuid.UUID(paper_id))
+        for _ in range(3):
+            session = AiSession(paper_id=paper.id, user_id=user.id, task_type=TaskType.CHAT)
+            db.add(session)
+            db.flush()
+            db.add(
+                Suggestion(
+                    session_id=session.id,
+                    suggestion_type=SuggestionType.STYLE,
+                    original_text="a",
+                    suggested_text="b",
+                    status=SuggestionStatus.PENDING,
+                )
+            )
+        db.commit()
+
+    statements: list[str] = []
+
+    def _capture(_conn, _cursor, statement, *_args):
+        statements.append(statement)
+
+    engine = _get_engine()
+    event.listen(engine, "before_cursor_execute", _capture)
+    try:
+        deleted = await client.delete(f"/api/v1/papers/{paper_id}", headers=headers)
+    finally:
+        event.remove(engine, "before_cursor_execute", _capture)
+    assert deleted.status_code == 204
+
+    assert not [s for s in statements if s.lstrip().upper().startswith("SELECT") and "FROM ai_sessions" in s]
+    with get_db() as db:
+        pid = uuid.UUID(paper_id)
+        assert db.scalar(select(func.count()).select_from(AiSession).where(AiSession.paper_id == pid)) == 0
+        assert db.scalar(select(func.count()).select_from(Suggestion)) == 0
