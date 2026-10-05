@@ -579,6 +579,9 @@ kept as `LICENSES/LicenseRef-LPPL-1.3.txt` because SPDX only lists 1.3a and 1.3c
 The backend Docker image also installs TeX Live, latexmk and biber from Debian packages; their licenses travel with the
 image in `/usr/share/doc/*/copyright` and are not repeated here.
 
+This file, `LICENSE` and `LICENSES/` are copied into the backend image (`/app`); the Docker CI smoke test checks
+they are present. The frontend image is built from `frontend/` only and does not carry them yet.
+
 ## Runtime-loaded resources
 
 Not redistributed — the browser loads them from Google Fonts (`fonts.googleapis.com` / `fonts.gstatic.com`), from
