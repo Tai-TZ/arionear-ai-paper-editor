@@ -60,7 +60,7 @@
   --font-latex-times-mono: "Courier New", Courier, monospace;
 }
 
-/* LaTeX preview â€” Latin Modern (official CM web derivative used by LaTeX) */
+/* LaTeX preview — Latin Modern (official CM web derivative used by LaTeX) */
 @font-face {
   font-family: "Latin Modern Roman";
   src: url("/fonts/lm/lmroman-regular-webfont.woff") format("woff");
@@ -648,7 +648,7 @@
   overflow: hidden;
 }
 
-/* Shared metrics â€” textarea selection must match syntax highlight layer exactly */
+/* Shared metrics — textarea selection must match syntax highlight layer exactly */
 .editor-shell .latex-editor-canvas {
   font-family: var(--font-mono-data);
   font-size: 13px;
@@ -756,7 +756,7 @@
   background-color: rgba(0, 100, 255, 0.22);
 }
 
-/* Thin soft scrollbars â€” editor workspace only */
+/* Thin soft scrollbars — editor workspace only */
 .editor-shell .soft-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.7 0.02 255 / 35%) transparent;
@@ -780,7 +780,7 @@
   background: oklch(0.5 0.05 255 / 45%);
 }
 
-/* Paper score dialog â€” portaled outside .editor-shell */
+/* Paper score dialog — portaled outside .editor-shell */
 .paper-score-dialog .paper-score-scroll {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.58 0.03 80 / 38%) transparent;
@@ -820,7 +820,7 @@
   background: transparent;
 }
 
-/* Paper score â€” audit waiting animation */
+/* Paper score — audit waiting animation */
 .paper-score-audit-anim {
   display: flex;
   flex-direction: column;
@@ -1168,7 +1168,7 @@
   background: color-mix(in oklch, var(--primary) 45%, var(--border) 55%);
 }
 
-/* Defense mode â€” chat panel */
+/* Defense mode — chat panel */
 .editor-shell .defense-masthead-prefs {
   display: inline-flex;
   align-items: stretch;
@@ -1282,7 +1282,7 @@
   cursor: not-allowed;
 }
 
-/* Defense panel â€” editorial layout */
+/* Defense panel — editorial layout */
 .editor-shell .defense-panel {
   --defense-border: var(--border);
   --defense-muted: var(--muted-foreground);
@@ -1294,7 +1294,7 @@
   color: var(--foreground);
 }
 
-/* Header â€” match PDF toolbar height (44px / h-11) */
+/* Header — match PDF toolbar height (44px / h-11) */
 .editor-shell .defense-panel-head {
   display: flex;
   align-items: center;
@@ -2444,7 +2444,7 @@
   color: var(--foreground);
 }
 
-/* Workspace mobile layout (< md) â€” desktop unchanged from md breakpoint up */
+/* Workspace mobile layout (< md) — desktop unchanged from md breakpoint up */
 .workspace-main-column {
   min-width: 0;
 }
@@ -2899,7 +2899,7 @@
   color: var(--background);
 }
 
-/* Projects desk â€” main content area */
+/* Projects desk — main content area */
 .projects-desk {
   background: color-mix(in oklch, var(--background) 94%, var(--foreground));
   min-width: 0;
@@ -3014,7 +3014,7 @@
   border-bottom: none;
 }
 
-/* Workspace content skeleton â€” in-shell loading (no fullscreen flash) */
+/* Workspace content skeleton — in-shell loading (no fullscreen flash) */
 .workspace-content-skeleton {
   display: flex;
   flex-direction: column;
@@ -4298,7 +4298,7 @@ html[lang="vi"] .hero-headline {
   padding: 1in 0.85in;
 }
 
-/* Override global h1/h2 Playfair â€” preview must use LaTeX serif only */
+/* Override global h1/h2 Playfair — preview must use LaTeX serif only */
 .editor-shell .preview-page-content h1,
 .editor-shell .preview-page-content h2,
 .editor-shell .preview-page-content h3,
@@ -4511,7 +4511,7 @@ html[lang="vi"] .hero-headline {
   pointer-events: none;
 }
 
-/* PDF.js text layer â€” aligned with pdf_viewer.css; scoped under editor-shell */
+/* PDF.js text layer — aligned with pdf_viewer.css; scoped under editor-shell */
 .editor-shell .pdf-preview-text-layer {
   --user-unit: 1;
   --total-scale-factor: calc(var(--scale-factor, 1) * var(--user-unit, 1));
@@ -4573,7 +4573,7 @@ html[lang="vi"] .hero-headline {
   background: transparent;
 }
 
-/* PDF.js annotation layer â€” citation / internal links (requires pdf_viewer section rules) */
+/* PDF.js annotation layer — citation / internal links (requires pdf_viewer section rules) */
 .editor-shell .pdf-preview-annotation-layer {
   position: absolute;
   inset: 0;
@@ -4629,7 +4629,7 @@ html[lang="vi"] .hero-headline {
   background: transparent;
 }
 
-/* IEEE / mathptmx / times â€” Times New Roman stack (Nimbus Roman on Linux) */
+/* IEEE / mathptmx / times — Times New Roman stack (Nimbus Roman on Linux) */
 .editor-shell .preview-page-content.preview-font-times,
 .editor-shell .preview-page-content.preview-font-times h1,
 .editor-shell .preview-page-content.preview-font-times h2,
@@ -4671,7 +4671,7 @@ html[lang="vi"] .hero-headline {
   line-height: 1.5;
 }
 
-/* Chat overlay â€” floats over LaTeX editor */
+/* Chat overlay — floats over LaTeX editor */
 .editor-shell .editor-workspace {
   isolation: isolate;
 }
@@ -4836,7 +4836,7 @@ html[lang="vi"] .hero-headline {
   box-shadow: none;
 }
 
-/* Chat dock â€” fixed bottom panel inside editor column (does not overlay code) */
+/* Chat dock — fixed bottom panel inside editor column (does not overlay code) */
 .editor-shell .chat-dock {
   --chat-bg: color-mix(in oklch, var(--card) 98%, transparent);
   --chat-input-bg: var(--editor-chat-input-bg);
@@ -5658,7 +5658,7 @@ html[lang="vi"] .hero-headline {
   border-radius: 0.3rem;
 }
 
-/* Dropdown menus are portaled outside `.editor-shell` â€” duplicate the critical
+/* Dropdown menus are portaled outside `.editor-shell` — duplicate the critical
    size rules unscoped so provider icons don't blow up in the menu. */
 .llm-provider-avatar {
   height: 0.95rem;
@@ -6435,7 +6435,7 @@ html[lang="vi"] .hero-headline {
   overflow: auto;
 }
 
-/* Editor left sidebar â€” Overleaf-style icon rail + collapsible panel */
+/* Editor left sidebar — Overleaf-style icon rail + collapsible panel */
 .editor-shell .editor-left-sidebar {
   position: relative;
   display: flex;
@@ -7163,7 +7163,7 @@ html[lang="vi"] .hero-headline {
   color: var(--newsprint);
 }
 
-/* App loading â€” route pending, editor entry, page fetch, overlays */
+/* App loading — route pending, editor entry, page fetch, overlays */
 .app-loading-screen--fullscreen {
   position: fixed;
   inset: 0;
@@ -7400,7 +7400,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* 404 â€” editorial missing page */
+/* 404 — editorial missing page */
 .app-not-found-masthead {
   background: var(--background);
 }
@@ -7409,7 +7409,7 @@ html[lang="vi"] .hero-headline {
   min-height: 100%;
 }
 
-/* About page â€” interactive editorial board figure */
+/* About page — interactive editorial board figure */
 .about-board-live-dot {
   width: 0.5rem;
   height: 0.5rem;
@@ -7555,7 +7555,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* â”€â”€â”€ Admin console (ops-style shell â€” ~40% Arionear editorial DNA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ Admin console (ops-style shell — ~40% Arionear editorial DNA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .admin-shell,
 .admin-shell * {
@@ -9199,7 +9199,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* Workspace user guide â€” animated step demos */
+/* Workspace user guide — animated step demos */
 .guide-step-demo {
   background: var(--hero-demo-desk);
   padding: 0.75rem;
