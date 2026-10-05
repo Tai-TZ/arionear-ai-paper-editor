@@ -1,7 +1,7 @@
 # Core
 fastapi>=0.142.2
 python-multipart>=0.0.32
-uvicorn[standard]>=0.34.0
+uvicorn[standard]>=0.54.0
 qrcode[pil]>=8.0
 pydantic>=2.13.5
 pydantic-settings>=2.7.0
