@@ -310,3 +310,26 @@ def test_seed_keeps_admin_set_lncs_license(templates_root: Path):
 
     rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
     assert rows["springer-lncs"]["license"] == "Lab internal use"
+
+
+def test_ieee_starter_is_marked_as_modified_lppl_work(templates_root: Path):
+    ts.ensure_template_seed()
+
+    rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
+    assert rows["ieee-journal"]["license"].startswith("LPPL 1.3")
+    assert ts.IEEE_JOURNAL_MAIN_TEX.startswith("% Arionear IEEE journal starter: a MODIFIED")
+    assert "bare_jrnl.tex" in ts.IEEE_JOURNAL_MAIN_TEX.splitlines()[0]
+
+
+def test_seed_updates_retired_ieee_license_label(templates_root: Path):
+    ts.ensure_template_seed()
+    data = _registry(templates_root)
+    for row in data["templates"]:
+        if row["id"] == "ieee-journal":
+            row["license"] = "Other (as stated in the work)"
+    (templates_root / "registry.json").write_text(json.dumps(data), encoding="utf-8")
+
+    ts.ensure_template_seed()
+
+    rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
+    assert rows["ieee-journal"]["license"] == ts.IEEE_JOURNAL_LICENSE

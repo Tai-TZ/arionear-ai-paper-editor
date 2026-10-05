@@ -79,7 +79,9 @@ licenses — some of them GPL — documented inside the image, see [Bundled asse
    [Bundled assets](#bundled-assets) provide that information.
 2. **IEEE starter template.** `IEEE_JOURNAL_MAIN_TEX` in `src/services/template_store.py` reuses the title, author and
    `\markboth` lines of `bare_jrnl.tex` from the IEEEtran bundle (LPPL 1.3) in shortened form. The IEEEtran headers ask
-   that modified files be clearly marked as such.
+   that modified files be clearly marked as such. **Resolved:** the starter now opens with a comment marking it as a
+   modified, shortened version of `bare_jrnl.tex` (IEEEtran, Michael Shell, LPPL 1.3), and its gallery license reads
+   `IEEE_JOURNAL_LICENSE` (registries seeded with the old "Other" label are corrected on start-up).
 3. **Springer LNCS starter template.** Several placeholder lines in `SPRINGER_LNCS_MAIN_TEX`
    (`src/services/template_builtins.py`) match Springer's LNCS `samplepaper.tex`. CTAN lists the `llncs` package as
    CC BY 4.0, and Overleaf lists the Springer proceedings template as CC BY 4.0, which asks for attribution and an
