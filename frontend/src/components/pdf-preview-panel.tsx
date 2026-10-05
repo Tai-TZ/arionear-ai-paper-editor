@@ -336,6 +336,8 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
   const [searchMatches, setSearchMatches] = useState<PdfSearchMatch[]>([]);
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
+  // Latest search request; a recompile can replace the document while an older search still runs.
+  const searchSeqRef = useRef(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState<boolean | null>(null);
   const [enginesInfo, setEnginesInfo] = useState<Partial<Record<string, boolean>>>({});
@@ -535,6 +537,7 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
 
   const runSearch = useCallback(
     async (query: string, preferredIndex = 0) => {
+      const seq = ++searchSeqRef.current;
       if (!pdf || !query.trim()) {
         setSearchMatches([]);
         setActiveMatchIndex(-1);
@@ -546,7 +549,19 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
       setIsSearching(true);
       setSearchStatus(t.pdf.searching);
       try {
-        const matches = await collectPdfSearchMatches(pdf, query);
+        let matches: PdfSearchMatch[];
+        try {
+          matches = await collectPdfSearchMatches(pdf, query);
+        } catch {
+          // The document was destroyed mid-search (newer compile); the effect searches the new one.
+          if (seq === searchSeqRef.current) {
+            setSearchMatches([]);
+            setActiveMatchIndex(-1);
+            setSearchStatus(null);
+          }
+          return;
+        }
+        if (seq !== searchSeqRef.current) return; // a newer search owns the results
         setSearchMatches(matches);
         if (!matches.length) {
           setActiveMatchIndex(-1);
@@ -557,7 +572,7 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
         const idx = Math.min(Math.max(0, preferredIndex), matches.length - 1);
         await goToMatch(idx, matches, query);
       } finally {
-        setIsSearching(false);
+        if (seq === searchSeqRef.current) setIsSearching(false);
       }
     },
     [goToMatch, pdf, t.pdf],
