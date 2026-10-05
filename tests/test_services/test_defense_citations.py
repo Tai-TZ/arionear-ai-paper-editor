@@ -98,3 +98,17 @@ def test_first_plain_occurrence_is_linked_after_an_existing_link():
     out = prepare_defense_council_markdown(reply, latex)
     _assert_well_formed_links(out)
     assert out.count("](#pdf?search=BioBERT)") == 1
+
+
+def test_terms_inside_math_are_not_linked():
+    latex = r"\textbf{PubMedBERT}"
+    reply = r"Với $\mathrm{PubMedBERT}(x)$ và $$\text{PubMedBERT}$$, vì sao PubMedBERT tốt hơn?"
+    out = prepare_defense_council_markdown(reply, latex)
+    assert r"$\mathrm{PubMedBERT}(x)$" in out
+    assert r"$$\text{PubMedBERT}$$" in out
+    assert "vì sao [PubMedBERT](#pdf?search=PubMedBERT) tốt hơn?" in out
+
+
+def test_terms_between_prices_are_still_linked():
+    out = prepare_defense_council_markdown("It cost $5 to fine-tune PubMedBERT, not $10.", r"\textbf{PubMedBERT}")
+    assert "[PubMedBERT](#pdf?search=PubMedBERT)" in out

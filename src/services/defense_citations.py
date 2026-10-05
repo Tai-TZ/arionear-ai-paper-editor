@@ -188,19 +188,23 @@ def _already_linked(text: str, search: str) -> bool:
     return f"search={search.lower()}" in text.lower()
 
 
-_MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\([^)]*\)")
+# Markdown links, ``$$…$$`` and ``$…$`` math — the same rule as the frontend renderer
+# (frontend/src/lib/defense-pdf-autolink.ts): no whitespace just inside the dollars and no digit
+# right after the closing one, so prices such as "$5 and $10" stay plain text.
+_PROTECTED_SPAN_RE = re.compile(r"\[[^\]]*\]\([^)]*\)|\$\$[\s\S]+?\$\$|\$(?=[^\s$])[^$\n]*?[^\s$]\$(?!\d)")
 
 
 def _link_first_outside_links(content: str, pattern: re.Pattern[str], make_link) -> str:
-    """Link the first match of ``pattern`` that is not inside an existing markdown link.
+    """Link the first match of ``pattern`` outside existing markdown links and math.
 
     The model writes links such as ``[phần phương pháp](#pdf?passage=method)``; linking a phrase
-    inside that label would nest links, which markdown renders as raw brackets.
+    inside that label would nest links, which markdown renders as raw brackets. Inside ``$…$``
+    KaTeX would print the link markdown literally.
     """
     pieces: list[str] = []
     last = 0
     linked = False
-    for link in _MARKDOWN_LINK_RE.finditer(content):
+    for link in _PROTECTED_SPAN_RE.finditer(content):
         plain = content[last : link.start()]
         if not linked and pattern.search(plain):
             plain = pattern.sub(make_link, plain, count=1)
