@@ -25,6 +25,8 @@ frontend/.codegraph
 docs/
 eval/
 *.md
+# License notices ship with the API image (LICENSE and LICENSES/ are copied as-is).
+!THIRD_PARTY_NOTICES.md
 !requirements.txt
 .dockerignore
 Dockerfile

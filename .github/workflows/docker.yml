@@ -79,6 +79,8 @@ jobs:
           # TeX Live must be usable inside the image for PDF compile
           curl -fsS http://localhost:8000/api/v1/compile/status | tee status.json
           grep -q '"available":true' status.json
+          # License notices must travel with the image
+          docker exec api sh -c 'test -f LICENSE && test -f THIRD_PARTY_NOTICES.md && test -f LICENSES/MIT.txt'
 
       - name: Container logs
         if: always()
