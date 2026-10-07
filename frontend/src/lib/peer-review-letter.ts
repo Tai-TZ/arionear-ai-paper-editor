@@ -187,7 +187,7 @@ export function buildResponseLetterLatex(
   { labels, includeChanges = true }: ResponseLetterOptions,
 ): string {
   const lines: string[] = [
-    "% Response to reviewers - draft generated with Arionear. Review every response before sending.",
+    "% Response to reviewers - draft generated with Edico. Review every response before sending.",
     "% Placeholders marked [AUTHOR: ...] must be completed by the authors.",
     `\\section*{${escapeLatex(labels.title)}}`,
     "",

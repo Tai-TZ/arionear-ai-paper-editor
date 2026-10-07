@@ -22,9 +22,9 @@ export function MobileToolsSheet({
   onToolsTabChange,
   onJumpToStructureSection,
   canJumpToStructureSection,
-  onAskArioStructure,
+  onAskDicoStructure,
   onApplyStructureFix,
-  onAskArioCitation,
+  onAskDicoCitation,
   onRunLogicAudit,
   logicAuditLoading,
   logicAuditReportStale = false,
@@ -34,7 +34,7 @@ export function MobileToolsSheet({
   logicAuditScopeHint = null,
   onCancelLogicAudit,
   onJumpToLogicIssue,
-  onAskArioLogic,
+  onAskDicoLogic,
   canJumpToLogicIssue,
   onCitationsUpdated,
   llmProvider,
@@ -54,9 +54,9 @@ export function MobileToolsSheet({
   onToolsTabChange: (tab: ToolsTab) => void;
   onJumpToStructureSection: (sectionName: string) => void;
   canJumpToStructureSection: (sectionName: string) => boolean;
-  onAskArioStructure: (prefill: string) => void;
+  onAskDicoStructure: (prefill: string) => void;
   onApplyStructureFix?: (suggestion: StructureSuggestion) => void;
-  onAskArioCitation: (prefill: string, citeKey?: string) => void;
+  onAskDicoCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
   logicAuditReportStale?: boolean;
@@ -66,7 +66,7 @@ export function MobileToolsSheet({
   logicAuditScopeHint?: LogicAuditScope | null;
   onCancelLogicAudit?: () => void;
   onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
-  onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  onAskDicoLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
   canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   llmProvider?: LLMProvider;
@@ -103,9 +103,9 @@ export function MobileToolsSheet({
           onToolsTabChange={onToolsTabChange}
           onJumpToStructureSection={onJumpToStructureSection}
           canJumpToStructureSection={canJumpToStructureSection}
-          onAskArioStructure={onAskArioStructure}
+          onAskDicoStructure={onAskDicoStructure}
           onApplyStructureFix={onApplyStructureFix}
-          onAskArioCitation={onAskArioCitation}
+          onAskDicoCitation={onAskDicoCitation}
           onRunLogicAudit={onRunLogicAudit}
           logicAuditLoading={logicAuditLoading}
           logicAuditReportStale={logicAuditReportStale}
@@ -115,7 +115,7 @@ export function MobileToolsSheet({
           logicAuditScopeHint={logicAuditScopeHint}
           onCancelLogicAudit={onCancelLogicAudit}
           onJumpToLogicIssue={onJumpToLogicIssue}
-          onAskArioLogic={onAskArioLogic}
+          onAskDicoLogic={onAskDicoLogic}
           canJumpToLogicIssue={canJumpToLogicIssue}
           onCitationsUpdated={onCitationsUpdated}
           onClose={onClose}

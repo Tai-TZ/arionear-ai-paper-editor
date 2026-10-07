@@ -24,7 +24,7 @@ import { useYjsShareViewer } from "@/lib/use-yjs-share-sync";
 export const Route = createFileRoute("/share/$token")({
   ssr: false,
   head: () => ({
-    meta: [{ title: "Shared manuscript — Arionear" }],
+    meta: [{ title: "Shared manuscript — Edico" }],
   }),
   component: ShareViewerPage,
 });
@@ -191,7 +191,7 @@ function ShareViewerPage() {
         <p className="font-serif-display text-2xl font-bold">Link unavailable</p>
         <p className="max-w-md text-sm text-muted-foreground">{bootError}</p>
         <Link to="/" className="text-sm underline underline-offset-4">
-          Back to Arionear
+          Back to Edico
         </Link>
       </div>
     );
@@ -201,13 +201,13 @@ function ShareViewerPage() {
     <div className="editor-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground">
       <div className="editor-masthead flex shrink-0 items-center justify-between border-b border-foreground/20 bg-foreground px-4 py-1 text-[10px] font-mono-data uppercase tracking-widest text-background">
         <div className="flex items-center gap-3">
-          <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
-            Arionear
+          <Link to="/" className="hover:text-[color:var(--editorial-accent)] transition-colors">
+            Edico
           </Link>
           <span className="opacity-40">·</span>
           <span>Shared view</span>
         </div>
-        <span className="text-[color:var(--editorial-red)]">Read only</span>
+        <span className="text-[color:var(--editorial-accent)]">Read only</span>
       </div>
 
       <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">

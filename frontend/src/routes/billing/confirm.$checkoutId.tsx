@@ -17,7 +17,7 @@ const copy = {
 
 export const Route = createFileRoute("/billing/confirm/$checkoutId")({
   head: () => ({
-    meta: [{ title: "Confirming payment — Arionear" }],
+    meta: [{ title: "Confirming payment — Edico" }],
   }),
   component: BillingConfirmRedirectPage,
 });

@@ -5,7 +5,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { EdicoWordmark } from "@/components/edico-wordmark";
 import { commonCopy } from "@/lib/common-i18n";
 
 export function AuthShell({
@@ -25,8 +25,8 @@ export function AuthShell({
   return (
     <div className="auth-page min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       <aside className="auth-aside hidden lg:flex flex-col justify-between border-r-4 border-foreground p-12 bg-foreground text-background">
-        <Link to="/" className="font-serif-display text-4xl font-black tracking-tighter">
-          <ArionearWordmark />
+        <Link to="/" className="font-serif-display text-4xl font-black tracking-tight">
+          <EdicoWordmark />
         </Link>
         <div>
           <p className="font-sans-ui uppercase text-[11px] tracking-widest opacity-70 mb-4">
@@ -44,8 +44,8 @@ export function AuthShell({
 
       <main className="flex flex-col">
         <header className="lg:hidden border-b-4 border-foreground px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif-display text-2xl font-black tracking-tighter">
-            <ArionearWordmark />
+          <Link to="/" className="font-serif-display text-2xl font-black tracking-tight">
+            <EdicoWordmark />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageToggle compact className="masthead-language-toggle shrink-0" />
@@ -66,7 +66,7 @@ export function AuthShell({
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
           <div className="w-full max-w-lg">
-            <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-3">
+            <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-accent)] mb-3">
               {eyebrow}
             </p>
             <h1 className="font-serif-display text-3xl sm:text-4xl xl:text-5xl font-bold leading-[1.08] tracking-tight text-balance">
@@ -126,7 +126,7 @@ export function AuthField({
       <div
         className={`flex items-center border bg-background transition-colors focus-within:outline focus-within:outline-2 ${
           error
-            ? "border-[color:var(--editorial-red)] focus-within:outline-[color:var(--editorial-red)]"
+            ? "border-[color:var(--destructive)] focus-within:outline-[color:var(--destructive)]"
             : "border-foreground focus-within:outline-foreground"
         }`}
       >
@@ -155,7 +155,7 @@ export function AuthField({
         )}
       </div>
       {error ? (
-        <p className="mt-2 font-serif-body text-xs text-[color:var(--editorial-red)]">{error}</p>
+        <p className="mt-2 font-serif-body text-xs text-[color:var(--destructive)]">{error}</p>
       ) : helper ? (
         <p className="mt-2 font-serif-body text-xs text-foreground/60">{helper}</p>
       ) : null}
@@ -185,7 +185,7 @@ export function AuthDisabledAccount({
 
   return (
     <div className="border border-foreground/30 bg-foreground/[0.03] px-5 py-6">
-      <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)]">
+      <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--destructive)]">
         {t.eyebrow}
       </p>
       <h2 className="mt-2 font-serif-display text-2xl font-bold leading-tight">{t.title}</h2>
@@ -206,8 +206,8 @@ export function AuthDisabledAccount({
 
 export function AuthAlert({ message }: { message: string }) {
   return (
-    <div className="mb-5 border border-[color:var(--editorial-red)]/40 bg-[color:var(--editorial-red)]/5 px-4 py-3">
-      <p className="font-serif-body text-sm text-[color:var(--editorial-red)]">{message}</p>
+    <div className="mb-5 border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/5 px-4 py-3">
+      <p className="font-serif-body text-sm text-[color:var(--destructive)]">{message}</p>
     </div>
   );
 }

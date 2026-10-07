@@ -38,7 +38,7 @@ export const Route = createFileRoute("/auth/google/callback")({
     }
   },
   head: () => ({
-    meta: [{ title: "Signing in — Arionear" }],
+    meta: [{ title: "Signing in — Edico" }],
   }),
   component: GoogleCallbackPage,
 });
@@ -123,7 +123,7 @@ function GoogleCallbackPage() {
         {error || !access_token ? (
           <Link
             to="/signin"
-            className="font-sans-ui uppercase text-xs tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+            className="font-sans-ui uppercase text-xs tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
           >
             {t.backToSignIn}
           </Link>

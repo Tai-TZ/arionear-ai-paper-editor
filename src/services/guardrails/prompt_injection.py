@@ -43,7 +43,7 @@ _INJECTION_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 _LEAK_MARKERS: tuple[str, ...] = (
     "integrity guard (non-negotiable)",
     "what this product is",
-    "you are ario — the ai research assistant",
+    "you are dico — the ai research assistant",
     "return only valid json",
     "target_type=latex_command",
     "non-negotiable",
@@ -98,11 +98,11 @@ def looks_like_system_prompt_leak(text: str) -> bool:
 _REFUSALS: dict[UiLocale, str] = {
     "vi": (
         "Tôi không thể thực hiện yêu cầu ghi đè hướng dẫn hệ thống hoặc tiết lộ prompt nội bộ. "
-        "ARIONEAR chỉ hỗ trợ biên tập bài báo LaTeX — hãy đặt câu hỏi về bản thảo của bạn."
+        "EDICO chỉ hỗ trợ biên tập bài báo LaTeX — hãy đặt câu hỏi về bản thảo của bạn."
     ),
     "en": (
         "I can't override system instructions or reveal internal prompts. "
-        "ARIONEAR only supports LaTeX manuscript editing — ask about your draft instead."
+        "EDICO only supports LaTeX manuscript editing — ask about your draft instead."
     ),
 }
 

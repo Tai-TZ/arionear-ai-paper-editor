@@ -112,11 +112,11 @@ const EN: AuthPagesCopy = {
     bannerEyebrow: "The Editor's Desk",
     bannerQuote: "“Good writing is rewriting. We just make the second pass faster.”",
     bannerLede:
-      "Arionear reads like a copy-editor and questions like a reviewer — never inventing data, always citing the source.",
+      "Edico reads like a copy-editor and questions like a reviewer — never inventing data, always citing the source.",
     bannerFooter: "Vol. I · No. 01 · International Edition",
     mobileBack: "Back",
-    footerCopyright: "© Arionear Press",
-    footerTagline: "Closer to publication",
+    footerCopyright: "© Edico Press",
+    footerTagline: "From draft to proof.",
   },
   signin: {
     eyebrow: "The Reading Room",
@@ -128,7 +128,7 @@ const EN: AuthPagesCopy = {
     forgot: "Forgot?",
     submit: "Sign in",
     dividerGoogle: "or continue with Google",
-    newHere: "New to Arionear?",
+    newHere: "New to Edico?",
     createAccount: "Create an account",
   },
   forgotPassword: {
@@ -148,7 +148,7 @@ const EN: AuthPagesCopy = {
   resetPassword: {
     eyebrow: "New Credentials",
     title: "Set a new password.",
-    lede: "Choose a strong password you have not used on Arionear before. This link works once and expires in 30 minutes.",
+    lede: "Choose a strong password you have not used on Edico before. This link works once and expires in 30 minutes.",
     newPassword: "New password",
     newPasswordPlaceholder: "At least 8 characters, 1 letter & 1 number",
     confirmPassword: "Confirm password",
@@ -187,7 +187,7 @@ const EN: AuthPagesCopy = {
     passwordLabel: "Password",
     passwordPlaceholder: "At least 8 characters, 1 letter & 1 number",
     integrityPolicy:
-      "I agree to Arionear's editorial integrity policy — AI assists with language and structure; the author remains responsible for the science.",
+      "I agree to Edico's editorial integrity policy — AI assists with language and structure; the author remains responsible for the science.",
     continue: "Continue",
     acceptPolicyError: "Please accept the editorial integrity policy to continue.",
     passwordTooShort: "Password must be at least 8 characters.",
@@ -203,7 +203,7 @@ const EN: AuthPagesCopy = {
     continueWithGoogle: "Continue with Google",
   },
   googleCallback: {
-    pageTitle: "Signing in — Arionear",
+    pageTitle: "Signing in — Edico",
     eyebrow: "Single Sign-On",
     title: "One moment.",
     lede: "We are verifying your Google account and opening your editorial desk.",
@@ -224,11 +224,11 @@ const VI: AuthPagesCopy = {
     bannerEyebrow: "Bàn biên tập",
     bannerQuote: "“Viết hay là viết lại. Chúng tôi giúp vòng hai nhanh hơn.”",
     bannerLede:
-      "Arionear đọc như biên tập viên và hỏi như phản biện — không bịa dữ liệu, luôn trích nguồn rõ ràng.",
+      "Edico đọc như biên tập viên và hỏi như phản biện — không bịa dữ liệu, luôn trích nguồn rõ ràng.",
     bannerFooter: "Tập I · Số 01 · Ấn bản quốc tế",
     mobileBack: "Quay lại",
-    footerCopyright: "© Arionear Press",
-    footerTagline: "Gần hơn với công bố",
+    footerCopyright: "© Edico Press",
+    footerTagline: "Từ bản thảo đến bản in.",
   },
   signin: {
     eyebrow: "Phòng đọc",
@@ -240,7 +240,7 @@ const VI: AuthPagesCopy = {
     forgot: "Quên mật khẩu?",
     submit: "Đăng nhập",
     dividerGoogle: "hoặc tiếp tục với Google",
-    newHere: "Mới dùng Arionear?",
+    newHere: "Mới dùng Edico?",
     createAccount: "Tạo tài khoản",
   },
   forgotPassword: {
@@ -260,7 +260,7 @@ const VI: AuthPagesCopy = {
   resetPassword: {
     eyebrow: "Thông tin mới",
     title: "Đặt mật khẩu mới.",
-    lede: "Chọn mật khẩu mạnh mà bạn chưa từng dùng trên Arionear. Liên kết chỉ dùng một lần và hết hạn sau 30 phút.",
+    lede: "Chọn mật khẩu mạnh mà bạn chưa từng dùng trên Edico. Liên kết chỉ dùng một lần và hết hạn sau 30 phút.",
     newPassword: "Mật khẩu mới",
     newPasswordPlaceholder: "Tối thiểu 8 ký tự, 1 chữ cái & 1 số",
     confirmPassword: "Xác nhận mật khẩu",
@@ -299,7 +299,7 @@ const VI: AuthPagesCopy = {
     passwordLabel: "Mật khẩu",
     passwordPlaceholder: "Tối thiểu 8 ký tự, 1 chữ cái & 1 số",
     integrityPolicy:
-      "Tôi đồng ý với chính sách trung thực biên tập của Arionear — AI hỗ trợ ngôn ngữ và cấu trúc; tác giả vẫn chịu trách nhiệm về khoa học.",
+      "Tôi đồng ý với chính sách trung thực biên tập của Edico — AI hỗ trợ ngôn ngữ và cấu trúc; tác giả vẫn chịu trách nhiệm về khoa học.",
     continue: "Tiếp tục",
     acceptPolicyError: "Vui lòng chấp nhận chính sách trung thực biên tập để tiếp tục.",
     passwordTooShort: "Mật khẩu phải có ít nhất 8 ký tự.",
@@ -315,7 +315,7 @@ const VI: AuthPagesCopy = {
     continueWithGoogle: "Tiếp tục với Google",
   },
   googleCallback: {
-    pageTitle: "Đang đăng nhập — Arionear",
+    pageTitle: "Đang đăng nhập — Edico",
     eyebrow: "Đăng nhập một lần",
     title: "Chờ một chút.",
     lede: "Chúng tôi đang xác minh tài khoản Google và mở bàn biên tập của bạn.",

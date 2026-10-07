@@ -61,7 +61,7 @@ export const Route = createFileRoute("/admin")({
   },
   head: () => ({
     meta: [
-      { title: "Admin Console — Arionear" },
+      { title: "Admin Console — Edico" },
       {
         name: "description",
         content: "Manage users, LLM quotas, token limits, and platform usage.",
@@ -445,7 +445,7 @@ function AdminPage() {
                 <div className="admin-panel">
                   <div className="admin-panel-head">
                     <UserPlus
-                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      className="h-4 w-4 text-[color:var(--editorial-accent)]"
                       strokeWidth={1.5}
                     />
                     <h2>{t.overview.newUsersTitle}</h2>
@@ -518,7 +518,7 @@ function AdminPage() {
                   <div className="admin-panel">
                     <div className="admin-panel-head">
                       <Brain
-                        className="h-4 w-4 text-[color:var(--editorial-red)]"
+                        className="h-4 w-4 text-[color:var(--editorial-accent)]"
                         strokeWidth={1.5}
                       />
                       <h2>{t.overview.llmStackTitle}</h2>
@@ -1054,7 +1054,7 @@ function AdminPage() {
                 <div className="admin-panel">
                   <div className="admin-panel-head">
                     <Brain
-                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      className="h-4 w-4 text-[color:var(--editorial-accent)]"
                       strokeWidth={1.5}
                     />
                     <h2>{t.llm.providerStatusTitle}</h2>
@@ -1081,7 +1081,7 @@ function AdminPage() {
                 <div className="admin-panel">
                   <div className="admin-panel-head">
                     <Gauge
-                      className="h-4 w-4 text-[color:var(--editorial-red)]"
+                      className="h-4 w-4 text-[color:var(--editorial-accent)]"
                       strokeWidth={1.5}
                     />
                     <h2>{t.llm.globalDefaultsTitle}</h2>

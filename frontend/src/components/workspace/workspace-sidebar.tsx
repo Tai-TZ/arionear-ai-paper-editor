@@ -1,4 +1,4 @@
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { EdicoWordmark } from "@/components/edico-wordmark";
 import { Link } from "@tanstack/react-router";
 import { FolderOpen, Shield, UserCircle, BookOpen, Zap, LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
@@ -181,7 +181,7 @@ export function WorkspaceSidebar({
     >
       <div className="workspace-topbar flex h-14 shrink-0 items-center px-4">
         <Link to="/" className="font-serif-display text-xl font-bold tracking-tight">
-          <ArionearWordmark />
+          <EdicoWordmark />
         </Link>
       </div>
 

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 
-import arioAvatar from "../../assets/avatar/avatar-chat.png";
+import dicoAvatar from "../../assets/avatar/dico-mark.svg?url";
 import appCss from "../styles.css?url";
 import { AppNotFound } from "../components/app-not-found";
 import { Toaster } from "../components/ui/sonner";
@@ -15,14 +15,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Arionear — Closer to Publication" },
+      { title: "Edico — From draft to proof" },
       {
         name: "description",
         content:
           "AI editorial assistant for scientific manuscripts. Improve language, structure, citations, and reviewer responses — without inventing data.",
       },
-      { name: "author", content: "Arionear" },
-      { property: "og:title", content: "Arionear — Closer to Publication" },
+      { name: "author", content: "Edico" },
+      { property: "og:title", content: "Edico — From draft to proof" },
       { property: "og:description", content: "AI editorial assistant for scientific manuscripts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -40,7 +40,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap",
       },
       {
         rel: "stylesheet",
@@ -48,8 +48,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "icon",
-        type: "image/png",
-        href: arioAvatar,
+        type: "image/svg+xml",
+        href: dicoAvatar,
       },
     ],
   }),
@@ -66,7 +66,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('arionear-theme');if(t==='dark')document.documentElement.classList.add('dark');var l=localStorage.getItem('arionear-locale');if(l==='vi'){document.documentElement.lang='vi';document.documentElement.setAttribute('data-locale','vi')}else{document.documentElement.lang='en';document.documentElement.setAttribute('data-locale','en')}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('edico-theme');if(t==='dark')document.documentElement.classList.add('dark');var l=localStorage.getItem('edico-locale');if(l==='vi'){document.documentElement.lang='vi';document.documentElement.setAttribute('data-locale','vi')}else{document.documentElement.lang='en';document.documentElement.setAttribute('data-locale','en')}}catch(e){}})();`,
           }}
         />
       </head>

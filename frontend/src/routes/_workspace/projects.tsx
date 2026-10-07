@@ -65,7 +65,7 @@ export const Route = createFileRoute("/_workspace/projects")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Your Projects — Arionear" },
+      { title: "Your Projects — Edico" },
       {
         name: "description",
         content: "Write IMRaD scientific papers in IEEE format, or import from Overleaf.",

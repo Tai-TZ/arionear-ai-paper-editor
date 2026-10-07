@@ -52,12 +52,14 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Ario Academic Editor"
+    app_name: str = "Dico Academic Editor"
     app_env: Literal["development", "production", "test"] = "development"
     app_port: int = Field(default=8000, ge=1, le=65535)
     app_host: str = "0.0.0.0"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    # Production only: extra allowed origins as a regex, e.g. r"https://([a-z0-9-]+\.)*example\.com".
+    cors_origin_regex: str = ""
 
     # LLM — default provider & model
     llm_provider: LLMProvider = "zai"
@@ -79,10 +81,10 @@ class Settings(BaseSettings):
 
     # OpenRouter optional headers
     openrouter_site_url: str = ""
-    openrouter_app_name: str = "Arionear Academic Editor"
+    openrouter_app_name: str = "Edico Academic Editor"
 
     # Inngest — chat pipeline observability
-    inngest_app_id: str = "ario-academic-editor"
+    inngest_app_id: str = "dico-academic-editor"
     inngest_event_key: str = ""
     inngest_signing_key: str = ""
     inngest_dev: bool = False

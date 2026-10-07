@@ -3,7 +3,7 @@ import { MarketingPage } from "@/components/marketing/marketing-page";
 
 export const Route = createFileRoute("/latex-guide")({
   head: () => ({
-    meta: [{ title: "LaTeX Guide — Arionear" }],
+    meta: [{ title: "LaTeX Guide — Edico" }],
   }),
   component: () => <MarketingPage slug="latex-guide" />,
 });

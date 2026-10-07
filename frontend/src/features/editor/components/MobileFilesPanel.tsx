@@ -118,7 +118,7 @@ export function MobileFilesPanel({
 
       <div className="shrink-0 border-t border-border/40 p-4">
         <div className="flex items-start gap-2 rounded-xl bg-secondary/60 p-3">
-          <ShieldCheck className="h-4 w-4 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
+          <ShieldCheck className="h-4 w-4 mt-0.5 text-[color:var(--editorial-accent)] shrink-0" />
           <p className="text-xs leading-snug text-muted-foreground">
             AI hỗ trợ diễn đạt — không bịa dữ liệu hay kết quả.
           </p>

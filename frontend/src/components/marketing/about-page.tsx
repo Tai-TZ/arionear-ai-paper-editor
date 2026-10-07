@@ -24,7 +24,7 @@ export function AboutPage() {
               <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
                 {content.eyebrow}
               </p>
-              <h1 className="marketing-page-title mt-3 font-serif-display font-black text-4xl lg:text-5xl tracking-tighter leading-[0.95]">
+              <h1 className="marketing-page-title mt-3 font-serif-display font-black text-4xl lg:text-5xl tracking-tight leading-[0.95]">
                 {content.title}
               </h1>
               <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground text-justify">
@@ -51,7 +51,7 @@ export function AboutPage() {
 
             <div className="lg:col-span-7 lg:pl-12">
               <div className="flex items-end justify-between border-b border-foreground pb-3 mb-8">
-                <h2 className="font-serif-display font-black text-3xl tracking-tighter">
+                <h2 className="font-serif-display font-black text-3xl tracking-tight">
                   {copy.mastheadTitle}
                 </h2>
                 <span className="font-mono-data uppercase text-[10px] tracking-widest text-muted-foreground">
@@ -101,7 +101,7 @@ export function AboutPage() {
           <div className="mt-16 pt-8 border-t border-foreground/30">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>

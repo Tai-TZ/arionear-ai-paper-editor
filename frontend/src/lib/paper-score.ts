@@ -346,8 +346,8 @@ function scoreLogicIntegrity(
       score: 0,
       hint:
         locale === "en"
-          ? "Ario is reading the full manuscript…"
-          : "Ario đang đọc lướt toàn bộ bài…",
+          ? "Dico is reading the full manuscript…"
+          : "Dico đang đọc lướt toàn bộ bài…",
     };
   }
 
@@ -358,8 +358,8 @@ function scoreLogicIntegrity(
       score: 45,
       hint:
         locale === "en"
-          ? "No review report yet — Ario will analyse when you open the dialog."
-          : "Chưa có báo cáo phản biện — Ario sẽ phân tích khi mở dialog.",
+          ? "No review report yet — Dico will analyse when you open the dialog."
+          : "Chưa có báo cáo phản biện — Dico sẽ phân tích khi mở dialog.",
     };
   }
 

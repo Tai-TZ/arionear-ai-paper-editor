@@ -1,12 +1,13 @@
-# Eval Evidence — Arionear
+# Eval Evidence — Edico
 
 > ≥5 manual test cases với output thật từ LLM (không mock)
 > **Ngày chạy:** 2026-07-08 12:13:04 UTC
-> **API:** https://api.arionear.id.vn
-> **Frontend:** https://arionear.id.vn
+> **Môi trường:** production Cloud Run (domain trước khi đổi tên; host gốc ghi trong raw data)
 > **Raw data:** [`_live_outputs.json`](./_live_outputs.json)
 
-**Môi trường:** Session `62d934a7-557e-4923-91eb-10834cc107f9` · Agent Ario v1.0 · Production Cloud Run · PostgreSQL · Health `ok`
+**Môi trường:** Session `62d934a7-557e-4923-91eb-10834cc107f9` · Agent Dico v1.0 · Production Cloud Run · PostgreSQL · Health `ok`
+
+> **Ghi chú:** phiên này chạy trước khi đổi tên sản phẩm (Arionear → Edico, trợ lý Ario → Dico). Input/output bên dưới giữ nguyên văn như trong raw data.
 
 ---
 

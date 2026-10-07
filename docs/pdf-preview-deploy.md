@@ -82,7 +82,7 @@ location /api/v1/compile {
 
 Docker image size increases by ~800 MB–1.5 GB due to TeX Live.
 
-## Overleaf parity (Arionear)
+## Overleaf parity (Edico)
 
 | Feature | Supported |
 |---------|-----------|

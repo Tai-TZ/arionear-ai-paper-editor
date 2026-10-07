@@ -115,7 +115,7 @@ export function ShareLinkDialog({
           ) : (
             <div className="space-y-5">
               {error ? (
-                <p className="rounded-none border border-[color:var(--editorial-red)]/35 bg-[color:var(--editorial-red)]/5 px-4 py-3 text-sm text-[color:var(--editorial-red)]">
+                <p className="rounded-none border border-[color:var(--destructive)]/35 bg-[color:var(--destructive)]/5 px-4 py-3 text-sm text-[color:var(--destructive)]">
                   {error}
                 </p>
               ) : null}
@@ -124,7 +124,10 @@ export function ShareLinkDialog({
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="share-dialog-note border border-border/70 bg-muted/20 px-3 py-3">
-                      <Eye className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]" aria-hidden />
+                      <Eye
+                        className="mb-2 h-4 w-4 text-[color:var(--editorial-accent)]"
+                        aria-hidden
+                      />
                       <p className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
                         {t.viewOnly}
                       </p>
@@ -134,7 +137,7 @@ export function ShareLinkDialog({
                     </div>
                     <div className="share-dialog-note border border-border/70 bg-muted/20 px-3 py-3">
                       <ShieldCheck
-                        className="mb-2 h-4 w-4 text-[color:var(--editorial-red)]"
+                        className="mb-2 h-4 w-4 text-[color:var(--editorial-accent)]"
                         aria-hidden
                       />
                       <p className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -153,7 +156,7 @@ export function ShareLinkDialog({
                     <div className="share-dialog-link-box border border-foreground/20 bg-[color:var(--muted)]/40">
                       <div className="flex items-start gap-3 border-b border-foreground/10 px-4 py-3">
                         <Link2
-                          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-red)]"
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--editorial-accent)]"
                           aria-hidden
                         />
                         <p className="min-w-0 flex-1 break-all font-mono text-[12px] leading-6 text-foreground/90">
@@ -186,7 +189,7 @@ export function ShareLinkDialog({
                       type="button"
                       disabled={working}
                       onClick={() => void handleDisable()}
-                      className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground underline underline-offset-4 transition hover:text-[color:var(--editorial-red)] disabled:opacity-50"
+                      className="font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground underline underline-offset-4 transition hover:text-[color:var(--editorial-accent)] disabled:opacity-50"
                     >
                       {t.disableSharing}
                     </button>
@@ -196,11 +199,11 @@ export function ShareLinkDialog({
                 <>
                   <ul className="space-y-2 text-sm text-foreground/75">
                     <li className="flex gap-2">
-                      <span className="text-[color:var(--editorial-red)]">—</span>
+                      <span className="text-[color:var(--editorial-accent)]">—</span>
                       {t.bulletPermanent}
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[color:var(--editorial-red)]">—</span>
+                      <span className="text-[color:var(--editorial-accent)]">—</span>
                       {t.bulletLive}
                     </li>
                   </ul>

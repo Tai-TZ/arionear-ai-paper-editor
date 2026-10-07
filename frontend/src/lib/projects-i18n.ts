@@ -68,7 +68,7 @@ type ProjectsCopy = {
 };
 
 const EN: ProjectsCopy = {
-  pageTitle: "Your Projects — Arionear",
+  pageTitle: "Your Projects — Edico",
   pageDescription:
     "Write IMRaD scientific papers with IEEE, Springer or Elsevier templates, or import an existing project.",
   headerTitle: "Your Projects",
@@ -94,7 +94,7 @@ const EN: ProjectsCopy = {
   emptyStartBody:
     "IMRaD structure (Introduction, Methods, Results, Discussion) in IEEE journal format. Open the sample project to get started.",
   emptyBlankHint: "Blank outline with IMRaD sections ready for your content.",
-  emptySampleHint: "Filled sample you can edit and compile to explore Arionear.",
+  emptySampleHint: "Filled sample you can edit and compile to explore Edico.",
   created: "Created",
   updated: "Updated",
   colName: "Name",
@@ -132,7 +132,7 @@ const EN: ProjectsCopy = {
   cancel: "Cancel",
   formatNoticeTitle: "Journal templates & IMRaD",
   formatNoticeBody:
-    "Arionear works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS or Elsevier (elsarticle).",
+    "Edico works best with IMRaD scientific papers built on a journal template: IEEE (IEEEtran), Springer LNCS or Elsevier (elsarticle).",
   formatNoticeImradLabel: "IMRaD sections",
   formatNoticeImradDetail:
     "Introduction · Methods · Results · Discussion — plus Abstract and keywords.",
@@ -142,7 +142,7 @@ const EN: ProjectsCopy = {
 };
 
 const VI: ProjectsCopy = {
-  pageTitle: "Dự án của bạn — Arionear",
+  pageTitle: "Dự án của bạn — Edico",
   pageDescription:
     "Viết bài báo khoa học theo IMRaD với mẫu IEEE, Springer hoặc Elsevier, hoặc nhập dự án có sẵn.",
   headerTitle: "Dự án của bạn",
@@ -206,7 +206,7 @@ const VI: ProjectsCopy = {
   cancel: "Hủy",
   formatNoticeTitle: "Mẫu tạp chí & IMRaD",
   formatNoticeBody:
-    "Arionear hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS hoặc Elsevier (elsarticle).",
+    "Edico hoạt động tốt nhất với bài báo khoa học theo cấu trúc IMRaD, dựng trên một mẫu tạp chí: IEEE (IEEEtran), Springer LNCS hoặc Elsevier (elsarticle).",
   formatNoticeImradLabel: "Các phần IMRaD",
   formatNoticeImradDetail:
     "Giới thiệu · Phương pháp · Kết quả · Thảo luận — kèm Tóm tắt (Abstract) và từ khóa.",

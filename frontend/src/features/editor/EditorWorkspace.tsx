@@ -27,7 +27,7 @@ import { persistChatThreads } from "./lib/editor-thread-storage";
 import { toInlineSuggestion } from "./lib/editor-inline-suggestion";
 import { EDITOR_SIDEBAR_STORAGE_KEY, readSidebarExpanded } from "./lib/editor-sidebar-prefs";
 import { hasSeenEditorOnboarding } from "./lib/editor-onboarding-prefs";
-import { ArionearMasthead } from "./components/ArionearMasthead";
+import { EdicoMasthead } from "./components/EdicoMasthead";
 import { CenterPanel } from "./components/CenterPanel";
 import { LatexEditor } from "./components/LatexEditor";
 import { LeftSidebar } from "./components/LeftSidebar";
@@ -401,8 +401,8 @@ export function EditorWorkspace() {
     openQuickEditFromPick(selectionPick);
   }, [selectionPick, openQuickEditFromPick]);
 
-  const handleAskArioFixCompile = useCallback(() => {
-    if (!latexWs.compileError || !latexWs.canAskArioFixCompile) return;
+  const handleAskDicoFixCompile = useCallback(() => {
+    if (!latexWs.compileError || !latexWs.canAskDicoFixCompile) return;
     setChatComposerMode("quick-edit");
     setChatSelectionContext(null);
     setSelection("");
@@ -470,7 +470,7 @@ export function EditorWorkspace() {
       compiler: project.compiler,
       onSynctexHit: latexWs.handleSynctexHit,
       onCompile: () => void latexWs.handleCompile(),
-      onAskArioFix: latexWs.canAskArioFixCompile ? handleAskArioFixCompile : undefined,
+      onAskDicoFix: latexWs.canAskDicoFixCompile ? handleAskDicoFixCompile : undefined,
       compileCacheId: projectId,
       projectName: project.projectName,
       latexSource: project.mainLatexSource,
@@ -482,7 +482,7 @@ export function EditorWorkspace() {
       project.compiler,
       project.projectName,
       project.mainLatexSource,
-      handleAskArioFixCompile,
+      handleAskDicoFixCompile,
     ],
   );
 
@@ -558,7 +558,7 @@ export function EditorWorkspace() {
             project.showSplash ? " invisible" : ""
           }`}
         >
-          <ArionearMasthead
+          <EdicoMasthead
             integrityStrictness={project.integrityStrictness}
             className="hidden md:flex"
           />

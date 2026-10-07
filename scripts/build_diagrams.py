@@ -9,8 +9,8 @@ Usage:
     python scripts/build_diagrams.py sequence   # build only the named diagram(s)
 
 Visual identity follows the app's editorial "newsprint" design (``frontend/src/styles.css``):
-newsprint paper, ink line-art blocks, editorial red for the live flow, square corners, hard
-offset shadows, Playfair / Source Serif / JetBrains Mono type stacks. Colours are CSS custom
+newsprint paper, ink line-art blocks, the blue-pencil accent for the live flow, square corners, hard
+offset shadows, Fraunces / Source Serif / JetBrains Mono type stacks. Colours are CSS custom
 properties holding the app's light tokens; the diagrams always render on newsprint, also on
 GitHub's dark theme (like a printed figure). The SVGs are self-contained (no external
 fonts/scripts) and animate with CSS + SMIL; ``prefers-reduced-motion`` stops the motion and
@@ -34,26 +34,26 @@ W = 1040  # canvas width
 M = 40  # outer margin
 GUTTER = M + 44  # content starts here when lanes carry a rotated label in the left gutter
 
-DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif"
+DISPLAY = "'Fraunces', Georgia, 'Times New Roman', serif"
 SERIF = "'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif"
 # Georgia has no precomposed Vietnamese glyphs, so Vietnamese text skips it.
-DISPLAY_VI = "'Playfair Display', 'Noto Serif Display', 'Noto Serif', 'Times New Roman', Times, serif"
+DISPLAY_VI = "'Fraunces', 'Noto Serif Display', 'Noto Serif', 'Times New Roman', Times, serif"
 SERIF_VI = "'Source Serif 4', 'Noto Serif', 'Times New Roman', Times, serif"
 MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace"
 SANS = "Inter, 'Helvetica Neue', Arial, sans-serif"
 VI_TEXT = re.compile(r"[À-ɏḀ-ỿ]")
 
 # App tokens (frontend/src/styles.css), oklch converted to the sRGB hex the browser renders.
-# light: newsprint oklch(.973 .005 90) · ink oklch(.145 0 0) · red oklch(.52 .22 27) · divider oklch(.91 .003 90)
+# light: newsprint oklch(.973 .005 90) · ink oklch(.145 0 0) · accent oklch(.47 .15 258) · divider oklch(.91 .003 90)
 LIGHT = {
     "pp": "#F7F6F2",  # newsprint (page)
     "ik": "#0A0A0A",  # ink
-    "rd": "#C9000C",  # editorial red
+    "ac": "#1A57AD",  # editorial accent (blue pencil)
     "mu": "#555555",  # muted foreground
     "tp": "#FEFDFB",  # block top face (hero surface)
     "fl": "#E2E1DF",  # block left face (divider)
     "fr": "#C9C7C1",  # block right face
-    "on": "#F7F6F2",  # text on red / ink
+    "on": "#F7F6F2",  # text on accent / ink
 }
 
 
@@ -66,7 +66,7 @@ CSS = (
     f".d{{font-family:{DISPLAY}}}.dv{{font-family:{DISPLAY_VI}}}.s{{font-family:{SERIF}}}"
     f".sv{{font-family:{SERIF_VI}}}.m{{font-family:{MONO}}}.u{{font-family:{SANS}}}"
     ".k{letter-spacing:.12em}"
-    ".i{fill:var(--ik)}.p{fill:var(--pp)}.r{fill:var(--rd)}.q{fill:var(--mu)}"
+    ".i{fill:var(--ik)}.p{fill:var(--pp)}.r{fill:var(--ac)}.q{fill:var(--mu)}"
     ".t{fill:var(--tp)}.L{fill:var(--fl)}.R{fill:var(--fr)}.o{fill:var(--on)}"
     ".e{stroke:var(--ik);stroke-width:1.3;stroke-linejoin:round}"
     ".h{paint-order:stroke;stroke:var(--pp);stroke-width:5px;stroke-linejoin:round}"
@@ -74,9 +74,9 @@ CSS = (
     ".sh{fill:var(--ik);fill-opacity:.18}"
     ".tk{fill:none;stroke:var(--ik);stroke-opacity:.42;stroke-width:1.3}"
     ".dt{fill:none;stroke:var(--ik);stroke-opacity:.6;stroke-width:1.3;stroke-dasharray:2 5;stroke-linecap:round}"
-    ".fw{fill:none;stroke:var(--rd);stroke-width:2;stroke-dasharray:6 10;animation:fw 1.4s linear infinite}"
+    ".fw{fill:none;stroke:var(--ac);stroke-width:2;stroke-dasharray:6 10;animation:fw 1.4s linear infinite}"
     "@keyframes fw{to{stroke-dashoffset:-32}}"
-    ".pl{fill:none;stroke:var(--rd);stroke-width:1.6;transform-box:fill-box;transform-origin:center;"
+    ".pl{fill:none;stroke:var(--ac);stroke-width:1.6;transform-box:fill-box;transform-origin:center;"
     "animation:pl 2.8s ease-out infinite}"
     "@keyframes pl{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}"
     "@media (prefers-reduced-motion:reduce){.fw,.pl{animation:none}.pl{opacity:.5}.pk{display:none}}"
@@ -131,8 +131,8 @@ class Box:
 class Diagram:
     """Collects SVG fragments in z-ordered layers and writes the final file.
 
-    Every figure shares the same newspaper furniture: masthead line (desk + FIG. number), red
-    kicker tag with the source reference, Playfair headline, italic deck, thick+thin double rule,
+    Every figure shares the same newspaper furniture: masthead line (desk + FIG. number), accent
+    kicker tag with the source reference, Fraunces headline, italic deck, thick+thin double rule,
     and an optional ink ticker band along the bottom edge.
     """
 
@@ -185,10 +185,12 @@ class Diagram:
             f'<path d="M {x1:.1f} {y1:.1f} L {x2:.1f} {y2:.1f}" class="ln" stroke-width="{width}"{extra}/>',
         )
 
-    def tag(self, x, y, label, *, red=True, layer="bg", h=26) -> float:
-        """Solid tag label (the site's red "BREAKING" box). Returns its width."""
+    def tag(self, x, y, label, *, accent=True, layer="bg", h=26) -> float:
+        """Solid tag label (the site's accent "BREAKING" box). Returns its width."""
         w = mono_w(label, 14, spaced=True) + 18
-        self.add(layer, f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h}" class="{"r" if red else "i"}"/>')
+        self.add(
+            layer, f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h}" class="{"r" if accent else "i"}"/>'
+        )
         self.text(x + 10, y + h / 2 + 5, label, cls="m k o", weight=700, layer=layer)
         return w
 
@@ -207,7 +209,7 @@ class Diagram:
             f'<rect width="{w}" height="{h}" class="p"/><rect width="{w}" height="{h}" fill="url(#dots)"/>'
             f'<rect x=".75" y=".75" width="{w - 1.5}" height="{h - 1.5}" class="ln" stroke-width="1.5"/>',
         )
-        self.text(M, 38, f"ARIONEAR · {desk}", cls="m k i", weight=700, layer="bg")
+        self.text(M, 38, f"EDICO · {desk}", cls="m k i", weight=700, layer="bg")
         self.text(w - M, 38, f"FIG. {fig}", cls="m k r", weight=700, anchor="end", layer="bg")
         self.line(M, 50, w - M, 50)
         tw = self.tag(M, 66, kicker)
@@ -231,7 +233,7 @@ class Diagram:
 
     # ---- building blocks ----------------------------------------------------
     def lane(self, top, bottom, number, name, caption="", *, tint=False, x0=M, x1=None) -> None:
-        """Newspaper section band: rule on top, red number, mono name, italic caption."""
+        """Newspaper section band: rule on top, accent number, mono name, italic caption."""
         x1 = self.w - M if x1 is None else x1
         if tint:
             self.add(
@@ -263,9 +265,9 @@ class Diagram:
             f"{escape(name)}</text></g>",
         )
 
-    def panel(self, x, y, w, h, title, caption=None, *, red=False) -> None:
+    def panel(self, x, y, w, h, title, caption=None, *, accent=False) -> None:
         self.add("lanes", f'<rect x="{x}" y="{y}" width="{w}" height="{h}" class="ln" stroke-width="1.3"/>')
-        tw = self.tag(x, y, title, red=red, layer="lanes", h=24)
+        tw = self.tag(x, y, title, accent=accent, layer="lanes", h=24)
         if caption:
             self.text(x + tw + 10, y + 17, caption, size=14, cls="s q", italic=True, layer="lanes")
 
@@ -315,7 +317,7 @@ class Diagram:
         self.add("packets", f'<g class="pk"{opacity}><path d="M0,{-s} L{s},0 L0,{s} L{-s},0z" class="r"/>{anim}</g>')
 
     def terminal(self, x, y, label) -> None:
-        """START / END node: solid ink disc with a pulsing red ring."""
+        """START / END node: solid ink disc with a pulsing accent ring."""
         self.add(
             "blocks",
             f'<g class="b"><circle cx="{x}" cy="{y}" r="29" class="sh" transform="translate(3 3)"/>'
@@ -408,7 +410,7 @@ class Diagram:
 
     @staticmethod
     def _cluster(box: Box) -> list[str]:
-        """Six mini cubes on a platform — one per Ario agent."""
+        """Six mini cubes on a platform — one per Dico agent."""
         if box.hw >= 80:
             grid, mw, mhgt, lift = [(-48, -48), (-16, -48), (-48, -16), (16, -48), (-48, 16), (-16, -16)], 13, 10, 4
         else:
@@ -524,7 +526,7 @@ def architecture() -> Diagram:
         kicker="OVERVIEW",
         source="src/ · frontend/",
         ticker=("LATEX-NATIVE", "HUMAN-IN-THE-LOOP", "MULTI-LLM FAILOVER", "QUOTA-METERED", "SANDBOXED TEX"),
-        aria="Arionear system architecture: user, processing, human gate, output and infrastructure layers",
+        aria="Edico system architecture: user, processing, human gate, output and infrastructure layers",
     )
     c = cols(7)
     bands = [(212, 368, "01", "USER"), (378, 516, "02", "PROCESSING"), (526, 644, "03", "GATE")]
@@ -548,7 +550,7 @@ def architecture() -> Diagram:
     store = node(1, p, "DB", "Paper Store", "Postgres + cache")
     router = node(2, p, "IR", "Intent Router", "rules → LLM")
     bottom = parser.bottom[1]
-    agents = d.block(c[3], bottom - 36 * ISO - 18, hw=36, bh=18, cluster=True, title="Ario Agents", sub="6 agents · L1")
+    agents = d.block(c[3], bottom - 36 * ISO - 18, hw=36, bh=18, cluster=True, title="Dico Agents", sub="6 agents · L1")
     integrity = node(4, p, "L2", "Integrity", "monitor · retry", key=True)
     peer = node(5, p, "PR", "Peer Review", "split → draft")
     council = node(6, p, "AI", "AI Council", "defense panel")
@@ -619,13 +621,13 @@ def request_flow() -> Diagram:
         "request-flow",
         790,
         title="Request Flow",
-        deck="Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Ario đều qua guardrail và Human Gate",
+        deck="Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Dico đều qua guardrail và Human Gate",
         desk="ARCHITECTURE DESK",
         fig="1.3",
         kicker="PIPELINE",
         source="POST /api/v1/chat/stream",
         ticker=("SSE STREAMING", "LLM QUOTA METERED", "GUARDRAIL L1–L2", "HUMAN GATE", "SANDBOXED TEX"),
-        aria="Arionear request flow: Editor, FastAPI, Intent Router, Ario Agents, LLM Providers, Integrity Monitor, "
+        aria="Edico request flow: Editor, FastAPI, Intent Router, Dico Agents, LLM Providers, Integrity Monitor, "
         "Human Gate, PDF compile",
     )
     cx, row1, row2 = (120, 360, 600, 860), 330, 604
@@ -633,7 +635,7 @@ def request_flow() -> Diagram:
     b1 = d.block(cx[0], row1, code="UI", title="Editor", sub="React 19 · LaTeX", **big)
     b2 = d.block(cx[1], row1, code="API", title="FastAPI", sub="Bearer JWT · quota", **big)
     b3 = d.block(cx[2], row1, code="IR", title="Intent Router", sub="rules → LLM classifier", **big)
-    b4 = d.block(cx[3], row1 + 32.3 - 57.7, hw=100, bh=28, cluster=True, title="Ario Agents", title_size=18)
+    b4 = d.block(cx[3], row1 + 32.3 - 57.7, hw=100, bh=28, cluster=True, title="Dico Agents", title_size=18)
     b5 = d.block(cx[3], row2, code="LLM", title="LLM Providers", sub="GLM · Gemini · GPT · Claude", **big)
     b6 = d.block(cx[2], row2, code="L2", title="Integrity Monitor", sub="numeric drift · scope", key=True, **big)
     b7 = d.block(cx[1], row2, glyphs=True, pulse=True, title="Human Gate", sub="Accept ✓ / Reject ✕", **big)
@@ -714,7 +716,7 @@ def _sequence(
                     "lanes",
                     f'<path d="M {fx0:.1f} {sy:.1f} H {fx1:.1f}" class="ln" stroke-opacity=".4" stroke-dasharray="3 4"/>',
                 )
-            tw = d.tag(fx0, sy, "ALT" if k == 0 else "ELSE", red=False, layer="lanes", h=22)
+            tw = d.tag(fx0, sy, "ALT" if k == 0 else "ELSE", accent=False, layer="lanes", h=22)
             d.text(fx0 + tw + 8, sy + 16, f"[{label}]", cls="m r", weight=700, layer="lanes")
 
     step, move, hold = 0.85, 0.7, 2.5
@@ -736,7 +738,7 @@ def _sequence(
         reveal = f'values="0;0;1;1;0" keyTimes="0;{s:.4f};{e:.4f};0.985;1" dur="{total:.2f}s" repeatCount="indefinite"'
         d.add(
             "edges",
-            f'<path d="{path}" class="ln pk" style="stroke:var(--rd)" stroke-width="2"{dash} '
+            f'<path d="{path}" class="ln pk" style="stroke:var(--ac)" stroke-width="2"{dash} '
             f'opacity="0"><animate attributeName="opacity" {reveal}/></path>',
         )
         d.text(*label_xy, label, anchor=anchor, halo=True)
@@ -763,7 +765,7 @@ def sequence() -> Diagram:
         ("Editor", "UI"),
         ("FastAPI", "API"),
         ("Intent\nRouter", "IR"),
-        ("Ario\nAgent", "AG"),
+        ("Dico\nAgent", "AG"),
         ("Integrity", "L2"),
         ("LLM", "LLM"),
         ("PostgreSQL", "PG"),
@@ -823,7 +825,7 @@ def api_surface() -> Diagram:
         fig="2.1",
         kicker="API",
         source="src/api/*.py → src/services/",
-        ticker=("FASTAPI", "OPENAPI /docs", "RED TOP = LLM QUOTA", "SECURITY HEADERS", "HSTS IN PROD"),
+        ticker=("FASTAPI", "OPENAPI /docs", "BLUE TOP = LLM QUOTA", "SECURITY HEADERS", "HSTS IN PROD"),
         aria="Backend API surface: route groups under /api/v1, the services behind them, and shared data stores",
     )
     d.glane(212, 316, "01", "CLIENT")
@@ -1156,7 +1158,7 @@ def frontend_routes() -> Diagram:
     shell = [
         node(0, 632, "TEX", "LatexEditor", "+ inline diff"),
         node(1, 632, "PDF", "PdfPreviewPanel", "PDF.js · SyncTeX"),
-        node(2, 632, "AI", "ChatOverlay", "Ario · SSE"),
+        node(2, 632, "AI", "ChatOverlay", "Dico · SSE"),
         node(3, 632, "KIT", "ToolsPanel", "versions · logic …"),
         node(4, 632, "%", "PaperScore\nDownloadDialog", "score + AI disclosure"),
     ]
@@ -1442,7 +1444,7 @@ def guardrails() -> Diagram:
 
     # platform hardening sidebar
     y0 = 812
-    d.panel(M, y0, W - 2 * M, 198, "PLATFORM HARDENING", "ngoài 4 lớp — bảo vệ hạ tầng & chi phí", red=True)
+    d.panel(M, y0, W - 2 * M, 198, "PLATFORM HARDENING", "ngoài 4 lớp — bảo vệ hạ tầng & chi phí", accent=True)
     notes = [
         ("LLM quota", "quota_policy.py trên mọi đường LLM"),
         ("TeX sandbox", "env allowlist · openin/openout = p"),
@@ -1489,9 +1491,9 @@ def deployment() -> Diagram:
         530,
         300,
         code="API",
-        title="arionear-api",
+        title="edico-api",
         sub="FastAPI + TeX Live",
-        sub2="api.arionear.id.vn",
+        sub2="api.your-domain",
         mono_title=True,
         key=True,
         **big,
@@ -1501,9 +1503,9 @@ def deployment() -> Diagram:
         320,
         470,
         code="SSR",
-        title="arionear-web",
+        title="edico-web",
         sub="TanStack · Nitro",
-        sub2="arionear.id.vn",
+        sub2="your-domain",
         mono_title=True,
         **big,
     )
@@ -1517,7 +1519,7 @@ def deployment() -> Diagram:
         d.block(700, 530, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · S2 · OpenAlex", **right),
         d.block(700, 630, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **right),
     ]
-    # Pages come from arionear-web; the browser bundle calls arionear-api directly (VITE_API_URL, CORS).
+    # Pages come from edico-web; the browser bundle calls edico-api directly (VITE_API_URL, CORS).
     bx0, by0 = browser.right[0] + 8, browser.right[1]
     d.edge(
         f"M {bx0} {by0} H 238 V {be.left[1]} H {be.left[0] - 10}", label="REST · SSE · WS", at=(359, be.left[1] - 11)
@@ -1692,7 +1694,7 @@ def features() -> Diagram:
         "features",
         640,
         title="Tính năng",
-        deck="Ario gợi ý như một biên tập viên — mọi thay đổi chờ tác giả Chấp nhận / Từ chối",
+        deck="Dico gợi ý như một biên tập viên — mọi thay đổi chờ tác giả Chấp nhận / Từ chối",
         desk="PRODUCT DESK",
         fig="0.1",
         kicker="FEATURES",
@@ -1701,8 +1703,8 @@ def features() -> Diagram:
     )
     columns = (
         (
-            "ARIO",
-            "Biên tập với Ario",
+            "DICO",
+            "Biên tập với Dico",
             True,
             (
                 "Style · văn phong",

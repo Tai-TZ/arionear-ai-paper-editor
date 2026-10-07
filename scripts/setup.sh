@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script cho Arionear
+# Setup script cho Edico
 
 set -e
 
-echo "=== Arionear Setup ==="
+echo "=== Edico Setup ==="
 
 # Check Python version
 python3 -c "import sys; assert sys.version_info >= (3, 11), 'Python 3.11+ required'"

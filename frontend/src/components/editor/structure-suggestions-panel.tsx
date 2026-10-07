@@ -8,7 +8,7 @@ import { editorCopy } from "@/lib/editor-i18n";
 type StructureSuggestionsPanelProps = {
   suggestions: StructureSuggestion[];
   onJumpToSection: (sectionName: string) => void;
-  onAskArio: (prefill: string) => void;
+  onAskDico: (prefill: string) => void;
   onApplyFix?: (suggestion: StructureSuggestion) => void;
   canJump: (sectionName: string) => boolean;
 };
@@ -26,7 +26,7 @@ function severityClass(severity?: string): string {
 export function StructureSuggestionsPanel({
   suggestions,
   onJumpToSection,
-  onAskArio,
+  onAskDico,
   onApplyFix,
   canJump,
 }: StructureSuggestionsPanelProps) {
@@ -90,10 +90,10 @@ export function StructureSuggestionsPanel({
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
-                  onClick={() => onAskArio(buildStructureAskPrompt(item))}
+                  onClick={() => onAskDico(buildStructureAskPrompt(item))}
                 >
                   <Sparkles className="h-3 w-3" />
-                  {t.tools.structureAskArio}
+                  {t.tools.structureAskDico}
                   <ArrowRight className="h-3 w-3 opacity-70" />
                 </button>
               </div>

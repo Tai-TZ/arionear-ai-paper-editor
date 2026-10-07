@@ -93,7 +93,7 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
       pdf: "PDF",
     },
     chat: {
-      councilBrand: "Ario",
+      councilBrand: "Dico",
       councilTitle: " Defense",
       councilSubtitle: "Mock viva session",
       resetSession: "Restart session",
@@ -165,7 +165,7 @@ const COPY: Record<UiLanguage, DefenseCopy> = {
       pdf: "PDF",
     },
     chat: {
-      councilBrand: "Ario",
+      councilBrand: "Dico",
       councilTitle: " phản biện",
       councilSubtitle: "Mô phỏng vấn đáp hội đồng",
       resetSession: "Bắt đầu lại",

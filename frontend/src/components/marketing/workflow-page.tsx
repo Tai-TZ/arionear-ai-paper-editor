@@ -38,7 +38,7 @@ function WorkflowDiagram({
               key={step.n}
               className="relative flex flex-col border border-foreground p-6 min-h-[220px] xl:border-r-0 xl:first:border-l xl:last:border-r xl:border-y xl:border-x-0 xl:[&:not(:last-child)]:border-r"
             >
-              <span className="absolute top-0 left-0 bg-[color:var(--editorial-red)] text-background font-mono-data text-[10px] uppercase tracking-widest px-2 py-1">
+              <span className="absolute top-0 left-0 bg-[color:var(--editorial-accent)] text-background font-mono-data text-[10px] uppercase tracking-widest px-2 py-1">
                 {ui.stepLabel} {step.n}
               </span>
 
@@ -60,7 +60,7 @@ function WorkflowDiagram({
               </p>
 
               {step.n === "03" ? (
-                <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)] border border-dashed border-foreground/40 px-2 py-1.5 text-center">
+                <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-accent)] border border-dashed border-foreground/40 px-2 py-1.5 text-center">
                   {ui.authorGate}
                 </p>
               ) : null}
@@ -107,7 +107,7 @@ export function WorkflowPage() {
             <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
               {content.eyebrow}
             </p>
-            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tight">
               {content.title}
             </h1>
             <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">
@@ -131,13 +131,13 @@ export function WorkflowPage() {
           <div className="mt-12 pt-8 border-t border-foreground/30 flex flex-wrap gap-6">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>
             <Link
               to="/projects"
-              className="inline-flex items-center gap-2 font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)]"
+              className="inline-flex items-center gap-2 font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)]"
             >
               {ui.openEditor} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>

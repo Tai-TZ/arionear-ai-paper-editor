@@ -66,7 +66,7 @@ from src.services.template_latex import generate_template
 
 logger = logging.getLogger(__name__)
 
-AGENT_NAME = "Ario"
+AGENT_NAME = "Dico"
 CONTENT_RESYNC_CODE = "content_resync_required"
 EDIT_DONE_MSG = "Đã cập nhật main.tex — xem diff và Accept/Reject."
 STYLE_DONE_MSG = "Đã biên tập — xem diff và Accept/Reject."

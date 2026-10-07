@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the README masthead banner (``docs/assets/banner.svg``).
 
-The wordmark matches the app's ``ArionearWordmark``: Playfair Display Black, tight tracking,
-"Ario" in ink and "near" in editorial red, on the light newsprint page like the landing masthead.
+The wordmark matches the app's ``EdicoWordmark``: Fraunces Black, tight tracking,
+"E" in ink and "dico" in the blue-pencil accent, on the light newsprint page like the landing masthead.
 Text is converted to outlines (fontTools + HarfBuzz shaping), so GitHub renders the exact face
 without loading fonts.
 
@@ -10,7 +10,7 @@ Usage:
     pip install fonttools uharfbuzz
     python scripts/build_banner.py
 
-Playfair Display (SIL Open Font License 1.1) is downloaded once from github.com/google/fonts into
+Fraunces (SIL Open Font License 1.1) is downloaded once from github.com/google/fonts into
 ``.cache/fonts/``.
 """
 
@@ -29,11 +29,11 @@ from fontTools.varLib.instancer import instantiateVariableFont
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "assets" / "banner.svg"
 CACHE = ROOT / ".cache" / "fonts"
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/{}"
-ROMAN, ITALIC = "PlayfairDisplay[wght].ttf", "PlayfairDisplay-Italic[wght].ttf"
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/{}"
+ROMAN, ITALIC = "Fraunces[SOFT,WONK,opsz,wght].ttf", "Fraunces-Italic[SOFT,WONK,opsz,wght].ttf"
 
 W, H, M = 1040, 300, 40
-INK, PAPER, RED = "#0A0A0A", "#F7F6F2", "#C9000C"  # app light tokens: ink · newsprint · editorial red
+INK, PAPER, ACCENT = "#0A0A0A", "#F7F6F2", "#1A57AD"  # app light tokens: ink · newsprint · editorial accent
 MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace"
 
 
@@ -47,22 +47,23 @@ def font_path(name: str) -> Path:
     return path
 
 
-def instance(name: str, weight: int) -> tuple[TTFont, bytes]:
-    """Static instance of the variable font at ``weight``, plus its bytes for HarfBuzz."""
-    font = instantiateVariableFont(TTFont(font_path(name)), {"wght": weight})
-    tmp = CACHE / f"{Path(name).stem}-{weight}.ttf"
+def instance(name: str, weight: int, opsz: int) -> tuple[TTFont, bytes]:
+    """Static instance of the variable font (plain, non-wonky forms), plus its bytes for HarfBuzz."""
+    axes = {"wght": weight, "opsz": opsz, "SOFT": 0, "WONK": 0}
+    font = instantiateVariableFont(TTFont(font_path(name)), axes)
+    tmp = CACHE / f"{Path(name).stem.split('[')[0]}-{weight}-{opsz}.ttf"
     font.save(tmp)
     return TTFont(tmp), tmp.read_bytes()
 
 
-def shape(blob: bytes, text: str) -> list[tuple[str, int, int]]:
+def shape(blob: bytes, text: str, *, liga: bool = True) -> list[tuple[str, int, int]]:
     """HarfBuzz-shaped (glyph name, x advance, x offset) runs, kerning included."""
     face = hb.Face(blob)
     hb_font = hb.Font(face)
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
-    hb.shape(hb_font, buf, {"kern": True, "liga": True})
+    hb.shape(hb_font, buf, {"kern": True, "liga": liga})
     names = [hb_font.glyph_to_string(info.codepoint) for info in buf.glyph_infos]
     return [(n, pos.x_advance, pos.x_offset) for n, pos in zip(names, buf.glyph_positions, strict=True)]
 
@@ -92,17 +93,18 @@ def text_width(font: TTFont, runs, size: float, tracking_em: float = 0.0) -> flo
 
 
 def build() -> str:
-    black, black_blob = instance(ROMAN, 900)
-    italic, italic_blob = instance(ITALIC, 400)
+    black, black_blob = instance(ROMAN, 900, 144)
+    italic, italic_blob = instance(ITALIC, 400, 36)
 
-    # Wordmark: one shaping pass so the "o|n" kerning across the colour split is kept.
+    # Wordmark: one shaping pass so the "E|d" kerning across the colour split is kept; no
+    # ligatures, so glyphs map 1:1 to letters and the split stays after "E".
     size, track = 132, -0.04
-    runs = shape(black_blob, "Arionear")
+    runs = shape(black_blob, "Edico", liga=False)
     total = text_width(black, runs, size, track)
     paths, _ = outline(black, runs, size, (W - total) / 2, 190, track)
-    ario, near = "".join(paths[:4]), "".join(paths[4:])
+    head, tail = "".join(paths[:1]), "".join(paths[1:])
 
-    tag_runs = shape(italic_blob, "Closer to Publication")
+    tag_runs = shape(italic_blob, "From draft to proof.")
     tag_size = 30
     tag_w = text_width(italic, tag_runs, tag_size)
     tagline = "".join(outline(italic, tag_runs, tag_size, (W - tag_w) / 2, 240)[0])
@@ -114,11 +116,11 @@ def build() -> str:
     tick = []
     for i, (item, width) in enumerate(zip(ticker, widths, strict=True)):
         if i:
-            tick.append(f'<path d="M {tx - 13:.1f} 277 l 5 5 l -5 5 l -5 -5 z" fill="{RED}"/>')
+            tick.append(f'<path d="M {tx - 13:.1f} 277 l 5 5 l -5 5 l -5 -5 z" fill="{ACCENT}"/>')
         tick.append(f'<text x="{tx:.1f}" y="287" class="m">{escape(item)}</text>')
         tx += width + 26
 
-    label = "Arionear — Closer to Publication. AI-assisted LaTeX editor for scientific papers."
+    label = "Edico — From draft to proof. AI-assisted LaTeX editor for scientific papers."
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
         f'role="img" aria-label="{escape(label)}"><title>{escape(label)}</title>'
@@ -129,7 +131,7 @@ def build() -> str:
         f'<text x="{M}" y="38" class="m">VOL. I · NO. 01</text>'
         f'<text x="{W - M}" y="38" class="m" text-anchor="end">AI-ASSISTED LATEX EDITOR</text>'
         f'<path d="M {M} 52 H {W - M}" stroke="{INK}" stroke-opacity=".45"/>'
-        f'<path d="{ario}" fill="{INK}"/><path d="{near}" fill="{RED}"/>'
+        f'<path d="{head}" fill="{INK}"/><path d="{tail}" fill="{ACCENT}"/>'
         f'<path d="{tagline}" fill="{INK}" fill-opacity=".8"/>'
         f'<rect x="{M}" y="256" width="{W - 2 * M}" height="3" fill="{INK}"/>'
         f'<path d="M {M} 263.5 H {W - M}" stroke="{INK}" stroke-opacity=".7"/>'

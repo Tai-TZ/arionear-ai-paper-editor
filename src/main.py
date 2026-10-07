@@ -80,8 +80,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Arionear API",
-    description="AI-assisted LaTeX editing for scientific papers — Ario agents built with LangGraph",
+    title="Edico API",
+    description="AI-assisted LaTeX editing for scientific papers — Dico agents built with LangGraph",
     version="1.0.0",
     lifespan=lifespan,
 )

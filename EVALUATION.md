@@ -1,8 +1,9 @@
-# EVALUATION — Arionear
+# EVALUATION — Edico
 
 > Kết quả kiểm thử thủ công và benchmark trên môi trường production.  
-> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **API production:** https://api.arionear.id.vn  
-> **Frontend:** https://arionear.id.vn · **Agent:** Ario v1.0 · Google Gemini 3.1 Flash Lite
+> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **Môi trường:** production Cloud Run (domain trước khi đổi tên)  
+> **Agent:** Dico v1.0 · Google Gemini 3.1 Flash Lite  
+> Các lần chạy này diễn ra trước khi đổi tên sản phẩm (Arionear → Edico, trợ lý Ario → Dico); input/output trích dẫn giữ nguyên văn như trong raw data.
 
 **Evidence gốc (log JSON / báo cáo chi tiết):**
 
@@ -19,7 +20,7 @@
 
 | STT | Input (User Prompt) | Output thực tế | Kết quả |
 | --- | --- | --- | --- |
-| 1 | `Giải thích ngắn gọn abstract của bài này bằng tiếng Việt` (task=`chat`, có abstract trong `latex_content`) | Ario trả lời lịch sự nhưng **xin lại abstract** thay vì đọc context đã gửi: *"…bạn vui lòng cung cấp nội dung… phần Abstract…"* · HTTP 200 · 5.20s | ⚠️ Partial — có response thật; context/paper sync chưa đủ chặt. **Khắc phục:** ưu tiên đọc `latex_content`/session paper trước khi hỏi lại; demo path dùng selection/abstract đã highlight. |
+| 1 | `Giải thích ngắn gọn abstract của bài này bằng tiếng Việt` (task=`chat`, có abstract trong `latex_content`) | Dico trả lời lịch sự nhưng **xin lại abstract** thay vì đọc context đã gửi: *"…bạn vui lòng cung cấp nội dung… phần Abstract…"* · HTTP 200 · 5.20s | ⚠️ Partial — có response thật; context/paper sync chưa đủ chặt. **Khắc phục:** ưu tiên đọc `latex_content`/session paper trước khi hỏi lại; demo path dùng selection/abstract đã highlight. |
 | 2 | `Chỉnh sửa abstract cho văn phong học thuật hơn` (task=`style`) | Diff + suggestion: *"While machine learning models frequently demonstrate superior predictive performance, they are often constrained by a lack of interpretability."* · `apply_mode=selection` · HTTP 200 · 4.50s | ✅ Pass |
 | 3 | `Phân tích cấu trúc IMRaD của bài này` (task=`structure`) | Cảnh báo thiếu Methods/Results/Discussion/Conclusion + Intro quá ngắn · HTTP 200 · 3.27s | ✅ Pass |
 | 4 | `Thêm các section IMRaD còn thiếu` (task=`template`) | Hướng dẫn 4 section IMRaD + hỏi vị trí chèn template vào `main.tex` · HTTP 200 · 4.60s | ✅ Pass |
@@ -34,7 +35,7 @@
 
 Chạy [`run_gate3_eval.py`](./eval/scripts/run_gate3_eval.py) trên production @ **2026-07-08 12:08:11 UTC** — chi tiết [`gate3_summary.md`](./eval/results/gate3_summary.md).
 
-| Metric | Arionear | Baseline | Improved? |
+| Metric | Edico | Baseline | Improved? |
 |--------|----------|----------|-----------|
 | intent_routing_accuracy | 1.0 | 0.65 | yes |
 | edit_scope_accuracy | 1.0 | 0.4 | yes |
@@ -60,12 +61,12 @@ Chạy [`run_gate3_eval.py`](./eval/scripts/run_gate3_eval.py) trên production 
 
 ```bash
 # Manual ≥5 TC → cập nhật report.md + _live_outputs.json
-python eval/scripts/refresh_manual_eval.py
+GATE3_API_URL=https://api.<domain> GATE3_FRONTEND_URL=https://<domain> python eval/scripts/refresh_manual_eval.py
 
 # Benchmark metrics
 python eval/scripts/run_gate3_eval.py \
-  --api-url https://api.arionear.id.vn \
-  --frontend-url https://arionear.id.vn \
+  --api-url https://api.<domain> \
+  --frontend-url https://<domain> \
   --live-llm
 ```
 

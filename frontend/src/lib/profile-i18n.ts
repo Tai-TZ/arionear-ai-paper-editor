@@ -84,7 +84,7 @@ const EN: ProfileCopy = {
     auto_compile: "Runs LaTeX compile automatically when you save.",
     auto_save: "Saves your project every few seconds while you edit.",
     integrity: "Higher levels apply stricter checks on AI suggestions.",
-    telemetry: "Helps improve Arionear — no manuscript content is sent.",
+    telemetry: "Helps improve Edico — no manuscript content is sent.",
   },
   footer: {
     signedInAs: (email) => `Signed in as ${email}`,
@@ -147,7 +147,7 @@ const VI: ProfileCopy = {
     auto_compile: "Chạy LaTeX tự động khi bạn lưu.",
     auto_save: "Lưu dự án mỗi vài giây khi bạn chỉnh sửa.",
     integrity: "Mức cao hơn = kiểm tra chặt hơn với gợi ý AI.",
-    telemetry: "Giúp cải thiện Arionear — không gửi nội dung bản thảo.",
+    telemetry: "Giúp cải thiện Edico — không gửi nội dung bản thảo.",
   },
   footer: {
     signedInAs: (email) => `Đã đăng nhập với ${email}`,

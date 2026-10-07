@@ -146,7 +146,7 @@ async def generate_template(state: dict) -> dict:
         "apply_mode": "document",
         "integrity_flags": [],
         "response": (
-            "Ario đã soạn sườn bài IMRAD trực tiếp vào main.tex. "
+            "Dico đã soạn sườn bài IMRAD trực tiếp vào main.tex. "
             "Xem phần thay đổi (đỏ = cũ, xanh = mới) và nhấn Accept để áp dụng."
         ),
         "analysis": "IMRAD template generated.",

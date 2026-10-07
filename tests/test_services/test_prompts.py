@@ -5,13 +5,13 @@ from src.services.prompts import build_system_prompt, get_prompt
 
 def test_paper_ide_prompt_exists():
     core = get_prompt("paper_ide", "system")
-    assert "Paper IDE" in core or "ARIONEAR" in core
-    assert "Ario" in core
+    assert "Paper IDE" in core or "EDICO" in core
+    assert "Dico" in core
 
 
 def test_build_system_prompt_composes_core_and_task():
     combined = build_system_prompt("chat")
-    assert "Ario" in combined
+    assert "Dico" in combined
     assert "TASK:" in combined or "Conversational" in combined
 
 

@@ -7,8 +7,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
 # Browsers cannot set headers on WebSockets, so the client authenticates through subprotocols:
-# new WebSocket(url, ["arionear-share", "bearer." + accessToken]); the server echoes only the first.
-SHARE_SUBPROTOCOL = "arionear-share"
+# new WebSocket(url, ["edico-share", "bearer." + accessToken]); the server echoes only the first.
+SHARE_SUBPROTOCOL = "edico-share"
 BEARER_SUBPROTOCOL_PREFIX = "bearer."
 
 MAX_MESSAGE_BYTES = 1024 * 1024

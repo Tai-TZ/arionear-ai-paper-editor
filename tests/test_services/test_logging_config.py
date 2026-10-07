@@ -70,13 +70,13 @@ def test_json_lines_in_production(restore_logging, capsys):
     _configure(restore_logging, "production")
     capsys.readouterr()
 
-    logging.getLogger("arionear.test").warning("Xin chào %s", "thế giới")
+    logging.getLogger("edico.test").warning("Xin chào %s", "thế giới")
 
     line = capsys.readouterr().out.strip().splitlines()[-1]
     payload = json.loads(line)
     assert payload["severity"] == "WARNING"
     assert payload["message"] == "Xin chào thế giới"
-    assert payload["logger"] == "arionear.test"
+    assert payload["logger"] == "edico.test"
     assert payload["request_id"] == "-"
     assert "time" in payload
     assert "color_message" not in payload
@@ -86,10 +86,10 @@ def test_text_lines_in_development(restore_logging, capsys):
     _configure(restore_logging, "development")
     capsys.readouterr()
 
-    logging.getLogger("arionear.test").info("hello")
+    logging.getLogger("edico.test").info("hello")
 
     line = capsys.readouterr().out.strip().splitlines()[-1]
-    assert line.endswith("INFO     arionear.test [-] hello")
+    assert line.endswith("INFO     edico.test [-] hello")
 
 
 def test_uvicorn_loggers_propagate_to_root(restore_logging):
@@ -112,7 +112,7 @@ class _Collect(logging.Handler):
 
 @pytest.fixture
 def request_log():
-    log = logging.getLogger("arionear.test.request")
+    log = logging.getLogger("edico.test.request")
     handler = _Collect()
     log.addHandler(handler)
     log.setLevel(logging.INFO)

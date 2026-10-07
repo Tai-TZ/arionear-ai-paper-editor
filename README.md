@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="./docs/assets/banner.svg" alt="Arionear — Closer to Publication" width="100%">
+<img src="./docs/assets/banner.svg" alt="Edico — From draft to proof." width="100%">
 
 **Trợ lý AI biên tập bài báo khoa học trên LaTeX — gợi ý như một biên tập viên, quyết định vẫn thuộc về tác giả.**
 
-[![CI](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml)
-[![Security](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml)
-[![Docker](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml)
-[![LaTeX](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml)
+[![CI](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/ci.yml)
+[![Security](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/security.yml)
+[![Docker](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/docker.yml/badge.svg)](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/docker.yml)
+[![LaTeX](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/latex.yml/badge.svg)](https://github.com/Tai-TZ/edico-ai-paper-editor/actions/workflows/latex.yml)
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -26,12 +26,12 @@
 
 ## 📖 Giới thiệu
 
-**Arionear** là trình biên tập LaTeX cho bài báo khoa học, đi kèm trợ lý AI **Ario** làm việc như một biên tập viên: đọc toàn bộ bản thảo, góp ý văn phong học thuật, cấu trúc IMRaD, trích dẫn và mạch lập luận. Mỗi đề xuất hiện thành **diff** để tác giả **Chấp nhận / Từ chối** — Ario không tự sửa bản thảo và không bịa số liệu hay trích dẫn.
+**Edico** là trình biên tập LaTeX cho bài báo khoa học, đi kèm trợ lý AI **Dico** làm việc như một biên tập viên: đọc toàn bộ bản thảo, góp ý văn phong học thuật, cấu trúc IMRaD, trích dẫn và mạch lập luận. Mỗi đề xuất hiện thành **diff** để tác giả **Chấp nhận / Từ chối** — Dico không tự sửa bản thảo và không bịa số liệu hay trích dẫn.
 
 Mọi việc diễn ra ngay trong trình duyệt: soạn LaTeX, biên dịch PDF với SyncTeX, xác minh trích dẫn qua arXiv · Crossref · Semantic Scholar · OpenAlex, chấm điểm bản thảo trước khi nộp và luyện bảo vệ với hội đồng phản biện AI. Dự án hướng tới nhà nghiên cứu cần đưa bài lên chuẩn xuất bản quốc tế, đặc biệt là người viết tiếng Anh như một ngoại ngữ.
 
 ```text
-Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / Từ chối → Biên dịch PDF
+Mở project → Soạn LaTeX → Hỏi Dico → Xem diff → Chấp nhận / Từ chối → Biên dịch PDF
 ```
 
 ### Nguyên tắc thiết kế
@@ -48,7 +48,7 @@ Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / T�
 ## ✨ Tính năng
 
 <p align="center">
-  <img src="./docs/assets/features.svg" alt="Bốn nhóm tính năng — Biên tập với Ario: Style, Structure, Template, Citation L1–L4, Quick Edit, slash command; Đánh giá chất lượng: Logic Audit, Publication Score Gate, Defense Mode, Integrity Monitor, phản hồi peer review, AI disclosure; Môi trường LaTeX: editor đa file, TeX Live + SyncTeX, import ZIP/DOCX/PDF, template IEEE/LNCS/Elsevier, xem PDF, link chia sẻ read-only; Nền tảng: JWT + Google SSO, admin console, gói FREE/PRO, chọn model có failover, song ngữ EN/VI, dark mode và mobile" width="100%">
+  <img src="./docs/assets/features.svg" alt="Bốn nhóm tính năng — Biên tập với Dico: Style, Structure, Template, Citation L1–L4, Quick Edit, slash command; Đánh giá chất lượng: Logic Audit, Publication Score Gate, Defense Mode, Integrity Monitor, phản hồi peer review, AI disclosure; Môi trường LaTeX: editor đa file, TeX Live + SyncTeX, import ZIP/DOCX/PDF, template IEEE/LNCS/Elsevier, xem PDF, link chia sẻ read-only; Nền tảng: JWT + Google SSO, admin console, gói FREE/PRO, chọn model có failover, song ngữ EN/VI, dark mode và mobile" width="100%">
 </p>
 
 ---
@@ -56,13 +56,13 @@ Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / T�
 ## 🏗️ Kiến trúc
 
 <p align="center">
-  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
+  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Edico: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
 Luồng chính của editor chạy qua **SSE streaming**: Intent Router phân loại yêu cầu (rules → LLM fallback), chuyển đến agent tương ứng; output đi qua Integrity Monitor trước khi trở thành diff cho người dùng duyệt.
 
 <p align="center">
-  <img src="./docs/assets/request-flow.svg" alt="Luồng xử lý một yêu cầu trong Arionear: Editor → FastAPI → Intent Router → Ario Agents → LLM → Integrity Monitor → Human Gate → PDF" width="100%">
+  <img src="./docs/assets/request-flow.svg" alt="Luồng xử lý một yêu cầu trong Edico: Editor → FastAPI → Intent Router → Dico Agents → LLM → Integrity Monitor → Human Gate → PDF" width="100%">
 </p>
 
 Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](./ARCHITECTURE.md) và [docs/architecture_diagram.md](./docs/architecture_diagram.md).
@@ -95,8 +95,8 @@ Mọi push/PR chạy CI (Ruff, pytest 3.11 + 3.12, frontend, Prisma trên Postgr
 ### 1. Clone & cấu hình
 
 ```bash
-git clone https://github.com/Tai-TZ/arionear-ai-paper-editor.git
-cd arionear-ai-paper-editor
+git clone https://github.com/Tai-TZ/edico-ai-paper-editor.git
+cd edico-ai-paper-editor
 cp .env.example .env   # điền API key, DIRECT_DATABASE_URL, AUTH_SECRET_KEY
 ```
 
@@ -168,6 +168,22 @@ Chi tiết vận hành PDF preview: [docs/pdf-preview-deploy.md](./docs/pdf-prev
 
 </details>
 
+<details>
+<summary><b>☁️ Deploy lên Cloud Run</b></summary>
+
+<br>
+
+Deploy chạy tay bằng PowerShell (CI không deploy). Script đọc `.env` ở thư mục gốc và **không có domain mặc định**:
+
+```powershell
+scripts\deploy-cloudrun-backend.ps1 -FrontendUrl https://your-domain -BackendCustomDomain https://api.your-domain
+scripts\deploy-cloudrun-frontend.ps1 -ViteApiUrl https://api.your-domain/api/v1
+```
+
+Service mặc định là `edico-api` / `edico-web` (đổi bằng `-ServiceName`); thêm `-SkipBuild` khi chỉ cập nhật biến môi trường. Chi tiết: [ARCHITECTURE.md §8](./ARCHITECTURE.md).
+
+</details>
+
 ---
 
 ## 🔧 Cấu hình môi trường
@@ -183,6 +199,7 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 | `AUTH_SECRET_KEY` | ✅ | JWT secret — tạo bằng `openssl rand -hex 32`; production từ chối khởi động nếu để mặc định hoặc ngắn hơn 32 ký tự |
 | `APP_ENV` · `LOG_LEVEL` | | `production` bật kiểm tra cấu hình, HSTS và log JSON (Cloud Logging); `development` log dạng text |
 | `FRONTEND_BASE_URL` · `BACKEND_BASE_URL` · `CORS_ORIGINS` | | URL công khai và origins được phép |
+| `CORS_ORIGIN_REGEX` | | Chỉ production: thêm origins theo regex, vd. `https://([a-z0-9-]+\.)*your-domain\.com` |
 | `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | | Đăng nhập Google SSO |
 | `SMTP_*` | | Gửi email xác minh (dev: mã in ra log) |
 | `BILLING_DEMO_CHECKOUT` | | Bật checkout QR demo (không thu tiền) — mặc định **tắt** ở production |
@@ -195,9 +212,9 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 ## 📁 Cấu trúc thư mục
 
 ```text
-arionear-ai-paper-editor/
+edico-ai-paper-editor/
 ├── src/                  # Backend FastAPI
-│   ├── agents/           #   LangGraph graph & các agent của Ario
+│   ├── agents/           #   LangGraph graph & các agent của Dico
 │   ├── api/              #   REST / SSE / WebSocket routes
 │   ├── services/         #   Logic audit, defense, compile, citation, guardrails…
 │   ├── prompts/          #   Prompt templates (YAML)
@@ -219,18 +236,18 @@ arionear-ai-paper-editor/
 ## 🖼️ Giao diện
 
 <p align="center">
-  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Arionear: đoạn mở đầu được Ario viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
+  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Edico: đoạn mở đầu được Dico viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
 </p>
-<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Ario viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
+<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Dico viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
 
 <table>
 <tr>
 <td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Arionear theo phong cách báo in">
+  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Edico theo phong cách báo in">
   <br><sub><b>Trang chủ</b> — phong cách báo in, demo phiên biên tập trực tiếp</sub>
 </td>
 <td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Ario">
+  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Dico">
   <br><sub><b>Dark mode</b> — cùng phiên biên tập ở giao diện tối</sub>
 </td>
 </tr>
@@ -256,6 +273,7 @@ arionear-ai-paper-editor/
 </tr>
 </table>
 
+<sub>Nhận diện: phong cách báo in trên nền giấy, tiêu đề chữ Fraunces, màu nhấn xanh bút chì; màu đỏ chỉ dành cho lỗi và phần bị xóa trong diff.</sub><br>
 <sub>Ảnh chụp từ bản chạy local với dữ liệu demo; phản hồi AI trong ảnh lấy từ một LLM giả lập (OpenAI-compatible) để có thể tái lập.</sub>
 
 ---

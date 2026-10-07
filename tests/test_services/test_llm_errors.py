@@ -30,4 +30,4 @@ def test_friendly_llm_error_zai_insufficient_balance():
 
 def test_looks_like_provider_error():
     assert looks_like_provider_error("Error code: 429 - {'error': {'code': '1113'}}")
-    assert not looks_like_provider_error("Chào bạn! Tôi là Ario.")
+    assert not looks_like_provider_error("Chào bạn! Tôi là Dico.")

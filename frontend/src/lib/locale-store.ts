@@ -2,7 +2,7 @@ import type { UiLanguage } from "@/lib/researcher-profile";
 
 export type { UiLanguage };
 
-const STORAGE_KEY = "arionear-locale";
+const STORAGE_KEY = "edico-locale";
 
 export function getStoredLocale(): UiLanguage {
   if (typeof window === "undefined") return "en";

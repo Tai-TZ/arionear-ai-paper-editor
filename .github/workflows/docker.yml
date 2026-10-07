@@ -59,7 +59,7 @@ jobs:
           file: Dockerfile
           push: false
           load: true
-          tags: arionear-api:ci
+          tags: edico-api:ci
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
@@ -69,7 +69,7 @@ jobs:
             -e APP_ENV=production \
             -e AUTH_SECRET_KEY="$(openssl rand -hex 32)" \
             -e LLM_PROVIDER=openai -e OPENAI_API_KEY=ci-placeholder \
-            arionear-api:ci
+            edico-api:ci
           for i in $(seq 1 30); do
             curl -fsS http://localhost:8000/health && break
             sleep 2
@@ -102,14 +102,14 @@ jobs:
           file: frontend/Dockerfile
           push: false
           load: true
-          tags: arionear-web:ci
+          tags: edico-web:ci
           build-args: VITE_API_URL=http://localhost:8000/api/v1
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
       - name: Smoke test
         run: |
-          docker run -d --name web -p 8080:8080 arionear-web:ci
+          docker run -d --name web -p 8080:8080 edico-web:ci
           for i in $(seq 1 30); do
             curl -fsS -o /dev/null http://localhost:8080/ && break
             sleep 2

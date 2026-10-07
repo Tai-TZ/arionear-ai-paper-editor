@@ -61,7 +61,7 @@ type PdfPreviewPanelProps = {
     context?: string,
   ) => void;
   onCompile: () => void;
-  onAskArioFix?: () => void;
+  onAskDicoFix?: () => void;
   mobile?: boolean;
   projectName?: string;
   latexSource?: string;
@@ -305,7 +305,7 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
   onCompilerChange,
   onSynctexHit,
   onCompile,
-  onAskArioFix,
+  onAskDicoFix,
   mobile = false,
   projectName = "document",
   latexSource = "",
@@ -982,14 +982,14 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
                     {t.pdf.compile}
                   </button>
                 )}
-                {onAskArioFix && compileError && (
+                {onAskDicoFix && compileError && (
                   <button
                     type="button"
-                    onClick={onAskArioFix}
+                    onClick={onAskDicoFix}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
                   >
                     <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                    Ask Ario to fix
+                    Ask Dico to fix
                   </button>
                 )}
               </div>

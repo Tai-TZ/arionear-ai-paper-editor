@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { EdicoWordmark } from "@/components/edico-wordmark";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,8 +14,8 @@ export function AppNotFound() {
   return (
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
-        <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
-          <ArionearWordmark />
+        <Link to="/" className="font-serif-display text-xl font-black tracking-tight md:text-2xl">
+          <EdicoWordmark />
         </Link>
         <div className="flex items-center gap-2">
           <LanguageToggle compact className="masthead-language-toggle shrink-0" />
@@ -32,10 +32,10 @@ export function AppNotFound() {
         </aside>
 
         <main className="flex flex-col items-center justify-center px-6 py-12 text-center lg:px-12">
-          <p className="font-sans-ui text-[11px] uppercase tracking-[0.22em] text-[color:var(--editorial-red)]">
+          <p className="font-sans-ui text-[11px] uppercase tracking-[0.22em] text-[color:var(--editorial-accent)]">
             {t.eyebrow}
           </p>
-          <p className="mt-4 font-serif-display text-[clamp(4.5rem,16vw,8rem)] font-black leading-none tracking-tighter">
+          <p className="mt-4 font-serif-display text-[clamp(4.5rem,16vw,8rem)] font-black leading-none tracking-tight">
             {t.code}
           </p>
           <h1 className="mt-4 font-serif-display text-3xl font-bold tracking-tight md:text-4xl">

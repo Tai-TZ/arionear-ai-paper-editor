@@ -145,7 +145,7 @@ export function QrCheckoutDialog({
           {confirmed ? (
             <div className="flex flex-col items-center gap-4 py-4 text-center">
               <div className="flex h-14 w-14 items-center justify-center border border-foreground bg-foreground/[0.04]">
-                <Check className="h-7 w-7 text-[color:var(--editorial-red)]" strokeWidth={2} />
+                <Check className="h-7 w-7 text-[color:var(--editorial-accent)]" strokeWidth={2} />
               </div>
               <div>
                 <p className="font-serif-display text-xl font-bold tracking-tight">{t.success}</p>
@@ -194,7 +194,7 @@ export function QrCheckoutDialog({
                 href={confirmUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 font-sans-ui text-[11px] uppercase tracking-widest text-muted-foreground underline-offset-4 transition-colors hover:text-[color:var(--editorial-red)] hover:underline"
+                className="inline-flex items-center justify-center gap-1.5 font-sans-ui text-[11px] uppercase tracking-widest text-muted-foreground underline-offset-4 transition-colors hover:text-[color:var(--editorial-accent)] hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {t.devLink}
@@ -214,7 +214,7 @@ export function QrCheckoutDialog({
                       className={cn(
                         "shrink-0 font-mono-data text-xs tabular-nums",
                         secondsLeft <= 60
-                          ? "text-[color:var(--editorial-red)]"
+                          ? "text-[color:var(--destructive)]"
                           : "text-muted-foreground",
                       )}
                     >

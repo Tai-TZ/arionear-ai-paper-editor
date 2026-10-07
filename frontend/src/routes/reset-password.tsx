@@ -26,8 +26,8 @@ export const Route = createFileRoute("/reset-password")({
   },
   head: () => ({
     meta: [
-      { title: "Set New Password — Arionear" },
-      { name: "description", content: "Choose a new password for your Arionear account." },
+      { title: "Set New Password — Edico" },
+      { name: "description", content: "Choose a new password for your Edico account." },
     ],
   }),
   component: ResetPasswordPage,
@@ -141,7 +141,7 @@ function ResetPasswordPage() {
       <p className="mt-8 text-center text-sm font-serif-body">
         <Link
           to="/signin"
-          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
+          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-accent)]"
         >
           {t.backToSignIn}
         </Link>

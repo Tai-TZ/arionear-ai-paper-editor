@@ -308,7 +308,7 @@ export function AiDisclosureSection({ paperId }: { paperId: string }) {
       {error || report ? (
         <div className="space-y-3 border-t border-border/60 px-4 py-3" aria-live="polite">
           {error ? (
-            <div className="flex items-start gap-2 border border-[color:var(--editorial-red)]/35 bg-[color:var(--editorial-red)]/5 px-3 py-2 text-xs text-[color:var(--editorial-red)]">
+            <div className="flex items-start gap-2 border border-[color:var(--destructive)]/35 bg-[color:var(--destructive)]/5 px-3 py-2 text-xs text-[color:var(--destructive)]">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
               <span className="min-w-0 flex-1">{error}</span>
               {!report && !loading ? (

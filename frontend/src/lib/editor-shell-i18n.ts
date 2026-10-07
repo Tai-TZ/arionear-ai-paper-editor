@@ -7,7 +7,7 @@ export type EditorShellCopy = {
     retry: string;
     backToProjects: string;
   };
-  /** Chat prompt pre-filled by «Ask Ario to fix» for a failed compile. */
+  /** Chat prompt pre-filled by «Ask Dico to fix» for a failed compile. */
   fixCompilePrompt: (compileError: string) => string;
   /** Confirm shown when leaving the editor with unsaved changes. */
   unsavedLeave: {

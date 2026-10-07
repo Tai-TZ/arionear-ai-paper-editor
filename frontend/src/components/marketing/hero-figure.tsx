@@ -240,7 +240,7 @@ export function HeroPeerReviewFigure() {
         <span className="inline-flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5">
             <span
-              className="hero-demo-live inline-block h-1.5 w-1.5 bg-[color:var(--editorial-red)]"
+              className="hero-demo-live inline-block h-1.5 w-1.5 bg-[color:var(--editorial-accent)]"
               aria-hidden
             />
             {autoPlay ? demo.liveDemo : demo.pausedInteractive}
@@ -265,12 +265,12 @@ export function HeroPeerReviewFigure() {
             </div>
             <div className="min-w-0">
               <p className="font-mono-data text-[11px] uppercase tracking-widest">
-                {demo.arioRole}
+                {demo.dicoRole}
               </p>
               <p className="font-body text-xs text-neutral-600 italic">{demo.aiEditor}</p>
             </div>
             {thinking && (
-              <span className="ml-auto hero-demo-thinking font-mono-data text-[10px] text-[color:var(--editorial-red)] shrink-0">
+              <span className="ml-auto hero-demo-thinking font-mono-data text-[10px] text-[color:var(--editorial-accent)] shrink-0">
                 {demo.thinking}
               </span>
             )}
@@ -307,12 +307,12 @@ export function HeroPeerReviewFigure() {
             <p className="text-neutral-500">\section{"{Introduction}"}</p>
             <p className="mt-1.5 hero-demo-sentence">
               <span
-                className={`hero-demo-del line-through decoration-[color:var(--editorial-red)] decoration-1 text-neutral-400${styleAccepted ? " hero-demo-layer-out" : ""}`}
+                className={`hero-demo-del line-through decoration-[color:var(--destructive)] decoration-1 text-neutral-400${styleAccepted ? " hero-demo-layer-out" : ""}`}
               >
                 This paper discuss
               </span>
               <span
-                className={`hero-demo-ins bg-[color:var(--editorial-red)]/12 text-[color:var(--editorial-red)] px-0.5${styleAccepted ? " hero-demo-layer-out" : ""}`}
+                className={`hero-demo-ins bg-[color:var(--editorial-accent)]/12 text-[color:var(--editorial-accent)] px-0.5${styleAccepted ? " hero-demo-layer-out" : ""}`}
               >
                 {" "}
                 This paper discusses
@@ -326,7 +326,7 @@ export function HeroPeerReviewFigure() {
             </p>
             <p className="mt-1.5 text-neutral-600">the role of LaTeX in academic publishing.</p>
             <p
-              className={`mt-2 hero-demo-cite transition-colors duration-500${citationActive ? " text-[color:var(--editorial-red)] hero-demo-cite-warn" : " text-neutral-500"}`}
+              className={`mt-2 hero-demo-cite transition-colors duration-500${citationActive ? " text-[color:var(--destructive)] hero-demo-cite-warn" : " text-neutral-500"}`}
             >
               {citationAccepted ? (
                 "\\cite{author2024}"
@@ -337,7 +337,7 @@ export function HeroPeerReviewFigure() {
               )}
             </p>
             <p
-              className={`mt-2 text-[color:var(--editorial-red)]/80 hero-demo-logic-flag${logicVisible ? " hero-demo-layer-in" : " hero-demo-layer-out"}`}
+              className={`mt-2 text-[color:var(--destructive)]/80 hero-demo-logic-flag${logicVisible ? " hero-demo-layer-in" : " hero-demo-layer-out"}`}
             >
               % ⚠ Methods → missing Figure 1 ref
             </p>
@@ -381,7 +381,7 @@ export function HeroPeerReviewFigure() {
         >
           <div
             key={`${stepKey}-${loopKey}`}
-            className={`hero-demo-progress-fill h-full bg-[color:var(--editorial-red)] rounded-full${autoPlay ? " hero-demo-progress-animate" : ""}`}
+            className={`hero-demo-progress-fill h-full bg-[color:var(--editorial-accent)] rounded-full${autoPlay ? " hero-demo-progress-animate" : ""}`}
             style={
               autoPlay
                 ? undefined
@@ -400,7 +400,7 @@ export function HeroPeerReviewFigure() {
                 key={s.id}
                 className={`hero-demo-dot h-1.5 rounded-full transition-all duration-500 ease-out ${
                   activeId === s.id
-                    ? "w-5 bg-[color:var(--editorial-red)]"
+                    ? "w-5 bg-[color:var(--editorial-accent)]"
                     : resolved[s.id] !== "pending"
                       ? "w-1.5 bg-foreground/50"
                       : "w-1.5 bg-foreground/20"
@@ -416,7 +416,7 @@ export function HeroPeerReviewFigure() {
               <button
                 type="button"
                 onClick={resetDemo}
-                className="hover:text-[color:var(--editorial-red)] underline-offset-2 hover:underline"
+                className="hover:text-[color:var(--editorial-accent)] underline-offset-2 hover:underline"
               >
                 {demo.replayDemo}
               </button>
@@ -452,14 +452,14 @@ function SuggestionChip({
             ? "hero-demo-chip-accepted border-foreground/20 opacity-55"
             : "hero-demo-chip-refused border-foreground/15 opacity-40"
           : active
-            ? "hero-demo-chip-active border-[color:var(--editorial-red)] bg-[color:var(--editorial-red)]/5 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--editorial-red)_25%,transparent)]"
+            ? "hero-demo-chip-active border-[color:var(--editorial-accent)] bg-[color:var(--editorial-accent)]/5 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--editorial-accent)_25%,transparent)]"
             : "border-foreground/30 hover:border-foreground/50"
       }`}
       aria-pressed={active}
     >
       <p
         className={`font-mono-data text-[10px] uppercase tracking-widest transition-colors duration-300 ${
-          active && isPending ? "text-[color:var(--editorial-red)]" : "text-muted-foreground"
+          active && isPending ? "text-[color:var(--editorial-accent)]" : "text-muted-foreground"
         }`}
       >
         {suggestion.label}

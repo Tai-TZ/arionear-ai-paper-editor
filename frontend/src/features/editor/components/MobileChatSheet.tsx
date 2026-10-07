@@ -3,7 +3,7 @@ import type React from "react";
 import { PencilLine, X } from "lucide-react";
 import { useLocale } from "@/components/locale-context";
 import { ChatInput, ChatMessages, type ChatMessage } from "@/components/chat-overlay";
-import { arioAvatar } from "@/lib/ario-avatar";
+import { dicoAvatar } from "@/lib/dico-avatar";
 import { LlmSelector } from "@/components/llm-selector";
 import { PanelErrorBoundary } from "@/components/panel-error-boundary";
 import { editorCopy } from "@/lib/editor-i18n";
@@ -88,8 +88,8 @@ export function MobileChatSheet({
         <div className="mobile-chat-sheet-handle" aria-hidden />
         <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-2.5">
           <div className="flex items-center gap-2.5">
-            <img src={arioAvatar} alt="" className="h-7 w-7 rounded-lg object-contain" />
-            <span className="text-sm font-semibold tracking-tight">Ario</span>
+            <img src={dicoAvatar} alt="" className="h-7 w-7 rounded-lg object-contain" />
+            <span className="text-sm font-semibold tracking-tight">Dico</span>
           </div>
           <button
             onClick={onClose}

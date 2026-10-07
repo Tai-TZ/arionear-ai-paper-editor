@@ -1,4 +1,4 @@
-const EDITOR_SIDEBAR_STORAGE_KEY = "arionear-editor-sidebar-expanded";
+const EDITOR_SIDEBAR_STORAGE_KEY = "edico-editor-sidebar-expanded";
 
 export function readSidebarExpanded(): boolean {
   if (typeof window === "undefined") return true;

@@ -1,4 +1,4 @@
-// Arionear — Scientific Paper Assistant
+// Edico — Scientific Paper Assistant
 // Source of truth for PostgreSQL schema.
 // Python backend connects via SQLAlchemy using the same DATABASE_URL.
 

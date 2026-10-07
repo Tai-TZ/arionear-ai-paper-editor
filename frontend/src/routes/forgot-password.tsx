@@ -10,8 +10,8 @@ import { authToast } from "@/lib/auth-toast";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset Password — Arionear" },
-      { name: "description", content: "Request a password reset link for your Arionear account." },
+      { title: "Reset Password — Edico" },
+      { name: "description", content: "Request a password reset link for your Edico account." },
     ],
   }),
   component: ForgotPasswordPage,
@@ -53,7 +53,7 @@ function ForgotPasswordPage() {
 
       {submitted ? (
         <div className="border border-foreground bg-background p-6">
-          <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-red)] mb-3">
+          <p className="font-sans-ui uppercase text-[11px] tracking-widest text-[color:var(--editorial-accent)] mb-3">
             {t.noticePosted}
           </p>
           <h2 className="font-serif-display text-2xl font-bold mb-2">{t.checkInbox}</h2>
@@ -63,7 +63,7 @@ function ForgotPasswordPage() {
               {t.devMode}{" "}
               <a
                 href={devResetUrl}
-                className="underline break-all hover:text-[color:var(--editorial-red)]"
+                className="underline break-all hover:text-[color:var(--editorial-accent)]"
               >
                 {t.openResetLink}
               </a>
@@ -76,7 +76,7 @@ function ForgotPasswordPage() {
               setDevResetUrl(null);
               setNotice("");
             }}
-            className="mt-5 font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+            className="mt-5 font-sans-ui uppercase text-[11px] tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
           >
             {t.useDifferentEmail}
           </button>
@@ -104,13 +104,13 @@ function ForgotPasswordPage() {
       <div className="mt-8 flex items-center justify-between font-sans-ui uppercase text-[11px] tracking-widest">
         <Link
           to="/signin"
-          className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+          className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> {t.backToSignIn}
         </Link>
         <Link
           to="/signup"
-          className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+          className="underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
         >
           {t.createAccount}
         </Link>

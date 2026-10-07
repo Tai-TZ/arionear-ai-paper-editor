@@ -6,13 +6,13 @@ import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { commonCopy } from "@/lib/common-i18n";
 import { getSession, type AuthUser } from "@/lib/auth-store";
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { EdicoWordmark } from "@/components/edico-wordmark";
 import { editorEntryPath } from "@/lib/require-auth";
 
 function navLinkClass(active: boolean) {
   return active
-    ? "text-[color:var(--editorial-red)]"
-    : "text-foreground hover:text-[color:var(--editorial-red)]";
+    ? "text-[color:var(--editorial-accent)]"
+    : "text-foreground hover:text-[color:var(--editorial-accent)]";
 }
 
 function MarketingTicker() {
@@ -25,7 +25,7 @@ function MarketingTicker() {
       <div className="marketing-ticker-track flex whitespace-nowrap animate-[ticker_40s_linear_infinite] py-2 font-mono-data uppercase text-xs tracking-widest">
         {[...items, ...items, ...items].map((item, i) => (
           <span key={i} className="px-6 flex items-center gap-6">
-            <span className="inline-block w-1.5 h-1.5 bg-[color:var(--editorial-red)]" />
+            <span className="inline-block w-1.5 h-1.5 bg-[color:var(--editorial-accent)]" />
             {item}
           </span>
         ))}
@@ -92,7 +92,7 @@ function MarketingMasthead() {
                 <Link
                   to="/projects"
                   title={user.email}
-                  className="truncate max-w-[9rem] sm:max-w-none hover:text-[color:var(--editorial-red)] transition-colors"
+                  className="truncate max-w-[9rem] sm:max-w-none hover:text-[color:var(--editorial-accent)] transition-colors"
                 >
                   {user.name}
                 </Link>
@@ -108,9 +108,9 @@ function MarketingMasthead() {
         <div className="marketing-masthead-main flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-5">
           <Link
             to="/"
-            className="marketing-masthead-brand font-serif-display text-[1.65rem] sm:text-3xl md:text-5xl font-black leading-none tracking-tighter min-w-0"
+            className="marketing-masthead-brand font-serif-display text-[1.65rem] sm:text-3xl md:text-5xl font-black leading-none tracking-tight min-w-0"
           >
-            <ArionearWordmark />
+            <EdicoWordmark />
           </Link>
           <nav className="hidden md:flex items-center gap-8 font-sans-ui uppercase text-xs tracking-widest">
             {navLinks.map(({ label, to }) => (
@@ -186,9 +186,9 @@ function MarketingColophon() {
         <div className="col-span-2">
           <Link
             to="/"
-            className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80"
+            className="font-serif-display text-3xl font-black tracking-tight hover:opacity-80"
           >
-            <ArionearWordmark />
+            <EdicoWordmark />
           </Link>
           <p className="mt-2 font-body italic text-sm">{f.tagline}</p>
           <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -205,7 +205,7 @@ function MarketingColophon() {
                 <li key={link.label}>
                   <Link
                     to={link.to}
-                    className="hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+                    className="hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
                   >
                     {link.label}
                   </Link>

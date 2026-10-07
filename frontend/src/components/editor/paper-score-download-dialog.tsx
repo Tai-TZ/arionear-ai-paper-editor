@@ -42,7 +42,7 @@ const ISSUE_SEVERITY_ORDER: Record<string, number> = {
 function scoreColor(score: number): string {
   if (score >= 80) return "var(--editorial-green, #1a7f4b)";
   if (score >= 60) return "var(--editorial-amber, #b45309)";
-  return "var(--editorial-red)";
+  return "var(--destructive)";
 }
 
 function ScoreRing({ score, animate }: { score: number; animate: boolean }) {
@@ -368,7 +368,7 @@ function PaperScoreDialogBody({
                     <span
                       className={`mr-1.5 font-semibold uppercase ${
                         issue.severity === "critical"
-                          ? "text-[color:var(--editorial-red,#b91c1c)]"
+                          ? "text-[color:var(--destructive)]"
                           : "text-[color:var(--editorial-amber,#b45309)]"
                       }`}
                     >

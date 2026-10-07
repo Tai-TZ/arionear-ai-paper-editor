@@ -23,7 +23,7 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
             <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
               {content.eyebrow}
             </p>
-            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tight">
               {content.title}
             </h1>
             <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">
@@ -53,13 +53,23 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
                         className="flex items-start gap-3 font-body text-base leading-snug"
                       >
                         <Check
-                          className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-red)]"
+                          className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-accent)]"
                           strokeWidth={2}
                         />
                         {item}
                       </li>
                     ))}
                   </ul>
+                ) : null}
+                {section.link ? (
+                  <a
+                    href={section.link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex font-sans-ui uppercase text-xs tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
+                  >
+                    {section.link.label} ↗
+                  </a>
                 ) : null}
               </section>
             ))}
@@ -68,7 +78,7 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
           <div className="mt-12 pt-8 border-t border-foreground/30">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 
-const NOTICE_KEY = "arionear-project-format-notice-ack";
+const NOTICE_KEY = "edico-project-format-notice-ack";
 
 export function hasAcknowledgedProjectFormatNotice(): boolean {
   if (typeof window === "undefined") return true;
