@@ -37,3 +37,10 @@ repos:
         language: system
         files: ^frontend/.*\.(ts|tsx|js|mjs|json|css|md)$
         exclude: ^frontend/package-lock\.json$
+
+      # Needs the gitleaks binary on PATH (winget install Gitleaks.Gitleaks / brew install gitleaks).
+      - id: gitleaks
+        name: gitleaks · staged changes
+        entry: gitleaks git --pre-commit --staged --redact --no-banner
+        language: system
+        pass_filenames: false
