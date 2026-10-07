@@ -21,7 +21,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "AI editorial assistant for scientific manuscripts. Improve language, structure, citations, and reviewer responses — without inventing data.",
       },
-      { name: "author", content: "Edico" },
+      { name: "author", content: "Tai Thanh Nguyen" },
       { property: "og:title", content: "Edico — From draft to proof" },
       { property: "og:description", content: "AI editorial assistant for scientific manuscripts." },
       { property: "og:type", content: "website" },

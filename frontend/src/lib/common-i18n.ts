@@ -20,6 +20,7 @@ type CommonCopy = {
     tagline: string;
     edition: string;
     copyright: string;
+    credit: string;
     motto: string;
     sections: {
       desk: string;
@@ -108,6 +109,7 @@ const EN: CommonCopy = {
     tagline: "AI Academic Writing & Editing Assistant.",
     edition: "Edition Vol. I · Printed for the web ·",
     copyright: "Edico Editorial Co.",
+    credit: "Designed & built by",
     motto: "All the science that's fit to publish.",
     sections: { desk: "Desk", authors: "Authors", bureau: "Bureau", legal: "Legal" },
     links: {
@@ -197,6 +199,7 @@ const VI: CommonCopy = {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
     edition: "Ấn bản Tập I · In trên web ·",
     copyright: "Edico Editorial Co.",
+    credit: "Thiết kế & phát triển bởi",
     motto: "Mọi khoa học xứng đáng được xuất bản.",
     sections: { desk: "Ban biên tập", authors: "Tác giả", bureau: "Văn phòng", legal: "Pháp lý" },
     links: {

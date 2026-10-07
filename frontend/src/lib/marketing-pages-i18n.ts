@@ -163,7 +163,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
       {
         paragraphs: [
           "Edico giúp tác giả cải thiện ngôn ngữ, cấu trúc và trích dẫn trong khi giữ quyền kiểm soát cho con người.",
-          "Edico được thiết kế và phát triển bởi Nguyễn Thành Tài.",
+          "Edico được thiết kế và phát triển bởi Tai Thanh Nguyen.",
         ],
       },
     ],
@@ -438,7 +438,7 @@ const VI_WORKFLOW: WorkflowPageCopy = {
 
 const EN_ABOUT: AboutPageCopy = {
   publishedBy: "Published by",
-  teamName: "Nguyễn Thành Tài",
+  teamName: "Tai Thanh Nguyen",
   teamSubtitle: "Founder & Engineer · From draft to proof",
   mastheadTitle: "The Masthead",
   membersLabel: (count) => `${count} ${count === 1 ? "member" : "members"}`,
@@ -456,7 +456,7 @@ const EN_ABOUT: AboutPageCopy = {
 
 const VI_ABOUT: AboutPageCopy = {
   publishedBy: "Xuất bản bởi",
-  teamName: "Nguyễn Thành Tài",
+  teamName: "Tai Thanh Nguyen",
   teamSubtitle: "Founder & Engineer · Từ bản thảo đến bản in",
   mastheadTitle: "Ban biên tập",
   membersLabel: (count) => `${count} thành viên`,

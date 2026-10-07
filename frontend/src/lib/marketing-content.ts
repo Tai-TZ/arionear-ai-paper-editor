@@ -142,7 +142,7 @@ export const aboutContent: MarketingPageContent = {
     {
       paragraphs: [
         "Edico helps authors improve language, structure, and citations while keeping the human author in control.",
-        "Edico is designed and built by Nguyễn Thành Tài.",
+        "Edico is designed and built by Tai Thanh Nguyen.",
       ],
     },
   ],
