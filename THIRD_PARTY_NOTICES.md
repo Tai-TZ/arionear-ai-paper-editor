@@ -28,7 +28,7 @@ copyleft license (weak or strong); see the next section for how each one is used
 <!-- BEGIN:license-summary -->
 | License | Python | Frontend |
 | --- | ---: | ---: |
-| MIT | 41 | 288 |
+| MIT | 41 | 287 |
 | BSD-3-Clause | 16 | 3 |
 | Apache-2.0 | 12 | 4 |
 | ISC | — | 10 |
@@ -49,7 +49,7 @@ copyleft license (weak or strong); see the next section for how each one is used
 | PSF-2.0 | 1 | — |
 | Python-2.0 | — | 1 |
 | Unlicense | — | 1 |
-| **Total** | **87** | **314** |
+| **Total** | **87** | **313** |
 <!-- END:license-summary -->
 
 Bundled assets add: OFL-1.1 (KaTeX fonts, vendored and from the `katex` package), GUST Font License (Latin Modern fonts), LPPL 1.3 / 1.3c (IEEEtran,
@@ -115,7 +115,7 @@ Python 3.11 — the platform of the backend Docker image (`python:3.11-slim`). L
 | anyio | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | bcrypt | 5.0.0 | Apache-2.0 | <https://github.com/pyca/bcrypt/> |
 | bibtexparser | 2.1.0 | MIT | <https://github.com/sciunto-org/python-bibtexparser> |
-| cachetools | 7.2.0 | MIT | <https://github.com/tkem/cachetools/> |
+| cachetools | 7.2.1 | MIT | <https://github.com/tkem/cachetools/> |
 | certifi | 2026.7.22 | MPL-2.0 † | <https://github.com/certifi/python-certifi> |
 | cffi | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
 | charset-normalizer | 3.5.2 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
@@ -125,7 +125,7 @@ Python 3.11 — the platform of the backend Docker image (`python:3.11-slim`). L
 | docstring_parser | 0.18.0 | MIT | <https://github.com/rr-/docstring_parser> |
 | fastapi | 0.142.2 | MIT | <https://github.com/fastapi/fastapi> |
 | filetype | 1.2.0 | MIT | <https://github.com/h2non/filetype.py> |
-| google-auth | 2.59.1 | Apache-2.0 | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| google-auth | 2.60.0 | Apache-2.0 | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
 | google-genai | 2.28.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | h11 | 0.16.0 | MIT | <https://github.com/python-hyper/h11> |
 | httpcore | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
@@ -139,22 +139,22 @@ Python 3.11 — the platform of the backend Docker image (`python:3.11-slim`). L
 | jiter | 0.17.0 | MIT | <https://github.com/pydantic/jiter/> |
 | json_repair | 0.63.5 | MIT | <https://github.com/mangiucugna/json_repair/> |
 | jsonpatch | 1.33 | BSD-3-Clause | <https://github.com/stefankoegl/python-json-patch> |
-| jsonpointer | 3.1.1 | BSD-3-Clause | <https://github.com/stefankoegl/python-json-pointer> |
+| jsonpointer | 3.2.0 | BSD-3-Clause | <https://github.com/stefankoegl/python-json-pointer> |
 | langchain | 1.4.3 | MIT | <https://docs.langchain.com/> |
 | langchain-anthropic | 1.7.5 | MIT | <https://docs.langchain.com/oss/python/integrations/providers/anthropic> |
-| langchain-core | 1.6.6 | MIT | <https://docs.langchain.com/> |
+| langchain-core | 1.6.7 | MIT | <https://docs.langchain.com/> |
 | langchain-google-genai | 4.4.0 | MIT | <https://docs.langchain.com/oss/python/integrations/providers/google> |
 | langchain-openai | 1.6.7 | MIT | <https://docs.langchain.com/oss/python/integrations/providers/openai> |
 | langchain-protocol | 0.0.19 | MIT | <https://github.com/langchain-ai/agent-protocol/tree/main/streaming> |
-| langgraph | 1.2.12 | MIT | <https://docs.langchain.com/oss/python/langgraph/overview> |
+| langgraph | 1.2.14 | MIT | <https://docs.langchain.com/oss/python/langgraph/overview> |
 | langgraph-checkpoint | 4.2.0 | MIT | <https://github.com/langchain-ai/langgraph/tree/main/libs/checkpoint> |
 | langgraph-prebuilt | 1.1.0 | MIT | <https://github.com/langchain-ai/langgraph/tree/main/libs/prebuilt> |
-| langgraph-sdk | 0.4.5 | MIT | <https://github.com/langchain-ai/langgraph/tree/main/libs/sdk-py> |
+| langgraph-sdk | 0.4.6 | MIT | <https://github.com/langchain-ai/langgraph/tree/main/libs/sdk-py> |
 | langsmith | 0.14.4 | MIT | <https://smith.langchain.com/> |
 | lxml | 6.1.3 | BSD-3-Clause | <https://lxml.de/> |
-| openai | 3.24.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
-| opentelemetry-api | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
-| orjson | 3.12.0 | MPL-2.0 AND (Apache-2.0 OR MIT) † | <https://github.com/ijl/orjson> |
+| openai | 3.26.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| opentelemetry-api | 1.45.1 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
+| orjson | 3.13.0 | MPL-2.0 AND (Apache-2.0 OR MIT) † | <https://github.com/ijl/orjson> |
 | ormsgpack | 1.12.2 | Apache-2.0 OR MIT | <https://github.com/ormsgpack/ormsgpack> |
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
 | pdfminer.six | 20260107 | MIT | <https://github.com/pdfminer/pdfminer.six> |
@@ -264,11 +264,10 @@ according to their `package.json`.
 | @jridgewell/gen-mapping | 0.3.13 | MIT | <https://github.com/jridgewell/sourcemaps> |
 | @jridgewell/remapping | 2.3.5 | MIT | <https://github.com/jridgewell/sourcemaps> |
 | @jridgewell/resolve-uri | 3.1.2 | MIT | <https://github.com/jridgewell/resolve-uri> |
-| @jridgewell/sourcemap-codec | 1.5.5 | MIT | <https://github.com/jridgewell/sourcemaps> |
+| @jridgewell/sourcemap-codec | 1.6.0 | MIT | <https://github.com/jridgewell/sourcemaps> |
 | @jridgewell/trace-mapping | 0.3.31 | MIT | <https://github.com/jridgewell/sourcemaps> |
-| @napi-rs/canvas | 0.1.100 | MIT | <https://github.com/Brooooooklyn/canvas> |
-| @napi-rs/canvas-linux-x64-gnu | 0.1.100 | MIT | <https://github.com/Brooooooklyn/canvas> |
-| @napi-rs/canvas-linux-x64-musl | 0.1.100 | MIT | <https://github.com/Brooooooklyn/canvas> |
+| @napi-rs/canvas | 1.0.10 | MIT | <https://github.com/Brooooooklyn/canvas> |
+| @napi-rs/canvas-linux-x64-gnu | 1.0.10 | MIT | <https://github.com/Brooooooklyn/canvas> |
 | @oozcitak/dom | 2.0.2 | MIT | <https://github.com/oozcitak/dom> |
 | @oozcitak/infra | 2.0.2 | MIT | <https://github.com/oozcitak/infra> |
 | @oozcitak/url | 3.0.0 | MIT | <https://github.com/oozcitak/url> |
@@ -341,7 +340,7 @@ according to their `package.json`.
 | @types/katex | 0.16.8 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/mdast | 4.0.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/ms | 2.1.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
-| @types/node | 22.20.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
+| @types/node | 22.20.5 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/react | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/react-dom | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
 | @types/unist | 2.0.11 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped> |
@@ -510,7 +509,7 @@ according to their `package.json`.
 | seroval-plugins | 1.6.8 | MIT | <https://github.com/lxsmnsyc/seroval> |
 | sonner | 2.0.8 | MIT | <https://github.com/emilkowalski/sonner> |
 | source-map | 0.7.6 | BSD-3-Clause | <https://github.com/mozilla/source-map> |
-| source-map-js | 1.2.1 | BSD-3-Clause | <https://github.com/7rulnik/source-map-js> |
+| source-map-js | 1.2.2 | BSD-3-Clause | <https://github.com/7rulnik/source-map-js> |
 | space-separated-tokens | 2.0.2 | MIT | <https://github.com/wooorm/space-separated-tokens> |
 | srvx | 0.11.22 | MIT | <https://github.com/h3js/srvx> |
 | stringify-entities | 4.0.4 | MIT | <https://github.com/wooorm/stringify-entities> |
