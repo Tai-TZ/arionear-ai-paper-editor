@@ -220,6 +220,17 @@ function MarketingColophon() {
           <span>
             © {new Date().getFullYear()} {f.copyright}
           </span>
+          <span className="text-muted-foreground">
+            {f.credit}{" "}
+            <a
+              href="https://github.com/Tai-TZ"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
+            >
+              Tai Thanh Nguyen
+            </a>
+          </span>
           <span>{f.motto}</span>
         </div>
       </div>

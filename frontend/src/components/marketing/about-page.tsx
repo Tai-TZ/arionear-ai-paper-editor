@@ -6,7 +6,7 @@ import { aboutPageCopy, marketingPageContent, marketingPageUi } from "@/lib/mark
 import { EditorialBoardFigure } from "./editorial-board-figure";
 import { MarketingLayout } from "./marketing-layout";
 
-const teamMembers = [{ name: "Nguyễn Thành Tài", tag: "Founder" }];
+const teamMembers = [{ name: "Tai Thanh Nguyen", tag: "Founder" }];
 
 export function AboutPage() {
   const { locale } = useLocale();
