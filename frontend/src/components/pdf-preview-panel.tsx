@@ -396,7 +396,7 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
       .then(async (doc) => {
         if (cancelled) {
           // A newer compile (or unmount) superseded this load: free the worker-side document.
-          void doc.destroy();
+          void doc.loadingTask.destroy();
           return;
         }
         setPdf(doc);
@@ -422,7 +422,7 @@ export const PdfPreviewPanel = memo(function PdfPreviewPanel({
   useEffect(() => {
     if (!pdf) return;
     return () => {
-      void pdf.destroy();
+      void pdf.loadingTask.destroy();
     };
   }, [pdf]);
 

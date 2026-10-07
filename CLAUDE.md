@@ -55,7 +55,7 @@ Core invariant: AI output never applies itself — every edit goes through the I
 ## Known state
 
 - Vite builds without type-checking, so run `npm run typecheck` yourself; CI fails on any type error.
-- pdf.js is v5: `AnnotationLayer` takes `linkService` in its constructor (render() ignores it) and `page.render()` needs `canvas`. `getDocument` runs with `isEvalSupported: false`; PDF links are limited to http(s)/mailto (`frontend/src/lib/pdf-safe-url.ts`).
+- pdf.js is v6: `AnnotationLayer` takes `linkService` in its constructor (render() ignores it) and `page.render()` needs `canvas`; free a document with `pdf.loadingTask.destroy()`. pdf.js 6 has no eval/`new Function` path (the `isEvalSupported` option is gone); PDF links are limited to http(s)/mailto (`frontend/src/lib/pdf-safe-url.ts`).
 - One vitest test is timing-sensitive and can fail once under heavy CPU load; re-run before investigating.
 - DB URLs are rewritten to `postgresql+psycopg2://` (`sqlalchemy_database_url`): SQLAlchemy 2.1 defaults bare `postgresql://` to psycopg 3, which isn't installed.
 - `tests/conftest.py` disables `.env` loading for the whole suite — tests must never reach the real database or LLM keys.
