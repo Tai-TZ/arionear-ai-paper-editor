@@ -19,7 +19,10 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // Classic hook rules only. react-hooks 7's recommended preset also enables the React
+      // Compiler rules (set-state-in-effect, refs, …); adopting those is a separate refactor.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "no-restricted-imports": [
         "error",
         {

@@ -49,9 +49,11 @@ async function authFetch<T>(path: string, init?: RequestInit, timeoutMs = 30_000
     });
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
-      throw new Error("Request timed out. The server may be busy — try again in a moment.");
+      throw new Error("Request timed out. The server may be busy — try again in a moment.", {
+        cause: e,
+      });
     }
-    throw new Error(unreachableServerMessage("check that the backend is running"));
+    throw new Error(unreachableServerMessage("check that the backend is running"), { cause: e });
   } finally {
     window.clearTimeout(timer);
   }
