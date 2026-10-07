@@ -3947,6 +3947,8 @@
 
 .hero-headline {
   line-height: 0.88;
+  /* Fraunces Black sets a narrow space; keep words apart at display sizes */
+  word-spacing: 0.1em;
 }
 
 /* Vietnamese diacritics need more vertical room between wrapped lines */

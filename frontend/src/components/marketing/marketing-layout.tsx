@@ -108,7 +108,7 @@ function MarketingMasthead() {
         <div className="marketing-masthead-main flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-5">
           <Link
             to="/"
-            className="marketing-masthead-brand font-serif-display text-[1.65rem] sm:text-3xl md:text-5xl font-black leading-none tracking-tighter min-w-0"
+            className="marketing-masthead-brand font-serif-display text-[1.65rem] sm:text-3xl md:text-5xl font-black leading-none tracking-tight min-w-0"
           >
             <EdicoWordmark />
           </Link>
@@ -186,7 +186,7 @@ function MarketingColophon() {
         <div className="col-span-2">
           <Link
             to="/"
-            className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80"
+            className="font-serif-display text-3xl font-black tracking-tight hover:opacity-80"
           >
             <EdicoWordmark />
           </Link>

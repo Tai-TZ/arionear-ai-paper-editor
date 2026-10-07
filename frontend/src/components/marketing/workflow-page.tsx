@@ -107,7 +107,7 @@ export function WorkflowPage() {
             <p className="font-mono-data uppercase text-xs tracking-widest text-muted-foreground">
               {content.eyebrow}
             </p>
-            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+            <h1 className="marketing-page-title mt-3 max-w-5xl font-serif-display font-black text-4xl lg:text-6xl tracking-tight">
               {content.title}
             </h1>
             <p className="mt-6 max-w-3xl font-body text-lg leading-relaxed text-muted-foreground">

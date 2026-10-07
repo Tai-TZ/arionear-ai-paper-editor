@@ -57,7 +57,7 @@ function Hero() {
             </span>
             <span className="min-w-0">{h.deskEdition}</span>
           </div>
-          <h1 className="hero-headline font-serif-display font-black tracking-tighter text-[2.35rem] leading-[0.95] sm:text-6xl sm:leading-none lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
+          <h1 className="hero-headline font-serif-display font-black tracking-tight text-[2.35rem] leading-[0.95] sm:text-6xl sm:leading-none lg:text-[4.5rem] xl:text-[5.5rem] 2xl:text-[6.5rem]">
             {locale === "vi" ? (
               <>
                 <span className="hero-headline-vi-fluid inline lg:hidden">
@@ -144,7 +144,7 @@ function Features() {
     <section id="features" className="border-b-4 border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-16">
         <div className="flex items-end justify-between border-b border-foreground pb-4 mb-0">
-          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tight">
             {f.sectionTitle}
           </h2>
           <Link
@@ -190,7 +190,7 @@ function WorkflowTeaser() {
     <section id="workflow" className="bg-foreground text-background border-b-4 border-foreground">
       <div className="max-w-screen-xl mx-auto px-4 py-20">
         <div className="flex items-end justify-between border-b border-background/40 pb-4">
-          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter">
+          <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tight">
             {w.sectionTitle}
           </h2>
           <Link
@@ -238,7 +238,7 @@ function Integrity() {
             <span className="font-mono-data uppercase text-xs tracking-widest">
               {ig.policyLabel}
             </span>
-            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-4">
+            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tight mt-4">
               {ig.titleLine1} <br />
               <em className="italic">{ig.titleEm}</em>
               {ig.titleLine3}
@@ -306,7 +306,7 @@ function Plans() {
             <span className="font-mono-data uppercase text-xs tracking-widest text-[color:var(--editorial-accent)]">
               {p.sectionLabel}
             </span>
-            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-1">
+            <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tight mt-1">
               {p.sectionTitle}
             </h2>
           </div>
@@ -330,7 +330,7 @@ function Plans() {
 
             {/* Price */}
             <div className="border-b border-foreground pb-6 mb-6">
-              <span className="font-serif-display font-black text-5xl tracking-tighter">
+              <span className="font-serif-display font-black text-5xl tracking-tight">
                 {p.free.price}
               </span>
               <span className="font-mono-data text-sm text-muted-foreground ml-2">
@@ -386,7 +386,7 @@ function Plans() {
 
             {/* Price */}
             <div className="border-b border-background/30 pb-6 mb-6">
-              <span className="font-serif-display font-black text-5xl tracking-tighter">
+              <span className="font-serif-display font-black text-5xl tracking-tight">
                 {p.pro.price}
               </span>
               <span className="font-mono-data text-sm text-background/60 ml-2">

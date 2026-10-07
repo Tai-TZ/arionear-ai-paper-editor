@@ -25,7 +25,7 @@ export function AuthShell({
   return (
     <div className="auth-page min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       <aside className="auth-aside hidden lg:flex flex-col justify-between border-r-4 border-foreground p-12 bg-foreground text-background">
-        <Link to="/" className="font-serif-display text-4xl font-black tracking-tighter">
+        <Link to="/" className="font-serif-display text-4xl font-black tracking-tight">
           <EdicoWordmark />
         </Link>
         <div>
@@ -44,7 +44,7 @@ export function AuthShell({
 
       <main className="flex flex-col">
         <header className="lg:hidden border-b-4 border-foreground px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif-display text-2xl font-black tracking-tighter">
+          <Link to="/" className="font-serif-display text-2xl font-black tracking-tight">
             <EdicoWordmark />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">

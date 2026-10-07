@@ -304,7 +304,7 @@ export function PricingCards({
                     <TierIcon className="h-4 w-4" strokeWidth={1.5} />
                   </div>
                   <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                    <span className="font-serif-display text-3xl font-black tracking-tighter leading-none">
+                    <span className="font-serif-display text-3xl font-black tracking-tight leading-none">
                       {plan.price}
                     </span>
                     <span className="font-mono-data text-xs text-muted-foreground">

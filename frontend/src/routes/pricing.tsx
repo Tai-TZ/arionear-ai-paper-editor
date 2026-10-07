@@ -78,7 +78,7 @@ function PricingPage() {
       <article className="border-b-4 border-foreground newsprint-texture">
         <div className="max-w-4xl mx-auto px-4 py-16 lg:py-24">
           <header className="text-center">
-            <h1 className="marketing-page-title font-serif-display font-black text-4xl sm:text-5xl lg:text-[3.5rem] tracking-tighter leading-[0.95]">
+            <h1 className="marketing-page-title font-serif-display font-black text-4xl sm:text-5xl lg:text-[3.5rem] tracking-tight leading-[0.95]">
               {plans.sectionTitle}
             </h1>
             <p className="mx-auto mt-5 max-w-xl font-body text-lg leading-relaxed text-muted-foreground">

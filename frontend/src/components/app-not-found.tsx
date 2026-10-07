@@ -14,7 +14,7 @@ export function AppNotFound() {
   return (
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
-        <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
+        <Link to="/" className="font-serif-display text-xl font-black tracking-tight md:text-2xl">
           <EdicoWordmark />
         </Link>
         <div className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export function AppNotFound() {
           <p className="font-sans-ui text-[11px] uppercase tracking-[0.22em] text-[color:var(--editorial-accent)]">
             {t.eyebrow}
           </p>
-          <p className="mt-4 font-serif-display text-[clamp(4.5rem,16vw,8rem)] font-black leading-none tracking-tighter">
+          <p className="mt-4 font-serif-display text-[clamp(4.5rem,16vw,8rem)] font-black leading-none tracking-tight">
             {t.code}
           </p>
           <h1 className="mt-4 font-serif-display text-3xl font-bold tracking-tight md:text-4xl">

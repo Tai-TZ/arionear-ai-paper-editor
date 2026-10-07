@@ -60,7 +60,7 @@ function ErrorFallbackView({
   return (
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
-        <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
+        <Link to="/" className="font-serif-display text-xl font-black tracking-tight md:text-2xl">
           Edico
         </Link>
       </div>
