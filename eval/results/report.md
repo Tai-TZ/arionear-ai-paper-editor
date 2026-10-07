@@ -2,8 +2,7 @@
 
 > ≥5 manual test cases với output thật từ LLM (không mock)
 > **Ngày chạy:** 2026-07-08 12:13:04 UTC
-> **API:** https://api.edico.example
-> **Frontend:** https://edico.example
+> **Môi trường:** production Cloud Run (domain trước khi đổi tên; host gốc ghi trong raw data)
 > **Raw data:** [`_live_outputs.json`](./_live_outputs.json)
 
 **Môi trường:** Session `62d934a7-557e-4923-91eb-10834cc107f9` · Agent Dico v1.0 · Production Cloud Run · PostgreSQL · Health `ok`

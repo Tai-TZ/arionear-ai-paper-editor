@@ -100,7 +100,7 @@ erDiagram
     string eprint
     text raw_text
     json formatted_styles
-    enum verification_status "Edico"
+    enum verification_status "VERIFIED|PARTIAL|UNVERIFIED|NOT_FOUND|ERROR|POSSIBLE_MISMATCH"
     text verification_message
     json verification_layers
     timestamp created_at

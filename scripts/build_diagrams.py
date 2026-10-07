@@ -1493,7 +1493,7 @@ def deployment() -> Diagram:
         code="API",
         title="edico-api",
         sub="FastAPI + TeX Live",
-        sub2="api.edico.example",
+        sub2="api.your-domain",
         mono_title=True,
         key=True,
         **big,
@@ -1505,7 +1505,7 @@ def deployment() -> Diagram:
         code="SSR",
         title="edico-web",
         sub="TanStack · Nitro",
-        sub2="edico.example",
+        sub2="your-domain",
         mono_title=True,
         **big,
     )

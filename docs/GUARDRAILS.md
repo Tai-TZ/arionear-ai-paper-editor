@@ -113,7 +113,7 @@ On every AI edit proposal (when not blocked by L2 errors):
 python eval/scripts/run_gate3_eval.py --skip-live
 
 # Full production + LLM
-GATE3_API_URL=https://api.edico.example python eval/scripts/run_gate3_eval.py --live-llm
+GATE3_API_URL=https://api.<domain> python eval/scripts/run_gate3_eval.py --live-llm
 
 # Regression
 pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
@@ -142,6 +142,6 @@ pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
 ## Production notes
 
 - `APP_ENV=production` on Cloud Run (`asia-east1`)
-- CORS locked to frontend URL (`edico.example`)
+- CORS locked to the frontend origin(s) in `CORS_ORIGINS` (+ optional `CORS_ORIGIN_REGEX`)
 - LLM API keys only on server (GCP Secret Manager) — never in browser
 - Integrity strictness persisted in user profile settings

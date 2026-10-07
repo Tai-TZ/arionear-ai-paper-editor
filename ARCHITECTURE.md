@@ -2,13 +2,13 @@
 
 **Dự án:** AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
 **Tagline:** *From draft to proof.*  
-**Phiên bản tài liệu:** 3.3 · **Cập nhật:** 04/10/2026
+**Phiên bản tài liệu:** 3.4 · **Cập nhật:** 07/10/2026
 
 > Kiến trúc tham khảo framework mã nguồn mở AutoResearchClaw (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
 Tài liệu này mô tả **kiến trúc đã triển khai** (v1.0, production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
 
-**Production URLs:** https://edico.example · https://api.edico.example
+**Production:** Google Cloud Run (`edico-web` + `edico-api`) sau custom domain do người deploy chọn — xem §8.
 
 ---
 
@@ -35,7 +35,7 @@ Edico là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải thi�
 | Auth | JWT (email/password + Google SSO) · god admin provisioning |
 | Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout demo (tắt mặc định ở production) |
 | Observability | Inngest (optional) |
-| DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `edico.example` |
+| DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain cấu hình khi deploy |
 
 ---
 
@@ -362,8 +362,8 @@ Comments + draft → tách item (R1/R2…, major/minor/editorial/question) → s
 
 | Service | Custom domain | Cloud Run |
 |---------|---------------|-----------|
-| Frontend | https://edico.example | `edico-web` |
-| Backend API | https://api.edico.example | `edico-api` |
+| Frontend | `https://<domain>` | `edico-web` |
+| Backend API | `https://api.<domain>` | `edico-api` |
 
 `edico-web` chỉ render trang (SSR); bundle chạy trong trình duyệt gọi thẳng `edico-api` qua `VITE_API_URL` (thiếu biến này thì dùng same-origin `/api/v1`). Probe: `GET /health` (liveness) và `GET /ready` (ping DB, báo trạng thái TeX). Log dạng JSON kèm `X-Request-ID` và trace id của Cloud Trace.
 
@@ -377,7 +377,7 @@ uvicorn src.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
-**Deploy:** `scripts/deploy-cloudrun-backend.ps1`, `scripts/deploy-cloudrun-frontend.ps1` (chạy tay; CI không deploy)  
+**Deploy:** `scripts/deploy-cloudrun-backend.ps1 -FrontendUrl https://<domain> -BackendCustomDomain https://api.<domain>`, `scripts/deploy-cloudrun-frontend.ps1 -ViteApiUrl https://api.<domain>/api/v1` (chạy tay; CI không deploy). Script không có domain mặc định; tên service mặc định là `edico-api` / `edico-web` (đổi bằng `-ServiceName`). `CORS_ORIGIN_REGEX` trong `.env` (nếu có) được chuyển lên Cloud Run.  
 **CI/CD:** GitHub Actions — xem §8.1.
 
 ### 8.1 CI/CD Pipeline
@@ -404,7 +404,7 @@ Pipeline chỉ **kiểm tra và đóng gói kiểm thử** — không có bướ
 
 - API keys trong `.env` — never commit; Cloud Run secrets at deploy time
 - Pydantic validation mọi API input
-- CORS: explicit origins (`cors_config.py`) + production domain `edico.example`
+- CORS: explicit origins `CORS_ORIGINS` (`cors_config.py`); production có thể thêm `CORS_ORIGIN_REGEX` (vd. mọi subdomain của domain chính)
 - JWT auth (72h default, 30d remember-me) — `auth_service.py`
 - Google SSO OAuth2 — `google_oauth_service.py`
 - Bearer token on agent APIs (`agent_deps.py`) — paper session access check

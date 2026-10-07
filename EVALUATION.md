@@ -1,8 +1,8 @@
 # EVALUATION — Edico
 
 > Kết quả kiểm thử thủ công và benchmark trên môi trường production.  
-> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **API production:** https://api.edico.example  
-> **Frontend:** https://edico.example · **Agent:** Dico v1.0 · Google Gemini 3.1 Flash Lite  
+> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **Môi trường:** production Cloud Run (domain trước khi đổi tên)  
+> **Agent:** Dico v1.0 · Google Gemini 3.1 Flash Lite  
 > Các lần chạy này diễn ra trước khi đổi tên sản phẩm (Arionear → Edico, trợ lý Ario → Dico); input/output trích dẫn giữ nguyên văn như trong raw data.
 
 **Evidence gốc (log JSON / báo cáo chi tiết):**
@@ -61,12 +61,12 @@ Chạy [`run_gate3_eval.py`](./eval/scripts/run_gate3_eval.py) trên production 
 
 ```bash
 # Manual ≥5 TC → cập nhật report.md + _live_outputs.json
-python eval/scripts/refresh_manual_eval.py
+GATE3_API_URL=https://api.<domain> GATE3_FRONTEND_URL=https://<domain> python eval/scripts/refresh_manual_eval.py
 
 # Benchmark metrics
 python eval/scripts/run_gate3_eval.py \
-  --api-url https://api.edico.example \
-  --frontend-url https://edico.example \
+  --api-url https://api.<domain> \
+  --frontend-url https://<domain> \
   --live-llm
 ```
 

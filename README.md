@@ -168,6 +168,22 @@ Chi tiết vận hành PDF preview: [docs/pdf-preview-deploy.md](./docs/pdf-prev
 
 </details>
 
+<details>
+<summary><b>☁️ Deploy lên Cloud Run</b></summary>
+
+<br>
+
+Deploy chạy tay bằng PowerShell (CI không deploy). Script đọc `.env` ở thư mục gốc và **không có domain mặc định**:
+
+```powershell
+scripts\deploy-cloudrun-backend.ps1 -FrontendUrl https://your-domain -BackendCustomDomain https://api.your-domain
+scripts\deploy-cloudrun-frontend.ps1 -ViteApiUrl https://api.your-domain/api/v1
+```
+
+Service mặc định là `edico-api` / `edico-web` (đổi bằng `-ServiceName`); thêm `-SkipBuild` khi chỉ cập nhật biến môi trường. Chi tiết: [ARCHITECTURE.md §8](./ARCHITECTURE.md).
+
+</details>
+
 ---
 
 ## 🔧 Cấu hình môi trường
@@ -183,6 +199,7 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 | `AUTH_SECRET_KEY` | ✅ | JWT secret — tạo bằng `openssl rand -hex 32`; production từ chối khởi động nếu để mặc định hoặc ngắn hơn 32 ký tự |
 | `APP_ENV` · `LOG_LEVEL` | | `production` bật kiểm tra cấu hình, HSTS và log JSON (Cloud Logging); `development` log dạng text |
 | `FRONTEND_BASE_URL` · `BACKEND_BASE_URL` · `CORS_ORIGINS` | | URL công khai và origins được phép |
+| `CORS_ORIGIN_REGEX` | | Chỉ production: thêm origins theo regex, vd. `https://([a-z0-9-]+\.)*your-domain\.com` |
 | `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | | Đăng nhập Google SSO |
 | `SMTP_*` | | Gửi email xác minh (dev: mã in ra log) |
 | `BILLING_DEMO_CHECKOUT` | | Bật checkout QR demo (không thu tiền) — mặc định **tắt** ở production |
@@ -256,6 +273,7 @@ edico-ai-paper-editor/
 </tr>
 </table>
 
+<sub>Nhận diện: phong cách báo in trên nền giấy, tiêu đề chữ Fraunces, màu nhấn xanh bút chì; màu đỏ chỉ dành cho lỗi và phần bị xóa trong diff.</sub><br>
 <sub>Ảnh chụp từ bản chạy local với dữ liệu demo; phản hồi AI trong ảnh lấy từ một LLM giả lập (OpenAI-compatible) để có thể tái lập.</sub>
 
 ---

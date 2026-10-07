@@ -9,6 +9,7 @@ Writes:
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 from datetime import UTC, datetime
@@ -18,7 +19,9 @@ from urllib import error, request
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS = REPO_ROOT / "eval" / "results"
-API = "https://api.edico.example"
+# Same env vars as run_gate3_eval.py, e.g. GATE3_API_URL=https://api.your-domain
+API = os.environ.get("GATE3_API_URL", "").strip().rstrip("/").removesuffix("/api/v1")
+FRONTEND = os.environ.get("GATE3_FRONTEND_URL", "").strip()
 V1 = f"{API}/api/v1"
 
 SAMPLE_LATEX = (
@@ -150,6 +153,9 @@ def summarize_pass(name: str, status: int, body: Any) -> tuple[bool, str]:
 
 
 def main() -> int:
+    if not API:
+        print("Set GATE3_API_URL (and optionally GATE3_FRONTEND_URL) to the deployment under test.")
+        return 2
     env = load_dotenv(REPO_ROOT / ".env")
     email = env.get("ADMIN_GOD_EMAIL")
     password = env.get("ADMIN_GOD_PASSWORD")
@@ -279,7 +285,7 @@ def main() -> int:
         "session_id": session_id,
         "timestamp": ts,
         "api_url": API,
-        "frontend_url": "https://edico.example",
+        "frontend_url": FRONTEND,
         "agent": "Dico v1.0",
         "tests": tests,
     }
@@ -293,7 +299,7 @@ def main() -> int:
         "> ≥5 manual test cases với output thật từ LLM (không mock)",
         f"> **Ngày chạy:** {ts}",
         f"> **API:** {API}",
-        "> **Frontend:** https://edico.example",
+        f"> **Frontend:** {FRONTEND or '—'}",
         "> **Raw data:** [`_live_outputs.json`](./_live_outputs.json)",
         "",
         f"**Môi trường:** Session `{session_id}` · Agent Dico v1.0 · Production Cloud Run · PostgreSQL · Health `ok`",

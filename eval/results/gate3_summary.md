@@ -1,8 +1,7 @@
 # Benchmark Eval Summary
 
 **Generated:** 2026-07-08 12:08:11 UTC
-**API:** https://api.edico.example
-**Frontend:** https://edico.example
+**Môi trường:** production Cloud Run (domain trước khi đổi tên sản phẩm; host gốc ghi trong `gate3_report.json`)
 
 > Companion evidence (LLM thật + JWT): [`report.md`](./report.md) — 6/6 TC pass @ 2026-07-08 12:13:04 UTC.
 > Note: `chat_latency_p50_s` / `style_latency_p50_s` trong script benchmark này đo probe không JWT (HTTP 401 nhanh); latency LLM thật xem `report.md` (~3–5s).
