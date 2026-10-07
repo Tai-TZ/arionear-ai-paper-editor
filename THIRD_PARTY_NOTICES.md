@@ -480,7 +480,7 @@ according to their `package.json`.
 | parse-entities | 4.0.2 | MIT | <https://github.com/wooorm/parse-entities> |
 | parse5 | 7.3.0 | MIT | <https://github.com/inikulin/parse5> |
 | pathe | 2.0.3 | MIT | <https://github.com/unjs/pathe> |
-| pdfjs-dist | 5.4.296 | Apache-2.0 | <https://github.com/mozilla/pdf.js> |
+| pdfjs-dist | 6.4.299 | Apache-2.0 | <https://github.com/mozilla/pdf.js> |
 | picocolors | 1.1.1 | ISC | <https://github.com/alexeyraspopov/picocolors> |
 | picomatch | 4.0.7 | MIT | <https://github.com/micromatch/picomatch> |
 | postcss | 8.5.28 | MIT | <https://github.com/postcss/postcss> |

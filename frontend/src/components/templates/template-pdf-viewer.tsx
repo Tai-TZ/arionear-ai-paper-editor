@@ -47,7 +47,7 @@ export function TemplatePdfViewer({
     return () => {
       cancelled = true;
       setPdf(null);
-      void doc?.destroy();
+      void doc?.loadingTask.destroy();
     };
   }, [pdfData, onError, onNumPages]);
 

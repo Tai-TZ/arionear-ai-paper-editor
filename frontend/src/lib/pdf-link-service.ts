@@ -158,6 +158,11 @@ export class PdfLinkService {
   executeSetOCGState() {
     return Promise.resolve();
   }
+
+  /** File-attachment links: no download manager here, so there is nothing to open. */
+  getAttachmentContent(_id?: string): Promise<null> {
+    return Promise.resolve(null);
+  }
 }
 
 /** hyperref emits URI links like "#cite.key" — treat as named PDF destinations, not browser hash. */

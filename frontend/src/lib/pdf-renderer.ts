@@ -22,8 +22,9 @@ export type PdfPageRenderResult = {
 };
 
 export async function loadPdfDocument(data: Uint8Array): Promise<PDFDocumentProxy> {
-  // isEvalSupported: false — never compile PDF-supplied code (fonts/functions) with eval/new Function.
-  const loadingTask = getDocument({ data: data.slice(), isEvalSupported: false });
+  // pdf.js 6 never compiles PDF-supplied code (fonts/functions) with eval/new Function, so the
+  // old `isEvalSupported: false` switch is gone with it.
+  const loadingTask = getDocument({ data: data.slice() });
   return loadingTask.promise;
 }
 
@@ -47,7 +48,7 @@ export async function renderPageToCanvas(
   }
 
   context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
-  // pdf.js v5: `canvas` defaults to canvasContext.canvas; pass it explicitly (same element).
+  // pdf.js >= 5: `canvas` defaults to canvasContext.canvas; pass it explicitly (same element).
   const task = page.render({ canvas, canvasContext: context, viewport });
   // Aborting cancels the task (it rejects with RenderingCancelledException) and frees the canvas
   // for the next render; pdf.js refuses two concurrent renders on one canvas.
@@ -344,7 +345,7 @@ export async function renderPageAnnotationLayer(
     page,
     viewport,
     structTreeLayer: null,
-    // pdf.js v5 reads the link service from the constructor (render() ignores it). Without it every
+    // pdf.js reads the link service from the constructor (render() ignores it). Without it every
     // link annotation throws and the whole layer fails, so citation links were not clickable.
     linkService,
     commentManager: null,
@@ -358,7 +359,8 @@ export async function renderPageAnnotationLayer(
     div: container,
     annotations,
     page,
-    linkService,
+    // Typed as pdf.js's full viewer PDFLinkService; ours implements the methods the layer calls.
+    linkService: linkService as unknown as Parameters<AnnotationLayer["render"]>[0]["linkService"],
     renderForms: false,
   });
 
