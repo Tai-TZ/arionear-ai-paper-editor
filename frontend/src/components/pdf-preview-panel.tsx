@@ -253,12 +253,9 @@ const PdfPageView = memo(function PdfPageView({
         const textLayer = textLayerRef.current;
         void capturePdfClickWord(clientX, clientY, textLayer).then(async (word) => {
           window.getSelection()?.removeAllRanges();
-          let context = "";
-          let pdfX = 0;
-          let pdfY = 0;
           const page = pageRef.current ?? (await pdf.getPage(pageNumber));
           pageRef.current = page;
-          [pdfX, pdfY] = await resolveSynctexPdfPoint(
+          const [pdfX, pdfY] = await resolveSynctexPdfPoint(
             page,
             viewport,
             rect,
@@ -269,8 +266,7 @@ const PdfPageView = memo(function PdfPageView({
           );
           const ctx = await extractPdfWordContext(page, pdfX, pdfY, word);
           if (ctx?.word && !word) word = ctx.word;
-          context = ctx?.context ?? "";
-          onPageClick(pageNumber, pdfX, pdfY, word, context);
+          onPageClick(pageNumber, pdfX, pdfY, word, ctx?.context ?? "");
         });
       }}
       style={
