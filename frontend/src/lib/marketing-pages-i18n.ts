@@ -176,9 +176,13 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     sections: [
       {
         paragraphs: [
-          "Email: support@edico.example",
-          "Khi báo lỗi hoặc đề xuất tính năng, vui lòng mô tả các bước tái hiện và trình duyệt bạn đang dùng.",
+          "Câu hỏi, báo lỗi và đề xuất tính năng xin gửi qua GitHub Issues của dự án.",
+          "Khi báo lỗi, vui lòng mô tả các bước tái hiện và trình duyệt bạn đang dùng.",
         ],
+        link: {
+          label: "Mở GitHub Issues",
+          href: "https://github.com/Tai-TZ/edico-ai-paper-editor/issues",
+        },
       },
     ],
   },

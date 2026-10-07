@@ -61,6 +61,16 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
                     ))}
                   </ul>
                 ) : null}
+                {section.link ? (
+                  <a
+                    href={section.link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex font-sans-ui uppercase text-xs tracking-widest underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
+                  >
+                    {section.link.label} ↗
+                  </a>
+                ) : null}
               </section>
             ))}
           </div>

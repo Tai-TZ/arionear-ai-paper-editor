@@ -2,6 +2,8 @@ export type MarketingSection = {
   heading?: string;
   paragraphs: string[];
   bullets?: string[];
+  /** External link shown under the paragraphs. */
+  link?: { label: string; href: string };
 };
 
 export type MarketingPageContent = {
@@ -154,9 +156,13 @@ export const contactContent: MarketingPageContent = {
   sections: [
     {
       paragraphs: [
-        "Email: support@edico.example",
-        "For bug reports or feature requests, please include the steps to reproduce and the browser you are using.",
+        "Questions, bug reports and feature requests go to the project's GitHub Issues.",
+        "For bug reports, please include the steps to reproduce and the browser you are using.",
       ],
+      link: {
+        label: "Open GitHub Issues",
+        href: "https://github.com/Tai-TZ/edico-ai-paper-editor/issues",
+      },
     },
   ],
 };
