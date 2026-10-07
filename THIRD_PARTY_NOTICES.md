@@ -28,7 +28,7 @@ copyleft license (weak or strong); see the next section for how each one is used
 <!-- BEGIN:license-summary -->
 | License | Python | Frontend |
 | --- | ---: | ---: |
-| MIT | 41 | 287 |
+| MIT | 41 | 283 |
 | BSD-3-Clause | 16 | 3 |
 | Apache-2.0 | 12 | 4 |
 | ISC | — | 10 |
@@ -49,7 +49,7 @@ copyleft license (weak or strong); see the next section for how each one is used
 | PSF-2.0 | 1 | — |
 | Python-2.0 | — | 1 |
 | Unlicense | — | 1 |
-| **Total** | **87** | **313** |
+| **Total** | **87** | **309** |
 <!-- END:license-summary -->
 
 Bundled assets add: OFL-1.1 (KaTeX fonts, vendored and from the `katex` package), GUST Font License (Latin Modern fonts), LPPL 1.3 / 1.3c (IEEEtran,
@@ -256,7 +256,6 @@ according to their `package.json`.
 | @babel/template | 7.29.7 | MIT | <https://github.com/babel/babel> |
 | @babel/traverse | 7.29.8 | MIT | <https://github.com/babel/babel> |
 | @babel/types | 7.29.8 | MIT | <https://github.com/babel/babel> |
-| @esbuild/linux-x64 | 0.28.2 | MIT | <https://github.com/evanw/esbuild> |
 | @floating-ui/core | 1.7.5 | MIT | <https://github.com/floating-ui/floating-ui> |
 | @floating-ui/dom | 1.7.6 | MIT | <https://github.com/floating-ui/floating-ui> |
 | @floating-ui/react-dom | 2.1.8 | MIT | <https://github.com/floating-ui/floating-ui> |
@@ -272,7 +271,7 @@ according to their `package.json`.
 | @oozcitak/infra | 2.0.2 | MIT | <https://github.com/oozcitak/infra> |
 | @oozcitak/url | 3.0.0 | MIT | <https://github.com/oozcitak/url> |
 | @oozcitak/util | 10.0.0 | MIT | <https://github.com/oozcitak/util> |
-| @oxc-project/types | 0.132.0 | MIT | <https://github.com/oxc-project/oxc> |
+| @oxc-project/types | 0.152.0 | MIT | <https://github.com/oxc-project/oxc> |
 | @radix-ui/primitive | 1.1.7 | MIT | <https://github.com/radix-ui/primitives> |
 | @radix-ui/react-alert-dialog | 1.1.23 | MIT | <https://github.com/radix-ui/primitives> |
 | @radix-ui/react-arrow | 1.1.15 | MIT | <https://github.com/radix-ui/primitives> |
@@ -306,9 +305,8 @@ according to their `package.json`.
 | @radix-ui/react-use-size | 1.1.4 | MIT | <https://github.com/radix-ui/primitives> |
 | @radix-ui/react-visually-hidden | 1.2.11 | MIT | <https://github.com/radix-ui/primitives> |
 | @radix-ui/rect | 1.1.3 | MIT | <https://github.com/radix-ui/primitives> |
-| @rolldown/binding-linux-x64-gnu | 1.0.2 | MIT | <https://github.com/rolldown/rolldown> |
+| @rolldown/binding-linux-x64-gnu | 1.2.12 | MIT | <https://github.com/rolldown/rolldown> |
 | @rolldown/pluginutils | 1.0.1 | MIT | <https://github.com/rolldown/plugins> |
-| @rollup/rollup-linux-x64-gnu | 4.60.2 | MIT | <https://github.com/rollup/rollup> |
 | @tailwindcss/node | 4.3.3 | MIT | <https://github.com/tailwindlabs/tailwindcss> |
 | @tailwindcss/oxide | 4.3.3 | MIT | <https://github.com/tailwindlabs/tailwindcss> |
 | @tailwindcss/oxide-linux-x64-gnu | 4.3.3 | MIT | <https://github.com/tailwindlabs/tailwindcss> |
@@ -377,7 +375,6 @@ according to their `package.json`.
 | electron-to-chromium | 1.5.444 | ISC | <https://github.com/Kilian/electron-to-chromium> |
 | enhanced-resolve | 5.26.0 | MIT | <https://github.com/webpack/enhanced-resolve> |
 | entities | 6.0.1 | BSD-2-Clause | <https://github.com/fb55/entities> |
-| esbuild | 0.28.2 | MIT | <https://github.com/evanw/esbuild> |
 | escalade | 3.2.0 | MIT | <https://github.com/lukeed/escalade> |
 | escape-string-regexp | 5.0.0 | MIT | <https://github.com/sindresorhus/escape-string-regexp> |
 | estree-util-is-identifier-name | 3.0.0 | MIT | <https://github.com/syntax-tree/estree-util-is-identifier-name> |
@@ -500,8 +497,7 @@ according to their `package.json`.
 | remark-parse | 11.0.0 | MIT | <https://github.com/remarkjs/remark.git#main> |
 | remark-rehype | 11.1.2 | MIT | <https://github.com/remarkjs/remark-rehype> |
 | remark-stringify | 11.0.0 | MIT | <https://github.com/remarkjs/remark.git#main> |
-| rolldown | 1.0.2 | MIT | <https://github.com/rolldown/rolldown> |
-| rollup | 4.60.2 | MIT | <https://github.com/rollup/rollup> |
+| rolldown | 1.2.12 | MIT | <https://github.com/rolldown/rolldown> |
 | rou3 | 0.8.1 | MIT | <https://github.com/h3js/rou3> |
 | scheduler | 0.28.0 | MIT | <https://github.com/react/react> |
 | semver | 6.3.1 | ISC | <https://github.com/npm/node-semver> |
@@ -543,7 +539,7 @@ according to their `package.json`.
 | vfile | 6.0.3 | MIT | <https://github.com/vfile/vfile> |
 | vfile-location | 5.0.3 | MIT | <https://github.com/vfile/vfile-location> |
 | vfile-message | 4.0.3 | MIT | <https://github.com/vfile/vfile-message> |
-| vite | 7.3.6 | MIT | <https://github.com/vitejs/vite> |
+| vite | 8.3.2 | MIT | <https://github.com/vitejs/vite> |
 | vite-tsconfig-paths | 6.1.1 | MIT | <https://github.com/aleclarson/vite-tsconfig-paths> |
 | vitefu | 1.1.3 | MIT | <https://github.com/svitejs/vitefu> |
 | web-namespaces | 2.0.1 | MIT | <https://github.com/wooorm/web-namespaces> |
