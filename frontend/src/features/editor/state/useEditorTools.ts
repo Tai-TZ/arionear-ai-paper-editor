@@ -330,7 +330,7 @@ export function useEditorTools({
     [mainLatexSource, mainFile, activeFile, switchActiveFile, jumpToOutlineLine],
   );
 
-  const askArioCitation = useCallback(
+  const askNibCitation = useCallback(
     (prefill: string, citeKey?: string) => {
       if (citeKey?.trim()) {
         jumpToCitation(citeKey);
@@ -357,7 +357,7 @@ export function useEditorTools({
     [mainLatexSource],
   );
 
-  const askArioLogicIssue = useCallback(
+  const askNibLogicIssue = useCallback(
     (prefill: string, sectionName: string, excerpt?: string) => {
       jumpToLogicIssue(sectionName, excerpt);
       chatBridgeRef.current.queueChatFollowUp(prefill);
@@ -381,11 +381,11 @@ export function useEditorTools({
       onToolsTabChange: setToolsTab,
       onJumpToStructureSection: jumpToStructureSection,
       canJumpToStructureSection,
-      onAskArioStructure: (prefill: string) => chatBridgeRef.current.queueChatFollowUp(prefill),
+      onAskNibStructure: (prefill: string) => chatBridgeRef.current.queueChatFollowUp(prefill),
       onApplyStructureFix: applyStructureFix,
-      onAskArioCitation: askArioCitation,
+      onAskNibCitation: askNibCitation,
       onJumpToLogicIssue: jumpToLogicIssue,
-      onAskArioLogic: askArioLogicIssue,
+      onAskNibLogic: askNibLogicIssue,
       canJumpToLogicIssue,
       logicAuditReportStale: auditReportStale,
       logicAuditProgressDetail,
@@ -410,9 +410,9 @@ export function useEditorTools({
       jumpToStructureSection,
       canJumpToStructureSection,
       applyStructureFix,
-      askArioCitation,
+      askNibCitation,
       jumpToLogicIssue,
-      askArioLogicIssue,
+      askNibLogicIssue,
       canJumpToLogicIssue,
       auditReportStale,
       logicAuditProgressDetail,

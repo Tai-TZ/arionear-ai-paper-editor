@@ -64,7 +64,7 @@ class ChatRunTracker:
             **extra,
         }
         self._stages.append(payload)
-        await emit_chat_event("ario/chat.stage", payload)
+        await emit_chat_event("nib/chat.stage", payload)
         return payload
 
     async def complete(self, *, success: bool = True, **extra: Any) -> None:
@@ -76,7 +76,7 @@ class ChatRunTracker:
             "stages": self._stages,
             **extra,
         }
-        event = "ario/chat.completed" if success else "ario/chat.failed"
+        event = "nib/chat.completed" if success else "nib/chat.failed"
         await emit_chat_event(event, payload)
 
     async def fail(self, error: str, **extra: Any) -> None:

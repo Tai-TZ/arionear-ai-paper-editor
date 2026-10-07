@@ -26,8 +26,8 @@ export const Route = createFileRoute("/reset-password")({
   },
   head: () => ({
     meta: [
-      { title: "Set New Password — Arionear" },
-      { name: "description", content: "Choose a new password for your Arionear account." },
+      { title: "Set New Password — Proofline" },
+      { name: "description", content: "Choose a new password for your Proofline account." },
     ],
   }),
   component: ResetPasswordPage,

@@ -11,7 +11,7 @@ import { marketingCopy } from "@/lib/marketing-i18n";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — Arionear" },
+      { title: "Pricing — Proofline" },
       {
         name: "description",
         content: "Choose Free or Pro to unlock more Defense Rehearsal turns and advanced features.",
@@ -25,7 +25,7 @@ const pageCopy = {
   vi: {
     lede: (
       <>
-        Dùng Ario không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm &nbsp;
+        Dùng Nib không giới hạn cho biên tập LaTeX. Nâng cấp Pro để mở khoá thêm &nbsp;
         <strong>lượt phản biện</strong>&nbsp;AI và các tính năng cao cấp.
       </>
     ),
@@ -40,7 +40,7 @@ const pageCopy = {
   en: {
     lede: (
       <>
-        Use Ario without limits for LaTeX editing. Upgrade to Pro to unlock more&nbsp;
+        Use Nib without limits for LaTeX editing. Upgrade to Pro to unlock more&nbsp;
         <strong>Defense Rehearsal</strong>&nbsp;turns and premium features.
       </>
     ),

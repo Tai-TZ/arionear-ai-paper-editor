@@ -6,7 +6,7 @@ import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { commonCopy } from "@/lib/common-i18n";
 import { getSession, type AuthUser } from "@/lib/auth-store";
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { ProoflineWordmark } from "@/components/proofline-wordmark";
 import { editorEntryPath } from "@/lib/require-auth";
 
 function navLinkClass(active: boolean) {
@@ -110,7 +110,7 @@ function MarketingMasthead() {
             to="/"
             className="marketing-masthead-brand font-serif-display text-[1.65rem] sm:text-3xl md:text-5xl font-black leading-none tracking-tighter min-w-0"
           >
-            <ArionearWordmark />
+            <ProoflineWordmark />
           </Link>
           <nav className="hidden md:flex items-center gap-8 font-sans-ui uppercase text-xs tracking-widest">
             {navLinks.map(({ label, to }) => (
@@ -188,7 +188,7 @@ function MarketingColophon() {
             to="/"
             className="font-serif-display text-3xl font-black tracking-tighter hover:opacity-80"
           >
-            <ArionearWordmark />
+            <ProoflineWordmark />
           </Link>
           <p className="mt-2 font-body italic text-sm">{f.tagline}</p>
           <p className="mt-4 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">

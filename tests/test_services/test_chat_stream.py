@@ -192,7 +192,7 @@ async def test_stream_scope_guard_blocks_before_manuscript_parse(monkeypatch):
     assert parse_states == []
     done = next(data for name, data in events if name == "done")
     assert done["task"] == "chat"
-    assert "ARIONEAR" in done["response"]
+    assert "PROOFLINE" in done["response"]
 
 
 @pytest.mark.asyncio

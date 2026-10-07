@@ -67,9 +67,9 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     tab: "Peer review",
     title: "Peer-review response",
     intro:
-      "Paste the reviewer comments you received. Ario splits them into individual points, classifies each one and drafts a polite, point-by-point response with a proposed change.",
+      "Paste the reviewer comments you received. Nib splits them into individual points, classifies each one and drafts a polite, point-by-point response with a proposed change.",
     humanGate:
-      "Drafts only — Ario never edits your manuscript. Review every response and fill in each [AUTHOR: …] placeholder before sending.",
+      "Drafts only — Nib never edits your manuscript. Review every response and fill in each [AUTHOR: …] placeholder before sending.",
     commentsLabel: "Reviewer comments",
     commentsPlaceholder:
       "Reviewer 1\n1. The sample size seems small…\n2. Please clarify…\n\nReviewer 2\n…",
@@ -115,7 +115,7 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     quoteUnverified: "Quote not verbatim",
     quoteUnverifiedHint: "This quote could not be matched exactly to the pasted comments.",
     draftFailed: "Draft failed",
-    draftFailedHint: "Ario could not draft this response — write it yourself or draft again.",
+    draftFailedHint: "Nib could not draft this response — write it yourself or draft again.",
     sectionRefs: "Sections",
     copyResponse: "Copy response",
     copied: "Copied",
@@ -127,17 +127,17 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     copyError: "Could not copy to the clipboard.",
     warnings: {
       comments_truncated: "The comments were long — only the first part was analysed.",
-      manuscript_truncated: "The manuscript was long — Ario read a shortened version.",
+      manuscript_truncated: "The manuscript was long — Nib read a shortened version.",
       items_capped: "Too many points — only the first ones were drafted.",
       split_fallback:
-        "Ario split the comments with a simple rule-based fallback; check the grouping and categories.",
+        "Nib split the comments with a simple rule-based fallback; check the grouping and categories.",
       draft_partial: "Some responses could not be drafted — they are marked below.",
     },
     omittedItems: (count) => `${count} more ${count === 1 ? "point was" : "points were"} skipped.`,
     errors: {
       quota: "You have reached your AI usage limit. Try again later.",
       llm: "The AI provider is unavailable right now. Try again or switch model.",
-      parse: "Ario could not produce valid drafts this time. Please try again.",
+      parse: "Nib could not produce valid drafts this time. Please try again.",
       timeout: "Drafting took too long. Try again with fewer comments.",
       network: "Network error — check your connection and try again.",
     },
@@ -146,14 +146,14 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     tab: "Phản biện",
     title: "Phản hồi phản biện",
     intro:
-      "Dán nhận xét của reviewer bạn nhận được. Ario tách thành từng ý, phân loại và soạn nháp câu trả lời lịch sự cho từng ý kèm đề xuất chỉnh sửa.",
+      "Dán nhận xét của reviewer bạn nhận được. Nib tách thành từng ý, phân loại và soạn nháp câu trả lời lịch sự cho từng ý kèm đề xuất chỉnh sửa.",
     humanGate:
-      "Chỉ là bản nháp — Ario không bao giờ sửa bản thảo của bạn. Hãy đọc lại mọi câu trả lời và điền các chỗ [AUTHOR: …] trước khi gửi.",
+      "Chỉ là bản nháp — Nib không bao giờ sửa bản thảo của bạn. Hãy đọc lại mọi câu trả lời và điền các chỗ [AUTHOR: …] trước khi gửi.",
     commentsLabel: "Nhận xét của reviewer",
     commentsPlaceholder: "Reviewer 1\n1. Cỡ mẫu có vẻ nhỏ…\n2. Đề nghị làm rõ…\n\nReviewer 2\n…",
     charCount: (count, limit) =>
       `${count.toLocaleString("vi-VN")} / ${limit.toLocaleString("vi-VN")} ký tự`,
-    overSoftLimit: "Với nhận xét quá dài, Ario chỉ phân tích phần đầu.",
+    overSoftLimit: "Với nhận xét quá dài, Nib chỉ phân tích phần đầu.",
     toneLabel: "Giọng văn",
     tones: {
       courteous: "Lịch sự",
@@ -193,7 +193,7 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     quoteUnverified: "Trích dẫn chưa khớp",
     quoteUnverifiedHint: "Không khớp chính xác đoạn trích này với nhận xét đã dán.",
     draftFailed: "Soạn thất bại",
-    draftFailedHint: "Ario chưa soạn được câu trả lời này — hãy tự viết hoặc soạn lại.",
+    draftFailedHint: "Nib chưa soạn được câu trả lời này — hãy tự viết hoặc soạn lại.",
     sectionRefs: "Mục liên quan",
     copyResponse: "Sao chép câu trả lời",
     copied: "Đã sao chép",
@@ -204,18 +204,18 @@ const COPY: Record<UiLanguage, PeerReviewCopy> = {
     includeChanges: "Kèm đề xuất chỉnh sửa trong thư",
     copyError: "Không sao chép được vào clipboard.",
     warnings: {
-      comments_truncated: "Nhận xét quá dài — Ario chỉ phân tích phần đầu.",
-      manuscript_truncated: "Bản thảo dài — Ario đọc bản rút gọn.",
-      items_capped: "Quá nhiều ý — Ario chỉ soạn cho các ý đầu tiên.",
+      comments_truncated: "Nhận xét quá dài — Nib chỉ phân tích phần đầu.",
+      manuscript_truncated: "Bản thảo dài — Nib đọc bản rút gọn.",
+      items_capped: "Quá nhiều ý — Nib chỉ soạn cho các ý đầu tiên.",
       split_fallback:
-        "Ario tách nhận xét bằng quy tắc dự phòng đơn giản; hãy kiểm tra lại cách nhóm và phân loại.",
+        "Nib tách nhận xét bằng quy tắc dự phòng đơn giản; hãy kiểm tra lại cách nhóm và phân loại.",
       draft_partial: "Một số câu trả lời chưa soạn được — đã được đánh dấu bên dưới.",
     },
     omittedItems: (count) => `Bỏ qua thêm ${count} ý.`,
     errors: {
       quota: "Bạn đã dùng hết hạn mức AI. Vui lòng thử lại sau.",
       llm: "Nhà cung cấp AI đang gián đoạn. Thử lại hoặc đổi model.",
-      parse: "Lần này Ario chưa tạo được bản nháp hợp lệ. Vui lòng thử lại.",
+      parse: "Lần này Nib chưa tạo được bản nháp hợp lệ. Vui lòng thử lại.",
       timeout: "Soạn quá lâu. Hãy thử lại với ít nhận xét hơn.",
       network: "Lỗi mạng — kiểm tra kết nối và thử lại.",
     },

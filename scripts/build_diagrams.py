@@ -207,7 +207,7 @@ class Diagram:
             f'<rect width="{w}" height="{h}" class="p"/><rect width="{w}" height="{h}" fill="url(#dots)"/>'
             f'<rect x=".75" y=".75" width="{w - 1.5}" height="{h - 1.5}" class="ln" stroke-width="1.5"/>',
         )
-        self.text(M, 38, f"ARIONEAR · {desk}", cls="m k i", weight=700, layer="bg")
+        self.text(M, 38, f"PROOFLINE · {desk}", cls="m k i", weight=700, layer="bg")
         self.text(w - M, 38, f"FIG. {fig}", cls="m k r", weight=700, anchor="end", layer="bg")
         self.line(M, 50, w - M, 50)
         tw = self.tag(M, 66, kicker)
@@ -408,7 +408,7 @@ class Diagram:
 
     @staticmethod
     def _cluster(box: Box) -> list[str]:
-        """Six mini cubes on a platform — one per Ario agent."""
+        """Six mini cubes on a platform — one per Nib agent."""
         if box.hw >= 80:
             grid, mw, mhgt, lift = [(-48, -48), (-16, -48), (-48, -16), (16, -48), (-48, 16), (-16, -16)], 13, 10, 4
         else:
@@ -524,7 +524,7 @@ def architecture() -> Diagram:
         kicker="OVERVIEW",
         source="src/ · frontend/",
         ticker=("LATEX-NATIVE", "HUMAN-IN-THE-LOOP", "MULTI-LLM FAILOVER", "QUOTA-METERED", "SANDBOXED TEX"),
-        aria="Arionear system architecture: user, processing, human gate, output and infrastructure layers",
+        aria="Proofline system architecture: user, processing, human gate, output and infrastructure layers",
     )
     c = cols(7)
     bands = [(212, 368, "01", "USER"), (378, 516, "02", "PROCESSING"), (526, 644, "03", "GATE")]
@@ -548,7 +548,7 @@ def architecture() -> Diagram:
     store = node(1, p, "DB", "Paper Store", "Postgres + cache")
     router = node(2, p, "IR", "Intent Router", "rules → LLM")
     bottom = parser.bottom[1]
-    agents = d.block(c[3], bottom - 36 * ISO - 18, hw=36, bh=18, cluster=True, title="Ario Agents", sub="6 agents · L1")
+    agents = d.block(c[3], bottom - 36 * ISO - 18, hw=36, bh=18, cluster=True, title="Nib Agents", sub="6 agents · L1")
     integrity = node(4, p, "L2", "Integrity", "monitor · retry", key=True)
     peer = node(5, p, "PR", "Peer Review", "split → draft")
     council = node(6, p, "AI", "AI Council", "defense panel")
@@ -619,13 +619,13 @@ def request_flow() -> Diagram:
         "request-flow",
         790,
         title="Request Flow",
-        deck="Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Ario đều qua guardrail và Human Gate",
+        deck="Từ một câu chat đến bản thảo đã duyệt — mọi đề xuất của Nib đều qua guardrail và Human Gate",
         desk="ARCHITECTURE DESK",
         fig="1.3",
         kicker="PIPELINE",
         source="POST /api/v1/chat/stream",
         ticker=("SSE STREAMING", "LLM QUOTA METERED", "GUARDRAIL L1–L2", "HUMAN GATE", "SANDBOXED TEX"),
-        aria="Arionear request flow: Editor, FastAPI, Intent Router, Ario Agents, LLM Providers, Integrity Monitor, "
+        aria="Proofline request flow: Editor, FastAPI, Intent Router, Nib Agents, LLM Providers, Integrity Monitor, "
         "Human Gate, PDF compile",
     )
     cx, row1, row2 = (120, 360, 600, 860), 330, 604
@@ -633,7 +633,7 @@ def request_flow() -> Diagram:
     b1 = d.block(cx[0], row1, code="UI", title="Editor", sub="React 19 · LaTeX", **big)
     b2 = d.block(cx[1], row1, code="API", title="FastAPI", sub="Bearer JWT · quota", **big)
     b3 = d.block(cx[2], row1, code="IR", title="Intent Router", sub="rules → LLM classifier", **big)
-    b4 = d.block(cx[3], row1 + 32.3 - 57.7, hw=100, bh=28, cluster=True, title="Ario Agents", title_size=18)
+    b4 = d.block(cx[3], row1 + 32.3 - 57.7, hw=100, bh=28, cluster=True, title="Nib Agents", title_size=18)
     b5 = d.block(cx[3], row2, code="LLM", title="LLM Providers", sub="GLM · Gemini · GPT · Claude", **big)
     b6 = d.block(cx[2], row2, code="L2", title="Integrity Monitor", sub="numeric drift · scope", key=True, **big)
     b7 = d.block(cx[1], row2, glyphs=True, pulse=True, title="Human Gate", sub="Accept ✓ / Reject ✕", **big)
@@ -763,7 +763,7 @@ def sequence() -> Diagram:
         ("Editor", "UI"),
         ("FastAPI", "API"),
         ("Intent\nRouter", "IR"),
-        ("Ario\nAgent", "AG"),
+        ("Nib\nAgent", "AG"),
         ("Integrity", "L2"),
         ("LLM", "LLM"),
         ("PostgreSQL", "PG"),
@@ -1156,7 +1156,7 @@ def frontend_routes() -> Diagram:
     shell = [
         node(0, 632, "TEX", "LatexEditor", "+ inline diff"),
         node(1, 632, "PDF", "PdfPreviewPanel", "PDF.js · SyncTeX"),
-        node(2, 632, "AI", "ChatOverlay", "Ario · SSE"),
+        node(2, 632, "AI", "ChatOverlay", "Nib · SSE"),
         node(3, 632, "KIT", "ToolsPanel", "versions · logic …"),
         node(4, 632, "%", "PaperScore\nDownloadDialog", "score + AI disclosure"),
     ]
@@ -1489,9 +1489,9 @@ def deployment() -> Diagram:
         530,
         300,
         code="API",
-        title="arionear-api",
+        title="proofline-api",
         sub="FastAPI + TeX Live",
-        sub2="api.arionear.id.vn",
+        sub2="api.proofline.example",
         mono_title=True,
         key=True,
         **big,
@@ -1501,9 +1501,9 @@ def deployment() -> Diagram:
         320,
         470,
         code="SSR",
-        title="arionear-web",
+        title="proofline-web",
         sub="TanStack · Nitro",
-        sub2="arionear.id.vn",
+        sub2="proofline.example",
         mono_title=True,
         **big,
     )
@@ -1517,7 +1517,7 @@ def deployment() -> Diagram:
         d.block(700, 530, code="S2", title="Scholarly APIs", sub="arXiv · CrossRef · S2 · OpenAlex", **right),
         d.block(700, 630, code="@", title="SMTP · Google OAuth", sub="email verify · SSO", **right),
     ]
-    # Pages come from arionear-web; the browser bundle calls arionear-api directly (VITE_API_URL, CORS).
+    # Pages come from proofline-web; the browser bundle calls proofline-api directly (VITE_API_URL, CORS).
     bx0, by0 = browser.right[0] + 8, browser.right[1]
     d.edge(
         f"M {bx0} {by0} H 238 V {be.left[1]} H {be.left[0] - 10}", label="REST · SSE · WS", at=(359, be.left[1] - 11)
@@ -1692,7 +1692,7 @@ def features() -> Diagram:
         "features",
         640,
         title="Tính năng",
-        deck="Ario gợi ý như một biên tập viên — mọi thay đổi chờ tác giả Chấp nhận / Từ chối",
+        deck="Nib gợi ý như một biên tập viên — mọi thay đổi chờ tác giả Chấp nhận / Từ chối",
         desk="PRODUCT DESK",
         fig="0.1",
         kicker="FEATURES",
@@ -1701,8 +1701,8 @@ def features() -> Diagram:
     )
     columns = (
         (
-            "ARIO",
-            "Biên tập với Ario",
+            "NIB",
+            "Biên tập với Nib",
             True,
             (
                 "Style · văn phong",

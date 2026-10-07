@@ -43,7 +43,7 @@ export type ResearcherProfilePatch = Partial<
   Omit<ResearcherProfile, "id" | "email" | "updated_at">
 >;
 
-const CACHE_KEY = "arionear-researcher-profile";
+const CACHE_KEY = "proofline-researcher-profile";
 
 export function getCachedProfile(): ResearcherProfile | null {
   if (typeof window === "undefined") return null;
@@ -58,7 +58,7 @@ export function getCachedProfile(): ResearcherProfile | null {
 
 export function setCachedProfile(profile: ResearcherProfile): void {
   if (typeof window === "undefined") return;
-  const storage = localStorage.getItem("arionear-access-token") ? localStorage : sessionStorage;
+  const storage = localStorage.getItem("proofline-access-token") ? localStorage : sessionStorage;
   storage.setItem(CACHE_KEY, JSON.stringify(profile));
 }
 

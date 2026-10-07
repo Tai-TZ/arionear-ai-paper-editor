@@ -3,7 +3,7 @@ import { MarketingPage } from "@/components/marketing/marketing-page";
 
 export const Route = createFileRoute("/data-use")({
   head: () => ({
-    meta: [{ title: "Data Use — Arionear" }],
+    meta: [{ title: "Data Use — Proofline" }],
   }),
   component: () => <MarketingPage slug="data-use" />,
 });

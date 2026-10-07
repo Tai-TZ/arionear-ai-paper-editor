@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { ProoflineWordmark } from "@/components/proofline-wordmark";
 import { useLocale } from "@/components/locale-context";
 import { commonCopy } from "@/lib/common-i18n";
 import type { UiLanguage } from "@/lib/researcher-profile";
@@ -84,7 +84,7 @@ export function AppLoadingScreenInner({
         {variant === "fullscreen" ? (
           <header className="app-loading-masthead">
             <span className="app-loading-brand">
-              <ArionearWordmark />
+              <ProoflineWordmark />
             </span>
             <span className="app-loading-masthead-meta">{t.loadingMasthead}</span>
           </header>

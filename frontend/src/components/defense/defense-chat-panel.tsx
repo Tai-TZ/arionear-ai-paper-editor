@@ -410,7 +410,7 @@ export function DefenseChatPanel({
         <header className="defense-panel-head">
           <div className="defense-panel-head-brand">
             <h1 className="defense-panel-head-title">
-              <span className="defense-panel-head-ario">{copy.councilBrand}</span>
+              <span className="defense-panel-head-nib">{copy.councilBrand}</span>
               <span className="defense-panel-head-mode">{copy.councilTitle}</span>
             </h1>
             <p className="defense-panel-head-sub">{copy.councilSubtitle}</p>

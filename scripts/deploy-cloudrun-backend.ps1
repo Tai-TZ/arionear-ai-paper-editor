@@ -1,4 +1,4 @@
-# Deploy arionear-api to Google Cloud Run (reads repo-root .env).
+# Deploy proofline-api to Google Cloud Run (reads repo-root .env).
 #
 # Usage (first deploy or full rebuild):
 #   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1
@@ -7,16 +7,16 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1 -SkipBuild
 #
 # Custom domains are set via -FrontendUrl / -BackendCustomDomain.
-# Defaults below match the production custom domains on arionear.id.vn.
+# Defaults below match the production custom domains on proofline.example.
 
 param(
     [string]$ProjectId    = "project-f8474886-b777-42fc-88c",
     [string]$Region       = "asia-east1",
-    [string]$ServiceName  = "arionear-api",
+    [string]$ServiceName  = "proofline-api",
     # Custom-domain URL of the frontend (used for CORS + OPENROUTER_SITE_URL)
-    [string]$FrontendUrl  = "https://arionear.id.vn",
+    [string]$FrontendUrl  = "https://proofline.example",
     # Custom-domain URL of the backend (used for BACKEND_BASE_URL + OAuth redirect)
-    [string]$BackendCustomDomain = "https://api.arionear.id.vn",
+    [string]$BackendCustomDomain = "https://api.proofline.example",
     # Cloud Run service URL — auto-detected if empty (used as BACKEND_BASE_URL fallback)
     [string]$BackendUrl   = "",
     [switch]$SkipBuild,
@@ -120,7 +120,7 @@ if ($SecretsOnly) {
     exit 0
 }
 
-$image = "$Region-docker.pkg.dev/$ProjectId/arionear/backend:latest"
+$image = "$Region-docker.pkg.dev/$ProjectId/proofline/backend:latest"
 
 if (-not $SkipBuild) {
     Write-Host "`n=== Step 2: Build image (10-20 minutes) ===" -ForegroundColor Cyan
@@ -209,7 +209,7 @@ if ($langchainTracing) { $envVars += "LANGCHAIN_TRACING_V2=$langchainTracing" }
 
 Write-Host "`n=== Step 3: Deploy Cloud Run ===" -ForegroundColor Cyan
 # Write env vars to YAML to avoid gcloud comma/colon escaping issues on Windows.
-$envVarsFile = Join-Path $env:TEMP "arionear-api-env-$([Guid]::NewGuid().ToString('N')).yaml"
+$envVarsFile = Join-Path $env:TEMP "proofline-api-env-$([Guid]::NewGuid().ToString('N')).yaml"
 try {
     $yamlLines = @("---")
     foreach ($entry in $envVars) {

@@ -89,7 +89,7 @@ async def test_ai_disclosure_is_scoped_to_paper_owner(client, disclosure_db):
     assert body["has_ai_usage"] is False
     assert body["totals"]["interactions"] == 0
     assert body["by_task"] == []
-    assert body["statement"]["en"].startswith("No use of Arionear's AI writing assistant was recorded")
+    assert body["statement"]["en"].startswith("No use of Proofline's AI writing assistant was recorded")
 
 
 @pytest.mark.asyncio
@@ -175,7 +175,7 @@ async def test_ai_disclosure_aggregates_recorded_usage_and_decisions(client, dis
 
     en = body["statement"]["en"]
     assert "glm-4.7-flash via Z.AI GLM and Google Gemini" in en
-    assert "Arionear proposed 2 text revisions" in en
+    assert "Proofline proposed 2 text revisions" in en
     assert "1 accepted and 1 rejected." in en
     assert "logical consistency" not in en
     assert body["statement"]["vi"].startswith("Trong quá trình chuẩn bị công trình này")

@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="./docs/assets/banner.svg" alt="Arionear — Closer to Publication" width="100%">
+<img src="./docs/assets/banner.svg" alt="Proofline — Closer to Publication" width="100%">
 
 **Trợ lý AI biên tập bài báo khoa học trên LaTeX — gợi ý như một biên tập viên, quyết định vẫn thuộc về tác giả.**
 
-[![CI](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/ci.yml)
-[![Security](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/security.yml)
-[![Docker](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/docker.yml)
-[![LaTeX](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml/badge.svg)](https://github.com/Tai-TZ/arionear-ai-paper-editor/actions/workflows/latex.yml)
+[![CI](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/ci.yml)
+[![Security](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/security.yml/badge.svg)](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/security.yml)
+[![Docker](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/docker.yml/badge.svg)](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/docker.yml)
+[![LaTeX](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/latex.yml/badge.svg)](https://github.com/Tai-TZ/proofline-ai-paper-editor/actions/workflows/latex.yml)
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -26,12 +26,12 @@
 
 ## 📖 Giới thiệu
 
-**Arionear** là trình biên tập LaTeX cho bài báo khoa học, đi kèm trợ lý AI **Ario** làm việc như một biên tập viên: đọc toàn bộ bản thảo, góp ý văn phong học thuật, cấu trúc IMRaD, trích dẫn và mạch lập luận. Mỗi đề xuất hiện thành **diff** để tác giả **Chấp nhận / Từ chối** — Ario không tự sửa bản thảo và không bịa số liệu hay trích dẫn.
+**Proofline** là trình biên tập LaTeX cho bài báo khoa học, đi kèm trợ lý AI **Nib** làm việc như một biên tập viên: đọc toàn bộ bản thảo, góp ý văn phong học thuật, cấu trúc IMRaD, trích dẫn và mạch lập luận. Mỗi đề xuất hiện thành **diff** để tác giả **Chấp nhận / Từ chối** — Nib không tự sửa bản thảo và không bịa số liệu hay trích dẫn.
 
 Mọi việc diễn ra ngay trong trình duyệt: soạn LaTeX, biên dịch PDF với SyncTeX, xác minh trích dẫn qua arXiv · Crossref · Semantic Scholar · OpenAlex, chấm điểm bản thảo trước khi nộp và luyện bảo vệ với hội đồng phản biện AI. Dự án hướng tới nhà nghiên cứu cần đưa bài lên chuẩn xuất bản quốc tế, đặc biệt là người viết tiếng Anh như một ngoại ngữ.
 
 ```text
-Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / Từ chối → Biên dịch PDF
+Mở project → Soạn LaTeX → Hỏi Nib → Xem diff → Chấp nhận / Từ chối → Biên dịch PDF
 ```
 
 ### Nguyên tắc thiết kế
@@ -48,7 +48,7 @@ Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / T�
 ## ✨ Tính năng
 
 <p align="center">
-  <img src="./docs/assets/features.svg" alt="Bốn nhóm tính năng — Biên tập với Ario: Style, Structure, Template, Citation L1–L4, Quick Edit, slash command; Đánh giá chất lượng: Logic Audit, Publication Score Gate, Defense Mode, Integrity Monitor, phản hồi peer review, AI disclosure; Môi trường LaTeX: editor đa file, TeX Live + SyncTeX, import ZIP/DOCX/PDF, template IEEE/LNCS/Elsevier, xem PDF, link chia sẻ read-only; Nền tảng: JWT + Google SSO, admin console, gói FREE/PRO, chọn model có failover, song ngữ EN/VI, dark mode và mobile" width="100%">
+  <img src="./docs/assets/features.svg" alt="Bốn nhóm tính năng — Biên tập với Nib: Style, Structure, Template, Citation L1–L4, Quick Edit, slash command; Đánh giá chất lượng: Logic Audit, Publication Score Gate, Defense Mode, Integrity Monitor, phản hồi peer review, AI disclosure; Môi trường LaTeX: editor đa file, TeX Live + SyncTeX, import ZIP/DOCX/PDF, template IEEE/LNCS/Elsevier, xem PDF, link chia sẻ read-only; Nền tảng: JWT + Google SSO, admin console, gói FREE/PRO, chọn model có failover, song ngữ EN/VI, dark mode và mobile" width="100%">
 </p>
 
 ---
@@ -56,13 +56,13 @@ Mở project → Soạn LaTeX → Hỏi Ario → Xem diff → Chấp nhận / T�
 ## 🏗️ Kiến trúc
 
 <p align="center">
-  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Arionear: User, Processing, Human Gate, Output, Infrastructure" width="100%">
+  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Proofline: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
 Luồng chính của editor chạy qua **SSE streaming**: Intent Router phân loại yêu cầu (rules → LLM fallback), chuyển đến agent tương ứng; output đi qua Integrity Monitor trước khi trở thành diff cho người dùng duyệt.
 
 <p align="center">
-  <img src="./docs/assets/request-flow.svg" alt="Luồng xử lý một yêu cầu trong Arionear: Editor → FastAPI → Intent Router → Ario Agents → LLM → Integrity Monitor → Human Gate → PDF" width="100%">
+  <img src="./docs/assets/request-flow.svg" alt="Luồng xử lý một yêu cầu trong Proofline: Editor → FastAPI → Intent Router → Nib Agents → LLM → Integrity Monitor → Human Gate → PDF" width="100%">
 </p>
 
 Chi tiết từng thành phần, guardrail và data flow: xem [ARCHITECTURE.md](./ARCHITECTURE.md) và [docs/architecture_diagram.md](./docs/architecture_diagram.md).
@@ -95,8 +95,8 @@ Mọi push/PR chạy CI (Ruff, pytest 3.11 + 3.12, frontend, Prisma trên Postgr
 ### 1. Clone & cấu hình
 
 ```bash
-git clone https://github.com/Tai-TZ/arionear-ai-paper-editor.git
-cd arionear-ai-paper-editor
+git clone https://github.com/Tai-TZ/proofline-ai-paper-editor.git
+cd proofline-ai-paper-editor
 cp .env.example .env   # điền API key, DIRECT_DATABASE_URL, AUTH_SECRET_KEY
 ```
 
@@ -195,9 +195,9 @@ Toàn bộ biến kèm chú thích nằm trong [`.env.example`](./.env.example).
 ## 📁 Cấu trúc thư mục
 
 ```text
-arionear-ai-paper-editor/
+proofline-ai-paper-editor/
 ├── src/                  # Backend FastAPI
-│   ├── agents/           #   LangGraph graph & các agent của Ario
+│   ├── agents/           #   LangGraph graph & các agent của Nib
 │   ├── api/              #   REST / SSE / WebSocket routes
 │   ├── services/         #   Logic audit, defense, compile, citation, guardrails…
 │   ├── prompts/          #   Prompt templates (YAML)
@@ -219,18 +219,18 @@ arionear-ai-paper-editor/
 ## 🖼️ Giao diện
 
 <p align="center">
-  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Arionear: đoạn mở đầu được Ario viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
+  <img src="./docs/assets/screenshots/02-editor-ai-edit.webp" alt="Editor của Proofline: đoạn mở đầu được Nib viết lại, hiển thị dạng diff đỏ/xanh với nút Từ chối / Chấp nhận, bên phải là PDF IEEE đã biên dịch" width="100%">
 </p>
-<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Ario viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
+<p align="center"><sub><b>Editor</b> — bôi đen đoạn mở đầu và nhờ Nib viết lại: đề xuất hiện thành diff đỏ/xanh chờ tác giả <b>Từ chối / Chấp nhận</b>; PDF biên dịch ngay bên cạnh, nhấp đúp để nhảy về dòng LaTeX (SyncTeX).</sub></p>
 
 <table>
 <tr>
 <td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Arionear theo phong cách báo in">
+  <img src="./docs/assets/screenshots/01-landing.webp" alt="Trang chủ Proofline theo phong cách báo in">
   <br><sub><b>Trang chủ</b> — phong cách báo in, demo phiên biên tập trực tiếp</sub>
 </td>
 <td width="50%" valign="top">
-  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Ario">
+  <img src="./docs/assets/screenshots/03-editor-dark.webp" alt="Editor ở chế độ tối với diff gợi ý của Nib">
   <br><sub><b>Dark mode</b> — cùng phiên biên tập ở giao diện tối</sub>
 </td>
 </tr>

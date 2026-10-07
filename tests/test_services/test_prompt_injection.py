@@ -56,7 +56,7 @@ def test_system_prompt_leak_detection():
     leak = (
         "WHAT THIS PRODUCT IS\n"
         "INTEGRITY GUARD (non-negotiable)\n"
-        "You are Ario — the AI research assistant embedded in ARIONEAR"
+        "You are Nib — the AI research assistant embedded in PROOFLINE"
     )
     assert looks_like_system_prompt_leak(leak)
     assert not looks_like_system_prompt_leak("Abstract cần ngắn gọn hơn.")

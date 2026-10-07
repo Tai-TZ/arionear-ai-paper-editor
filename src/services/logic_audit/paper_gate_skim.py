@@ -163,7 +163,7 @@ async def run_paper_gate_skim(
         if on_progress:
             on_progress(step_id, label, detail, status)
 
-    _progress("gate-start", "Ario đọc lướt bài báo…")
+    _progress("gate-start", "Nib đọc lướt bài báo…")
 
     audit_provider, audit_model = resolve_logic_audit_llm("quick", chat_provider or provider)
     effective_provider = provider or audit_provider
@@ -248,7 +248,7 @@ async def run_paper_gate_skim(
         fallback_summary = (
             "No major issues detected in the quick review."
             if ui_language == "English"
-            else "Ario đã đọc lướt nhưng không tìm thấy vấn đề cần chú ý."
+            else "Nib đã đọc lướt nhưng không tìm thấy vấn đề cần chú ý."
         )
         return {
             "logic_audit_report": {
@@ -289,7 +289,7 @@ async def run_paper_gate_skim(
         "meta": {"audit_mode": "gate", "language": language},
     }
 
-    summary = report["summary"] or "Ario đã đọc lướt bài báo."
+    summary = report["summary"] or "Nib đã đọc lướt bài báo."
     _progress("gate-done", "Hoàn thành phản biện nhanh", detail=summary, status="done")
 
     return {

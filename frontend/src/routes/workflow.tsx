@@ -5,7 +5,7 @@ import { workflowContent } from "@/lib/marketing-content";
 export const Route = createFileRoute("/workflow")({
   head: () => ({
     meta: [
-      { title: "Workflow — Arionear" },
+      { title: "Workflow — Proofline" },
       { name: "description", content: workflowContent.lede },
     ],
   }),

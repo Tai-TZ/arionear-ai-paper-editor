@@ -1,6 +1,6 @@
-# Guardrails — Arionear
+# Guardrails — Proofline
 
-Arionear implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production on Cloud Run.
+Proofline implements a **4-layer guardrail stack** so AI assists expression without silently changing scientific meaning. Every layer is active in production on Cloud Run.
 
 **Eval evidence:** [`EVALUATION.md`](../EVALUATION.md) · [`eval/results/gate3_summary.md`](../eval/results/gate3_summary.md)
 
@@ -84,7 +84,7 @@ Blocks unsafe edits **before** they reach the UI:
 
 ## L3 — Differential display (Human gate)
 
-1. User asks Ario to edit (chat or Quick Edit)
+1. User asks Nib to edit (chat or Quick Edit)
 2. Backend returns `original_text`, `replacement_text`, `selection_start/end`, `integrity_flags`
 3. Editor shows **inline diff** (red delete / green insert) via `inline-suggestion.ts`
 4. `SuggestionPanel` shows flags; **Accept is disabled** when any flag has `severity=error`
@@ -113,7 +113,7 @@ On every AI edit proposal (when not blocked by L2 errors):
 python eval/scripts/run_gate3_eval.py --skip-live
 
 # Full production + LLM
-GATE3_API_URL=https://api.arionear.id.vn python eval/scripts/run_gate3_eval.py --live-llm
+GATE3_API_URL=https://api.proofline.example python eval/scripts/run_gate3_eval.py --live-llm
 
 # Regression
 pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
@@ -142,6 +142,6 @@ pytest tests/test_gate3_metrics.py tests/test_services/test_academic.py -v
 ## Production notes
 
 - `APP_ENV=production` on Cloud Run (`asia-east1`)
-- CORS locked to frontend URL (`arionear.id.vn`)
+- CORS locked to frontend URL (`proofline.example`)
 - LLM API keys only on server (GCP Secret Manager) — never in browser
 - Integrity strictness persisted in user profile settings

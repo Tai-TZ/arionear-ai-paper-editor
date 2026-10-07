@@ -31,6 +31,6 @@ describe("template formats", () => {
     expect(templateEyebrow({ format: "elsevier", venue: "journal" }, "vi")).toBe(
       "Elsevier · Tạp chí",
     );
-    expect(templateEyebrow({ format: "", venue: "", author: "Arionear" }, "en")).toBe("Arionear");
+    expect(templateEyebrow({ format: "", venue: "", author: "Proofline" }, "en")).toBe("Proofline");
   });
 });

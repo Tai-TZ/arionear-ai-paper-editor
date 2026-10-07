@@ -127,7 +127,7 @@
   font-display: swap;
 }
 
-/* â”€â”€ Home / marketing: Arionear newsprint â”€â”€ */
+/* â”€â”€ Home / marketing: Proofline newsprint â”€â”€ */
 :root {
   --radius: 0px;
   --ink: oklch(0.145 0 0);
@@ -347,7 +347,7 @@
   }
 }
 
-/* â”€â”€ Editor workspace: insight-editor feel + Arionear accents â”€â”€ */
+/* â”€â”€ Editor workspace: insight-editor feel + Proofline accents â”€â”€ */
 .editor-shell {
   --radius: 0.375rem;
   --ink: oklch(0.145 0 0);
@@ -1326,7 +1326,7 @@
   text-overflow: ellipsis;
 }
 
-.editor-shell .defense-panel-head-ario {
+.editor-shell .defense-panel-head-nib {
   font-family: var(--font-serif-display);
   font-weight: 700;
   color: var(--editorial-red);
@@ -7555,7 +7555,7 @@ html[lang="vi"] .hero-headline {
   }
 }
 
-/* â”€â”€â”€ Admin console (ops-style shell — ~40% Arionear editorial DNA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ Admin console (ops-style shell — ~40% Proofline editorial DNA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .admin-shell,
 .admin-shell * {

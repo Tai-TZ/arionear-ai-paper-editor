@@ -44,7 +44,7 @@ _TEMPLATE_LICENSE = "LPPL (publisher class and BibTeX style ship with TeX Live)"
 # under CC BY 4.0 (attribution plus an indication of changes).
 _LNCS_LICENSE = (
     "CC BY 4.0 — adapted from Springer's LNCS sample paper (samplepaper.tex); shortened and "
-    "reorganised into an IMRaD outline for Arionear"
+    "reorganised into an IMRaD outline for Proofline"
 )
 
 
@@ -59,7 +59,7 @@ def _svg_rules(x: int, y: int, width: int, count: int, step: int = 8) -> str:
 
 # ─── Springer LNCS (llncs) ───────────────────────────────────────────────────
 
-SPRINGER_LNCS_MAIN_TEX = r"""% Springer LNCS conference proceedings starter for Arionear Paper IDE.
+SPRINGER_LNCS_MAIN_TEX = r"""% Springer LNCS conference proceedings starter for Proofline Paper IDE.
 % llncs.cls and splncs04.bst ship with TeX Live (texlive-publishers); follow the
 % Springer LNCS author guidelines for page limits and final-version requirements.
 \documentclass[runningheads]{llncs}
@@ -221,11 +221,11 @@ SPRINGER_LNCS = BuiltinTemplate(
         "title_vi": "Mẫu Springer LNCS cho kỷ yếu hội nghị (llncs, kèm ví dụ BibTeX)",
         "description": (
             "Official-style Springer Lecture Notes in Computer Science (LNCS) starter with the llncs class, "
-            "author/institute block, keywords, and splncs04 bibliography for Arionear Paper IDE."
+            "author/institute block, keywords, and splncs04 bibliography for Proofline Paper IDE."
         ),
         "description_vi": (
             "Mẫu khởi tạo bài kỷ yếu hội nghị Springer LNCS với lớp llncs, khối tác giả/đơn vị, "
-            "từ khóa và tài liệu tham khảo kiểu splncs04 cho Paper IDE Arionear."
+            "từ khóa và tài liệu tham khảo kiểu splncs04 cho Paper IDE Proofline."
         ),
         "abstract": (
             "This is a skeleton file for papers in Springer Lecture Notes in Computer Science (LNCS) "
@@ -238,7 +238,7 @@ SPRINGER_LNCS = BuiltinTemplate(
             "(CTAN). File minh họa cách khai báo tiêu đề, tác giả và đơn vị theo LNCS, từ khóa, dàn ý IMRaD, "
             "bảng/hình giữ chỗ và ví dụ BibTeX theo kiểu splncs04."
         ),
-        "author": "Springer template (Arionear gallery)",
+        "author": "Springer template (Proofline gallery)",
         "license": _LNCS_LICENSE,
         "tags": [
             "Citations",
@@ -263,7 +263,7 @@ SPRINGER_LNCS = BuiltinTemplate(
 
 # ─── Elsevier (elsarticle, preprint) ─────────────────────────────────────────
 
-ELSEVIER_ELSARTICLE_MAIN_TEX = r"""% Elsevier journal article starter (preprint) for Arionear Paper IDE.
+ELSEVIER_ELSARTICLE_MAIN_TEX = r"""% Elsevier journal article starter (preprint) for Proofline Paper IDE.
 % elsarticle.cls and elsarticle-num.bst ship with TeX Live (texlive-publishers); check the
 % Guide for Authors of your target journal for its reference style and length limits.
 \documentclass[preprint,12pt]{elsarticle}
@@ -444,11 +444,11 @@ ELSEVIER_ELSARTICLE = BuiltinTemplate(
         "title_vi": "Mẫu bài báo tạp chí Elsevier (elsarticle, bản preprint, kèm ví dụ BibTeX)",
         "description": (
             "Official-style Elsevier journal starter with the elsarticle class in preprint mode, frontmatter "
-            "with affiliations, keywords, and elsarticle-num bibliography for Arionear Paper IDE."
+            "with affiliations, keywords, and elsarticle-num bibliography for Proofline Paper IDE."
         ),
         "description_vi": (
             "Mẫu khởi tạo bài báo tạp chí Elsevier với lớp elsarticle ở chế độ preprint, khối frontmatter "
-            "kèm đơn vị, từ khóa và tài liệu tham khảo kiểu elsarticle-num cho Paper IDE Arionear."
+            "kèm đơn vị, từ khóa và tài liệu tham khảo kiểu elsarticle-num cho Paper IDE Proofline."
         ),
         "abstract": (
             "This is a skeleton file for Elsevier journal submissions using elsarticle.cls (preprint option) "
@@ -463,7 +463,7 @@ ELSEVIER_ELSARTICLE = BuiltinTemplate(
             "môi trường keyword, dàn ý IMRaD, bảng/hình giữ chỗ, tuyên bố xung đột lợi ích và tính sẵn có "
             "của dữ liệu, cùng ví dụ BibTeX theo kiểu elsarticle-num."
         ),
-        "author": "Elsevier template (Arionear gallery)",
+        "author": "Elsevier template (Proofline gallery)",
         "license": _TEMPLATE_LICENSE,
         "tags": [
             "Citations",

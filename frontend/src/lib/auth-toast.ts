@@ -11,7 +11,7 @@ export const authToast = {
   },
   signUpSuccess() {
     toast.success("Account created", {
-      description: "Welcome to Arionear. Your workspace is ready.",
+      description: "Welcome to Proofline. Your workspace is ready.",
     });
   },
   signUpError(message: string) {

@@ -115,7 +115,7 @@ def _is_share_owner(share_token: str, user_sub: str) -> bool:
 async def share_yjs_websocket(websocket: WebSocket, token: str):
     """Live sync for the share link — only the paper owner may join (the public link is read-only).
 
-    Auth comes from the subprotocols ["arionear-share", "bearer.<access token>"]; on failure the
+    Auth comes from the subprotocols ["proofline-share", "bearer.<access token>"]; on failure the
     handshake is closed (4401/4403) without being accepted.
     """
     access_token = bearer_from_subprotocols(websocket.scope.get("subprotocols"))

@@ -261,8 +261,8 @@ export function EditorialBoardFigure({
           textAnchor="middle"
           style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: 900 }}
         >
-          <tspan fill="var(--foreground)">Ario</tspan>
-          <tspan fill="var(--editorial-red)">near</tspan>
+          <tspan fill="var(--foreground)">Proof</tspan>
+          <tspan fill="var(--editorial-red)">line</tspan>
         </text>
         <text
           x="544"

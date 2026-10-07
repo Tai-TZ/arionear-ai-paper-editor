@@ -7,7 +7,7 @@ import { useLatestRef } from "@/lib/use-latest-ref";
 
 const LATEX_KEY = "latex";
 
-export const SHARE_WS_SUBPROTOCOL = "arionear-share";
+export const SHARE_WS_SUBPROTOCOL = "proofline-share";
 
 /**
  * Live share sync is owner-only. Browsers cannot set headers on WebSockets, so the access token

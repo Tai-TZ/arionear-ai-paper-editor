@@ -22,8 +22,8 @@ export const Route = createFileRoute("/signin")({
   },
   head: () => ({
     meta: [
-      { title: "Sign In — Arionear" },
-      { name: "description", content: "Sign in to Arionear to continue editing your manuscript." },
+      { title: "Sign In — Proofline" },
+      { name: "description", content: "Sign in to Proofline to continue editing your manuscript." },
     ],
   }),
   component: SignInPage,

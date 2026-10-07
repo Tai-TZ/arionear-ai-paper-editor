@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Arionear — AI-assisted LaTeX editor for scientific papers. FastAPI + LangGraph backend (`src/`), TanStack Start + React 19 frontend (`frontend/`), PostgreSQL via Prisma schema + SQLAlchemy runtime.
+Proofline — AI-assisted LaTeX editor for scientific papers. FastAPI + LangGraph backend (`src/`), TanStack Start + React 19 frontend (`frontend/`), PostgreSQL via Prisma schema + SQLAlchemy runtime.
 
 ## Commands
 
@@ -60,7 +60,7 @@ Core invariant: AI output never applies itself — every edit goes through the I
 - DB URLs are rewritten to `postgresql+psycopg2://` (`sqlalchemy_database_url`): SQLAlchemy 2.1 defaults bare `postgresql://` to psycopg 3, which isn't installed.
 - `tests/conftest.py` disables `.env` loading for the whole suite — tests must never reach the real database or LLM keys.
 - TeX runs with an allowlisted env, `shell_escape=f`, `openin_any=p`/`openout_any=p` (TeX Live; MiKTeX ignores the kpathsea vars). `main_file` must match `[A-Za-z0-9._/-]+` and end in `.tex`/`.latex`. Rerun detection reads the TeX `.log` (batchmode keeps warnings out of stdout).
-- Live share sync (`WS /ws/share/{token}`) is owner-only: the client sends subprotocols `["arionear-share", "bearer.<jwt>"]`; anonymous viewers get the `GET /share/{token}` snapshot.
+- Live share sync (`WS /ws/share/{token}`) is owner-only: the client sends subprotocols `["proofline-share", "bearer.<jwt>"]`; anonymous viewers get the `GET /share/{token}` snapshot.
 - Billing: the payment-less QR checkout only runs when `BILLING_DEMO_CHECKOUT` is on (off by default in production); `/billing/upgrade` is god-admin only.
 - Prisma migrations were verified locally against Postgres 16 (`migrate deploy` + `migrate diff --exit-code` with a shadow DB); CI repeats that check.
 

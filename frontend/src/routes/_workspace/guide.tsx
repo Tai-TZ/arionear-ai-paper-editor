@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_workspace/guide")({
   head: () => {
     const en = guideCopy("en");
     return {
-      meta: [{ title: `${en.title} — Arionear` }, { name: "description", content: en.lede }],
+      meta: [{ title: `${en.title} — Proofline` }, { name: "description", content: en.lede }],
     };
   },
   component: WorkspaceGuidePage,

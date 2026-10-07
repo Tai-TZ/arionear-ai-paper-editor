@@ -89,7 +89,7 @@ type MarketingCopy = {
     playDemo: string;
     pause: string;
     play: string;
-    arioRole: string;
+    nibRole: string;
     aiEditor: string;
     thinking: string;
     proof: string;
@@ -150,11 +150,11 @@ const EN: MarketingCopy = {
     headline: "Research ",
     headlineEm: "Deserves",
     headlineEnd: " a Fair Reading.",
-    lede: "Publishing quality international research is a major barrier — especially for non-native English speakers. Arionear is an AI academic editor for LaTeX: improve prose and grammar while preserving meaning, suggest structure, check citations — never fabricate content or results.",
+    lede: "Publishing quality international research is a major barrier — especially for non-native English speakers. Proofline is an AI academic editor for LaTeX: improve prose and grammar while preserving meaning, suggest structure, check citations — never fabricate content or results.",
     fromEditor: "From the Editor",
     editorQuote:
       '"Good research is rejected for how it reads — not for its scientific merit. We help your work be read at its true value."',
-    editorByline: "— The Arionear Desk",
+    editorByline: "— The Proofline Desk",
     uploadLatex: "Upload LaTeX",
     seeWorkflow: "See the Workflow",
     figCaption: "Fig. 1.1",
@@ -205,7 +205,7 @@ const EN: MarketingCopy = {
       {
         n: "02",
         t: "Read the Markup",
-        b: "Chat with Ario. Suggestions appear as tracked changes with rationale.",
+        b: "Chat with Nib. Suggestions appear as tracked changes with rationale.",
       },
       {
         n: "03",
@@ -225,7 +225,7 @@ const EN: MarketingCopy = {
     titleLine2: "",
     titleEm: "You",
     titleLine3: " are the author.",
-    body: "Arionear treats your manuscript the way a thoughtful editor would — improving how the work is presented without altering what the work claims. The system is hard-wired to refuse fabrication.",
+    body: "Proofline treats your manuscript the way a thoughtful editor would — improving how the work is presented without altering what the work claims. The system is hard-wired to refuse fabrication.",
     readPolicy: "Read editorial policy →",
     guaranteesLabel: "Five Guarantees",
     sectionRef: "§ 01–05",
@@ -266,7 +266,7 @@ const EN: MarketingCopy = {
     playDemo: "Play demo",
     pause: "Pause",
     play: "Play",
-    arioRole: "Ario",
+    nibRole: "Nib",
     aiEditor: "AI editor",
     thinking: "thinking…",
     proof: "Proof",
@@ -280,7 +280,7 @@ const EN: MarketingCopy = {
         id: "style",
         label: "Style",
         text: "Fix subject–verb agreement in the opening sentence.",
-        statusHint: "Ario marks a grammar fix on the proof.",
+        statusHint: "Nib marks a grammar fix on the proof.",
         acceptHint: "Author accepts — sentence updated in main.tex.",
         refuseHint: "Suggestion dismissed — original wording kept.",
       },
@@ -356,11 +356,11 @@ const VI: MarketingCopy = {
     headline: "Nghiên cứu ",
     headlineEm: "Xứng đáng",
     headlineEnd: " được đọc công bằng.",
-    lede: "Viết bài báo khoa học chất lượng quốc tế là rào cản lớn — đặc biệt với nhà nghiên cứu không phải người bản ngữ tiếng Anh. Arionear là trợ lý AI biên tập học thuật cho LaTeX: cải thiện văn phong và ngữ pháp giữ đúng ý gốc, gợi ý cấu trúc, kiểm tra trích dẫn — không bao giờ bịa nội dung hay kết quả.",
+    lede: "Viết bài báo khoa học chất lượng quốc tế là rào cản lớn — đặc biệt với nhà nghiên cứu không phải người bản ngữ tiếng Anh. Proofline là trợ lý AI biên tập học thuật cho LaTeX: cải thiện văn phong và ngữ pháp giữ đúng ý gốc, gợi ý cấu trúc, kiểm tra trích dẫn — không bao giờ bịa nội dung hay kết quả.",
     fromEditor: "Từ Ban biên tập",
     editorQuote:
       '"Nghiên cứu tốt bị từ chối vì cách trình bày — không phải vì chất lượng khoa học. Chúng tôi giúp công trình của bạn được đọc đúng giá trị."',
-    editorByline: "— Ban biên tập Arionear",
+    editorByline: "— Ban biên tập Proofline",
     uploadLatex: "Tải LaTeX",
     seeWorkflow: "Xem quy trình",
     figCaption: "Hình 1.1",
@@ -412,7 +412,7 @@ const VI: MarketingCopy = {
       {
         n: "02",
         t: "Đọc markup",
-        b: "Trò chuyện với Ario. Gợi ý hiện dạng tracked changes kèm lý do.",
+        b: "Trò chuyện với Nib. Gợi ý hiện dạng tracked changes kèm lý do.",
       },
       {
         n: "03",
@@ -432,7 +432,7 @@ const VI: MarketingCopy = {
     titleLine2: "",
     titleEm: "Bạn",
     titleLine3: " là tác giả.",
-    body: "Arionear xử lý bản thảo như một biên tập viên cẩn trọng — cải thiện cách trình bày mà không thay đổi nội dung khoa học. Hệ thống được thiết kế để từ chối mọi hành vi bịa đặt.",
+    body: "Proofline xử lý bản thảo như một biên tập viên cẩn trọng — cải thiện cách trình bày mà không thay đổi nội dung khoa học. Hệ thống được thiết kế để từ chối mọi hành vi bịa đặt.",
     readPolicy: "Đọc chính sách biên tập →",
     guaranteesLabel: "Năm cam kết",
     sectionRef: "§ 01–05",
@@ -469,7 +469,7 @@ const VI: MarketingCopy = {
     playDemo: "Phát demo",
     pause: "Tạm dừng",
     play: "Phát",
-    arioRole: "Ario",
+    nibRole: "Nib",
     aiEditor: "Biên tập AI",
     thinking: "đang suy nghĩ…",
     proof: "Bản in",
@@ -483,7 +483,7 @@ const VI: MarketingCopy = {
         id: "style",
         label: "Văn phong",
         text: "Sửa hòa hợp chủ ngữ–động từ trong câu mở đầu.",
-        statusHint: "Ario đánh dấu sửa ngữ pháp trên bản in.",
+        statusHint: "Nib đánh dấu sửa ngữ pháp trên bản in.",
         acceptHint: "Tác giả chấp nhận — câu cập nhật trong main.tex.",
         refuseHint: "Gợi ý bị bỏ — giữ nguyên câu gốc.",
       },

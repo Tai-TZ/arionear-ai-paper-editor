@@ -107,7 +107,7 @@ const EN: CommonCopy = {
   footer: {
     tagline: "AI Academic Writing & Editing Assistant.",
     edition: "Edition Vol. I · Printed for the web ·",
-    copyright: "Arionear Editorial Co.",
+    copyright: "Proofline Editorial Co.",
     motto: "All the science that's fit to publish.",
     sections: { desk: "Desk", authors: "Authors", bureau: "Bureau", legal: "Legal" },
     links: {
@@ -196,7 +196,7 @@ const VI: CommonCopy = {
   footer: {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
     edition: "Ấn bản Tập I · In trên web ·",
-    copyright: "Arionear Editorial Co.",
+    copyright: "Proofline Editorial Co.",
     motto: "Mọi khoa học xứng đáng được xuất bản.",
     sections: { desk: "Ban biên tập", authors: "Tác giả", bureau: "Văn phòng", legal: "Pháp lý" },
     links: {

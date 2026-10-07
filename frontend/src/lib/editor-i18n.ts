@@ -116,10 +116,10 @@ export type EditorCopy = {
     structureIntro: string;
     structureEmpty: string;
     structureJump: string;
-    structureAskArio: string;
+    structureAskNib: string;
     structureApplyFix: string;
     structureUnknownSection: string;
-    citationAskArio: string;
+    citationAskNib: string;
     citationFixAll: string;
   };
   share: {
@@ -150,7 +150,7 @@ export type EditorCopy = {
     cancel: string;
     auditingInProgress: string;
     jumpToIssue: string;
-    askArio: string;
+    askNib: string;
     claimLabel: string;
     partialChatStopped: (count: number) => string;
     partialChatTimeout: (count: number) => string;
@@ -412,9 +412,8 @@ const EN: EditorCopy = {
     noTitleInBib: "No title in BibTeX",
     aiRevisionHistory: "AI revision history",
     versionsHelp: "Versions help",
-    revisionsHint:
-      "Accept/Reject actions from Ario suggestions are recorded here (L4 audit trail).",
-    noRevisions: "No AI revisions yet. Ask Ario to edit or polish your manuscript.",
+    revisionsHint: "Accept/Reject actions from Nib suggestions are recorded here (L4 audit trail).",
+    noRevisions: "No AI revisions yet. Ask Nib to edit or polish your manuscript.",
     revisionAccepted: "Accepted",
     revisionRejected: "Rejected",
     revisionModified: "Modified",
@@ -425,14 +424,14 @@ const EN: EditorCopy = {
     verifiedCitations: (verified, total) => `Verified ${verified}/${total} citations.`,
     citationVerifyError: "Could not verify citations right now. Please try again later.",
     structure: "Structure",
-    structureIntro: "IMRAD outline suggestions from Ario. Jump to a section or ask Ario to fix it.",
+    structureIntro: "IMRAD outline suggestions from Nib. Jump to a section or ask Nib to fix it.",
     structureEmpty:
       "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
     structureJump: "Jump in editor",
-    structureAskArio: "Ask Ario",
+    structureAskNib: "Ask Nib",
     structureApplyFix: "Apply fix",
     structureUnknownSection: "Manuscript",
-    citationAskArio: "Ask Ario",
+    citationAskNib: "Ask Nib",
     citationFixAll: "Fix unverified citations",
   },
   share: {
@@ -440,7 +439,7 @@ const EN: EditorCopy = {
     title: "Share manuscript",
     description: "Send a view-only link. Readers see live LaTeX and PDF — no editing, no tools.",
     viewOnly: "View only",
-    viewOnlyHint: "Readers cannot edit or run Ario.",
+    viewOnlyHint: "Readers cannot edit or run Nib.",
     stableLink: "Stable link",
     stableLinkHint: "Same URL after compile and save until you disable sharing.",
     viewOnlyLink: "View-only link",
@@ -465,7 +464,7 @@ const EN: EditorCopy = {
     cancel: "Cancel audit",
     auditingInProgress: "New audit running — previous results stay visible until sections update.",
     jumpToIssue: "Go to line",
-    askArio: "Ask Ario",
+    askNib: "Ask Nib",
     claimLabel: "Claim:",
     partialChatStopped: (count) =>
       `Logic audit stopped — **${count}** section(s) already scanned. See **Logic Audit** tab for details.`,
@@ -515,7 +514,7 @@ const EN: EditorCopy = {
     eyebrow: "Pre-publication gate",
     title: "Score manuscript",
     description:
-      "Ario evaluates your manuscript before you export PDF — combining AI peer review and technical checks. Score is indicative — final judgement belongs to the author.",
+      "Nib evaluates your manuscript before you export PDF — combining AI peer review and technical checks. Score is indicative — final judgement belongs to the author.",
     totalScore: "Total score",
     withAgent: "Combined AI review, structure and citations.",
     heuristicOnly: "Structure, citations and technical checks.",
@@ -526,7 +525,7 @@ const EN: EditorCopy = {
     staleWarning: "Could not update review:",
     criteria: "Scoring criteria",
     footerLoading:
-      "Ario is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
+      "Nib is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
     footerCompileError: "PDF is ready to download — but we recommend fixing compile errors first.",
     footerReady: "Export PDF after reviewing the score. See Logic Audit for details.",
     downloadBtn: "Download PDF",
@@ -542,7 +541,7 @@ const EN: EditorCopy = {
     gradeNeedsWork: "Needs improvement",
     gradeFailing: "Failing",
     gradeEvaluating: "Evaluating…",
-    hintLoading: "Ario is reading the full manuscript…",
+    hintLoading: "Nib is reading the full manuscript…",
     gatePeerReviewNote:
       "Quick skim for scoring only — open the Logic Audit tab for full multi-agent review.",
     retryAudit: "Retry AI review",
@@ -551,7 +550,7 @@ const EN: EditorCopy = {
       "This looks like a template or placeholder — replace sample text with real research before relying on the score.",
     jumpToSection: "Go to section",
     openCitations: "Open Citations in Tools",
-    auditAnimationLabel: "Ario is reading",
+    auditAnimationLabel: "Nib is reading",
     auditPhrases: [
       "Reading abstract…",
       "Analyzing main arguments…",
@@ -589,7 +588,7 @@ const EN: EditorCopy = {
     placeholderNoProvider: "Configure an API key to use chat",
     placeholderQuickEdit: "How should this passage be edited?",
     placeholderSelection: "Ask or explain this passage…",
-    placeholderDefault: "Ask Ario… or type / for commands",
+    placeholderDefault: "Ask Nib… or type / for commands",
     hintEditScope: "Tip: select text or say e.g. «edit Abstract» for precise edits.",
     hintPendingEdits: "You have pending diffs — Accept/Reject above, or ask for changes.",
     llmHint: "No LLM provider — add OPENROUTER_API_KEY or ZAI_API_KEY to .env",
@@ -604,14 +603,14 @@ const EN: EditorCopy = {
     sendMessage: "Send message",
   },
   suggestion: {
-    documentMode: "Ario suggests a change — inline in the editor (red = remove, green = add)",
-    selectionMode: "Ario suggests an edit — inline in the editor (red = remove, green = add)",
+    documentMode: "Nib suggests a change — inline in the editor (red = remove, green = add)",
+    selectionMode: "Nib suggests an edit — inline in the editor (red = remove, green = add)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Reject",
     accept: "Accept",
   },
   pendingEdits: {
-    title: (count) => `Changes from Ario (${count})`,
+    title: (count) => `Changes from Nib (${count})`,
     hint: "Click to preview · Ctrl+Enter Accept · Esc Reject",
     rejectAll: "Reject all",
     acceptAll: "Accept all",
@@ -622,11 +621,11 @@ const EN: EditorCopy = {
       "Serious integrity flags — review the diff and Reject or revise before Accept.",
     staleWarning: "The file changed since this suggestion was created.",
     staleBadge: "Out of date",
-    staleOnAccept: "This edit is out of date — reject it and ask Ario again.",
+    staleOnAccept: "This edit is out of date — reject it and ask Nib again.",
   },
   welcome: {
     assistantMessage:
-      "Hi — I'm Ario, your research assistant in Paper IDE ARIONEAR. You can assign tasks freely: rename title/author, rewrite the Abstract, polish academic tone, check IMRAD structure, or ask about LaTeX. Pick a provider/model below and describe what you need.",
+      "Hi — I'm Nib, your research assistant in Paper IDE PROOFLINE. You can assign tasks freely: rename title/author, rewrite the Abstract, polish academic tone, check IMRAD structure, or ask about LaTeX. Pick a provider/model below and describe what you need.",
   },
   chatStream: {
     processing: "Processing",
@@ -635,7 +634,7 @@ const EN: EditorCopy = {
     acceptApplied: "Applied to the draft. Press Ctrl+S to save.",
     acceptAppliedCompile: "Applied to the draft. Compiling PDF…",
     compileAfterEditOk: "PDF updated — compile succeeded.",
-    compileAfterEditFail: "Edit applied but PDF compile failed — use «Ask Ario to fix».",
+    compileAfterEditFail: "Edit applied but PDF compile failed — use «Ask Nib to fix».",
     rejectSuggestionHint:
       "Suggestion rejected. A follow-up prompt is in the chat box — refine your request and send again.",
     rejectScopeDocument: "entire manuscript",
@@ -751,9 +750,8 @@ const VI: EditorCopy = {
     noTitleInBib: "Không có tiêu đề trong BibTeX",
     aiRevisionHistory: "Lịch sử chỉnh sửa AI",
     versionsHelp: "Trợ giúp phiên bản",
-    revisionsHint:
-      "Các thao tác Chấp nhận/Từ chối từ gợi ý của Ario được ghi tại đây (nhật ký L4).",
-    noRevisions: "Chưa có chỉnh sửa AI. Hãy nhờ Ario chỉnh sửa hoặc polish bản thảo.",
+    revisionsHint: "Các thao tác Chấp nhận/Từ chối từ gợi ý của Nib được ghi tại đây (nhật ký L4).",
+    noRevisions: "Chưa có chỉnh sửa AI. Hãy nhờ Nib chỉnh sửa hoặc polish bản thảo.",
     revisionAccepted: "Đã chấp nhận",
     revisionRejected: "Đã từ chối",
     revisionModified: "Đã sửa",
@@ -764,13 +762,13 @@ const VI: EditorCopy = {
     verifiedCitations: (verified, total) => `Đã xác minh ${verified}/${total} trích dẫn.`,
     citationVerifyError: "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.",
     structure: "Cấu trúc",
-    structureIntro: "Gợi ý cấu trúc IMRAD từ Ario. Nhảy tới section hoặc nhờ Ario chỉnh trực tiếp.",
+    structureIntro: "Gợi ý cấu trúc IMRAD từ Nib. Nhảy tới section hoặc nhờ Nib chỉnh trực tiếp.",
     structureEmpty: "Chưa có gợi ý cấu trúc. Chạy /structure trong chat để phân tích bản thảo.",
     structureJump: "Xem trong editor",
-    structureAskArio: "Nhờ Ario sửa",
+    structureAskNib: "Nhờ Nib sửa",
     structureApplyFix: "Sửa ngay",
     structureUnknownSection: "Bản thảo",
-    citationAskArio: "Nhờ Ario sửa",
+    citationAskNib: "Nhờ Nib sửa",
     citationFixAll: "Sửa trích dẫn chưa xác minh",
   },
   share: {
@@ -779,7 +777,7 @@ const VI: EditorCopy = {
     description:
       "Gửi liên kết chỉ xem. Người đọc thấy LaTeX và PDF trực tiếp — không chỉnh sửa, không dùng công cụ.",
     viewOnly: "Chỉ xem",
-    viewOnlyHint: "Người đọc không thể chỉnh sửa hay chạy Ario.",
+    viewOnlyHint: "Người đọc không thể chỉnh sửa hay chạy Nib.",
     stableLink: "Liên kết ổn định",
     stableLinkHint: "Cùng URL sau khi biên dịch và lưu cho đến khi bạn tắt chia sẻ.",
     viewOnlyLink: "Liên kết chỉ xem",
@@ -804,7 +802,7 @@ const VI: EditorCopy = {
     cancel: "Hủy audit",
     auditingInProgress: "Đang audit mới — kết quả cũ vẫn hiển thị cho đến khi có section cập nhật.",
     jumpToIssue: "Tới dòng",
-    askArio: "Nhờ Ario",
+    askNib: "Nhờ Nib",
     claimLabel: "Khẳng định:",
     partialChatStopped: (count) =>
       `Logic audit đã dừng — **${count}** phần đã quét. Xem tab **Logic Audit** để biết chi tiết.`,
@@ -853,7 +851,7 @@ const VI: EditorCopy = {
     eyebrow: "Pre-publication gate",
     title: "Chấm điểm bài báo",
     description:
-      "Ario đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật. Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.",
+      "Nib đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật. Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.",
     totalScore: "Điểm tổng",
     withAgent: "Kết hợp phản biện AI, cấu trúc và trích dẫn.",
     heuristicOnly: "Cấu trúc, trích dẫn và kỹ thuật.",
@@ -863,7 +861,7 @@ const VI: EditorCopy = {
     staleWarning: "Không cập nhật phản biện mới:",
     criteria: "Tiêu chí chấm điểm",
     footerLoading:
-      "Ario đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
+      "Nib đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
     footerCompileError: "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
     footerReady: "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit.",
     downloadBtn: "Tải PDF",
@@ -879,7 +877,7 @@ const VI: EditorCopy = {
     gradeNeedsWork: "Cần cải thiện",
     gradeFailing: "Chưa đạt",
     gradeEvaluating: "Đang đánh giá…",
-    hintLoading: "Ario đang đọc lướt toàn bộ bài…",
+    hintLoading: "Nib đang đọc lướt toàn bộ bài…",
     gatePeerReviewNote: "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
     retryAudit: "Chạy lại phản biện AI",
     topIssues: "Vấn đề nổi bật",
@@ -887,7 +885,7 @@ const VI: EditorCopy = {
       "Bản thảo có vẻ là template/mẫu — thay nội dung mẫu bằng nghiên cứu thật trước khi tin vào điểm số.",
     jumpToSection: "Đi tới section",
     openCitations: "Mở Citations trong Tools",
-    auditAnimationLabel: "Ario đang đọc",
+    auditAnimationLabel: "Nib đang đọc",
     auditPhrases: [
       "Đọc abstract…",
       "Phân tích luận điểm chính…",
@@ -925,7 +923,7 @@ const VI: EditorCopy = {
     placeholderNoProvider: "Cấu hình API key để dùng chat",
     placeholderQuickEdit: "Bạn muốn sửa đoạn này thế nào?",
     placeholderSelection: "Hỏi hoặc giải thích đoạn này…",
-    placeholderDefault: "Hỏi Ario… hoặc gõ / để chọn lệnh",
+    placeholderDefault: "Hỏi Nib… hoặc gõ / để chọn lệnh",
     hintEditScope: "Gợi ý: bôi đen đoạn hoặc nói rõ «sửa Abstract» để chỉnh đúng phần.",
     hintPendingEdits: "Còn diff chờ duyệt — Accept/Reject ở trên, hoặc nhắn chỉnh tiếp.",
     llmHint: "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
@@ -940,14 +938,14 @@ const VI: EditorCopy = {
     sendMessage: "Gửi tin nhắn",
   },
   suggestion: {
-    documentMode: "Ario đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
-    selectionMode: "Ario đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
+    documentMode: "Nib đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
+    selectionMode: "Nib đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Từ chối",
     accept: "Chấp nhận",
   },
   pendingEdits: {
-    title: (count) => `Các thay đổi từ Ario (${count})`,
+    title: (count) => `Các thay đổi từ Nib (${count})`,
     hint: "Click để preview · Ctrl+Enter Accept · Esc Reject",
     rejectAll: "Từ chối tất cả",
     acceptAll: "Chấp nhận tất cả",
@@ -958,11 +956,11 @@ const VI: EditorCopy = {
       "Có cảnh báo integrity nghiêm trọng — xem diff và Reject hoặc chỉnh lại trước khi Accept.",
     staleWarning: "File đã thay đổi kể từ khi tạo đề xuất này.",
     staleBadge: "Đã lỗi thời",
-    staleOnAccept: "Đề xuất đã lỗi thời — hãy Reject và nhờ Ario tạo lại.",
+    staleOnAccept: "Đề xuất đã lỗi thời — hãy Reject và nhờ Nib tạo lại.",
   },
   welcome: {
     assistantMessage:
-      "Xin chào — tôi là Ario, trợ lý NCKH trong Paper IDE ARIONEAR. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
+      "Xin chào — tôi là Nib, trợ lý NCKH trong Paper IDE PROOFLINE. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
   },
   chatStream: {
     processing: "Đang xử lý",
@@ -971,7 +969,7 @@ const VI: EditorCopy = {
     acceptApplied: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file.",
     acceptAppliedCompile: "Đã áp dụng thay đổi vào bản thảo. Đang compile PDF…",
     compileAfterEditOk: "PDF đã cập nhật — compile thành công.",
-    compileAfterEditFail: "Đã áp dụng sửa nhưng compile lỗi — dùng «Nhờ Ario sửa».",
+    compileAfterEditFail: "Đã áp dụng sửa nhưng compile lỗi — dùng «Nhờ Nib sửa».",
     rejectSuggestionHint:
       "Đã từ chối gợi ý. Mình đã gợi ý câu lệnh trong ô chat — bổ sung yêu cầu rồi gửi lại nhé.",
     rejectScopeDocument: "toàn bộ bản thảo",

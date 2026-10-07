@@ -61,7 +61,7 @@ export const Route = createFileRoute("/admin")({
   },
   head: () => ({
     meta: [
-      { title: "Admin Console — Arionear" },
+      { title: "Admin Console — Proofline" },
       {
         name: "description",
         content: "Manage users, LLM quotas, token limits, and platform usage.",

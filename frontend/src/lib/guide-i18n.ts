@@ -89,7 +89,7 @@ const EN: GuidePageContent = {
     accountChrome: "Workspace sidebar",
     plan: "Plan",
     profile: "Profile",
-    slashChrome: "Ario chat · slash commands",
+    slashChrome: "Nib chat · slash commands",
     slashInput: "/logic",
     slashMenuLogic: "/logic — quick claim–evidence scan",
     slashMenuLogicFull: "/logic full — full manuscript scan",
@@ -110,7 +110,7 @@ const EN: GuidePageContent = {
   },
   intro: {
     title: "Getting started",
-    lede: "Six steps to use Arionear — Projects, the editor desk, and the workspace sidebar.",
+    lede: "Six steps to use Proofline — Projects, the editor desk, and the workspace sidebar.",
     steps: [
       {
         id: "projects",
@@ -124,14 +124,14 @@ const EN: GuidePageContent = {
         step: "02",
         title: "Edit in the desk layout",
         description:
-          "Left — file tree and outline. Center — LaTeX source with undo/redo. Right — PDF preview after Compile. Ario chat sits in the bottom-right dock.",
+          "Left — file tree and outline. Center — LaTeX source with undo/redo. Right — PDF preview after Compile. Nib chat sits in the bottom-right dock.",
       },
       {
         id: "chat",
         step: "03",
-        title: "Chat with Ario · Accept or Refuse",
+        title: "Chat with Nib · Accept or Refuse",
         description:
-          "Ask Ario to polish style, check citations, or review logic. Style edits show as a diff — nothing is saved until you Accept. Refuse to dismiss.",
+          "Ask Nib to polish style, check citations, or review logic. Style edits show as a diff — nothing is saved until you Accept. Refuse to dismiss.",
       },
       {
         id: "compile",
@@ -165,7 +165,7 @@ const EN: GuidePageContent = {
         step: "01",
         title: "Slash commands in chat",
         description:
-          "In the Ario chat box, type / to open the command palette. Pick a command or keep typing to filter — e.g. /logic full, /edit shorten the abstract.",
+          "In the Nib chat box, type / to open the command palette. Pick a command or keep typing to filter — e.g. /logic full, /edit shorten the abstract.",
         bullets: [
           "/logic — quick claim–evidence scan on 2–3 IMRAD sections (Gemini 2.5 Flash)",
           "/logic full — full manuscript scan (Gemini 3.5 Flash, up to 20 sections, Tools → Logic)",
@@ -183,9 +183,9 @@ const EN: GuidePageContent = {
           "Open Tools from the editor toolbar (wrench icon). Five tabs keep project stats, structure hints, logic audit, citations, and AI revision history in one place.",
         bullets: [
           "Info — word/figure/math counts, auto-compile toggle, link to researcher profile",
-          "Structure — missing or reordered IMRAD sections; jump to source or ask Ario to fix",
-          "Logic — run Quick audit, track progress, jump to flagged lines, ask Ario per issue",
-          "Citations — verify keys against metadata; fix one key or ask Ario to fix all gaps",
+          "Structure — missing or reordered IMRAD sections; jump to source or ask Nib to fix",
+          "Logic — run Quick audit, track progress, jump to flagged lines, ask Nib per issue",
+          "Citations — verify keys against metadata; fix one key or ask Nib to fix all gaps",
           "Versions — accepted/refused AI edits with diff stats and timestamps",
         ],
       },
@@ -266,7 +266,7 @@ const VI: GuidePageContent = {
     accountChrome: "Sidebar workspace",
     plan: "Gói",
     profile: "Hồ sơ",
-    slashChrome: "Chat Ario · lệnh slash",
+    slashChrome: "Chat Nib · lệnh slash",
     slashInput: "/logic",
     slashMenuLogic: "/logic — quét nhanh claim–evidence",
     slashMenuLogicFull: "/logic full — quét toàn bộ bài",
@@ -287,7 +287,7 @@ const VI: GuidePageContent = {
   },
   intro: {
     title: "Bắt đầu",
-    lede: "Sáu bước dùng Arionear — Dự án, bàn editor và sidebar workspace.",
+    lede: "Sáu bước dùng Proofline — Dự án, bàn editor và sidebar workspace.",
     steps: [
       {
         id: "projects",
@@ -301,14 +301,14 @@ const VI: GuidePageContent = {
         step: "02",
         title: "Biên tập trên bàn làm việc",
         description:
-          "Trái — cây file và outline. Giữa — nguồn LaTeX với undo/redo. Phải — xem trước PDF sau Biên dịch. Chat Ario ở góc dưới-phải.",
+          "Trái — cây file và outline. Giữa — nguồn LaTeX với undo/redo. Phải — xem trước PDF sau Biên dịch. Chat Nib ở góc dưới-phải.",
       },
       {
         id: "chat",
         step: "03",
-        title: "Chat Ario · Accept hoặc Refuse",
+        title: "Chat Nib · Accept hoặc Refuse",
         description:
-          "Nhờ Ario chỉnh văn phong, kiểm tra trích dẫn hoặc logic. Style edit hiện diff — chỉ lưu khi bạn Accept. Refuse để bỏ qua.",
+          "Nhờ Nib chỉnh văn phong, kiểm tra trích dẫn hoặc logic. Style edit hiện diff — chỉ lưu khi bạn Accept. Refuse để bỏ qua.",
       },
       {
         id: "compile",
@@ -342,7 +342,7 @@ const VI: GuidePageContent = {
         step: "01",
         title: "Lệnh nhanh slash (/) trong chat",
         description:
-          "Trong ô chat Ario, gõ / để mở bảng lệnh. Chọn lệnh hoặc gõ tiếp để lọc — ví dụ /logic full, /edit rút gọn abstract.",
+          "Trong ô chat Nib, gõ / để mở bảng lệnh. Chọn lệnh hoặc gõ tiếp để lọc — ví dụ /logic full, /edit rút gọn abstract.",
         bullets: [
           "/logic — quét nhanh claim–evidence 2–3 phần IMRAD (Gemini 2.5 Flash)",
           "/logic full — quét toàn bộ bài (Gemini 3.5 Flash, tối đa 20 section, Tools → Logic)",
@@ -360,9 +360,9 @@ const VI: GuidePageContent = {
           "Mở Tools trên toolbar editor (icon cờ lê). Năm tab gom thống kê dự án, gợi ý cấu trúc, logic audit, trích dẫn và lịch sử chỉnh sửa AI.",
         bullets: [
           "Thông tin — đếm từ/hình/công thức, bật tự biên dịch, link hồ sơ researcher",
-          "Cấu trúc — section IMRAD thiếu/sai thứ tự; nhảy tới nguồn hoặc nhờ Ario sửa",
-          "Logic — chạy Quick audit, theo dõi tiến độ, nhảy tới dòng lỗi, hỏi Ario từng issue",
-          "Trích dẫn — xác minh key với metadata; sửa từng key hoặc nhờ Ario sửa hết",
+          "Cấu trúc — section IMRAD thiếu/sai thứ tự; nhảy tới nguồn hoặc nhờ Nib sửa",
+          "Logic — chạy Quick audit, theo dõi tiến độ, nhảy tới dòng lỗi, hỏi Nib từng issue",
+          "Trích dẫn — xác minh key với metadata; sửa từng key hoặc nhờ Nib sửa hết",
           "Phiên bản — các edit AI đã Accept/Refuse kèm diff và thời gian",
         ],
       },

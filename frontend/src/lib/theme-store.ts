@@ -1,6 +1,6 @@
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "arionear-theme";
+const STORAGE_KEY = "proofline-theme";
 
 export function getStoredTheme(): Theme {
   if (typeof window === "undefined") return "light";

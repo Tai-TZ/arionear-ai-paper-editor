@@ -5,7 +5,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { authPagesCopy } from "@/lib/auth-pages-i18n";
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { ProoflineWordmark } from "@/components/proofline-wordmark";
 import { commonCopy } from "@/lib/common-i18n";
 
 export function AuthShell({
@@ -26,7 +26,7 @@ export function AuthShell({
     <div className="auth-page min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       <aside className="auth-aside hidden lg:flex flex-col justify-between border-r-4 border-foreground p-12 bg-foreground text-background">
         <Link to="/" className="font-serif-display text-4xl font-black tracking-tighter">
-          <ArionearWordmark />
+          <ProoflineWordmark />
         </Link>
         <div>
           <p className="font-sans-ui uppercase text-[11px] tracking-widest opacity-70 mb-4">
@@ -45,7 +45,7 @@ export function AuthShell({
       <main className="flex flex-col">
         <header className="lg:hidden border-b-4 border-foreground px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif-display text-2xl font-black tracking-tighter">
-            <ArionearWordmark />
+            <ProoflineWordmark />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageToggle compact className="masthead-language-toggle shrink-0" />

@@ -506,7 +506,7 @@ def _acquire_workspace(
             work_dir = cached.path
             fresh = False
         else:
-            work_dir = Path(tempfile.mkdtemp(prefix="arionear-latex-"))
+            work_dir = Path(tempfile.mkdtemp(prefix="proofline-latex-"))
             _workspaces[workspace_key] = _CachedWorkspace(path=work_dir, last_used=time.monotonic())
             fresh = True
 
@@ -1574,7 +1574,7 @@ def parse_synctex_inverse_disambiguated(
             synctex_bytes = base64.b64decode(synctex_gz_b64)
         except (OSError, ValueError):
             return None
-        temp_dir = tempfile.TemporaryDirectory(prefix="arionear-synctex-")
+        temp_dir = tempfile.TemporaryDirectory(prefix="proofline-synctex-")
         work_dir = Path(temp_dir.name)
         (work_dir / pdf_name).write_bytes(pdf_bytes)
         (work_dir / synctex_name).write_bytes(synctex_bytes)

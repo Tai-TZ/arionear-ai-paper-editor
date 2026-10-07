@@ -13,7 +13,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp, ChevronDown, ChevronUp, Maximize2, PencilLine, Square, X } from "lucide-react";
 
-import { arioAvatar } from "@/lib/ario-avatar";
+import { nibAvatar } from "@/lib/nib-avatar";
 import { LlmSelector } from "@/components/llm-selector";
 import { useLocale } from "@/components/locale-context";
 import type { EditorSelectionContext } from "@/lib/editor-selection-anchor";
@@ -55,7 +55,7 @@ function hasChatHistory(messages: ChatMessage[]): boolean {
 const CHAT_MIN_H = 160;
 const CHAT_DEFAULT_RATIO = 0.62;
 const CHAT_MAX_RATIO = 0.86;
-const CHAT_HEIGHT_STORAGE_KEY = "ario-chat-panel-height";
+const CHAT_HEIGHT_STORAGE_KEY = "nib-chat-panel-height";
 
 type ChatDockProps = {
   open: boolean;
@@ -277,8 +277,8 @@ function ChatDock({
               <ChevronDown className="chat-dock-collapse-icon h-4 w-4" />
             </button>
             <div className="chat-dock-title">
-              <img src={arioAvatar} alt="" className="chat-dock-title-avatar" />
-              <span>Ario</span>
+              <img src={nibAvatar} alt="" className="chat-dock-title-avatar" />
+              <span>Nib</span>
             </div>
             <div className="flex-1" />
             <button
@@ -490,7 +490,7 @@ const ChatMessageRow = memo(function ChatMessageRow({
 
   return (
     <div className="chat-message-row chat-assistant-row">
-      <img src={arioAvatar} alt="Ario" className="chat-avatar shrink-0" />
+      <img src={nibAvatar} alt="Nib" className="chat-avatar shrink-0" />
       <div className="chat-assistant-content min-w-0 flex-1">
         {m.reasoning?.trim() ? (
           <details className="chat-reasoning-panel mb-2" open={Boolean(m.isStreaming)}>
@@ -768,7 +768,7 @@ export const ChatInput = forwardRef<
             }}
             onMouseEnter={() => setHighlightIndex(index)}
           >
-            <img src={arioAvatar} alt="" className="chat-slash-menu-icon" />
+            <img src={nibAvatar} alt="" className="chat-slash-menu-icon" />
             <span className="chat-slash-menu-body">
               <span className="chat-slash-menu-cmd">/{cmd.command}</span>
               <span className="chat-slash-menu-desc">{cmd.description}</span>

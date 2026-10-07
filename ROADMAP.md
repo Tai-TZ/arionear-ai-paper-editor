@@ -1,4 +1,4 @@
-# ROADMAP — Arionear
+# ROADMAP — Proofline
 
 **Tagline:** *Closer to Publication*  
 **Cập nhật:** 16/06/2026  
@@ -8,7 +8,7 @@
 
 ## 1. Tầm nhìn sản phẩm
 
-Arionear là nền tảng **Assisted Editing** — AI đóng vai biên tập viên (**Ario**), giúp researcher cải thiện bản thảo học thuật **không thay đổi ý nghĩa khoa học** và **không bịa dữ liệu**. Mọi output AI đều qua **Human Gate** (diff + Accept/Reject).
+Proofline là nền tảng **Assisted Editing** — AI đóng vai biên tập viên (**Nib**), giúp researcher cải thiện bản thảo học thuật **không thay đổi ý nghĩa khoa học** và **không bịa dữ liệu**. Mọi output AI đều qua **Human Gate** (diff + Accept/Reject).
 
 ### Nguyên tắc bất biến (mọi phase)
 
@@ -37,7 +37,7 @@ Arionear là nền tảng **Assisted Editing** — AI đóng vai biên tập vi�
 | **Editor** | SyncTeX inverse (double-click PDF → source), word/context disambiguation, highlight + auto-scroll | |
 | **Backend** | LaTeX compile multi-engine (pdflatex/xelatex/lualatex), latexmk, biber, stubs | |
 | **AI — Orchestrator** | LangGraph + SSE streaming (`chat_stream.py`) | |
-| **AI — Agents** | Style, Structure, Citation, Template (IMRAD), Chat (Ario) | |
+| **AI — Agents** | Style, Structure, Citation, Template (IMRAD), Chat (Nib) | |
 | **AI — Routing** | Intent router (regex + LLM classifier) | |
 | **AI — Guardrail** | L1 prompt constraint, L2 integrity check + retry, L3 diff gate | |
 | **AI — Citation** | 4-layer verify: arXiv → CrossRef → Semantic Scholar | Lớp 4 LLM chưa có |
@@ -76,7 +76,7 @@ flowchart TB
         A2[Structure Analyzer]
         A3[Citation Verifier]
         A4[Template Generator]
-        A5[Chat — Ario]
+        A5[Chat — Nib]
         A6[Logic Audit — P2]
         A7[Peer-Review Response — P2]
     end
@@ -108,7 +108,7 @@ flowchart TB
 
 | Agent | Input | Output | LLM? | Trạng thái |
 |-------|-------|--------|------|------------|
-| **Ario (chat)** | Message + latex context + selection | Text / gợi ý chung | ✅ | ✅ |
+| **Nib (chat)** | Message + latex context + selection | Text / gợi ý chung | ✅ | ✅ |
 | **Style** | Selection hoặc section | Polished text + diff | ✅ | ✅ |
 | **Structure** | Parsed sections | JSON suggestions | ✅ (rules + LLM) | ✅ |
 | **Citation** | Cite keys + BibTeX | Status report 4 lớp | ❌ (L1–3) / ✅ (L4) | ✅ L1–4 + OpenAlex |
@@ -288,7 +288,7 @@ Springer LNCS, Elsevier (elsarticle) seed trong `src/services/template_builtins.
 
 ```mermaid
 gantt
-    title Arionear Roadmap 2026
+    title Proofline Roadmap 2026
     dateFormat YYYY-MM-DD
     section P1 MVP
     Core agents + guardrail L1-L3     :done, p1, 2026-05-29, 2026-06-13
@@ -310,7 +310,7 @@ gantt
 
 | Phase | Tiêu chí đạt |
 |-------|----------------|
-| **P1** | User compile LaTeX, chat Ario, nhận style/citation/structure suggestion qua diff, Accept/Reject — **đạt** |
+| **P1** | User compile LaTeX, chat Nib, nhận style/citation/structure suggestion qua diff, Accept/Reject — **đạt** |
 | **P1.5** | ✅ Accept/Reject ghi audit DB; reload project thấy revision + citation registry |
 | **P2** | Logic audit + peer-review draft; import DOCX; citation L4 + OpenAlex |
 | **P3** | Export AI contribution report; LangSmith eval pass; on-prem docker one-command |

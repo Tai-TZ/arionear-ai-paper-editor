@@ -43,7 +43,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     slug: "workflow",
     title: "Quy trình vận hành",
     eyebrow: "Mục B · Quy trình",
-    lede: "Arionear Giai đoạn 1 tập trung vào bản thảo LaTeX. Tải nguồn `.tex`, cộng tác với Ario trong trình biên tập, và giữ toàn quyền kiểm soát mọi thay đổi.",
+    lede: "Proofline Giai đoạn 1 tập trung vào bản thảo LaTeX. Tải nguồn `.tex`, cộng tác với Nib trong trình biên tập, và giữ toàn quyền kiểm soát mọi thay đổi.",
     sections: [
       {
         heading: "Bước 01 · Tải LaTeX",
@@ -55,7 +55,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
       {
         heading: "Bước 02 · Đọc markup",
         paragraphs: [
-          "Trò chuyện với Ario để cải thiện văn phong, cấu trúc hoặc trích dẫn. Gợi ý hiện dạng tracked changes kèm lý do rõ ràng.",
+          "Trò chuyện với Nib để cải thiện văn phong, cấu trúc hoặc trích dẫn. Gợi ý hiện dạng tracked changes kèm lý do rõ ràng.",
         ],
       },
       {
@@ -108,7 +108,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     slug: "integrity",
     title: "AI là biên tập viên. Bạn là tác\u00A0giả.",
     eyebrow: "Chính sách biên tập",
-    lede: "Arionear cải thiện cách trình bày — không thay đổi nội dung khoa học cốt lõi.",
+    lede: "Proofline cải thiện cách trình bày — không thay đổi nội dung khoa học cốt lõi.",
     sections: [
       {
         paragraphs: [],
@@ -126,7 +126,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     slug: "latex-guide",
     title: "Hướng dẫn LaTeX",
     eyebrow: "Tác giả · LaTeX",
-    lede: "Mọi thứ bạn cần để bắt đầu với Arionear bằng file nguồn LaTeX.",
+    lede: "Mọi thứ bạn cần để bắt đầu với Proofline bằng file nguồn LaTeX.",
     sections: [
       {
         heading: "Đầu vào hỗ trợ",
@@ -156,14 +156,14 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
   },
   about: {
     slug: "about",
-    title: "Giới thiệu Arionear",
+    title: "Giới thiệu Proofline",
     eyebrow: "Văn phòng",
     lede: "Trợ lý AI biên tập dành cho nhà nghiên cứu cần một lần đọc công bằng — không phải viết lại khoa học của họ.",
     sections: [
       {
         paragraphs: [
-          "Arionear giúp tác giả cải thiện ngôn ngữ, cấu trúc và trích dẫn trong khi giữ quyền kiểm soát cho con người.",
-          "Arionear được thiết kế và phát triển bởi Nguyễn Thành Tài.",
+          "Proofline giúp tác giả cải thiện ngôn ngữ, cấu trúc và trích dẫn trong khi giữ quyền kiểm soát cho con người.",
+          "Proofline được thiết kế và phát triển bởi Nguyễn Thành Tài.",
         ],
       },
     ],
@@ -176,7 +176,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     sections: [
       {
         paragraphs: [
-          "Email: support@arionear.example",
+          "Email: support@proofline.example",
           "Khi báo lỗi hoặc đề xuất tính năng, vui lòng mô tả các bước tái hiện và trình duyệt bạn đang dùng.",
         ],
       },
@@ -186,11 +186,11 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     slug: "terms",
     title: "Điều khoản sử dụng",
     eyebrow: "Pháp lý",
-    lede: "Khi dùng Arionear, bạn đồng ý sử dụng dịch vụ cho mục đích biên tập học thuật hợp pháp.",
+    lede: "Khi dùng Proofline, bạn đồng ý sử dụng dịch vụ cho mục đích biên tập học thuật hợp pháp.",
     sections: [
       {
         paragraphs: [
-          "Bạn giữ quyền sở hữu bản thảo. Arionear chỉ cung cấp gợi ý; bạn chịu trách nhiệm bản cuối cùng nộp đi.",
+          "Bạn giữ quyền sở hữu bản thảo. Proofline chỉ cung cấp gợi ý; bạn chịu trách nhiệm bản cuối cùng nộp đi.",
           "Không tải lên tài liệu mật hoặc kiểm soát xuất khẩu trừ khi bạn được phép.",
         ],
       },
@@ -214,7 +214,7 @@ const VI_PAGES: Record<MarketingPageSlug, MarketingPageContent> = {
     slug: "ethics",
     title: "Đạo đức",
     eyebrow: "Pháp lý",
-    lede: "Nguyên tắc toàn vẹn học thuật chi phối Arionear.",
+    lede: "Nguyên tắc toàn vẹn học thuật chi phối Proofline.",
     sections: [
       {
         bullets: [
@@ -407,7 +407,7 @@ const EN_WORKFLOW: WorkflowPageCopy = {
   figNote: "LaTeX MVP · Phase 1",
   steps: [
     { n: "01", title: "Upload LaTeX", detail: "Import `.tex` + figures, or start blank / sample" },
-    { n: "02", title: "Chat with Ario", detail: "Style, structure & citation suggestions" },
+    { n: "02", title: "Chat with Nib", detail: "Style, structure & citation suggestions" },
     { n: "03", title: "Accept or Refuse", detail: "Tracked changes — you keep authorship" },
     { n: "04", title: "Compile PDF", detail: "Preview & save LaTeX to your account" },
   ],
@@ -422,7 +422,7 @@ const VI_WORKFLOW: WorkflowPageCopy = {
   figNote: "LaTeX MVP · Giai đoạn 1",
   steps: [
     { n: "01", title: "Tải LaTeX", detail: "Nhập `.tex` + hình, hoặc bắt đầu trống / mẫu" },
-    { n: "02", title: "Trò chuyện với Ario", detail: "Gợi ý văn phong, cấu trúc & trích dẫn" },
+    { n: "02", title: "Trò chuyện với Nib", detail: "Gợi ý văn phong, cấu trúc & trích dẫn" },
     { n: "03", title: "Chấp nhận hoặc Từ chối", detail: "Tracked changes — bạn giữ quyền tác giả" },
     { n: "04", title: "Biên dịch PDF", detail: "Xem trước & lưu LaTeX vào tài khoản" },
   ],
@@ -438,9 +438,9 @@ const EN_ABOUT: AboutPageCopy = {
   teamSubtitle: "Founder & Engineer · Closer to Publication",
   mastheadTitle: "The Masthead",
   membersLabel: (count) => `${count} ${count === 1 ? "member" : "members"}`,
-  figCaption: "Fig. 3.1 — The Arionear editorial desk.",
+  figCaption: "Fig. 3.1 — The Proofline editorial desk.",
   illustrationAria:
-    "Interactive illustration of the Arionear editorial desk — three editors at a shared desk",
+    "Interactive illustration of the Proofline editorial desk — three editors at a shared desk",
   manuscriptLabel: "LaTeX Manuscript",
   liveDemo: "Live",
   paused: "Paused · interactive",
@@ -456,9 +456,9 @@ const VI_ABOUT: AboutPageCopy = {
   teamSubtitle: "Founder & Engineer · Closer to Publication",
   mastheadTitle: "Ban biên tập",
   membersLabel: (count) => `${count} thành viên`,
-  figCaption: "Hình 3.1 — Bàn biên tập Arionear.",
+  figCaption: "Hình 3.1 — Bàn biên tập Proofline.",
   illustrationAria:
-    "Minh họa tương tác bàn biên tập Arionear — ba biên tập viên tại bàn biên tập chung",
+    "Minh họa tương tác bàn biên tập Proofline — ba biên tập viên tại bàn biên tập chung",
   manuscriptLabel: "Bản thảo LaTeX",
   liveDemo: "Trực tiếp",
   paused: "Tạm dừng · tương tác",

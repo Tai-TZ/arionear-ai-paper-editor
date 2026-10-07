@@ -1,5 +1,5 @@
 import { ChevronUp, FileText, MoreHorizontal } from "lucide-react";
-import { arioAvatar } from "@/lib/ario-avatar";
+import { nibAvatar } from "@/lib/nib-avatar";
 
 export function MobileBottomBar({
   activeFile,
@@ -39,7 +39,7 @@ export function MobileBottomBar({
           onClick={onOpenChat}
           className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
-          <img src={arioAvatar} alt="Chat with Ario" className="h-6 w-6 object-contain" />
+          <img src={nibAvatar} alt="Chat with Nib" className="h-6 w-6 object-contain" />
         </button>
       </div>
     </div>

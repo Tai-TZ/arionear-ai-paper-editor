@@ -345,9 +345,7 @@ function scoreLogicIntegrity(
       label,
       score: 0,
       hint:
-        locale === "en"
-          ? "Ario is reading the full manuscript…"
-          : "Ario đang đọc lướt toàn bộ bài…",
+        locale === "en" ? "Nib is reading the full manuscript…" : "Nib đang đọc lướt toàn bộ bài…",
     };
   }
 
@@ -358,8 +356,8 @@ function scoreLogicIntegrity(
       score: 45,
       hint:
         locale === "en"
-          ? "No review report yet — Ario will analyse when you open the dialog."
-          : "Chưa có báo cáo phản biện — Ario sẽ phân tích khi mở dialog.",
+          ? "No review report yet — Nib will analyse when you open the dialog."
+          : "Chưa có báo cáo phản biện — Nib sẽ phân tích khi mở dialog.",
     };
   }
 

@@ -16,7 +16,7 @@ export const workflowContent: MarketingPageContent = {
   slug: "workflow",
   title: "How the Press Runs",
   eyebrow: "Section B · Workflow",
-  lede: "Arionear Phase 1 focuses on LaTeX manuscripts. Upload your `.tex` source, collaborate with Ario in the editor, and keep every change under your control.",
+  lede: "Proofline Phase 1 focuses on LaTeX manuscripts. Upload your `.tex` source, collaborate with Nib in the editor, and keep every change under your control.",
   sections: [
     {
       heading: "Step 01 · Upload LaTeX",
@@ -28,7 +28,7 @@ export const workflowContent: MarketingPageContent = {
     {
       heading: "Step 02 · Read the Markup",
       paragraphs: [
-        "Chat with Ario to improve style, structure, or citations. Suggestions appear as tracked changes with a clear rationale.",
+        "Chat with Nib to improve style, structure, or citations. Suggestions appear as tracked changes with a clear rationale.",
       ],
     },
     {
@@ -83,7 +83,7 @@ export const integrityContent: MarketingPageContent = {
   slug: "integrity",
   title: "AI is the editor. You are the author.",
   eyebrow: "Editorial Policy",
-  lede: "Arionear improves presentation — never the underlying scientific claims.",
+  lede: "Proofline improves presentation — never the underlying scientific claims.",
   sections: [
     {
       paragraphs: [],
@@ -102,7 +102,7 @@ export const latexGuideContent: MarketingPageContent = {
   slug: "latex-guide",
   title: "LaTeX Guide",
   eyebrow: "Authors · LaTeX",
-  lede: "Everything you need to start with Arionear using LaTeX source files.",
+  lede: "Everything you need to start with Proofline using LaTeX source files.",
   sections: [
     {
       heading: "Supported inputs",
@@ -133,14 +133,14 @@ export const latexGuideContent: MarketingPageContent = {
 
 export const aboutContent: MarketingPageContent = {
   slug: "about",
-  title: "About Arionear",
+  title: "About Proofline",
   eyebrow: "Bureau",
   lede: "An AI editorial assistant built for researchers who need a fair reading — not a rewrite of their science.",
   sections: [
     {
       paragraphs: [
-        "Arionear helps authors improve language, structure, and citations while keeping the human author in control.",
-        "Arionear is designed and built by Nguyễn Thành Tài.",
+        "Proofline helps authors improve language, structure, and citations while keeping the human author in control.",
+        "Proofline is designed and built by Nguyễn Thành Tài.",
       ],
     },
   ],
@@ -154,7 +154,7 @@ export const contactContent: MarketingPageContent = {
   sections: [
     {
       paragraphs: [
-        "Email: support@arionear.example",
+        "Email: support@proofline.example",
         "For bug reports or feature requests, please include the steps to reproduce and the browser you are using.",
       ],
     },
@@ -165,11 +165,11 @@ export const termsContent: MarketingPageContent = {
   slug: "terms",
   title: "Terms of Use",
   eyebrow: "Legal",
-  lede: "By using Arionear you agree to use the service for legitimate academic editing purposes.",
+  lede: "By using Proofline you agree to use the service for legitimate academic editing purposes.",
   sections: [
     {
       paragraphs: [
-        "You retain ownership of your manuscripts. Arionear provides suggestions only; you are responsible for the final submitted work.",
+        "You retain ownership of your manuscripts. Proofline provides suggestions only; you are responsible for the final submitted work.",
         "Do not upload confidential or export-controlled material unless you are authorized to do so.",
       ],
     },
@@ -195,7 +195,7 @@ export const ethicsContent: MarketingPageContent = {
   slug: "ethics",
   title: "Ethics",
   eyebrow: "Legal",
-  lede: "Academic integrity principles that govern Arionear.",
+  lede: "Academic integrity principles that govern Proofline.",
   sections: [
     {
       bullets: [

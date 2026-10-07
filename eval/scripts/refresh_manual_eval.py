@@ -18,7 +18,7 @@ from urllib import error, request
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS = REPO_ROOT / "eval" / "results"
-API = "https://api.arionear.id.vn"
+API = "https://api.proofline.example"
 V1 = f"{API}/api/v1"
 
 SAMPLE_LATEX = (
@@ -228,7 +228,7 @@ def main() -> int:
             "TC5_compile",
             "compile",
             {
-                "latex": r"\documentclass{article}\begin{document}Hello Arionear.\end{document}",
+                "latex": r"\documentclass{article}\begin{document}Hello Proofline.\end{document}",
                 "main_file": "main.tex",
             },
             f"{V1}/compile",
@@ -279,8 +279,8 @@ def main() -> int:
         "session_id": session_id,
         "timestamp": ts,
         "api_url": API,
-        "frontend_url": "https://arionear.id.vn",
-        "agent": "Ario v1.0",
+        "frontend_url": "https://proofline.example",
+        "agent": "Nib v1.0",
         "tests": tests,
     }
     RESULTS.mkdir(parents=True, exist_ok=True)
@@ -288,15 +288,15 @@ def main() -> int:
 
     # Markdown report
     lines = [
-        "# Eval Evidence — Arionear",
+        "# Eval Evidence — Proofline",
         "",
         "> ≥5 manual test cases với output thật từ LLM (không mock)",
         f"> **Ngày chạy:** {ts}",
         f"> **API:** {API}",
-        "> **Frontend:** https://arionear.id.vn",
+        "> **Frontend:** https://proofline.example",
         "> **Raw data:** [`_live_outputs.json`](./_live_outputs.json)",
         "",
-        f"**Môi trường:** Session `{session_id}` · Agent Ario v1.0 · Production Cloud Run · PostgreSQL · Health `ok`",
+        f"**Môi trường:** Session `{session_id}` · Agent Nib v1.0 · Production Cloud Run · PostgreSQL · Health `ok`",
         "",
         "---",
         "",

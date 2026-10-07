@@ -38,7 +38,7 @@ export const Route = createFileRoute("/auth/google/callback")({
     }
   },
   head: () => ({
-    meta: [{ title: "Signing in — Arionear" }],
+    meta: [{ title: "Signing in — Proofline" }],
   }),
   component: GoogleCallbackPage,
 });

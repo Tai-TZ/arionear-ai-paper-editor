@@ -1,4 +1,4 @@
-# Deploy arionear-web frontend to Google Cloud Run.
+# Deploy proofline-web frontend to Google Cloud Run.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-frontend.ps1
@@ -9,15 +9,15 @@
 param(
     [string]$ProjectId   = "project-f8474886-b777-42fc-88c",
     [string]$Region      = "asia-east1",
-    [string]$ServiceName = "arionear-web",
-    [string]$ViteApiUrl  = "https://api.arionear.id.vn/api/v1",
+    [string]$ServiceName = "proofline-web",
+    [string]$ViteApiUrl  = "https://api.proofline.example/api/v1",
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $FrontendDir = Join-Path $RepoRoot "frontend"
-$image = "$Region-docker.pkg.dev/$ProjectId/arionear/frontend:latest"
+$image = "$Region-docker.pkg.dev/$ProjectId/proofline/frontend:latest"
 
 gcloud config set project $ProjectId | Out-Null
 

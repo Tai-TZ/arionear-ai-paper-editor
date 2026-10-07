@@ -24,13 +24,13 @@ import { marketingCopy } from "@/lib/marketing-i18n";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Arionear — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học" },
+      { title: "Proofline — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học" },
       {
         name: "description",
         content:
           "AI academic writing assistant for researchers. Improve academic prose, structure, citations and reviewer replies — without inventing data or results.",
       },
-      { property: "og:title", content: "Arionear — Closer to Publication" },
+      { property: "og:title", content: "Proofline — Closer to Publication" },
       {
         property: "og:description",
         content: "Help good research get published. AI as editor, human as author.",

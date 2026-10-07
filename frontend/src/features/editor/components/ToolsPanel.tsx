@@ -32,9 +32,9 @@ export const ToolsPanel = memo(function ToolsPanel({
   onToolsTabChange,
   onJumpToStructureSection,
   canJumpToStructureSection,
-  onAskArioStructure,
+  onAskNibStructure,
   onApplyStructureFix,
-  onAskArioCitation,
+  onAskNibCitation,
   onRunLogicAudit,
   logicAuditLoading = false,
   logicAuditReportStale = false,
@@ -44,7 +44,7 @@ export const ToolsPanel = memo(function ToolsPanel({
   logicAuditScopeHint = null,
   onCancelLogicAudit,
   onJumpToLogicIssue,
-  onAskArioLogic,
+  onAskNibLogic,
   canJumpToLogicIssue,
   onCitationsUpdated,
   onClose,
@@ -64,9 +64,9 @@ export const ToolsPanel = memo(function ToolsPanel({
   onToolsTabChange: (tab: ToolsTab) => void;
   onJumpToStructureSection: (sectionName: string) => void;
   canJumpToStructureSection: (sectionName: string) => boolean;
-  onAskArioStructure: (prefill: string) => void;
+  onAskNibStructure: (prefill: string) => void;
   onApplyStructureFix?: (suggestion: StructureSuggestion) => void;
-  onAskArioCitation: (prefill: string, citeKey?: string) => void;
+  onAskNibCitation: (prefill: string, citeKey?: string) => void;
   onRunLogicAudit: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   logicAuditLoading?: boolean;
   logicAuditReportStale?: boolean;
@@ -76,7 +76,7 @@ export const ToolsPanel = memo(function ToolsPanel({
   logicAuditScopeHint?: LogicAuditScope | null;
   onCancelLogicAudit?: () => void;
   onJumpToLogicIssue?: (sectionName: string, excerpt?: string) => void;
-  onAskArioLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  onAskNibLogic?: (prefill: string, sectionName: string, excerpt?: string) => void;
   canJumpToLogicIssue?: (sectionName: string, excerpt?: string) => boolean;
   onCitationsUpdated: (results: Record<string, unknown>[], summary: string) => void;
   onClose: () => void;
@@ -225,7 +225,7 @@ export const ToolsPanel = memo(function ToolsPanel({
             <StructureSuggestionsPanel
               suggestions={structureSuggestions}
               onJumpToSection={onJumpToStructureSection}
-              onAskArio={onAskArioStructure}
+              onAskNib={onAskNibStructure}
               onApplyFix={onApplyStructureFix}
               canJump={canJumpToStructureSection}
             />
@@ -245,7 +245,7 @@ export const ToolsPanel = memo(function ToolsPanel({
               onRun={onRunLogicAudit}
               onCancel={onCancelLogicAudit}
               onJumpToIssue={onJumpToLogicIssue}
-              onAskArio={onAskArioLogic}
+              onAskNib={onAskNibLogic}
               canJumpToIssue={canJumpToLogicIssue}
             />
           </div>
@@ -284,7 +284,7 @@ export const ToolsPanel = memo(function ToolsPanel({
                 className="mt-3 inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition hover:bg-primary/90"
                 onClick={() => {
                   const first = citationResults.find((r) => r.status !== "verified");
-                  onAskArioCitation(
+                  onAskNibCitation(
                     buildCitationFixPrompt(),
                     first?.key ? String(first.key) : undefined,
                   );
@@ -320,13 +320,13 @@ export const ToolsPanel = memo(function ToolsPanel({
                         type="button"
                         className="shrink-0 rounded border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:bg-secondary"
                         onClick={() =>
-                          onAskArioCitation(
+                          onAskNibCitation(
                             buildCitationFixPrompt(String(r.key ?? "")),
                             String(r.key ?? ""),
                           )
                         }
                       >
-                        {t.tools.citationAskArio}
+                        {t.tools.citationAskNib}
                       </button>
                     ) : null}
                   </div>

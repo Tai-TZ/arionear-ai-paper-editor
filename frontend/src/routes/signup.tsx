@@ -28,10 +28,10 @@ export const Route = createFileRoute("/signup")({
   },
   head: () => ({
     meta: [
-      { title: "Sign Up — Arionear" },
+      { title: "Sign Up — Proofline" },
       {
         name: "description",
-        content: "Create an Arionear account to start editing your scientific manuscripts.",
+        content: "Create an Proofline account to start editing your scientific manuscripts.",
       },
     ],
   }),

@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from src.config import Settings
 
-# Production frontends/API on *.arionear.id.vn (e.g. app.arionear.id.vn).
-_ARIONEAR_ORIGIN_REGEX = r"https://([a-zA-Z0-9-]+\.)*arionear\.id\.vn"
-
 
 def _dedupe_origins(origins: list[str]) -> list[str]:
     seen: set[str] = set()
@@ -37,6 +34,6 @@ def build_cors_middleware_kwargs(settings: Settings) -> dict:
     }
     if settings.app_env == "development":
         kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
-    elif settings.app_env == "production":
-        kwargs["allow_origin_regex"] = _ARIONEAR_ORIGIN_REGEX
+    elif settings.app_env == "production" and settings.cors_origin_regex.strip():
+        kwargs["allow_origin_regex"] = settings.cors_origin_regex.strip()
     return kwargs

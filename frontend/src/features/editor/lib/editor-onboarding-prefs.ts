@@ -1,4 +1,4 @@
-const EDITOR_ONBOARDING_SEEN_KEY = "arionear-editor-onboarding-seen";
+const EDITOR_ONBOARDING_SEEN_KEY = "proofline-editor-onboarding-seen";
 
 export function hasSeenEditorOnboarding(): boolean {
   if (typeof window === "undefined") return true;

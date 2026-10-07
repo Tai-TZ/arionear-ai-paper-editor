@@ -61,7 +61,7 @@ function ErrorFallbackView({
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
         <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
-          Arionear
+          Proofline
         </Link>
       </div>
       <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-6 py-12 text-center">

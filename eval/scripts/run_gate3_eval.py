@@ -38,7 +38,7 @@ SAMPLE_LATEX = (
 
 MINIMAL_COMPILE_LATEX = (
     r"\documentclass{article}"
-    r"\begin{document}Hello Arionear.\end{document}"
+    r"\begin{document}Hello Proofline.\end{document}"
 )
 
 
@@ -363,7 +363,7 @@ def compare_to_baselines(metrics: dict[str, float], baselines: dict) -> list[dic
         rows.append(
             {
                 "metric": key,
-                "arionear": measured,
+                "proofline": measured,
                 "baseline": baseline_val,
                 "unit": base.get("unit", ""),
                 "delta": round(delta, 4),
@@ -384,12 +384,12 @@ def write_summary_md(report: dict, path: Path) -> None:
         "",
         "## Metrics vs baseline",
         "",
-        "| Metric | Arionear | Baseline | Improved? |",
+        "| Metric | Proofline | Baseline | Improved? |",
         "|--------|----------|----------|-----------|",
     ]
     for row in report.get("comparison", []):
         improved = "yes" if row["improved_vs_baseline"] else "no"
-        lines.append(f"| {row['metric']} | {row['arionear']} | {row['baseline']} | {improved} |")
+        lines.append(f"| {row['metric']} | {row['proofline']} | {row['baseline']} | {improved} |")
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -489,7 +489,7 @@ def main() -> int:
     print(f"Wrote {md_path}")
     for row in report["comparison"]:
         mark = "+" if row["improved_vs_baseline"] else "-"
-        print(f"  [{mark}] {row['metric']}: {row['arionear']} vs baseline {row['baseline']}")
+        print(f"  [{mark}] {row['metric']}: {row['proofline']} vs baseline {row['baseline']}")
     return 0
 
 

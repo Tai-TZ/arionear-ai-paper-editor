@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_workspace/profile")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Researcher Profile — Arionear" },
+      { title: "Researcher Profile — Proofline" },
       {
         name: "description",
         content: "Manage your researcher profile, AI preferences, and editorial workflow defaults.",

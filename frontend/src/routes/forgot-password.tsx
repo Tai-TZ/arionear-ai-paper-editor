@@ -10,8 +10,8 @@ import { authToast } from "@/lib/auth-toast";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset Password — Arionear" },
-      { name: "description", content: "Request a password reset link for your Arionear account." },
+      { title: "Reset Password — Proofline" },
+      { name: "description", content: "Request a password reset link for your Proofline account." },
     ],
   }),
   component: ForgotPasswordPage,

@@ -78,7 +78,7 @@ def _params(mailto: str, **extra: str) -> dict[str, str]:
 
 def _headers(mailto: str) -> dict[str, str]:
     contact = (mailto or "").strip()
-    agent = f"Arionear/1.0 (mailto:{contact})" if contact else "Arionear/1.0"
+    agent = f"Proofline/1.0 (mailto:{contact})" if contact else "Proofline/1.0"
     return {"User-Agent": agent}
 
 

@@ -47,8 +47,8 @@ describe("auth session storage", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
     invalidateFetchKey("auth:me");
-    local.setItem("arionear-access-token", "token-abc");
-    local.setItem("arionear-session", JSON.stringify(USER));
+    local.setItem("proofline-access-token", "token-abc");
+    local.setItem("proofline-session", JSON.stringify(USER));
   });
 
   afterEach(() => {
@@ -63,8 +63,8 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toBeNull();
 
-    expect(local.getItem("arionear-access-token")).toBe("token-abc");
-    expect(local.getItem("arionear-session")).toBe(JSON.stringify(USER));
+    expect(local.getItem("proofline-access-token")).toBe("token-abc");
+    expect(local.getItem("proofline-session")).toBe(JSON.stringify(USER));
   });
 
   it("clears the session when the server rejects the token", async () => {
@@ -72,8 +72,8 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toBeNull();
 
-    expect(local.getItem("arionear-access-token")).toBeNull();
-    expect(local.getItem("arionear-session")).toBeNull();
+    expect(local.getItem("proofline-access-token")).toBeNull();
+    expect(local.getItem("proofline-session")).toBeNull();
   });
 
   it("refreshes the cached user when the token is valid", async () => {
@@ -82,22 +82,22 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toEqual(updated);
 
-    expect(JSON.parse(local.getItem("arionear-session") ?? "null")).toEqual(updated);
+    expect(JSON.parse(local.getItem("proofline-session") ?? "null")).toEqual(updated);
   });
 
   it("signs out without wiping device preferences", () => {
-    local.setItem("arionear-locale", "vi");
-    local.setItem("arionear-theme", "dark");
-    local.setItem("arionear-researcher-profile", "{}");
+    local.setItem("proofline-locale", "vi");
+    local.setItem("proofline-theme", "dark");
+    local.setItem("proofline-researcher-profile", "{}");
     session.setItem("defense_session_p1", "{}");
 
     signOut();
 
-    expect(local.getItem("arionear-access-token")).toBeNull();
-    expect(local.getItem("arionear-session")).toBeNull();
-    expect(local.getItem("arionear-researcher-profile")).toBeNull();
+    expect(local.getItem("proofline-access-token")).toBeNull();
+    expect(local.getItem("proofline-session")).toBeNull();
+    expect(local.getItem("proofline-researcher-profile")).toBeNull();
     expect(session.length).toBe(0);
-    expect(local.getItem("arionear-locale")).toBe("vi");
-    expect(local.getItem("arionear-theme")).toBe("dark");
+    expect(local.getItem("proofline-locale")).toBe("vi");
+    expect(local.getItem("proofline-theme")).toBe("dark");
   });
 });

@@ -1,8 +1,8 @@
 {
-  "name": "arionear-db",
+  "name": "proofline-db",
   "private": true,
   "license": "MIT",
-  "description": "Prisma schema & migrations for Arionear (Python FastAPI connects via DATABASE_URL)",
+  "description": "Prisma schema & migrations for Proofline (Python FastAPI connects via DATABASE_URL)",
   "scripts": {
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

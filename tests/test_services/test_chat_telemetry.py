@@ -22,7 +22,7 @@ async def test_emit_holds_task_until_done_then_releases(monkeypatch):
     monkeypatch.setattr(chat_telemetry, "_inngest_enabled", lambda: True)
     monkeypatch.setattr(chat_telemetry.inngest_client, "send", slow_send)
 
-    await chat_telemetry.emit_chat_event("ario/chat.stage", {"stage": "x"})
+    await chat_telemetry.emit_chat_event("nib/chat.stage", {"stage": "x"})
     gc.collect()
 
     assert len(chat_telemetry._pending_emits) == 1
@@ -31,7 +31,7 @@ async def test_emit_holds_task_until_done_then_releases(monkeypatch):
         if not chat_telemetry._pending_emits:
             break
         await asyncio.sleep(0)
-    assert sent == ["ario/chat.stage"]
+    assert sent == ["nib/chat.stage"]
     assert chat_telemetry._pending_emits == set()
 
 
@@ -43,7 +43,7 @@ async def test_emit_failure_is_swallowed_and_released(monkeypatch):
     monkeypatch.setattr(chat_telemetry, "_inngest_enabled", lambda: True)
     monkeypatch.setattr(chat_telemetry.inngest_client, "send", failing_send)
 
-    await chat_telemetry.emit_chat_event("ario/chat.failed", {})
+    await chat_telemetry.emit_chat_event("nib/chat.failed", {})
     for _ in range(10):
         if not chat_telemetry._pending_emits:
             break
@@ -54,5 +54,5 @@ async def test_emit_failure_is_swallowed_and_released(monkeypatch):
 @pytest.mark.asyncio
 async def test_emit_is_noop_when_disabled(monkeypatch):
     monkeypatch.setattr(chat_telemetry, "_inngest_enabled", lambda: False)
-    await chat_telemetry.emit_chat_event("ario/chat.stage", {})
+    await chat_telemetry.emit_chat_event("nib/chat.stage", {})
     assert chat_telemetry._pending_emits == set()

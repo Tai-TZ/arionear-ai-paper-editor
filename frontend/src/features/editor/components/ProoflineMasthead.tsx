@@ -1,4 +1,4 @@
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { ProoflineWordmark } from "@/components/proofline-wordmark";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/components/locale-context";
 import { editorCopy, formatMastheadDate } from "@/lib/editor-i18n";
@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth-store";
 import { DefenseMastheadPrefs } from "@/components/defense/defense-masthead-prefs";
 import type { ResearcherProfile } from "@/lib/researcher-profile";
 
-export function ArionearMasthead({
+export function ProoflineMasthead({
   className = "",
   integrityStrictness = "standard",
 }: {
@@ -29,7 +29,7 @@ export function ArionearMasthead({
     >
       <div className="flex items-center gap-3">
         <Link to="/" className="hover:text-[color:var(--editorial-red)] transition-colors">
-          <ArionearWordmark />
+          <ProoflineWordmark />
         </Link>
         <span className="opacity-40">·</span>
         <Link to="/projects" className="hover:text-[color:var(--editorial-red)] transition-colors">

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
-import { ArionearWordmark } from "@/components/arionear-wordmark";
+import { ProoflineWordmark } from "@/components/proofline-wordmark";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLocale } from "@/components/locale-context";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -15,7 +15,7 @@ export function AppNotFound() {
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
         <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
-          <ArionearWordmark />
+          <ProoflineWordmark />
         </Link>
         <div className="flex items-center gap-2">
           <LanguageToggle compact className="masthead-language-toggle shrink-0" />

@@ -15,8 +15,8 @@ import { normalizeEmail, validateEmail, validateName, validatePassword } from ".
 
 export type { AuthUser };
 
-const TOKEN_KEY = "arionear-access-token";
-const USER_KEY = "arionear-session";
+const TOKEN_KEY = "proofline-access-token";
+const USER_KEY = "proofline-session";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 

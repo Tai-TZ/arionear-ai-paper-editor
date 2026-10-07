@@ -264,9 +264,7 @@ export function HeroPeerReviewFigure() {
               <MessageSquare className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
-              <p className="font-mono-data text-[11px] uppercase tracking-widest">
-                {demo.arioRole}
-              </p>
+              <p className="font-mono-data text-[11px] uppercase tracking-widest">{demo.nibRole}</p>
               <p className="font-body text-xs text-neutral-600 italic">{demo.aiEditor}</p>
             </div>
             {thinking && (

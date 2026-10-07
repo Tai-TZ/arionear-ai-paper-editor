@@ -59,7 +59,7 @@ async def _check_crossref(doi: str, *, client: httpx.AsyncClient | None = None) 
     url = f"https://api.crossref.org/works/{doi}"
     try:
         async with http_client(client, LOOKUP_TIMEOUT_SEC) as http:
-            resp = await http.get(url, headers={"User-Agent": "Arionear/1.0"}, timeout=LOOKUP_TIMEOUT_SEC)
+            resp = await http.get(url, headers={"User-Agent": "Proofline/1.0"}, timeout=LOOKUP_TIMEOUT_SEC)
             if resp.status_code == 404:
                 return {"found": False}
             resp.raise_for_status()
