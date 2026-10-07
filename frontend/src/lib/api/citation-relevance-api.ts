@@ -69,7 +69,7 @@ export async function checkCitationRelevance({
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new Error("NETWORK_ERROR");
+    throw new Error("NETWORK_ERROR", { cause: error });
   }
   if (res.status === 401) {
     logoutUser();
