@@ -24,13 +24,13 @@ import { marketingCopy } from "@/lib/marketing-i18n";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Proofline — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học" },
+      { title: "Edico — AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học" },
       {
         name: "description",
         content:
           "AI academic writing assistant for researchers. Improve academic prose, structure, citations and reviewer replies — without inventing data or results.",
       },
-      { property: "og:title", content: "Proofline — Closer to Publication" },
+      { property: "og:title", content: "Edico — From draft to proof" },
       {
         property: "og:description",
         content: "Help good research get published. AI as editor, human as author.",
@@ -52,7 +52,7 @@ function Hero() {
       <div className="hero-split max-w-screen-2xl mx-auto px-4 sm:px-6 grid grid-cols-1 gap-0">
         <div className="hero-split-copy lg:border-r border-foreground p-4 sm:p-6 lg:p-8 xl:p-10">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono-data uppercase text-[10px] sm:text-xs tracking-widest mb-4 sm:mb-6">
-            <span className="bg-[color:var(--editorial-red)] text-background px-2 py-1">
+            <span className="bg-[color:var(--editorial-accent)] text-background px-2 py-1">
               {h.breaking}
             </span>
             <span className="min-w-0">{h.deskEdition}</span>
@@ -149,7 +149,7 @@ function Features() {
           </h2>
           <Link
             to="/features"
-            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-accent)]"
           >
             {f.sectionLink}
           </Link>
@@ -203,7 +203,7 @@ function WorkflowTeaser() {
         <ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-l border-background/40">
           {w.steps.map((s) => (
             <li key={s.n} className="p-8 border-r border-b border-background/40">
-              <div className="font-mono-data text-[color:var(--editorial-red)] text-sm uppercase tracking-widest mb-4">
+              <div className="font-mono-data text-[color:var(--editorial-accent)] text-sm uppercase tracking-widest mb-4">
                 {w.stepLabel} {s.n}
               </div>
               <h3 className="font-serif-display font-bold text-3xl mb-3">{s.t}</h3>
@@ -246,7 +246,7 @@ function Integrity() {
             <p className="font-body text-lg leading-relaxed mt-6 text-justify">{ig.body}</p>
             <Link
               to="/integrity"
-              className="mt-6 inline-flex font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="mt-6 inline-flex font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ig.readPolicy}
             </Link>
@@ -273,7 +273,7 @@ function Integrity() {
                       <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
                         <Icon className="h-4 w-4" strokeWidth={1.5} />
                       </div>
-                      <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)]">
+                      <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-accent)]">
                         § {n}
                       </span>
                     </div>
@@ -303,7 +303,7 @@ function Plans() {
         {/* Section header */}
         <div className="flex items-end justify-between border-b border-foreground pb-4 mb-0">
           <div>
-            <span className="font-mono-data uppercase text-xs tracking-widest text-[color:var(--editorial-red)]">
+            <span className="font-mono-data uppercase text-xs tracking-widest text-[color:var(--editorial-accent)]">
               {p.sectionLabel}
             </span>
             <h2 className="font-serif-display font-black text-4xl lg:text-6xl tracking-tighter mt-1">
@@ -312,7 +312,7 @@ function Plans() {
           </div>
           <Link
             to="/pricing"
-            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-red)]"
+            className="font-mono-data uppercase text-xs tracking-widest hidden sm:block hover:text-[color:var(--editorial-accent)]"
           >
             {p.sectionLink}
           </Link>
@@ -323,7 +323,7 @@ function Plans() {
           {/* ── FREE card ── */}
           <article className="p-8 border-r border-b border-foreground">
             <div className="flex items-center gap-3 mb-6">
-              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-accent)]">
                 § {p.free.tier}
               </span>
             </div>
@@ -371,17 +371,17 @@ function Plans() {
           {/* ── PRO card (editorial inverse) ── */}
           <article className="relative p-8 border-r border-b border-foreground bg-foreground text-background">
             {/* "Most popular" ribbon */}
-            <div className="absolute top-0 right-0 bg-[color:var(--editorial-red)] px-3 py-1">
+            <div className="absolute top-0 right-0 bg-[color:var(--editorial-accent)] px-3 py-1">
               <span className="font-mono-data text-[10px] uppercase tracking-widest text-background">
                 {p.pro.badge}
               </span>
             </div>
 
             <div className="flex items-center gap-3 mb-6">
-              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-red)]">
+              <span className="font-mono-data text-xs uppercase tracking-widest text-[color:var(--editorial-accent)]">
                 § {p.pro.tier}
               </span>
-              <Zap className="h-4 w-4 text-[color:var(--editorial-red)]" strokeWidth={1.5} />
+              <Zap className="h-4 w-4 text-[color:var(--editorial-accent)]" strokeWidth={1.5} />
             </div>
 
             {/* Price */}

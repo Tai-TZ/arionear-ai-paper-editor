@@ -1,15 +1,15 @@
 # Benchmark Eval Summary
 
 **Generated:** 2026-07-08 12:08:11 UTC
-**API:** https://api.proofline.example
-**Frontend:** https://proofline.example
+**API:** https://api.edico.example
+**Frontend:** https://edico.example
 
 > Companion evidence (LLM thật + JWT): [`report.md`](./report.md) — 6/6 TC pass @ 2026-07-08 12:13:04 UTC.
 > Note: `chat_latency_p50_s` / `style_latency_p50_s` trong script benchmark này đo probe không JWT (HTTP 401 nhanh); latency LLM thật xem `report.md` (~3–5s).
 
 ## Metrics vs baseline
 
-| Metric | Proofline | Baseline | Improved? |
+| Metric | Edico | Baseline | Improved? |
 |--------|----------|----------|-----------|
 | intent_routing_accuracy | 1.0 | 0.65 | yes |
 | edit_scope_accuracy | 1.0 | 0.4 | yes |

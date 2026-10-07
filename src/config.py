@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Nib Academic Editor"
+    app_name: str = "Dico Academic Editor"
     app_env: Literal["development", "production", "test"] = "development"
     app_port: int = Field(default=8000, ge=1, le=65535)
     app_host: str = "0.0.0.0"
@@ -81,10 +81,10 @@ class Settings(BaseSettings):
 
     # OpenRouter optional headers
     openrouter_site_url: str = ""
-    openrouter_app_name: str = "Proofline Academic Editor"
+    openrouter_app_name: str = "Edico Academic Editor"
 
     # Inngest — chat pipeline observability
-    inngest_app_id: str = "nib-academic-editor"
+    inngest_app_id: str = "dico-academic-editor"
     inngest_event_key: str = ""
     inngest_signing_key: str = ""
     inngest_dev: bool = False

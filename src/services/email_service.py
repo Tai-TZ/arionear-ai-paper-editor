@@ -113,7 +113,7 @@ def _verification_html(*, code: str, expire_minutes: int) -> str:
     <tr><td align="center" style="padding:32px 16px;">
       <table width="100%" style="max-width:480px;background:#fff;border:1px solid #d4cfc6;" cellpadding="0" cellspacing="0">
         <tr><td style="padding:28px 32px 8px;">
-          <p style="margin:0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#8b0000;">Proofline</p>
+          <p style="margin:0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#8b0000;">Edico</p>
           <h1 style="margin:12px 0 0;font-size:22px;font-weight:600;">Verify your email</h1>
         </td></tr>
         <tr><td style="padding:8px 32px 24px;font-size:15px;line-height:1.6;color:#333;">
@@ -136,7 +136,7 @@ def _password_reset_html(*, reset_url: str, expire_minutes: int) -> str:
     <tr><td align="center" style="padding:32px 16px;">
       <table width="100%" style="max-width:480px;background:#fff;border:1px solid #d4cfc6;" cellpadding="0" cellspacing="0">
         <tr><td style="padding:28px 32px 8px;">
-          <p style="margin:0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#8b0000;">Proofline</p>
+          <p style="margin:0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#8b0000;">Edico</p>
           <h1 style="margin:12px 0 0;font-size:22px;font-weight:600;">Reset your password</h1>
         </td></tr>
         <tr><td style="padding:8px 32px 24px;font-size:15px;line-height:1.6;color:#333;">
@@ -155,7 +155,7 @@ def send_signup_verification_email(*, to_email: str, code: str) -> EmailDelivery
     """Send a 6-digit signup verification code."""
     settings = get_settings()
     expire = settings.auth_signup_code_expire_minutes
-    subject = "Your Proofline verification code"
+    subject = "Your Edico verification code"
     plain_body = (
         f"Your verification code is: {code}\n\n"
         f"This code expires in {expire} minutes.\n\n"
@@ -176,9 +176,9 @@ def send_password_reset_email(*, to_email: str, reset_url: str) -> EmailDelivery
     """Send a one-time password reset link."""
     settings = get_settings()
     expire = settings.auth_reset_expire_minutes
-    subject = "Reset your Proofline password"
+    subject = "Reset your Edico password"
     plain_body = (
-        "We received a request to reset your Proofline password.\n\n"
+        "We received a request to reset your Edico password.\n\n"
         f"Open this link to set a new password (expires in {expire} minutes):\n"
         f"{reset_url}\n\n"
         "If you did not request this, you can ignore this email."

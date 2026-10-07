@@ -58,7 +58,7 @@ function FeatureRow({ text, included }: PlanFeature) {
     <li className={cn("flex items-start gap-2.5", !included && "opacity-45")}>
       {included ? (
         <Check
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--editorial-red)]"
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--editorial-accent)]"
           strokeWidth={2.5}
         />
       ) : (
@@ -284,7 +284,7 @@ export function PricingCards({
               )}
             >
               {plan.highlight && (
-                <div className="absolute top-0 right-0 bg-[color:var(--editorial-red)] px-2.5 py-1">
+                <div className="absolute top-0 right-0 bg-[color:var(--editorial-accent)] px-2.5 py-1">
                   <span className="font-mono-data text-[10px] uppercase tracking-widest text-background">
                     {planCopy.pro.badge}
                   </span>

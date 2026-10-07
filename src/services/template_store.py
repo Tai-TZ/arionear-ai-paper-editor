@@ -436,9 +436,9 @@ async def upload_template_pdf(template_id: str, file: UploadFile) -> PaperTempla
 # ask for modified versions to say so; the header comment below and the gallery license label do.
 IEEE_JOURNAL_LICENSE = "LPPL 1.3 — modified version of bare_jrnl.tex from IEEEtran (IEEEtran.cls ships with TeX Live)"
 _IEEE_SUPERSEDED_LICENSES = ("Other (as stated in the work)",)
-IEEE_JOURNAL_MAIN_TEX = r"""% Proofline IEEE journal starter: a MODIFIED, shortened version of bare_jrnl.tex from the
+IEEE_JOURNAL_MAIN_TEX = r"""% Edico IEEE journal starter: a MODIFIED, shortened version of bare_jrnl.tex from the
 % IEEEtran bundle by Michael Shell (LaTeX Project Public License 1.3, https://ctan.org/pkg/ieeetran).
-% Changes: trimmed to a one-file skeleton with Proofline placeholder text.
+% Changes: trimmed to a one-file skeleton with Edico placeholder text.
 \documentclass[journal]{IEEEtran}
 
 \usepackage{amsmath,amssymb,amsfonts}
@@ -453,7 +453,7 @@ IEEE_JOURNAL_MAIN_TEX = r"""% Proofline IEEE journal starter: a MODIFIED, shorte
 \author{Michael~Shell,~\IEEEmembership{Member,~IEEE,}
         John~Doe,~\IEEEmembership{Fellow,~OSA,}
         and~Jane~Doe,~\IEEEmembership{Life~Fellow,~IEEE}%
-\thanks{Manuscript created for the Proofline template gallery.}}
+\thanks{Manuscript created for the Edico template gallery.}}
 
 \markboth{Journal of \LaTeX\ Class Files,~Vol.~14, No.~8, August~2021}%
 {Shell \MakeLowercase{\textit{et al.}}: Bare Demo of IEEEtran.cls for IEEE Journals}
@@ -470,7 +470,7 @@ IEEE, IEEEtran, journal, \LaTeX, paper, template.
 
 \section{Introduction}
 \IEEEPARstart{T}{his} demo file is intended to serve as a starter template for IEEE journal articles.
-Use the Proofline editor to replace placeholder text while keeping your scientific claims intact.
+Use the Edico editor to replace placeholder text while keeping your scientific claims intact.
 
 \section{Methods}
 Describe your methodology here.
@@ -593,17 +593,17 @@ def _seed_ieee_journal(now: str) -> dict[str, Any]:
         "title_vi": "Mẫu IEEE cho tạp chí (kèm ví dụ BibTeX)",
         "description": (
             "Official-style IEEE journal starter with IEEEtran class, abstract, keywords, "
-            "and bibliography hooks for Proofline Paper IDE."
+            "and bibliography hooks for Edico Paper IDE."
         ),
         "description_vi": (
             "Mẫu khởi tạo bài báo tạp chí IEEE với lớp IEEEtran, abstract, từ khóa "
-            "và khung tài liệu tham khảo cho Paper IDE Proofline."
+            "và khung tài liệu tham khảo cho Paper IDE Edico."
         ),
         "abstract": IEEE_JOURNAL_ABSTRACT,
         "abstract_vi": (
             "Đây là file khung minh họa IEEEtran.cls dùng cho bài gửi tạp chí IEEE. Có thể kèm file BibTeX mẫu."
         ),
-        "author": "IEEE template (Proofline gallery)",
+        "author": "IEEE template (Edico gallery)",
         "license": IEEE_JOURNAL_LICENSE,
         "tags": [
             "Citations",

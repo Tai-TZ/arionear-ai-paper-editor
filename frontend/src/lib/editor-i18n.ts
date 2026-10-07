@@ -116,10 +116,10 @@ export type EditorCopy = {
     structureIntro: string;
     structureEmpty: string;
     structureJump: string;
-    structureAskNib: string;
+    structureAskDico: string;
     structureApplyFix: string;
     structureUnknownSection: string;
-    citationAskNib: string;
+    citationAskDico: string;
     citationFixAll: string;
   };
   share: {
@@ -150,7 +150,7 @@ export type EditorCopy = {
     cancel: string;
     auditingInProgress: string;
     jumpToIssue: string;
-    askNib: string;
+    askDico: string;
     claimLabel: string;
     partialChatStopped: (count: number) => string;
     partialChatTimeout: (count: number) => string;
@@ -412,8 +412,9 @@ const EN: EditorCopy = {
     noTitleInBib: "No title in BibTeX",
     aiRevisionHistory: "AI revision history",
     versionsHelp: "Versions help",
-    revisionsHint: "Accept/Reject actions from Nib suggestions are recorded here (L4 audit trail).",
-    noRevisions: "No AI revisions yet. Ask Nib to edit or polish your manuscript.",
+    revisionsHint:
+      "Accept/Reject actions from Dico suggestions are recorded here (L4 audit trail).",
+    noRevisions: "No AI revisions yet. Ask Dico to edit or polish your manuscript.",
     revisionAccepted: "Accepted",
     revisionRejected: "Rejected",
     revisionModified: "Modified",
@@ -424,14 +425,14 @@ const EN: EditorCopy = {
     verifiedCitations: (verified, total) => `Verified ${verified}/${total} citations.`,
     citationVerifyError: "Could not verify citations right now. Please try again later.",
     structure: "Structure",
-    structureIntro: "IMRAD outline suggestions from Nib. Jump to a section or ask Nib to fix it.",
+    structureIntro: "IMRAD outline suggestions from Dico. Jump to a section or ask Dico to fix it.",
     structureEmpty:
       "No structure suggestions yet. Run /structure in chat to analyze the manuscript.",
     structureJump: "Jump in editor",
-    structureAskNib: "Ask Nib",
+    structureAskDico: "Ask Dico",
     structureApplyFix: "Apply fix",
     structureUnknownSection: "Manuscript",
-    citationAskNib: "Ask Nib",
+    citationAskDico: "Ask Dico",
     citationFixAll: "Fix unverified citations",
   },
   share: {
@@ -439,7 +440,7 @@ const EN: EditorCopy = {
     title: "Share manuscript",
     description: "Send a view-only link. Readers see live LaTeX and PDF — no editing, no tools.",
     viewOnly: "View only",
-    viewOnlyHint: "Readers cannot edit or run Nib.",
+    viewOnlyHint: "Readers cannot edit or run Dico.",
     stableLink: "Stable link",
     stableLinkHint: "Same URL after compile and save until you disable sharing.",
     viewOnlyLink: "View-only link",
@@ -464,7 +465,7 @@ const EN: EditorCopy = {
     cancel: "Cancel audit",
     auditingInProgress: "New audit running — previous results stay visible until sections update.",
     jumpToIssue: "Go to line",
-    askNib: "Ask Nib",
+    askDico: "Ask Dico",
     claimLabel: "Claim:",
     partialChatStopped: (count) =>
       `Logic audit stopped — **${count}** section(s) already scanned. See **Logic Audit** tab for details.`,
@@ -514,7 +515,7 @@ const EN: EditorCopy = {
     eyebrow: "Pre-publication gate",
     title: "Score manuscript",
     description:
-      "Nib evaluates your manuscript before you export PDF — combining AI peer review and technical checks. Score is indicative — final judgement belongs to the author.",
+      "Dico evaluates your manuscript before you export PDF — combining AI peer review and technical checks. Score is indicative — final judgement belongs to the author.",
     totalScore: "Total score",
     withAgent: "Combined AI review, structure and citations.",
     heuristicOnly: "Structure, citations and technical checks.",
@@ -525,7 +526,7 @@ const EN: EditorCopy = {
     staleWarning: "Could not update review:",
     criteria: "Scoring criteria",
     footerLoading:
-      "Nib is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
+      "Dico is reading abstract, introduction, methods, results and conclusion — technical criteria on the right are ready.",
     footerCompileError: "PDF is ready to download — but we recommend fixing compile errors first.",
     footerReady: "Export PDF after reviewing the score. See Logic Audit for details.",
     downloadBtn: "Download PDF",
@@ -541,7 +542,7 @@ const EN: EditorCopy = {
     gradeNeedsWork: "Needs improvement",
     gradeFailing: "Failing",
     gradeEvaluating: "Evaluating…",
-    hintLoading: "Nib is reading the full manuscript…",
+    hintLoading: "Dico is reading the full manuscript…",
     gatePeerReviewNote:
       "Quick skim for scoring only — open the Logic Audit tab for full multi-agent review.",
     retryAudit: "Retry AI review",
@@ -550,7 +551,7 @@ const EN: EditorCopy = {
       "This looks like a template or placeholder — replace sample text with real research before relying on the score.",
     jumpToSection: "Go to section",
     openCitations: "Open Citations in Tools",
-    auditAnimationLabel: "Nib is reading",
+    auditAnimationLabel: "Dico is reading",
     auditPhrases: [
       "Reading abstract…",
       "Analyzing main arguments…",
@@ -588,7 +589,7 @@ const EN: EditorCopy = {
     placeholderNoProvider: "Configure an API key to use chat",
     placeholderQuickEdit: "How should this passage be edited?",
     placeholderSelection: "Ask or explain this passage…",
-    placeholderDefault: "Ask Nib… or type / for commands",
+    placeholderDefault: "Ask Dico… or type / for commands",
     hintEditScope: "Tip: select text or say e.g. «edit Abstract» for precise edits.",
     hintPendingEdits: "You have pending diffs — Accept/Reject above, or ask for changes.",
     llmHint: "No LLM provider — add OPENROUTER_API_KEY or ZAI_API_KEY to .env",
@@ -603,14 +604,14 @@ const EN: EditorCopy = {
     sendMessage: "Send message",
   },
   suggestion: {
-    documentMode: "Nib suggests a change — inline in the editor (red = remove, green = add)",
-    selectionMode: "Nib suggests an edit — inline in the editor (red = remove, green = add)",
+    documentMode: "Dico suggests a change — inline in the editor (red = remove, green = add)",
+    selectionMode: "Dico suggests an edit — inline in the editor (red = remove, green = add)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Reject",
     accept: "Accept",
   },
   pendingEdits: {
-    title: (count) => `Changes from Nib (${count})`,
+    title: (count) => `Changes from Dico (${count})`,
     hint: "Click to preview · Ctrl+Enter Accept · Esc Reject",
     rejectAll: "Reject all",
     acceptAll: "Accept all",
@@ -621,11 +622,11 @@ const EN: EditorCopy = {
       "Serious integrity flags — review the diff and Reject or revise before Accept.",
     staleWarning: "The file changed since this suggestion was created.",
     staleBadge: "Out of date",
-    staleOnAccept: "This edit is out of date — reject it and ask Nib again.",
+    staleOnAccept: "This edit is out of date — reject it and ask Dico again.",
   },
   welcome: {
     assistantMessage:
-      "Hi — I'm Nib, your research assistant in Paper IDE PROOFLINE. You can assign tasks freely: rename title/author, rewrite the Abstract, polish academic tone, check IMRAD structure, or ask about LaTeX. Pick a provider/model below and describe what you need.",
+      "Hi — I'm Dico, your research assistant in Paper IDE EDICO. You can assign tasks freely: rename title/author, rewrite the Abstract, polish academic tone, check IMRAD structure, or ask about LaTeX. Pick a provider/model below and describe what you need.",
   },
   chatStream: {
     processing: "Processing",
@@ -634,7 +635,7 @@ const EN: EditorCopy = {
     acceptApplied: "Applied to the draft. Press Ctrl+S to save.",
     acceptAppliedCompile: "Applied to the draft. Compiling PDF…",
     compileAfterEditOk: "PDF updated — compile succeeded.",
-    compileAfterEditFail: "Edit applied but PDF compile failed — use «Ask Nib to fix».",
+    compileAfterEditFail: "Edit applied but PDF compile failed — use «Ask Dico to fix».",
     rejectSuggestionHint:
       "Suggestion rejected. A follow-up prompt is in the chat box — refine your request and send again.",
     rejectScopeDocument: "entire manuscript",
@@ -750,8 +751,9 @@ const VI: EditorCopy = {
     noTitleInBib: "Không có tiêu đề trong BibTeX",
     aiRevisionHistory: "Lịch sử chỉnh sửa AI",
     versionsHelp: "Trợ giúp phiên bản",
-    revisionsHint: "Các thao tác Chấp nhận/Từ chối từ gợi ý của Nib được ghi tại đây (nhật ký L4).",
-    noRevisions: "Chưa có chỉnh sửa AI. Hãy nhờ Nib chỉnh sửa hoặc polish bản thảo.",
+    revisionsHint:
+      "Các thao tác Chấp nhận/Từ chối từ gợi ý của Dico được ghi tại đây (nhật ký L4).",
+    noRevisions: "Chưa có chỉnh sửa AI. Hãy nhờ Dico chỉnh sửa hoặc polish bản thảo.",
     revisionAccepted: "Đã chấp nhận",
     revisionRejected: "Đã từ chối",
     revisionModified: "Đã sửa",
@@ -762,13 +764,13 @@ const VI: EditorCopy = {
     verifiedCitations: (verified, total) => `Đã xác minh ${verified}/${total} trích dẫn.`,
     citationVerifyError: "Không thể xác minh trích dẫn lúc này. Vui lòng thử lại sau.",
     structure: "Cấu trúc",
-    structureIntro: "Gợi ý cấu trúc IMRAD từ Nib. Nhảy tới section hoặc nhờ Nib chỉnh trực tiếp.",
+    structureIntro: "Gợi ý cấu trúc IMRAD từ Dico. Nhảy tới section hoặc nhờ Dico chỉnh trực tiếp.",
     structureEmpty: "Chưa có gợi ý cấu trúc. Chạy /structure trong chat để phân tích bản thảo.",
     structureJump: "Xem trong editor",
-    structureAskNib: "Nhờ Nib sửa",
+    structureAskDico: "Nhờ Dico sửa",
     structureApplyFix: "Sửa ngay",
     structureUnknownSection: "Bản thảo",
-    citationAskNib: "Nhờ Nib sửa",
+    citationAskDico: "Nhờ Dico sửa",
     citationFixAll: "Sửa trích dẫn chưa xác minh",
   },
   share: {
@@ -777,7 +779,7 @@ const VI: EditorCopy = {
     description:
       "Gửi liên kết chỉ xem. Người đọc thấy LaTeX và PDF trực tiếp — không chỉnh sửa, không dùng công cụ.",
     viewOnly: "Chỉ xem",
-    viewOnlyHint: "Người đọc không thể chỉnh sửa hay chạy Nib.",
+    viewOnlyHint: "Người đọc không thể chỉnh sửa hay chạy Dico.",
     stableLink: "Liên kết ổn định",
     stableLinkHint: "Cùng URL sau khi biên dịch và lưu cho đến khi bạn tắt chia sẻ.",
     viewOnlyLink: "Liên kết chỉ xem",
@@ -802,7 +804,7 @@ const VI: EditorCopy = {
     cancel: "Hủy audit",
     auditingInProgress: "Đang audit mới — kết quả cũ vẫn hiển thị cho đến khi có section cập nhật.",
     jumpToIssue: "Tới dòng",
-    askNib: "Nhờ Nib",
+    askDico: "Nhờ Dico",
     claimLabel: "Khẳng định:",
     partialChatStopped: (count) =>
       `Logic audit đã dừng — **${count}** phần đã quét. Xem tab **Logic Audit** để biết chi tiết.`,
@@ -851,7 +853,7 @@ const VI: EditorCopy = {
     eyebrow: "Pre-publication gate",
     title: "Chấm điểm bài báo",
     description:
-      "Nib đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật. Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.",
+      "Dico đánh giá bản thảo trước khi bạn xuất PDF — kết hợp phản biện AI và kiểm tra kỹ thuật. Điểm số mang tính gợi ý — quyết định cuối thuộc về tác giả.",
     totalScore: "Điểm tổng",
     withAgent: "Kết hợp phản biện AI, cấu trúc và trích dẫn.",
     heuristicOnly: "Cấu trúc, trích dẫn và kỹ thuật.",
@@ -861,7 +863,7 @@ const VI: EditorCopy = {
     staleWarning: "Không cập nhật phản biện mới:",
     criteria: "Tiêu chí chấm điểm",
     footerLoading:
-      "Nib đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
+      "Dico đang đọc abstract, giới thiệu, phương pháp, kết quả và kết luận — tiêu chí kỹ thuật bên phải sẵn sàng.",
     footerCompileError: "PDF đã sẵn sàng tải — nhưng khuyến nghị sửa lỗi compile trước.",
     footerReady: "Xuất PDF sau khi xem điểm. Chi tiết logic xem trong Logic Audit.",
     downloadBtn: "Tải PDF",
@@ -877,7 +879,7 @@ const VI: EditorCopy = {
     gradeNeedsWork: "Cần cải thiện",
     gradeFailing: "Chưa đạt",
     gradeEvaluating: "Đang đánh giá…",
-    hintLoading: "Nib đang đọc lướt toàn bộ bài…",
+    hintLoading: "Dico đang đọc lướt toàn bộ bài…",
     gatePeerReviewNote: "Phản biện nhanh cho chấm điểm — mở tab Logic Audit để soi sâu đa persona.",
     retryAudit: "Chạy lại phản biện AI",
     topIssues: "Vấn đề nổi bật",
@@ -885,7 +887,7 @@ const VI: EditorCopy = {
       "Bản thảo có vẻ là template/mẫu — thay nội dung mẫu bằng nghiên cứu thật trước khi tin vào điểm số.",
     jumpToSection: "Đi tới section",
     openCitations: "Mở Citations trong Tools",
-    auditAnimationLabel: "Nib đang đọc",
+    auditAnimationLabel: "Dico đang đọc",
     auditPhrases: [
       "Đọc abstract…",
       "Phân tích luận điểm chính…",
@@ -923,7 +925,7 @@ const VI: EditorCopy = {
     placeholderNoProvider: "Cấu hình API key để dùng chat",
     placeholderQuickEdit: "Bạn muốn sửa đoạn này thế nào?",
     placeholderSelection: "Hỏi hoặc giải thích đoạn này…",
-    placeholderDefault: "Hỏi Nib… hoặc gõ / để chọn lệnh",
+    placeholderDefault: "Hỏi Dico… hoặc gõ / để chọn lệnh",
     hintEditScope: "Gợi ý: bôi đen đoạn hoặc nói rõ «sửa Abstract» để chỉnh đúng phần.",
     hintPendingEdits: "Còn diff chờ duyệt — Accept/Reject ở trên, hoặc nhắn chỉnh tiếp.",
     llmHint: "Chưa có provider LLM — thêm OPENROUTER_API_KEY hoặc ZAI_API_KEY vào .env",
@@ -938,14 +940,14 @@ const VI: EditorCopy = {
     sendMessage: "Gửi tin nhắn",
   },
   suggestion: {
-    documentMode: "Nib đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
-    selectionMode: "Nib đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
+    documentMode: "Dico đề xuất thay đổi — inline trong editor (đỏ = xóa, xanh = thêm)",
+    selectionMode: "Dico đề xuất chỉnh sửa — inline trong editor (đỏ = xóa, xanh = thêm)",
     shortcutHint: "Ctrl+Enter Accept · Esc Reject",
     reject: "Từ chối",
     accept: "Chấp nhận",
   },
   pendingEdits: {
-    title: (count) => `Các thay đổi từ Nib (${count})`,
+    title: (count) => `Các thay đổi từ Dico (${count})`,
     hint: "Click để preview · Ctrl+Enter Accept · Esc Reject",
     rejectAll: "Từ chối tất cả",
     acceptAll: "Chấp nhận tất cả",
@@ -956,11 +958,11 @@ const VI: EditorCopy = {
       "Có cảnh báo integrity nghiêm trọng — xem diff và Reject hoặc chỉnh lại trước khi Accept.",
     staleWarning: "File đã thay đổi kể từ khi tạo đề xuất này.",
     staleBadge: "Đã lỗi thời",
-    staleOnAccept: "Đề xuất đã lỗi thời — hãy Reject và nhờ Nib tạo lại.",
+    staleOnAccept: "Đề xuất đã lỗi thời — hãy Reject và nhờ Dico tạo lại.",
   },
   welcome: {
     assistantMessage:
-      "Xin chào — tôi là Nib, trợ lý NCKH trong Paper IDE PROOFLINE. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
+      "Xin chào — tôi là Dico, trợ lý NCKH trong Paper IDE EDICO. Bạn có thể giao task tự do: sửa tên/tác giả, viết lại Abstract, chỉnh văn phong học thuật, kiểm tra cấu trúc IMRAD, hoặc hỏi về LaTeX. Chọn provider/model bên dưới rồi mô tả việc cần làm.",
   },
   chatStream: {
     processing: "Đang xử lý",
@@ -969,7 +971,7 @@ const VI: EditorCopy = {
     acceptApplied: "Đã áp dụng thay đổi vào bản thảo. Nhấn Ctrl+S để lưu file.",
     acceptAppliedCompile: "Đã áp dụng thay đổi vào bản thảo. Đang compile PDF…",
     compileAfterEditOk: "PDF đã cập nhật — compile thành công.",
-    compileAfterEditFail: "Đã áp dụng sửa nhưng compile lỗi — dùng «Nhờ Nib sửa».",
+    compileAfterEditFail: "Đã áp dụng sửa nhưng compile lỗi — dùng «Nhờ Dico sửa».",
     rejectSuggestionHint:
       "Đã từ chối gợi ý. Mình đã gợi ý câu lệnh trong ô chat — bổ sung yêu cầu rồi gửi lại nhé.",
     rejectScopeDocument: "toàn bộ bản thảo",

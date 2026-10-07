@@ -188,9 +188,9 @@ def test_room_history_is_dropped_above_cap(monkeypatch):
 
 
 def test_bearer_from_subprotocols():
-    assert share_room.bearer_from_subprotocols(["proofline-share", "bearer.abc"]) == "abc"
+    assert share_room.bearer_from_subprotocols(["edico-share", "bearer.abc"]) == "abc"
     assert share_room.bearer_from_subprotocols(["bearer.abc"]) is None
-    assert share_room.bearer_from_subprotocols(["proofline-share", "bearer."]) is None
+    assert share_room.bearer_from_subprotocols(["edico-share", "bearer."]) is None
     assert share_room.bearer_from_subprotocols(None) is None
 
 

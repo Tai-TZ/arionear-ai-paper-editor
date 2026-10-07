@@ -1,17 +1,15 @@
-# Cloud Build config for the Proofline frontend.
+# Cloud Build config for the Edico frontend.
 # VITE_API_URL is baked into the client bundle at build time — it must match the
 # backend custom domain so the browser hits the correct API origin.
 #
 # Usage (from repo root or frontend/):
 #   gcloud builds submit --config=frontend/cloudbuild.yaml \
-#     --substitutions=_VITE_API_URL=https://api.proofline.example/api/v1,_IMAGE=asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/proofline/frontend:latest
+#     --substitutions=_VITE_API_URL=https://api.your-domain/api/v1,_IMAGE=asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/edico/frontend:latest
 #
-# Default substitution value covers the production custom domain — override only
-# when targeting a different environment (staging, local Cloud Run URL, etc.).
+# _VITE_API_URL has no default on purpose: the build fails unless you pass it.
 
 substitutions:
-  _VITE_API_URL: https://api.proofline.example/api/v1
-  _IMAGE: asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/proofline/frontend:latest
+  _IMAGE: asia-east1-docker.pkg.dev/project-f8474886-b777-42fc-88c/edico/frontend:latest
 
 steps:
   - name: gcr.io/cloud-builders/docker

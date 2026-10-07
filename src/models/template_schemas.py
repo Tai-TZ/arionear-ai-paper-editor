@@ -47,8 +47,8 @@ class PaperTemplateCreateRequest(BaseModel):
     description_vi: str | None = None
     abstract: str = ""
     abstract_vi: str | None = None
-    author: str = "Proofline"
-    license: str = "Proofline template license"
+    author: str = "Edico"
+    license: str = "Edico template license"
     tags: list[str] = Field(default_factory=list)
     is_official: bool = False
     format: str = "ieee"

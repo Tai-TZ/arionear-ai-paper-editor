@@ -1,12 +1,14 @@
-# Eval Evidence — Proofline
+# Eval Evidence — Edico
 
 > ≥5 manual test cases với output thật từ LLM (không mock)
 > **Ngày chạy:** 2026-07-08 12:13:04 UTC
-> **API:** https://api.proofline.example
-> **Frontend:** https://proofline.example
+> **API:** https://api.edico.example
+> **Frontend:** https://edico.example
 > **Raw data:** [`_live_outputs.json`](./_live_outputs.json)
 
-**Môi trường:** Session `62d934a7-557e-4923-91eb-10834cc107f9` · Agent Nib v1.0 · Production Cloud Run · PostgreSQL · Health `ok`
+**Môi trường:** Session `62d934a7-557e-4923-91eb-10834cc107f9` · Agent Dico v1.0 · Production Cloud Run · PostgreSQL · Health `ok`
+
+> **Ghi chú:** phiên này chạy trước khi đổi tên sản phẩm (Arionear → Edico, trợ lý Ario → Dico). Input/output bên dưới giữ nguyên văn như trong raw data.
 
 ---
 
@@ -45,7 +47,7 @@
 
 **Output:**
 
-> Chào bạn, tôi là Nib. Để tôi có thể giải thích tóm tắt phần Abstract, bạn vui lòng cung cấp nội dung hoặc đoạn văn bản của phần Abstract trong bản thảo hiện tại. Sau khi có nội dung, tôi sẽ giúp bạn phân tích các ý chính như mục tiêu nghiên cứu, phương pháp, kết quả nổi bật và đóng góp của bài viết một cách ngắn gọn và chuẩn học thuật.
+> Chào bạn, tôi là Ario. Để tôi có thể giải thích tóm tắt phần Abstract, bạn vui lòng cung cấp nội dung hoặc đoạn văn bản của phần Abstract trong bản thảo hiện tại. Sau khi có nội dung, tôi sẽ giúp bạn phân tích các ý chính như mục tiêu nghiên cứu, phương pháp, kết quả nổi bật và đóng góp của bài viết một cách ngắn gọn và chuẩn học thuật.
 
 ---
 
@@ -179,7 +181,7 @@ Nếu bạn muốn tôi chèn khung (template) cho các mục này vào file mai
 
 ```json
 {
-  "latex": "\\documentclass{article}\\begin{document}Hello Proofline.\\end{document}",
+  "latex": "\\documentclass{article}\\begin{document}Hello Arionear.\\end{document}",
   "main_file": "main.tex"
 }
 ```

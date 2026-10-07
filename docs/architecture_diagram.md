@@ -1,8 +1,8 @@
-# Architecture Diagram — Proofline
+# Architecture Diagram — Edico
 
-**Tagline:** *Closer to Publication*  
+**Tagline:** *From draft to proof.*  
 **Cập nhật:** 04/10/2026 · Đồng bộ production v1.0 · sơ đồ sinh bởi [`scripts/build_diagrams.py`](../scripts/build_diagrams.py) (phong cách editorial của app, luôn hiển thị bản sáng)  
-**Live:** [https://proofline.example/](https://proofline.example/) · API: [https://api.proofline.example](https://api.proofline.example)
+**Live:** [https://edico.example/](https://edico.example/) · API: [https://api.edico.example](https://api.edico.example)
 
 Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triển khai · ⚠️ = một phần · *(planned)* = mục tiêu tương lai.
 
@@ -16,11 +16,11 @@ Sơ đồ bổ sung cho [ARCHITECTURE.md](../ARCHITECTURE.md). ✅ = đã triể
 
 | Surface | URL / host | Ghi chú |
 |---------|------------|---------|
-| Frontend (prod) | `https://proofline.example` | Custom domain → Cloud Run `proofline-web` |
-| Backend API | `https://api.proofline.example` | Custom domain → Cloud Run `proofline-api` + TeX compile |
+| Frontend (prod) | `https://edico.example` | Custom domain → Cloud Run `edico-web` |
+| Backend API | `https://api.edico.example` | Custom domain → Cloud Run `edico-api` + TeX compile |
 | Database | `DIRECT_DATABASE_URL` | Papers, auth, profiles, platform provider keys (template registry nằm ở `data/templates/registry.json`) |
 
-Trình duyệt tải trang từ `proofline-web` và gọi thẳng `proofline-api` (`VITE_API_URL`). API có `GET /health` (liveness), `GET /ready` (readiness), log JSON kèm `X-Request-ID`.
+Trình duyệt tải trang từ `edico-web` và gọi thẳng `edico-api` (`VITE_API_URL`). API có `GET /health` (liveness), `GET /ready` (readiness), log JSON kèm `X-Request-ID`.
 
 ---
 
@@ -157,5 +157,5 @@ Chi tiết từng workflow: [ARCHITECTURE.md §8.1](../ARCHITECTURE.md#81-cicd-p
 ## Tài liệu liên quan
 
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — mô tả chi tiết kiến trúc
-- [README.md](../README.md) — setup & Live URL (`https://proofline.example`)
+- [README.md](../README.md) — setup & Live URL (`https://edico.example`)
 - [pdf-preview-deploy.md](./pdf-preview-deploy.md) — TeX & Docker ops

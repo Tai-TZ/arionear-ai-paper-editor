@@ -55,7 +55,7 @@ def format_provider_test_failure(
     if provider == "google" and is_google_project_denied(msg):
         return (
             "Google đã chặn project GCP gắn với API key này (403 PERMISSION_DENIED). "
-            "Key có thể hợp lệ nhưng project bị Google flag — không phải lỗi cấu hình Proofline. "
+            "Key có thể hợp lệ nhưng project bị Google flag — không phải lỗi cấu hình Edico. "
             "Kiểm tra banner tại aistudio.google.com hoặc console.cloud.google.com; "
             "tạo project + API key mới nếu cần; thử model gemini-2.5-flash-lite. "
             f"(model: {model_label})"

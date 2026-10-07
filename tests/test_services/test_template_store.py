@@ -45,7 +45,7 @@ def _legacy_ieee_only_registry(root: Path) -> dict:
         "title": "IEEE for journals template with bibtex example files included",
         "title_vi": "Mẫu IEEE cho tạp chí (kèm ví dụ BibTeX)",
         "description": "Admin-edited description.",
-        "author": "IEEE template (Proofline gallery)",
+        "author": "IEEE template (Edico gallery)",
         "tags": ["IEEE (all)"],
         "is_official": True,
         "format": "ieee",
@@ -317,7 +317,7 @@ def test_ieee_starter_is_marked_as_modified_lppl_work(templates_root: Path):
 
     rows = {row["id"]: row for row in _registry(templates_root)["templates"]}
     assert rows["ieee-journal"]["license"].startswith("LPPL 1.3")
-    assert ts.IEEE_JOURNAL_MAIN_TEX.startswith("% Proofline IEEE journal starter: a MODIFIED")
+    assert ts.IEEE_JOURNAL_MAIN_TEX.startswith("% Edico IEEE journal starter: a MODIFIED")
     assert "bare_jrnl.tex" in ts.IEEE_JOURNAL_MAIN_TEX.splitlines()[0]
 
 

@@ -62,27 +62,27 @@ def detect_off_topic_request(query: str) -> OffTopicKind | None:
 _REFUSALS: dict[UiLocale, dict[OffTopicKind, str]] = {
     "vi": {
         "general_coding": (
-            "Tôi là trợ lý biên tập bài báo trong PROOFLINE — chỉ hỗ trợ viết/chỉnh LaTeX, "
+            "Tôi là trợ lý biên tập bài báo trong EDICO — chỉ hỗ trợ viết/chỉnh LaTeX, "
             "cấu trúc IMRAD, trích dẫn và nội dung học thuật trong bản thảo của bạn. "
             "Tôi không viết code Python/JS hay lập trình chung cho mục đích khác.\n\n"
             "Nếu bạn cần chèn đoạn code minh họa vào bài (ví dụ phần Methods với listings), "
             "hãy nói rõ vị trí trong main.tex."
         ),
         "homework": (
-            "PROOFLINE chỉ hỗ trợ soạn và biên tập bài báo khoa học (LaTeX), không làm bài tập "
+            "EDICO chỉ hỗ trợ soạn và biên tập bài báo khoa học (LaTeX), không làm bài tập "
             "hay bài luận chung. Hãy đặt câu hỏi liên quan đến bản thảo đang mở."
         ),
     },
     "en": {
         "general_coding": (
-            "I'm Nib, your manuscript co-pilot in PROOFLINE — I help with LaTeX, IMRAD structure, "
+            "I'm Dico, your manuscript co-pilot in EDICO — I help with LaTeX, IMRAD structure, "
             "citations, and academic writing in your draft. I don't write standalone Python/JS code "
             "or general programming for unrelated tasks.\n\n"
             "If you need a code snippet inside the paper (e.g. a listings block in Methods), "
             "say where in main.tex it should go."
         ),
         "homework": (
-            "PROOFLINE supports scientific manuscript editing (LaTeX) only — not homework or general essays. "
+            "EDICO supports scientific manuscript editing (LaTeX) only — not homework or general essays. "
             "Ask about the open draft instead."
         ),
     },

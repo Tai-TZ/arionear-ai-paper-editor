@@ -245,7 +245,7 @@ def render_document(
 ) -> tuple[str, bool]:
     """Return ``(main_tex, uses_unicode_engine)``."""
     unicode_engine = needs_unicode_engine(title_latex) or needs_unicode_engine(body)
-    header = [f"% Converted from {_comment_safe(source_name)} by Proofline document import."]
+    header = [f"% Converted from {_comment_safe(source_name)} by Edico document import."]
     if notes:
         header.append("% Import notes:")
         header.extend(f"% - {_comment_safe(note)}" for note in notes)

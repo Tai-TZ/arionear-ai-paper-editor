@@ -197,12 +197,12 @@ export function EditorialBoardFigure({
                     y1="20"
                     x2={x}
                     y2="8"
-                    stroke="var(--editorial-red, #c0392b)"
+                    stroke="var(--editorial-accent, #1a57ad)"
                     strokeWidth="2"
                   />
                   <path
                     d={`M ${x - 14} 20 Q ${x} 32 ${x + 14} 20 Z`}
-                    fill="var(--editorial-red, #c0392b)"
+                    fill="var(--editorial-accent, #1a57ad)"
                     opacity="0.9"
                   />
                 </g>
@@ -215,7 +215,7 @@ export function EditorialBoardFigure({
                   width="68"
                   height="108"
                   fill="none"
-                  stroke="var(--editorial-red, #c0392b)"
+                  stroke="var(--editorial-accent, #1a57ad)"
                   strokeWidth="1"
                   strokeDasharray="3 3"
                   rx="2"
@@ -240,7 +240,7 @@ export function EditorialBoardFigure({
           x="320"
           y="102"
           textAnchor="middle"
-          style={{ fontFamily: "'Playfair Display', serif", fontSize: "11px", fontStyle: "italic" }}
+          style={{ fontFamily: "'Fraunces', serif", fontSize: "11px", fontStyle: "italic" }}
           fill="var(--foreground)"
         >
           {copy.manuscriptLabel}
@@ -259,10 +259,10 @@ export function EditorialBoardFigure({
           x="544"
           y="48"
           textAnchor="middle"
-          style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: 900 }}
+          style={{ fontFamily: "'Fraunces', serif", fontSize: "16px", fontWeight: 900 }}
         >
-          <tspan fill="var(--foreground)">Proof</tspan>
-          <tspan fill="var(--editorial-red)">line</tspan>
+          <tspan fill="var(--foreground)">E</tspan>
+          <tspan fill="var(--editorial-accent)">dico</tspan>
         </text>
         <text
           x="544"

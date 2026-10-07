@@ -1,22 +1,21 @@
-# Deploy proofline-api to Google Cloud Run (reads repo-root .env).
+# Deploy edico-api to Google Cloud Run (reads repo-root .env).
 #
 # Usage (first deploy or full rebuild):
-#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1 `
+#     -FrontendUrl https://your-domain -BackendCustomDomain https://api.your-domain
 #
-# Update env vars only (CORS / domain change, no rebuild):
-#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-backend.ps1 -SkipBuild
+# Update env vars only (CORS / domain change, no rebuild): add -SkipBuild.
 #
-# Custom domains are set via -FrontendUrl / -BackendCustomDomain.
-# Defaults below match the production custom domains on proofline.example.
+# -FrontendUrl / -BackendCustomDomain are required (there is no default domain).
 
 param(
     [string]$ProjectId    = "project-f8474886-b777-42fc-88c",
     [string]$Region       = "asia-east1",
-    [string]$ServiceName  = "proofline-api",
+    [string]$ServiceName  = "edico-api",
     # Custom-domain URL of the frontend (used for CORS + OPENROUTER_SITE_URL)
-    [string]$FrontendUrl  = "https://proofline.example",
+    [string]$FrontendUrl  = "",
     # Custom-domain URL of the backend (used for BACKEND_BASE_URL + OAuth redirect)
-    [string]$BackendCustomDomain = "https://api.proofline.example",
+    [string]$BackendCustomDomain = "",
     # Cloud Run service URL — auto-detected if empty (used as BACKEND_BASE_URL fallback)
     [string]$BackendUrl   = "",
     [switch]$SkipBuild,
@@ -24,6 +23,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $SecretsOnly -and (-not $FrontendUrl -or -not $BackendCustomDomain)) {
+    throw "Pass -FrontendUrl and -BackendCustomDomain (the production custom domains; there is no default)."
+}
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $RepoRoot ".env"
 
@@ -120,7 +122,7 @@ if ($SecretsOnly) {
     exit 0
 }
 
-$image = "$Region-docker.pkg.dev/$ProjectId/proofline/backend:latest"
+$image = "$Region-docker.pkg.dev/$ProjectId/edico/backend:latest"
 
 if (-not $SkipBuild) {
     Write-Host "`n=== Step 2: Build image (10-20 minutes) ===" -ForegroundColor Cyan
@@ -162,6 +164,7 @@ $openrouterSiteUrl = $FrontendUrl
 $openrouterAppName = Get-DotEnvValue "OPENROUTER_APP_NAME"
 $langchainProject = Get-DotEnvValue "LANGCHAIN_PROJECT"
 $langchainTracing = Get-DotEnvValue "LANGCHAIN_TRACING_V2"
+$corsOriginRegex = Get-DotEnvValue "CORS_ORIGIN_REGEX"
 
 $secretBindings = @(
     "DIRECT_DATABASE_URL=direct-database-url:latest",
@@ -206,10 +209,12 @@ $envVars = @(
 )
 if ($langchainProject) { $envVars += "LANGCHAIN_PROJECT=$langchainProject" }
 if ($langchainTracing) { $envVars += "LANGCHAIN_TRACING_V2=$langchainTracing" }
+# Optional: extra production origins as a regex (e.g. every subdomain of your domain).
+if ($corsOriginRegex) { $envVars += "CORS_ORIGIN_REGEX=$corsOriginRegex" }
 
 Write-Host "`n=== Step 3: Deploy Cloud Run ===" -ForegroundColor Cyan
 # Write env vars to YAML to avoid gcloud comma/colon escaping issues on Windows.
-$envVarsFile = Join-Path $env:TEMP "proofline-api-env-$([Guid]::NewGuid().ToString('N')).yaml"
+$envVarsFile = Join-Path $env:TEMP "edico-api-env-$([Guid]::NewGuid().ToString('N')).yaml"
 try {
     $yamlLines = @("---")
     foreach ($entry in $envVars) {

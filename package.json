@@ -1,8 +1,8 @@
 {
-  "name": "proofline-db",
+  "name": "edico-db",
   "private": true,
   "license": "MIT",
-  "description": "Prisma schema & migrations for Proofline (Python FastAPI connects via DATABASE_URL)",
+  "description": "Prisma schema & migrations for Edico (Python FastAPI connects via DATABASE_URL)",
   "scripts": {
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

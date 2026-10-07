@@ -7,7 +7,7 @@ export function templatesCopy(locale: UiLanguage) {
 const EN = {
   galleryTitle: "LaTeX templates",
   gallerySubtitle:
-    "Journal articles, conference papers, theses, and more — curated starters for Proofline Paper IDE.",
+    "Journal articles, conference papers, theses, and more — curated starters for Edico Paper IDE.",
   catalogueEyebrow: "Template catalogue",
   editorsPick: "Editor's pick",
   resultCountOne: "template",
@@ -46,7 +46,7 @@ const EN = {
 const VI = {
   galleryTitle: "Mẫu LaTeX",
   gallerySubtitle:
-    "Bài tạp chí, hội nghị, luận văn và nhiều hơn — mẫu khởi đầu dành cho Paper IDE Proofline.",
+    "Bài tạp chí, hội nghị, luận văn và nhiều hơn — mẫu khởi đầu dành cho Paper IDE Edico.",
   catalogueEyebrow: "Danh mục mẫu",
   editorsPick: "Mẫu nổi bật",
   resultCountOne: "mẫu",

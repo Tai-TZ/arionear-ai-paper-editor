@@ -125,14 +125,14 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: proofline
-          POSTGRES_PASSWORD: proofline
-          POSTGRES_DB: proofline
+          POSTGRES_USER: edico
+          POSTGRES_PASSWORD: edico
+          POSTGRES_DB: edico
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U proofline" --health-interval 5s --health-timeout 5s --health-retries 10
+          --health-cmd "pg_isready -U edico" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://proofline:proofline@localhost:5432/proofline
+      DATABASE_URL: postgresql://edico:edico@localhost:5432/edico
     steps:
       - uses: actions/checkout@v7
 
@@ -153,8 +153,8 @@ jobs:
 
       - name: Schema and migrations are in sync
         env:
-          SHADOW_DATABASE_URL: postgresql://proofline:proofline@localhost:5432/proofline_shadow
+          SHADOW_DATABASE_URL: postgresql://edico:edico@localhost:5432/edico_shadow
         run: |
-          PGPASSWORD=proofline psql -h localhost -U proofline -d proofline -c "CREATE DATABASE proofline_shadow"
+          PGPASSWORD=edico psql -h localhost -U edico -d edico -c "CREATE DATABASE edico_shadow"
           npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
             --shadow-database-url "$SHADOW_DATABASE_URL" --exit-code

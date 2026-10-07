@@ -53,7 +53,7 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
                         className="flex items-start gap-3 font-body text-base leading-snug"
                       >
                         <Check
-                          className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-red)]"
+                          className="h-5 w-5 mt-0.5 shrink-0 text-[color:var(--editorial-accent)]"
                           strokeWidth={2}
                         />
                         {item}
@@ -68,7 +68,7 @@ export function MarketingPage({ slug }: { slug: MarketingPageSlug }) {
           <div className="mt-12 pt-8 border-t border-foreground/30">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>

@@ -29,7 +29,7 @@ function renderReply(content: string, isStreaming = false): string {
   ]);
 }
 
-describe("math in Nib chat replies", () => {
+describe("math in Dico chat replies", () => {
   it("typesets inline and display math in a finished reply", () => {
     const html = renderReply(
       String.raw`The energy is $E = mc^2$ where $c$ is the speed of light.

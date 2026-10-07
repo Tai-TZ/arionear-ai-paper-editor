@@ -4,10 +4,7 @@ import { featuresContent } from "@/lib/marketing-content";
 
 export const Route = createFileRoute("/features")({
   head: () => ({
-    meta: [
-      { title: "Features — Proofline" },
-      { name: "description", content: featuresContent.lede },
-    ],
+    meta: [{ title: "Features — Edico" }, { name: "description", content: featuresContent.lede }],
   }),
   component: FeaturesPage,
 });

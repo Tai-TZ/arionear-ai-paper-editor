@@ -24,7 +24,7 @@ def test_casual_chat_not_blocked():
 def test_refusal_has_no_llm_needed_message():
     allowed, msg = evaluate_editor_scope("code giúp tôi quicksort python", locale="vi")
     assert not allowed
-    assert "PROOFLINE" in msg
+    assert "EDICO" in msg
     assert "listings" in msg.lower() or "main.tex" in msg
 
 

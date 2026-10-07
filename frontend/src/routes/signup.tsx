@@ -28,10 +28,10 @@ export const Route = createFileRoute("/signup")({
   },
   head: () => ({
     meta: [
-      { title: "Sign Up — Proofline" },
+      { title: "Sign Up — Edico" },
       {
         name: "description",
-        content: "Create an Proofline account to start editing your scientific manuscripts.",
+        content: "Create an Edico account to start editing your scientific manuscripts.",
       },
     ],
   }),
@@ -229,7 +229,7 @@ function SignUpPage() {
                 setError("");
                 setVerificationCode("");
               }}
-              className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+              className="inline-flex items-center gap-2 underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
             >
               <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} /> {t.backToForm}
             </button>
@@ -237,7 +237,7 @@ function SignUpPage() {
               type="button"
               onClick={handleResendCode}
               disabled={loading || resendCooldown > 0}
-              className="underline underline-offset-4 hover:text-[color:var(--editorial-red)] disabled:opacity-50"
+              className="underline underline-offset-4 hover:text-[color:var(--editorial-accent)] disabled:opacity-50"
             >
               {resendCooldown > 0 ? t.resendCooldown(resendCooldown) : t.resendCode}
             </button>
@@ -343,7 +343,7 @@ function SignUpPage() {
         {t.alreadyHave}{" "}
         <Link
           to="/signin"
-          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
+          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-accent)]"
         >
           {t.signIn}
         </Link>

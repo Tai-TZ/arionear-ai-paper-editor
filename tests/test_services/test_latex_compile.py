@@ -201,7 +201,7 @@ def test_compile_minimal_document_when_pdflatex_available():
     if not lc.find_pdflatex():
         return
     req = CompileRequest(
-        latex=r"\documentclass{article}\begin{document}Hello Proofline\end{document}",
+        latex=r"\documentclass{article}\begin{document}Hello Edico\end{document}",
         compiler="pdflatex",
     )
     result = lc.compile_latex(req)
@@ -372,7 +372,7 @@ def _pdflatex_is_tex_live() -> bool:
 
 @pytest.mark.skipif(not _pdflatex_is_tex_live(), reason="needs TeX Live pdflatex (kpathsea openin_any)")
 def test_compile_cannot_input_absolute_path_outside_workspace(tmp_path):
-    marker = f"PROOFLINELEAK{uuid.uuid4().hex}"
+    marker = f"EDICOLEAK{uuid.uuid4().hex}"
     secret = tmp_path / "secret.tex"
     # \typeout would copy the marker into the log if TeX ever read the file.
     secret.write_text(f"\\typeout{{{marker}}}\n{marker}\n", encoding="utf-8")

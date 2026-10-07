@@ -29,7 +29,7 @@ type LogicAuditPanelProps = {
   onRun: (mode: LogicAuditMode, scope: LogicAuditScope, sections: string[]) => void;
   onCancel?: () => void;
   onJumpToIssue?: (sectionName: string, excerpt?: string) => void;
-  onAskNib?: (prefill: string, sectionName: string, excerpt?: string) => void;
+  onAskDico?: (prefill: string, sectionName: string, excerpt?: string) => void;
   canJumpToIssue?: (sectionName: string, excerpt?: string) => boolean;
 };
 
@@ -45,7 +45,7 @@ export function LogicAuditPanel({
   onRun,
   onCancel,
   onJumpToIssue,
-  onAskNib,
+  onAskDico,
   canJumpToIssue,
 }: LogicAuditPanelProps) {
   const { locale } = useLocale();
@@ -309,7 +309,7 @@ export function LogicAuditPanel({
                         className="rounded-md border border-border/40 px-2 py-2 text-xs"
                       >
                         <div>
-                          <span className="font-medium text-[color:var(--editorial-red)]">
+                          <span className="font-medium text-[color:var(--destructive)]">
                             [{severityLabel(c.severity)}]
                           </span>{" "}
                           {c.comment}
@@ -320,7 +320,7 @@ export function LogicAuditPanel({
                             {c.claim_text.trim()}
                           </p>
                         ) : null}
-                        {(onJumpToIssue || onAskNib) && (
+                        {(onJumpToIssue || onAskDico) && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {onJumpToIssue && jumpable ? (
                               <button
@@ -331,12 +331,12 @@ export function LogicAuditPanel({
                                 {t.jumpToIssue}
                               </button>
                             ) : null}
-                            {onAskNib ? (
+                            {onAskDico ? (
                               <button
                                 type="button"
                                 className="text-[10px] text-primary hover:underline"
                                 onClick={() =>
-                                  onAskNib(
+                                  onAskDico(
                                     buildLogicConflictAskPrompt({
                                       section: section.section,
                                       comment: c.comment,
@@ -347,7 +347,7 @@ export function LogicAuditPanel({
                                   )
                                 }
                               >
-                                {t.askNib}
+                                {t.askDico}
                               </button>
                             ) : null}
                           </div>
@@ -365,7 +365,7 @@ export function LogicAuditPanel({
                         <div>
                           [{t.weak}] {w}
                         </div>
-                        {(onJumpToIssue || onAskNib) && (
+                        {(onJumpToIssue || onAskDico) && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {onJumpToIssue && jumpable ? (
                               <button
@@ -376,19 +376,19 @@ export function LogicAuditPanel({
                                 {t.jumpToIssue}
                               </button>
                             ) : null}
-                            {onAskNib ? (
+                            {onAskDico ? (
                               <button
                                 type="button"
                                 className="text-[10px] text-primary hover:underline"
                                 onClick={() =>
-                                  onAskNib(
+                                  onAskDico(
                                     buildLogicWeakClaimAskPrompt(section.section, w),
                                     section.section,
                                     w,
                                   )
                                 }
                               >
-                                {t.askNib}
+                                {t.askDico}
                               </button>
                             ) : null}
                           </div>
@@ -411,7 +411,7 @@ export function LogicAuditPanel({
                 className="rounded-md border border-dashed border-border/60 p-3 text-xs"
               >
                 <span className="font-medium">{t.crossSection}</span> {cross.description}
-                {(jumpable || onAskNib) && (
+                {(jumpable || onAskDico) && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {jumpable && onJumpToIssue ? (
                       <button
@@ -422,19 +422,19 @@ export function LogicAuditPanel({
                         {t.jumpToIssue}
                       </button>
                     ) : null}
-                    {onAskNib ? (
+                    {onAskDico ? (
                       <button
                         type="button"
                         className="text-[10px] font-medium text-primary hover:underline"
                         onClick={() =>
-                          onAskNib(
+                          onAskDico(
                             buildLogicCrossSectionAskPrompt(cross.description, jumpSection),
                             jumpSection,
                             jumpExcerpt,
                           )
                         }
                       >
-                        {t.askNib}
+                        {t.askDico}
                       </button>
                     ) : null}
                   </div>

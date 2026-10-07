@@ -159,7 +159,7 @@ export const LeftSidebar = memo(function LeftSidebar({
 
           <div className="border-t border-border p-3">
             <div className="flex items-start gap-2 rounded-md bg-secondary/60 p-2.5">
-              <ShieldCheck className="h-3.5 w-3.5 mt-0.5 text-[color:var(--editorial-red)] shrink-0" />
+              <ShieldCheck className="h-3.5 w-3.5 mt-0.5 text-[color:var(--editorial-accent)] shrink-0" />
               <p className="text-[10px] leading-snug text-muted-foreground">
                 {t.sidebar.aiDisclaimer}
               </p>

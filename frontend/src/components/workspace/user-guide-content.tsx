@@ -15,7 +15,7 @@ function GuideStepItem({
   return (
     <li className="guide-step">
       <div className="flex items-baseline gap-3">
-        <span className="font-mono-data text-xs tracking-widest text-[color:var(--editorial-red)]">
+        <span className="font-mono-data text-xs tracking-widest text-[color:var(--editorial-accent)]">
           {step.step}
         </span>
         <h3 className="font-serif-display text-lg font-bold tracking-tight md:text-xl">

@@ -44,7 +44,7 @@ def test_signup_email_requires_smtp_in_production(monkeypatch):
 def test_signup_email_sends_via_smtp(mock_smtp_ctor, monkeypatch):
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
-    monkeypatch.setenv("SMTP_FROM", "noreply@proofline.test")
+    monkeypatch.setenv("SMTP_FROM", "noreply@edico.test")
     monkeypatch.setenv("SMTP_USER", "smtp-user")
     monkeypatch.setenv("SMTP_PASSWORD", "smtp-pass")
     get_settings.cache_clear()
@@ -66,7 +66,7 @@ def test_signup_email_sends_via_smtp(mock_smtp_ctor, monkeypatch):
 def test_signup_email_no_dev_fallback_when_smtp_fails(mock_smtp_ctor, monkeypatch):
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
-    monkeypatch.setenv("SMTP_FROM", "noreply@proofline.test")
+    monkeypatch.setenv("SMTP_FROM", "noreply@edico.test")
     monkeypatch.setenv("SMTP_USER", "smtp-user")
     monkeypatch.setenv("SMTP_PASSWORD", "smtp-pass")
     get_settings.cache_clear()
@@ -86,7 +86,7 @@ def test_password_reset_email_uses_ssl_when_configured(mock_ssl_ctor, monkeypatc
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
     monkeypatch.setenv("SMTP_PORT", "465")
-    monkeypatch.setenv("SMTP_FROM", "noreply@proofline.test")
+    monkeypatch.setenv("SMTP_FROM", "noreply@edico.test")
     monkeypatch.setenv("SMTP_USE_SSL", "true")
     monkeypatch.setenv("SMTP_USE_TLS", "false")
     get_settings.cache_clear()

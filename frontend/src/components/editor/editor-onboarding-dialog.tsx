@@ -56,7 +56,7 @@ export function EditorOnboardingDialog({ open, onOpenChange }: EditorOnboardingD
               <BookOpen className="h-4 w-4" strokeWidth={1.5} />
             </span>
             <div className="min-w-0 space-y-2">
-              <p className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)]">
+              <p className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-accent)]">
                 {g.onboarding.stepOf(index + 1, steps.length)}
               </p>
               <DialogTitle className="font-serif-display text-xl font-bold leading-snug tracking-tight">

@@ -1,7 +1,8 @@
-# Deploy proofline-web frontend to Google Cloud Run.
+# Deploy edico-web frontend to Google Cloud Run.
 #
-# Usage:
-#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-frontend.ps1
+# Usage (-ViteApiUrl is required for a build; there is no default domain):
+#   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-frontend.ps1 `
+#     -ViteApiUrl https://api.your-domain/api/v1
 #
 # Env-only update (no rebuild):
 #   powershell -ExecutionPolicy Bypass -File scripts\deploy-cloudrun-frontend.ps1 -SkipBuild
@@ -9,19 +10,20 @@
 param(
     [string]$ProjectId   = "project-f8474886-b777-42fc-88c",
     [string]$Region      = "asia-east1",
-    [string]$ServiceName = "proofline-web",
-    [string]$ViteApiUrl  = "https://api.proofline.example/api/v1",
+    [string]$ServiceName = "edico-web",
+    [string]$ViteApiUrl  = "",
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $FrontendDir = Join-Path $RepoRoot "frontend"
-$image = "$Region-docker.pkg.dev/$ProjectId/proofline/frontend:latest"
+$image = "$Region-docker.pkg.dev/$ProjectId/edico/frontend:latest"
 
 gcloud config set project $ProjectId | Out-Null
 
 if (-not $SkipBuild) {
+    if (-not $ViteApiUrl) { throw "Pass -ViteApiUrl (the backend API URL baked into the bundle)." }
     Write-Host "`n=== Build frontend image (10-15 minutes) ===" -ForegroundColor Cyan
     Push-Location $RepoRoot
     try {

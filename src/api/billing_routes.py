@@ -331,7 +331,7 @@ def _checkout_page(
 <html lang="vi"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{page_title} — Proofline</title>
+<title>{page_title} — Edico</title>
 {_CHECKOUT_FONTS}
 <style>{_CHECKOUT_STYLES}</style>
 </head>
@@ -356,7 +356,7 @@ def _checkout_html(*, success: bool, already_done: bool = False) -> str:
     if not success:
         return _checkout_page(
             page_title="Lỗi thanh toán",
-            brand="Proofline · Billing",
+            brand="Edico · Billing",
             eyebrow="Không hợp lệ",
             heading="Mã QR không dùng được",
             paragraphs=[
@@ -371,7 +371,7 @@ def _checkout_html(*, success: bool, already_done: bool = False) -> str:
     if already_done:
         return _checkout_page(
             page_title="Đã kích hoạt",
-            brand="Proofline · Billing",
+            brand="Edico · Billing",
             eyebrow="Gói Pro",
             heading="Đã kích hoạt trước đó",
             paragraphs=[
@@ -386,7 +386,7 @@ def _checkout_html(*, success: bool, already_done: bool = False) -> str:
 
     return _checkout_page(
         page_title="Nâng cấp thành công",
-        brand="Proofline · Billing",
+        brand="Edico · Billing",
         eyebrow="Thanh toán xác nhận",
         heading="Nâng cấp Pro thành công",
         paragraphs=[

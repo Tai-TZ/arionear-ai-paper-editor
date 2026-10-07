@@ -1,27 +1,27 @@
-# Architecture Document — Proofline
+# Architecture Document — Edico
 
 **Dự án:** AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học  
-**Tagline:** *Closer to Publication*  
+**Tagline:** *From draft to proof.*  
 **Phiên bản tài liệu:** 3.3 · **Cập nhật:** 04/10/2026
 
 > Kiến trúc tham khảo framework mã nguồn mở AutoResearchClaw (ARC v0.3.1) — chọn lọc ~40% thành phần ARC, loại bỏ pipeline sinh bài tự động.
 
 Tài liệu này mô tả **kiến trúc đã triển khai** (v1.0, production-ready). Các mục đánh dấu *(planned)* chưa có trong repo.
 
-**Production URLs:** https://proofline.example · https://api.proofline.example
+**Production URLs:** https://edico.example · https://api.edico.example
 
 ---
 
 ## 1. Tóm tắt hệ thống
 
-Proofline là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải thiện bản thảo học thuật mà **không thay đổi ý nghĩa khoa học** và **không bịa dữ liệu**.
+Edico là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải thiện bản thảo học thuật mà **không thay đổi ý nghĩa khoa học** và **không bịa dữ liệu**.
 
 | Khía cạnh | Mô tả |
 |-----------|--------|
 | **Input** | Bản thảo LaTeX (upload, Overleaf ZIP, template gallery), Word (.docx) và PDF (text) |
 | **Output** | Bản thảo cải thiện + báo cáo integrity/citation + logic audit + publication score |
-| **Vai trò AI** | Editor (Nib) + Defense Council — human luôn approve cuối |
-| **Khác ARC** | ARC sinh bài từ ý tưởng; Proofline **không** chạy thí nghiệm, **không** PIVOT hướng nghiên cứu |
+| **Vai trò AI** | Editor (Dico) + Defense Council — human luôn approve cuối |
+| **Khác ARC** | ARC sinh bài từ ý tưởng; Edico **không** chạy thí nghiệm, **không** PIVOT hướng nghiên cứu |
 
 **Stack hiện tại:**
 
@@ -35,7 +35,7 @@ Proofline là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải t
 | Auth | JWT (email/password + Google SSO) · god admin provisioning |
 | Billing | Tier quotas (FREE/PRO), defense turn limits, QR checkout demo (tắt mặc định ở production) |
 | Observability | Inngest (optional) |
-| DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `proofline.example` |
+| DevOps | Google Cloud Run (`asia-east1`), GitHub Actions CI, custom domain `edico.example` |
 
 ---
 
@@ -44,7 +44,7 @@ Proofline là nền tảng **Assisted Editing** giúp nhà nghiên cứu cải t
 > **Quy ước sơ đồ:** Chỉ gồm thành phần **đã code và chạy production** (✅). Tính năng roadmap *(planned P2)* không vẽ vào đây — xem [§12 Roadmap](#12-roadmap-tóm-tắt). `Researcher` là actor (người dùng), không phải module phần mềm.
 
 <p align="center">
-  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Proofline: User, Processing, Human Gate, Output, Infrastructure" width="100%">
+  <img src="./docs/assets/architecture.svg" alt="Kiến trúc 5 tầng của Edico: User, Processing, Human Gate, Output, Infrastructure" width="100%">
 </p>
 
 Sơ đồ gồm cả DOCX/PDF import, Peer Review (→ Reply Letter), Citations L1–L4 (OpenAlex + L4 relevance) và AI Disclosure — endpoint chi tiết ở §4.2, luồng dữ liệu ở §7. Toàn bộ sơ đồ trong `docs/assets/` sinh từ [`scripts/build_diagrams.py`](./scripts/build_diagrams.py), theo phong cách editorial "newsprint" của app, luôn hiển thị bản sáng (kể cả trên GitHub dark theme).
@@ -56,7 +56,7 @@ Sơ đồ gồm cả DOCX/PDF import, Peer Review (→ Reply Letter), Citations 
 Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /chat` dùng LangGraph graph (ít dùng hơn). Defense dùng `POST /api/v1/defense/stream`.
 
 <p align="center">
-  <img src="./docs/assets/sequence.svg" alt="Sequence end-to-end: Researcher, Editor, FastAPI, Intent Router, Nib Agent, Integrity, LLM, PostgreSQL" width="100%">
+  <img src="./docs/assets/sequence.svg" alt="Sequence end-to-end: Researcher, Editor, FastAPI, Intent Router, Dico Agent, Integrity, LLM, PostgreSQL" width="100%">
 </p>
 
 ---
@@ -70,7 +70,7 @@ Luồng chính qua **SSE streaming** (`POST /api/v1/chat/stream`). Sync `POST /c
 | `/` | Landing editorial + marketing | ✅ |
 | `/signin`, `/signup`, `/forgot-password` | Auth JWT + Google SSO | ✅ |
 | `/projects` | Quản lý dự án (PostgreSQL) | ✅ |
-| `/editor?projectId=` | LaTeX editor + PDF + chat Nib | ✅ |
+| `/editor?projectId=` | LaTeX editor + PDF + chat Dico | ✅ |
 | `/defense?projectId=` | Mock viva — split PDF + chat council | ✅ |
 | `/profile` | Researcher profile & preferences | ✅ |
 | `/plan` | Billing / upgrade | ✅ |
@@ -192,7 +192,7 @@ Entry: `src/main.py` · Prefix: `/api/v1` · Health: `GET /health`
 | `citation_node` | 4-layer verify → `citation_registry` |
 | `structure_node` | Rule-based + LLM structure suggestions |
 | `logic_node` | Logic audit entry (sync path) |
-| `chat_node` | General Nib chat |
+| `chat_node` | General Dico chat |
 | `respond_node` | Format response message |
 
 **Stream service** (`src/services/chat_stream.py`) — primary path `POST /chat/stream`:
@@ -297,9 +297,9 @@ Chi tiết: [docs/GUARDRAILS.md](./docs/GUARDRAILS.md)
 
 ---
 
-## 6. Ánh xạ AutoResearchClaw (ARC) → Proofline
+## 6. Ánh xạ AutoResearchClaw (ARC) → Edico
 
-| ARC | Quyết định | Proofline equivalent | Trạng thái |
+| ARC | Quyết định | Edico equivalent | Trạng thái |
 |-----|------------|---------------------|------------|
 | C1 RAG | ADAPT | Citation Verifier (+ Literature Suggester opt-in) | Verifier ✅ |
 | C2 Debate | ADAPT | Logic Audit Panel (persona debate) | ✅ |
@@ -357,15 +357,15 @@ Comments + draft → tách item (R1/R2…, major/minor/editorial/question) → s
 ## 8. Deployment Architecture
 
 <p align="center">
-  <img src="./docs/assets/deployment.svg" alt="Deployment: trình duyệt tải trang từ proofline-web và gọi thẳng proofline-api trên Cloud Run; Cloud Build, Secret Manager, PostgreSQL và các dịch vụ ngoài" width="100%">
+  <img src="./docs/assets/deployment.svg" alt="Deployment: trình duyệt tải trang từ edico-web và gọi thẳng edico-api trên Cloud Run; Cloud Build, Secret Manager, PostgreSQL và các dịch vụ ngoài" width="100%">
 </p>
 
 | Service | Custom domain | Cloud Run |
 |---------|---------------|-----------|
-| Frontend | https://proofline.example | `proofline-web` |
-| Backend API | https://api.proofline.example | `proofline-api` |
+| Frontend | https://edico.example | `edico-web` |
+| Backend API | https://api.edico.example | `edico-api` |
 
-`proofline-web` chỉ render trang (SSR); bundle chạy trong trình duyệt gọi thẳng `proofline-api` qua `VITE_API_URL` (thiếu biến này thì dùng same-origin `/api/v1`). Probe: `GET /health` (liveness) và `GET /ready` (ping DB, báo trạng thái TeX). Log dạng JSON kèm `X-Request-ID` và trace id của Cloud Trace.
+`edico-web` chỉ render trang (SSR); bundle chạy trong trình duyệt gọi thẳng `edico-api` qua `VITE_API_URL` (thiếu biến này thì dùng same-origin `/api/v1`). Probe: `GET /health` (liveness) và `GET /ready` (ping DB, báo trạng thái TeX). Log dạng JSON kèm `X-Request-ID` và trace id của Cloud Trace.
 
 **Dev:**
 
@@ -393,7 +393,7 @@ Pipeline chỉ **kiểm tra và đóng gói kiểm thử** — không có bướ
 | Local gate (`.pre-commit-config.yaml`) | mỗi `git commit` | Ruff check + format, Prettier + ESLint cho file frontend đã stage, hygiene hooks (YAML/TOML/JSON, EOF, whitespace, file lớn, private key); `make ci` chạy lại các bước CI ở máy local |
 | `ci.yml` | push `main`, pull request | Ruff; pytest trên Python 3.11 + 3.12 kèm coverage; frontend lint · Prettier · typecheck · vitest · build; Prisma `validate` + `migrate deploy` + drift check trên Postgres 16 |
 | `security.yml` | push, PR, hàng tuần | CodeQL (Python, JS/TS), pip-audit, npm audit (mức high), gitleaks, dependency review (chỉ PR) |
-| `docker.yml` | thay đổi Dockerfile/deps (path filter), hàng tuần | Build `proofline-api` (FastAPI + TeX Live) và `proofline-web`, smoke test `/health`, `/api/v1/compile/status`, trang HTML — `push: false` |
+| `docker.yml` | thay đổi Dockerfile/deps (path filter), hàng tuần | Build `edico-api` (FastAPI + TeX Live) và `edico-web`, smoke test `/health`, `/api/v1/compile/status`, trang HTML — `push: false` |
 | `latex.yml` | thay đổi compile/template/import, hàng tuần | Cài TeX Live rồi chạy toàn bộ pytest, không còn test bị skip vì thiếu TeX |
 | `release.yml` | push tag `vX.Y.Z` | `gh release create --generate-notes` → GitHub Release |
 | Dependabot | pip + npm `/frontend` hàng tuần; npm `/` và GitHub Actions hàng tháng | Mở PR cập nhật dependency (đi qua đúng các workflow trên) |
@@ -404,7 +404,7 @@ Pipeline chỉ **kiểm tra và đóng gói kiểm thử** — không có bướ
 
 - API keys trong `.env` — never commit; Cloud Run secrets at deploy time
 - Pydantic validation mọi API input
-- CORS: explicit origins (`cors_config.py`) + production domain `proofline.example`
+- CORS: explicit origins (`cors_config.py`) + production domain `edico.example`
 - JWT auth (72h default, 30d remember-me) — `auth_service.py`
 - Google SSO OAuth2 — `google_oauth_service.py`
 - Bearer token on agent APIs (`agent_deps.py`) — paper session access check

@@ -29,7 +29,7 @@ type PendingConfirm =
 function ProviderIcon({ providerId }: { providerId: string }) {
   const icon = providerIconUrl(normalizeLlmProvider(providerId));
   if (!icon) {
-    return <KeyRound className="h-5 w-5 text-[color:var(--editorial-red)]" strokeWidth={1.5} />;
+    return <KeyRound className="h-5 w-5 text-[color:var(--editorial-accent)]" strokeWidth={1.5} />;
   }
   return (
     <img src={icon} alt="" className="h-5 w-5 shrink-0 object-contain" width={20} height={20} />

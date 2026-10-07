@@ -22,8 +22,8 @@ export const Route = createFileRoute("/signin")({
   },
   head: () => ({
     meta: [
-      { title: "Sign In — Proofline" },
-      { name: "description", content: "Sign in to Proofline to continue editing your manuscript." },
+      { title: "Sign In — Edico" },
+      { name: "description", content: "Sign in to Edico to continue editing your manuscript." },
     ],
   }),
   component: SignInPage,
@@ -118,7 +118,7 @@ function SignInPage() {
           </label>
           <Link
             to="/forgot-password"
-            className="underline underline-offset-4 hover:text-[color:var(--editorial-red)]"
+            className="underline underline-offset-4 hover:text-[color:var(--editorial-accent)]"
           >
             {t.forgot}
           </Link>
@@ -137,7 +137,7 @@ function SignInPage() {
         {t.newHere}{" "}
         <Link
           to="/signup"
-          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-red)]"
+          className="underline underline-offset-4 font-semibold hover:text-[color:var(--editorial-accent)]"
         >
           {t.createAccount}
         </Link>

@@ -101,7 +101,7 @@ export function AboutPage() {
           <div className="mt-16 pt-8 border-t border-foreground/30">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>

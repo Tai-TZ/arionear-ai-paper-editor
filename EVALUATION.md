@@ -1,8 +1,9 @@
-# EVALUATION — Proofline
+# EVALUATION — Edico
 
 > Kết quả kiểm thử thủ công và benchmark trên môi trường production.  
-> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **API production:** https://api.proofline.example  
-> **Frontend:** https://proofline.example · **Agent:** Nib v1.0 · Google Gemini 3.1 Flash Lite
+> **Ngày chạy:** 2026-07-08 12:13:04 UTC · **API production:** https://api.edico.example  
+> **Frontend:** https://edico.example · **Agent:** Dico v1.0 · Google Gemini 3.1 Flash Lite  
+> Các lần chạy này diễn ra trước khi đổi tên sản phẩm (Arionear → Edico, trợ lý Ario → Dico); input/output trích dẫn giữ nguyên văn như trong raw data.
 
 **Evidence gốc (log JSON / báo cáo chi tiết):**
 
@@ -19,11 +20,11 @@
 
 | STT | Input (User Prompt) | Output thực tế | Kết quả |
 | --- | --- | --- | --- |
-| 1 | `Giải thích ngắn gọn abstract của bài này bằng tiếng Việt` (task=`chat`, có abstract trong `latex_content`) | Nib trả lời lịch sự nhưng **xin lại abstract** thay vì đọc context đã gửi: *"…bạn vui lòng cung cấp nội dung… phần Abstract…"* · HTTP 200 · 5.20s | ⚠️ Partial — có response thật; context/paper sync chưa đủ chặt. **Khắc phục:** ưu tiên đọc `latex_content`/session paper trước khi hỏi lại; demo path dùng selection/abstract đã highlight. |
+| 1 | `Giải thích ngắn gọn abstract của bài này bằng tiếng Việt` (task=`chat`, có abstract trong `latex_content`) | Dico trả lời lịch sự nhưng **xin lại abstract** thay vì đọc context đã gửi: *"…bạn vui lòng cung cấp nội dung… phần Abstract…"* · HTTP 200 · 5.20s | ⚠️ Partial — có response thật; context/paper sync chưa đủ chặt. **Khắc phục:** ưu tiên đọc `latex_content`/session paper trước khi hỏi lại; demo path dùng selection/abstract đã highlight. |
 | 2 | `Chỉnh sửa abstract cho văn phong học thuật hơn` (task=`style`) | Diff + suggestion: *"While machine learning models frequently demonstrate superior predictive performance, they are often constrained by a lack of interpretability."* · `apply_mode=selection` · HTTP 200 · 4.50s | ✅ Pass |
 | 3 | `Phân tích cấu trúc IMRaD của bài này` (task=`structure`) | Cảnh báo thiếu Methods/Results/Discussion/Conclusion + Intro quá ngắn · HTTP 200 · 3.27s | ✅ Pass |
 | 4 | `Thêm các section IMRaD còn thiếu` (task=`template`) | Hướng dẫn 4 section IMRaD + hỏi vị trí chèn template vào `main.tex` · HTTP 200 · 4.60s | ✅ Pass |
-| 5 | Compile: `\documentclass{article}\begin{document}Hello Proofline.\end{document}` | `success=true` · engine `pdflatex` · PDF base64 length 17540 · HTTP 200 · 0.21s | ✅ Pass |
+| 5 | Compile: `\documentclass{article}\begin{document}Hello Arionear.\end{document}` | `success=true` · engine `pdflatex` · PDF base64 length 17540 · HTTP 200 · 0.21s | ✅ Pass |
 | 6 | Citation verify `\cite{smith2020}` + bib stub | API chạy đúng: `results=[{key: smith2020, status: not_found}]` · summary *"Verified 0/1 citations."* · HTTP 200 · 2.42s | ⚠️ Partial — pipeline verify OK; key giả không có trên DB ngoài → `not_found` đúng kỳ vọng kỹ thuật. **Khắc phục / demo:** dùng DOI/arxiv có thật khi demo; giữ case này làm bằng chứng không fake “verified”. |
 
 **Tóm tắt manual TC:** 6/6 có **output thật từ production** (không mock) · 4 ✅ Pass · 2 ⚠️ Partial có ghi chú khắc phục.
@@ -34,7 +35,7 @@
 
 Chạy [`run_gate3_eval.py`](./eval/scripts/run_gate3_eval.py) trên production @ **2026-07-08 12:08:11 UTC** — chi tiết [`gate3_summary.md`](./eval/results/gate3_summary.md).
 
-| Metric | Proofline | Baseline | Improved? |
+| Metric | Edico | Baseline | Improved? |
 |--------|----------|----------|-----------|
 | intent_routing_accuracy | 1.0 | 0.65 | yes |
 | edit_scope_accuracy | 1.0 | 0.4 | yes |
@@ -64,8 +65,8 @@ python eval/scripts/refresh_manual_eval.py
 
 # Benchmark metrics
 python eval/scripts/run_gate3_eval.py \
-  --api-url https://api.proofline.example \
-  --frontend-url https://proofline.example \
+  --api-url https://api.edico.example \
+  --frontend-url https://edico.example \
   --live-llm
 ```
 

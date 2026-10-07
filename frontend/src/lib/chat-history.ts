@@ -5,7 +5,7 @@ export type ChatHistoryTurn = {
   content: string;
 };
 
-const WELCOME_PREFIX = "Xin chào — tôi là Nib";
+const WELCOME_PREFIX = "Xin chào — tôi là Dico";
 const MAX_TURN_CONTENT = 4000;
 const DEFAULT_MAX_TURNS = 6;
 

@@ -342,7 +342,7 @@ export function useLatexWorkspace({
     [projectFiles, activeFile, switchActiveFile, jumpToSynctex],
   );
 
-  const canAskNibFixCompile = Boolean(compileError && isAgentFixableCompileError(compileError));
+  const canAskDicoFixCompile = Boolean(compileError && isAgentFixableCompileError(compileError));
 
   const compileErrorLine = compileError ? parseCompileErrorLine(compileError) : null;
 
@@ -368,7 +368,7 @@ export function useLatexWorkspace({
       jumpToSynctex,
       jumpToOutlineLine,
       handleSynctexHit,
-      canAskNibFixCompile,
+      canAskDicoFixCompile,
       compileErrorLine,
     }),
     [
@@ -389,7 +389,7 @@ export function useLatexWorkspace({
       jumpToSynctex,
       jumpToOutlineLine,
       handleSynctexHit,
-      canAskNibFixCompile,
+      canAskDicoFixCompile,
       compileErrorLine,
     ],
   );

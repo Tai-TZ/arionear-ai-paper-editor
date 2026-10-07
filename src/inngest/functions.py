@@ -6,7 +6,7 @@ from src.inngest.client import inngest_client
 
 @inngest_client.create_function(
     fn_id="chat_stage_trace",
-    trigger=inngest.TriggerEvent(event="nib/chat.stage"),
+    trigger=inngest.TriggerEvent(event="dico/chat.stage"),
 )
 async def chat_stage_trace(ctx: inngest.Context) -> dict:
     data = ctx.event.data or {}
@@ -24,7 +24,7 @@ async def chat_stage_trace(ctx: inngest.Context) -> dict:
 
 @inngest_client.create_function(
     fn_id="chat_run_completed",
-    trigger=inngest.TriggerEvent(event="nib/chat.completed"),
+    trigger=inngest.TriggerEvent(event="dico/chat.completed"),
 )
 async def chat_run_completed(ctx: inngest.Context) -> dict:
     data = ctx.event.data or {}
@@ -40,7 +40,7 @@ async def chat_run_completed(ctx: inngest.Context) -> dict:
 
 @inngest_client.create_function(
     fn_id="chat_run_failed",
-    trigger=inngest.TriggerEvent(event="nib/chat.failed"),
+    trigger=inngest.TriggerEvent(event="dico/chat.failed"),
 )
 async def chat_run_failed(ctx: inngest.Context) -> dict:
     data = ctx.event.data or {}

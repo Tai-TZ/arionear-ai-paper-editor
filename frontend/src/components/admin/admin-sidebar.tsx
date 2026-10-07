@@ -67,7 +67,7 @@ export function AdminSidebar({
     >
       <div className="admin-sidebar-topbar flex shrink-0 flex-col justify-center px-4">
         <Link to="/" className="admin-brand">
-          Proofline
+          Edico
         </Link>
         <p className="admin-eyebrow mt-1">{t.consoleEyebrow}</p>
       </div>

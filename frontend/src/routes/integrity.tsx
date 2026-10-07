@@ -3,7 +3,7 @@ import { MarketingPage } from "@/components/marketing/marketing-page";
 
 export const Route = createFileRoute("/integrity")({
   head: () => ({
-    meta: [{ title: "Integrity — Proofline" }],
+    meta: [{ title: "Integrity — Edico" }],
   }),
   component: () => <MarketingPage slug="integrity" />,
 });

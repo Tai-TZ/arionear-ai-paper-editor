@@ -1,6 +1,6 @@
-# Database Setup — Proofline (Prisma + PostgreSQL + FastAPI)
+# Database Setup — Edico (Prisma + PostgreSQL + FastAPI)
 
-Proofline dùng **Prisma** để định nghĩa schema & tạo bảng trên PostgreSQL.  
+Edico dùng **Prisma** để định nghĩa schema & tạo bảng trên PostgreSQL.  
 Backend **Python/FastAPI** kết nối qua **SQLAlchemy** cùng `DIRECT_DATABASE_URL`.
 
 ```
@@ -41,7 +41,7 @@ erDiagram
     string target_journal
     string citation_style
     string language_level
-    text raw_latex "Proofline: full LaTeX blob"
+    text raw_latex "Edico: full LaTeX blob"
     json metadata
     timestamp created_at
     timestamp updated_at
@@ -79,7 +79,7 @@ erDiagram
     enum suggestion_type
     text original_text
     text suggested_text
-    string section_label "Proofline: intro/methods/…"
+    string section_label "Edico: intro/methods/…"
     text explanation
     text diff
     enum status
@@ -100,7 +100,7 @@ erDiagram
     string eprint
     text raw_text
     json formatted_styles
-    enum verification_status "Proofline"
+    enum verification_status "Edico"
     text verification_message
     json verification_layers
     timestamp created_at
@@ -230,7 +230,7 @@ npm install
 ```bash
 # Tạo migration có tên (khuyên dùng)
 npm run db:migrate
-# Prisma sẽ hỏi tên migration, ví dụ: init_proofline_schema
+# Prisma sẽ hỏi tên migration, ví dụ: init_edico_schema
 
 # Hoặc push nhanh không tạo file migration (chỉ dev cá nhân)
 npm run db:push
@@ -286,12 +286,12 @@ Dữ liệu được lưu vào bảng `papers` (không mất khi restart server)
 ### Local PostgreSQL (Docker)
 
 ```bash
-docker run --name proofline-db -e POSTGRES_USER=proofline -e POSTGRES_PASSWORD=proofline -e POSTGRES_DB=proofline -p 5432:5432 -d postgres:16-alpine
+docker run --name edico-db -e POSTGRES_USER=edico -e POSTGRES_PASSWORD=edico -e POSTGRES_DB=edico -p 5432:5432 -d postgres:16-alpine
 ```
 
 `.env`:
 ```env
-DATABASE_URL=postgresql://proofline:proofline@localhost:5432/proofline
+DATABASE_URL=postgresql://edico:edico@localhost:5432/edico
 ```
 
 Sau đó chạy `npm run db:migrate` như bước 3.

@@ -47,8 +47,8 @@ describe("auth session storage", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
     invalidateFetchKey("auth:me");
-    local.setItem("proofline-access-token", "token-abc");
-    local.setItem("proofline-session", JSON.stringify(USER));
+    local.setItem("edico-access-token", "token-abc");
+    local.setItem("edico-session", JSON.stringify(USER));
   });
 
   afterEach(() => {
@@ -63,8 +63,8 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toBeNull();
 
-    expect(local.getItem("proofline-access-token")).toBe("token-abc");
-    expect(local.getItem("proofline-session")).toBe(JSON.stringify(USER));
+    expect(local.getItem("edico-access-token")).toBe("token-abc");
+    expect(local.getItem("edico-session")).toBe(JSON.stringify(USER));
   });
 
   it("clears the session when the server rejects the token", async () => {
@@ -72,8 +72,8 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toBeNull();
 
-    expect(local.getItem("proofline-access-token")).toBeNull();
-    expect(local.getItem("proofline-session")).toBeNull();
+    expect(local.getItem("edico-access-token")).toBeNull();
+    expect(local.getItem("edico-session")).toBeNull();
   });
 
   it("refreshes the cached user when the token is valid", async () => {
@@ -82,22 +82,22 @@ describe("auth session storage", () => {
 
     await expect(refreshSession()).resolves.toEqual(updated);
 
-    expect(JSON.parse(local.getItem("proofline-session") ?? "null")).toEqual(updated);
+    expect(JSON.parse(local.getItem("edico-session") ?? "null")).toEqual(updated);
   });
 
   it("signs out without wiping device preferences", () => {
-    local.setItem("proofline-locale", "vi");
-    local.setItem("proofline-theme", "dark");
-    local.setItem("proofline-researcher-profile", "{}");
+    local.setItem("edico-locale", "vi");
+    local.setItem("edico-theme", "dark");
+    local.setItem("edico-researcher-profile", "{}");
     session.setItem("defense_session_p1", "{}");
 
     signOut();
 
-    expect(local.getItem("proofline-access-token")).toBeNull();
-    expect(local.getItem("proofline-session")).toBeNull();
-    expect(local.getItem("proofline-researcher-profile")).toBeNull();
+    expect(local.getItem("edico-access-token")).toBeNull();
+    expect(local.getItem("edico-session")).toBeNull();
+    expect(local.getItem("edico-researcher-profile")).toBeNull();
     expect(session.length).toBe(0);
-    expect(local.getItem("proofline-locale")).toBe("vi");
-    expect(local.getItem("proofline-theme")).toBe("dark");
+    expect(local.getItem("edico-locale")).toBe("vi");
+    expect(local.getItem("edico-theme")).toBe("dark");
   });
 });

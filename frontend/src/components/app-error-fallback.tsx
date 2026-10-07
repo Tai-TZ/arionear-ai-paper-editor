@@ -61,11 +61,11 @@ function ErrorFallbackView({
     <div className="app-not-found min-h-[100dvh] bg-background text-foreground">
       <div className="app-not-found-masthead flex items-center justify-between border-b border-foreground/15 px-4 py-3 md:px-6">
         <Link to="/" className="font-serif-display text-xl font-black tracking-tighter md:text-2xl">
-          Proofline
+          Edico
         </Link>
       </div>
       <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-6 py-12 text-center">
-        <p className="font-sans-ui text-[11px] uppercase tracking-[0.22em] text-[color:var(--editorial-red)]">
+        <p className="font-sans-ui text-[11px] uppercase tracking-[0.22em] text-[color:var(--destructive)]">
           {copy.eyebrow}
         </p>
         <h1 className="mt-4 font-serif-display text-3xl font-bold tracking-tight md:text-4xl">

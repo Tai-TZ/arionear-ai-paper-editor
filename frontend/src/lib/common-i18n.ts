@@ -107,7 +107,7 @@ const EN: CommonCopy = {
   footer: {
     tagline: "AI Academic Writing & Editing Assistant.",
     edition: "Edition Vol. I · Printed for the web ·",
-    copyright: "Proofline Editorial Co.",
+    copyright: "Edico Editorial Co.",
     motto: "All the science that's fit to publish.",
     sections: { desk: "Desk", authors: "Authors", bureau: "Bureau", legal: "Legal" },
     links: {
@@ -127,7 +127,7 @@ const EN: CommonCopy = {
     },
   },
   ticker: [
-    "Closer to publication",
+    "From draft to proof",
     "AI academic writing & editing assistant",
     "LaTeX upload · edit · compile · preview",
     "Expression support — never invent data or results",
@@ -163,7 +163,7 @@ const EN: CommonCopy = {
     loadingEyebrow: "Desk session",
     loadingMasthead: "Manuscript desk · Loading",
     loadingSubline: "Preparing your session",
-    loadingFooter: "Vol. I · No. 01 · Closer to Publication",
+    loadingFooter: "Vol. I · No. 01 · From draft to proof",
     notFound: {
       code: "404",
       eyebrow: "Missing manuscript",
@@ -196,7 +196,7 @@ const VI: CommonCopy = {
   footer: {
     tagline: "AI Trợ Lý Viết & Biên Tập Bài Báo Khoa Học.",
     edition: "Ấn bản Tập I · In trên web ·",
-    copyright: "Proofline Editorial Co.",
+    copyright: "Edico Editorial Co.",
     motto: "Mọi khoa học xứng đáng được xuất bản.",
     sections: { desk: "Ban biên tập", authors: "Tác giả", bureau: "Văn phòng", legal: "Pháp lý" },
     links: {
@@ -216,7 +216,7 @@ const VI: CommonCopy = {
     },
   },
   ticker: [
-    "Gần hơn với xuất bản",
+    "Từ bản thảo đến bản in",
     "Trợ lý AI viết & biên tập học thuật",
     "LaTeX tải lên · chỉnh sửa · biên dịch · xem trước",
     "Hỗ trợ diễn đạt — không bao giờ bịa dữ liệu hay kết quả",
@@ -252,7 +252,7 @@ const VI: CommonCopy = {
     loadingEyebrow: "Phiên biên tập",
     loadingMasthead: "Bàn biên tập · Đang tải",
     loadingSubline: "Đang chuẩn bị phiên làm việc",
-    loadingFooter: "Tập I · Số 01 · Closer to Publication",
+    loadingFooter: "Tập I · Số 01 · Từ bản thảo đến bản in",
     notFound: {
       code: "404",
       eyebrow: "Không tìm thấy",

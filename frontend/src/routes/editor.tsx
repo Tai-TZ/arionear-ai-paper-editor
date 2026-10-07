@@ -19,7 +19,7 @@ export const Route = createFileRoute("/editor")({
   },
   head: () => ({
     meta: [
-      { title: "Proofline - AI LaTeX Editor" },
+      { title: "Edico - AI LaTeX Editor" },
       {
         name: "description",
         content: "Upload LaTeX manuscripts and refine them with an AI LaTeX editor.",

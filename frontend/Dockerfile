@@ -1,14 +1,11 @@
-# Proofline frontend — TanStack Start + Nitro (node-server) for Google Cloud Run
+# Edico frontend — TanStack Start + Nitro (node-server) for Google Cloud Run
 #
 # Local Docker:
-#   docker build --build-arg VITE_API_URL=https://api.proofline.example/api/v1 -t proofline-web .
+#   docker build --build-arg VITE_API_URL=https://api.edico.example/api/v1 -t edico-web .
 #
-# Production (via Cloud Build — preferred; defaults already set in cloudbuild.yaml):
-#   gcloud builds submit --config=frontend/cloudbuild.yaml
-#
-# Override domain (staging or alternative env):
+# Production (via Cloud Build — preferred; _VITE_API_URL is required, no default):
 #   gcloud builds submit --config=frontend/cloudbuild.yaml \
-#     --substitutions=_VITE_API_URL=https://api.proofline.example/api/v1,_IMAGE=REGION-docker.pkg.dev/PROJECT/proofline/frontend:latest
+#     --substitutions=_VITE_API_URL=https://api.edico.example/api/v1,_IMAGE=REGION-docker.pkg.dev/PROJECT/edico/frontend:latest
 
 FROM node:22-slim AS builder
 

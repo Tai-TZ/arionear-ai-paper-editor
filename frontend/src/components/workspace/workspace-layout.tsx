@@ -1,4 +1,4 @@
-import { ProoflineWordmark } from "@/components/proofline-wordmark";
+import { EdicoWordmark } from "@/components/edico-wordmark";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -85,7 +85,7 @@ export function WorkspaceLayout({
             )}
           </button>
           <Link to="/" className="workspace-mobile-brand">
-            <ProoflineWordmark />
+            <EdicoWordmark />
           </Link>
         </div>
 

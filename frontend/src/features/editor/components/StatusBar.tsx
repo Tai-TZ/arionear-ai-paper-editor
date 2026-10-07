@@ -26,7 +26,7 @@ export const StatusBar = memo(function StatusBar({
       </div>
       <div className="flex items-center gap-4">
         <span>{t.statusBar.line(lineCount)}</span>
-        <span className="text-[color:var(--editorial-red)]">Proofline</span>
+        <span className="text-[color:var(--editorial-accent)]">Edico</span>
         <span className="text-primary">{t.statusBar.editor}</span>
       </div>
     </footer>

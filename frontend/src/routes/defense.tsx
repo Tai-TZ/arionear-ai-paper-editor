@@ -738,7 +738,7 @@ function DefensePage() {
           <Link
             to="/editor"
             search={{ projectId: projectId! }}
-            className="flex shrink-0 items-center gap-1.5 hover:text-[color:var(--editorial-red)] transition-colors"
+            className="flex shrink-0 items-center gap-1.5 hover:text-[color:var(--editorial-accent)] transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
             {t.masthead.backToProject}
@@ -753,7 +753,7 @@ function DefensePage() {
             type="button"
             onClick={handleRefreshPaper}
             disabled={paperRefreshing || isStreaming}
-            className="defense-masthead-refresh inline-flex items-center gap-1 rounded px-1.5 py-0.5 normal-case font-sans text-[10px] tracking-normal transition hover:text-[color:var(--editorial-red)] disabled:opacity-50"
+            className="defense-masthead-refresh inline-flex items-center gap-1 rounded px-1.5 py-0.5 normal-case font-sans text-[10px] tracking-normal transition hover:text-[color:var(--editorial-accent)] disabled:opacity-50"
             title={t.masthead.refreshPaper}
           >
             <RefreshCw className={`h-3 w-3${paperRefreshing ? " animate-spin" : ""}`} aria-hidden />

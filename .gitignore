@@ -59,7 +59,7 @@ frontend/public/core/
 *.pyc
 *.pyo
 
-# Vendor clones (reference only — not part of Proofline runtime)
+# Vendor clones (reference only — not part of Edico runtime)
 _vendor/
 
 # Local AI usage logs (never commit)

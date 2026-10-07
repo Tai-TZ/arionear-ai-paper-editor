@@ -6,10 +6,10 @@ export const Route = createFileRoute("/templates/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "LaTeX Templates — Proofline" },
+      { title: "LaTeX Templates — Edico" },
       {
         name: "description",
-        content: "Browse IEEE and academic LaTeX templates for Proofline Paper IDE.",
+        content: "Browse IEEE and academic LaTeX templates for Edico Paper IDE.",
       },
     ],
   }),

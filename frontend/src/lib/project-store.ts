@@ -106,7 +106,7 @@ const SAMPLE_LATEX_EN = `\\documentclass[journal]{IEEEtran}
 
 \\begin{abstract}
 This sample follows the IEEEtran journal layout with IMRaD sections.
-Use it to explore compile, preview, and Proofline editorial tools before replacing every placeholder with your own research content.
+Use it to explore compile, preview, and Edico editorial tools before replacing every placeholder with your own research content.
 \\end{abstract}
 
 \\begin{IEEEkeywords}
@@ -150,7 +150,7 @@ ${VIETNAMESE_PREAMBLE}\\usepackage{amsmath,amssymb,amsfonts}
 
 \\begin{abstract}
 Bản mẫu này theo bố cục tạp chí IEEEtran với các phần IMRaD.
-Dùng để khám phá biên dịch, xem trước PDF và các công cụ biên tập của Proofline trước khi thay thế toàn bộ nội dung mẫu bằng nghiên cứu của bạn.
+Dùng để khám phá biên dịch, xem trước PDF và các công cụ biên tập của Edico trước khi thay thế toàn bộ nội dung mẫu bằng nghiên cứu của bạn.
 \\end{abstract}
 
 \\begin{IEEEkeywords}

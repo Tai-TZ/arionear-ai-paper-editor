@@ -103,7 +103,7 @@ function FeaturesHubDiagram({
                       fontSize: "8px",
                       letterSpacing: "0.08em",
                     }}
-                    className="fill-[color:var(--editorial-red)] uppercase"
+                    className="fill-[color:var(--editorial-accent)] uppercase"
                   >
                     {f.n}
                   </text>
@@ -112,7 +112,7 @@ function FeaturesHubDiagram({
                     y={ny + 10}
                     textAnchor="middle"
                     style={{
-                      fontFamily: "'Playfair Display', serif",
+                      fontFamily: "'Fraunces', serif",
                       fontSize: "8px",
                       fontWeight: 700,
                     }}
@@ -150,7 +150,7 @@ function FeaturesHubDiagram({
               y={cy + 8}
               textAnchor="middle"
               fill="var(--newsprint, #F9F7F2)"
-              style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 900 }}
+              style={{ fontFamily: "'Fraunces', serif", fontSize: "18px", fontWeight: 900 }}
             >
               {copy.hubCenterLatex}
             </text>
@@ -178,7 +178,7 @@ function FeaturesHubDiagram({
                   <div className="h-10 w-10 border border-foreground flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
                     <Icon className="h-5 w-5" strokeWidth={1.5} />
                   </div>
-                  <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-red)]">
+                  <span className="font-mono-data text-[10px] uppercase tracking-widest text-[color:var(--editorial-accent)]">
                     {copy.noLabel} {n}
                   </span>
                 </div>
@@ -189,7 +189,7 @@ function FeaturesHubDiagram({
                 <div className="mt-4">
                   <Link
                     to={featureLearnMore[n] ?? "/workflow"}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground hover:text-[color:var(--editorial-red)] underline-offset-4 hover:underline"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 font-sans-ui text-[10px] uppercase tracking-widest text-muted-foreground hover:text-[color:var(--editorial-accent)] underline-offset-4 hover:underline"
                   >
                     {ui.learnMore}
                   </Link>
@@ -254,13 +254,13 @@ export function FeaturesPage() {
           <div className="mt-12 pt-8 border-t border-foreground/30 flex flex-wrap gap-6">
             <Link
               to="/"
-              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)] hover:underline underline-offset-4"
+              className="font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)] hover:underline underline-offset-4"
             >
               {ui.backToHome}
             </Link>
             <Link
               to="/workflow"
-              className="inline-flex items-center gap-2 font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-red)]"
+              className="inline-flex items-center gap-2 font-sans-ui uppercase text-xs tracking-widest hover:text-[color:var(--editorial-accent)]"
             >
               {ui.seeWorkflow} <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
